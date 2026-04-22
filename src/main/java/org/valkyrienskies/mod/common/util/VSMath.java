@@ -1,6 +1,5 @@
 package org.valkyrienskies.mod.common.util;
 
-import lombok.experimental.UtilityClass;
 import net.minecraft.util.Tuple;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.Vec3d;
@@ -16,17 +15,20 @@ import java.util.List;
  *
  * @author thebest108
  */
-@UtilityClass
-public class VSMath {
+public final class VSMath {
 
     public static final int AABB_MERGE_PASSES = 5;
     public static final double STANDING_TOLERANCE = .42D;
 
-    public Vector3d toVector3d(Vec3i vec) {
+    private VSMath() {
+        throw new UnsupportedOperationException("Utility class");
+    }
+
+    public static Vector3d toVector3d(Vec3i vec) {
         return new Vector3d(vec.getX(), vec.getY(), vec.getZ());
     }
 
-    public Vector3d toVector3d(Vec3d vec) {
+    public static Vector3d toVector3d(Vec3d vec) {
         return new Vector3d(vec.x, vec.y, vec.z);
     }
 
@@ -34,7 +36,7 @@ public class VSMath {
     /**
      * @see #generateLineBetween(int, int, int, int, int, int, IntTernaryFunction)
      */
-    public <T> List<T> generateLineBetween(Vec3d start, Vec3d end, IntTernaryFunction<T> constructor) {
+    public static <T> List<T> generateLineBetween(Vec3d start, Vec3d end, IntTernaryFunction<T> constructor) {
         return VSMath.generateLineBetween(
             (int) start.x, (int) start.y, (int) start.z,
             (int) end.x, (int) end.y, (int) end.z,
@@ -50,7 +52,7 @@ public class VSMath {
      *
      * @see <a href="https://www.geeksforgeeks.org/bresenhams-algorithm-for-3-d-line-drawing/">Reference</a>
      */
-    public <T> List<T> generateLineBetween(int x1, int y1, int z1, int x2, int y2, int z2, IntTernaryFunction<T> constructor) {
+    public static <T> List<T> generateLineBetween(int x1, int y1, int z1, int x2, int y2, int z2, IntTernaryFunction<T> constructor) {
         List<T> points = new ArrayList<>();
         points.add(constructor.apply(x1, y1, z1));
 
@@ -126,7 +128,7 @@ public class VSMath {
         return points;
     }
 
-    public Tuple<Double, Double> getPitchYawFromVector(final Vector3dc vector3dc) {
+    public static Tuple<Double, Double> getPitchYawFromVector(final Vector3dc vector3dc) {
         // First get the pitch from the vector
         final double pitch = Math.toDegrees(-Math.asin(vector3dc.y()));
         if (Double.isNaN(pitch)) {

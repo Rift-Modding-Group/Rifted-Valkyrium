@@ -33,8 +33,6 @@ import net.minecraftforge.fml.common.gameevent.PlayerEvent.PlayerLoggedOutEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent.PlayerTickEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent.WorldTickEvent;
 import net.minecraftforge.fml.relauncher.Side;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.valkyrienskies.mod.common.config.VSConfig;
@@ -56,7 +54,6 @@ public class EventsCommon {
 
     @Deprecated
     private static final Map<EntityPlayer, double[]> lastPositions = new HashMap<>();
-    private static final Logger logger = LogManager.getLogger(EventsCommon.class);
 
     @SubscribeEvent
     public static void onPlayerSleepInBedEvent(PlayerSleepInBedEvent event) {
@@ -142,7 +139,7 @@ public class EventsCommon {
                     }
                 }
             } catch (NullPointerException e) {
-                logger.warn("Nullpointer EventsCommon.java:onPlayerTickEvent");
+                ValkyrienSkiesMod.LOGGER.warn("Nullpointer EventsCommon.java:onPlayerTickEvent");
             }
 
             pos[0] = p.posX;

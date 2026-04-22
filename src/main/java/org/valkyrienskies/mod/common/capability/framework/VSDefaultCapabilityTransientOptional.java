@@ -3,7 +3,7 @@ package org.valkyrienskies.mod.common.capability.framework;
 import java.util.Optional;
 import java.util.function.Supplier;
 import javax.annotation.Nonnull;
-import mcp.MethodsReturnNonnullByDefault;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Like {@link VSDefaultCapability} but does not serialize anything, and has no guarantee that the
@@ -11,7 +11,6 @@ import mcp.MethodsReturnNonnullByDefault;
  *
  * @param <K>
  */
-@MethodsReturnNonnullByDefault
 public class VSDefaultCapabilityTransientOptional<K> {
 
     private K instance;
@@ -28,7 +27,7 @@ public class VSDefaultCapabilityTransientOptional<K> {
         this.instance = factory.get();
     }
 
-    public Optional<K> get() {
+    public @NotNull Optional<K> get() {
         return Optional.ofNullable(instance);
     }
 

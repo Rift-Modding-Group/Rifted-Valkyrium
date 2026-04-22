@@ -1,8 +1,5 @@
 package org.valkyrienskies.mod.common.util;
 
-import lombok.NonNull;
-import lombok.experimental.UtilityClass;
-import mcp.MethodsReturnNonnullByDefault;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLiving;
 import net.minecraft.entity.player.EntityPlayerMP;
@@ -15,6 +12,7 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 import net.minecraft.world.chunk.Chunk;
+import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4dc;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
@@ -48,10 +46,12 @@ import java.util.UUID;
 /**
  * This class contains various helper functions for Valkyrien Skies.
  */
-@UtilityClass
-@MethodsReturnNonnullByDefault
 @ParametersAreNonnullByDefault
-public class ValkyrienUtils {
+public final class ValkyrienUtils {
+
+    private ValkyrienUtils() {
+        throw new UnsupportedOperationException("Utility class");
+    }
 
     /**
      * The liver of this mod. Returns the PhysicsObject that managed the given pos in the given
@@ -62,12 +62,12 @@ public class ValkyrienUtils {
      * @return The PhysicsObject that owns the chunk at pos within the given world.
      */
     @SuppressWarnings("ConstantConditions")
-    public Optional<PhysicsObject> getPhysoManagingBlock(@Nullable World world, @Nullable BlockPos pos) {
+    public static @NotNull Optional<PhysicsObject> getPhysoManagingBlock(@Nullable World world, @Nullable BlockPos pos) {
         return getShipManagingBlock(world, pos)
             .map(shipData -> getPhysObjWorld(world).getPhysObjectFromUUID(shipData.getUuid()));
     }
 
-    public Optional<PhysicsObject> getPhysoManagingBlockThreadSafe(@Nullable World world, @Nullable BlockPos pos) {
+    public static @NotNull Optional<PhysicsObject> getPhysoManagingBlockThreadSafe(@Nullable World world, @Nullable BlockPos pos) {
         for (PhysicsObject physicsObject : getPhysObjWorld(world).getAllLoadedThreadSafe()) {
             if (physicsObject.getChunkClaim().containsBlock(pos)) {
                 return Optional.of(physicsObject);
@@ -76,7 +76,7 @@ public class ValkyrienUtils {
         return Optional.empty();
     }
 
-    public Optional<ShipData> getShipManagingBlock(@Nullable World world, @Nullable BlockPos pos) {
+    public static @NotNull Optional<ShipData> getShipManagingBlock(@Nullable World world, @Nullable BlockPos pos) {
         if (world == null ||
             pos == null ||
             !ShipChunkAllocator.isChunkInShipyard(pos.getX() >> 4, pos.getZ() >> 4)) {
@@ -91,7 +91,7 @@ public class ValkyrienUtils {
      * If the given AxisAlignedBB is in ship space, then this will return that AxisAlignedBB
      * transformed to global space. Otherwise it just returns the input AxisAlignedBB.
      */
-    public AxisAlignedBB getAABBInGlobal(AxisAlignedBB axisAlignedBB,
+    public static @NotNull AxisAlignedBB getAABBInGlobal(AxisAlignedBB axisAlignedBB,
                                                 @Nullable World world, @Nullable BlockPos pos) {
         Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(world, pos);
         if (physicsObject.isPresent()) {
@@ -106,7 +106,7 @@ public class ValkyrienUtils {
         }
     }
 
-    public EntityShipMountData getMountedShipAndPos(Entity entity) {
+    public static @NotNull EntityShipMountData getMountedShipAndPos(Entity entity) {
         Entity ridingEntity = entity.ridingEntity;
         if (ridingEntity instanceof EntityMountable) {
             EntityMountable mountable = (EntityMountable) ridingEntity;
@@ -118,7 +118,7 @@ public class ValkyrienUtils {
         return new EntityShipMountData();
     }
 
-    public void fixEntityToShip(Entity toFix, Vector3dc posInLocal,
+    public static void fixEntityToShip(Entity toFix, Vector3dc posInLocal,
                                        PhysicsObject mountingShip) {
         World world = mountingShip.getWorld();
         EntityMountable entityMountable = new EntityMountable(world, JOML.toMinecraft(posInLocal),
@@ -127,7 +127,7 @@ public class ValkyrienUtils {
         toFix.startRiding(entityMountable);
     }
 
-    private VSWorldDataCapability getWorldDataCapability(World world) {
+    private static @NotNull VSWorldDataCapability getWorldDataCapability(World world) {
         VSWorldDataCapability worldData = world
                 .getCapability(VSCapabilityRegistry.VS_WORLD_DATA, null);
         if (worldData == null) {
@@ -141,7 +141,7 @@ public class ValkyrienUtils {
         return worldData;
     }
 
-    public boolean notInFakeWorldBlacklist(World world) {
+    public static boolean notInFakeWorldBlacklist(World world) {
         for (String worldname : VSConfig.fakeDimensionBlacklist) {
             if (world.toString().contains(worldname)) {
                 return false;
@@ -157,7 +157,7 @@ public class ValkyrienUtils {
      * @param world The world we are getting the QueryableShipData from
      * @return The QueryableShipData corresponding to the given world
      */
-    public QueryableShipData getQueryableData(World world) {
+    public static @NotNull QueryableShipData getQueryableData(World world) {
         return getWorldDataCapability(world).get().getQueryableShipData();
     }
 
@@ -168,18 +168,18 @@ public class ValkyrienUtils {
      * @param world The world we are getting the QueryableShipData from
      * @return The QueryableShipData corresponding to the given world
      */
-    public ShipChunkAllocator getShipChunkAllocator(World world) {
+    public static @NotNull ShipChunkAllocator getShipChunkAllocator(World world) {
         return getWorldDataCapability(world).get().getShipChunkAllocator();
     }
 
-    public WorldServerShipManager getServerShipManager(World world) {
+    public static @NotNull WorldServerShipManager getServerShipManager(World world) {
         return (WorldServerShipManager) ((IHasShipManager) world).getManager();
     }
 
     /**
      * Creates a new ShipIndexedData based on the inputs provided by the physics infuser block.
      */
-    public ShipData createNewShip(World world, BlockPos physInfuserPos) {
+    public static @NotNull ShipData createNewShip(World world, BlockPos physInfuserPos) {
         String name = NounListNameGenerator.getInstance().generateName();
         UUID shipID = UUID.randomUUID();
         // Create ship chunk claims
@@ -189,15 +189,15 @@ public class ValkyrienUtils {
         ShipTransform initial = new ShipTransform(shipPosInitial, centerOfMassInitial);
         AxisAlignedBB axisAlignedBB = new AxisAlignedBB(shipPosInitial.x(), shipPosInitial.y(),
             shipPosInitial.z(), shipPosInitial.x(), shipPosInitial.y(), shipPosInitial.z());
-        return ShipData.createData(QueryableShipData.get(world).getAllShips(),
+        return ShipData.createData(QueryableShipData.get(world).allShips(),
             name, chunkClaim, shipID, initial, axisAlignedBB);
     }
 
-    public Iterable<PhysicsObject> getPhysosLoadedInWorld(World world) {
+    public static @NotNull Iterable<PhysicsObject> getPhysosLoadedInWorld(World world) {
         return ((IHasShipManager) world).getManager().getAllLoadedPhysObj();
     }
 
-    public void assembleShipAsOrderedByPlayer(World world, @Nullable EntityPlayerMP creator,
+    public static void assembleShipAsOrderedByPlayer(World world, @Nullable EntityPlayerMP creator,
                                               BlockPos physicsInfuserPos, BlockFinder.BlockFinderType blockFinderType) {
         if (world.isRemote) {
             throw new IllegalStateException("This method cannot be invoked on client side!");
@@ -214,7 +214,7 @@ public class ValkyrienUtils {
         ((WorldServerShipManager) ValkyrienUtils.getPhysObjWorld(world)).queueShipSpawn(shipData, physicsInfuserPos, blockFinderType);
     }
 
-    public IPhysObjectWorld getPhysObjWorld(World world) {
+    public static @NotNull IPhysObjectWorld getPhysObjWorld(World world) {
         return ((IHasShipManager) world).getManager();
     }
 
@@ -223,7 +223,7 @@ public class ValkyrienUtils {
      * @param transform The transform matrix to be applied.
      * @param entity The entity that will be transformed.
      */
-    public void transformEntity(final Matrix4dc transform, final Entity entity, final boolean transformEntityBoundingBox) {
+    public static void transformEntity(final Matrix4dc transform, final Entity entity, final boolean transformEntityBoundingBox) {
         Vec3d entityLookMc = entity.getLook(1.0F);
 
         Vector3d entityPos = new Vector3d(entity.posX, entity.posY, entity.posZ);
@@ -295,18 +295,17 @@ public class ValkyrienUtils {
      * Used for bad code that tries reading tile entities from a non game thread. But hey it works (mostly).
      */
     @Nullable
-    public TileEntity getTileEntitySafe(World world, BlockPos pos) {
+    public static TileEntity getTileEntitySafe(World world, BlockPos pos) {
         return world.getChunk(pos).getTileEntity(pos, Chunk.EnumCreateEntityType.CHECK);
     }
 
     @Nullable
-    public ShipData getLastShipTouchedByEntity(final Entity entity) {
+    public static ShipData getLastShipTouchedByEntity(final Entity entity) {
         final IDraggable asDraggable = IDraggable.class.cast(entity);
         return asDraggable.getEntityShipMovementData().getLastTouchedShip();
     }
 
-    @NonNull
-    public EntityShipMovementData getEntityShipMovementDataFor(final Entity entity) {
+    public static @NotNull EntityShipMovementData getEntityShipMovementDataFor(final Entity entity) {
         final IDraggable asDraggable = IDraggable.class.cast(entity);
         return asDraggable.getEntityShipMovementData();
     }

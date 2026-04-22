@@ -1,8 +1,6 @@
 package org.valkyrienskies.mod.common.util.multithreaded;
 
 import com.google.common.collect.ImmutableList;
-import lombok.Getter;
-import lombok.extern.log4j.Log4j2;
 import net.minecraft.client.Minecraft;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.math.AxisAlignedBB;
@@ -25,9 +23,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 /**
  * Handles the physics for a given world. This is run on a separate thread, not on the game tick.
  */
-@Log4j2
 public class VSWorldPhysicsLoop implements Runnable {
-
     // The number of physics ticks to be considered in the average tick time.
     private final static long TICK_TIME_QUEUE = 100;
     // Used to give each VS thread a unique name
@@ -43,7 +39,6 @@ public class VSWorldPhysicsLoop implements Runnable {
     private ImmutableList<PhysicsObject> immutableShipsList;
     private final ConcurrentLinkedQueue<IPhysTimeTask> recurringTasks;
 
-    @Getter
     private final String name;
 
     public VSWorldPhysicsLoop(World host) {
@@ -55,7 +50,7 @@ public class VSWorldPhysicsLoop implements Runnable {
         this.taskQueue = new ConcurrentLinkedQueue<>();
         this.immutableShipsList = ImmutableList.of();
         this.recurringTasks = new ConcurrentLinkedQueue<>();
-        log.trace(name + " created.");
+        ValkyrienSkiesMod.LOGGER.trace(name + " created.");
     }
 
     @SideOnly(Side.CLIENT)
@@ -129,7 +124,7 @@ public class VSWorldPhysicsLoop implements Runnable {
         }
         // If we get to this point of run(), then we are about to return and this thread
         // will terminate soon.
-        log.trace(name + " killed");
+        ValkyrienSkiesMod.LOGGER.trace(name + " killed");
     }
 
     private long lastPacketSendTime = 0;
@@ -245,7 +240,7 @@ public class VSWorldPhysicsLoop implements Runnable {
      * the thread will die after the current running physics tick is finished.
      */
     public void kill() {
-        log.trace(name + " marked for death.");
+        ValkyrienSkiesMod.LOGGER.trace(name + " marked for death.");
         threadRunning = false;
     }
 
@@ -263,5 +258,9 @@ public class VSWorldPhysicsLoop implements Runnable {
         // If we don't have enough data to get an average, just assume its the ideal
         // tick time.
         return getNsPerTick();
+    }
+
+    public String getName() {
+        return name;
     }
 }

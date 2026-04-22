@@ -1,6 +1,5 @@
 package org.valkyrienskies.mod.common.ships.chunk_claims;
 
-import lombok.Getter;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.ChunkCache;
@@ -9,9 +8,8 @@ import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 
 public class SurroundingChunkCacheController {
 
-    @Getter
     private ChunkCache cachedChunks;
-    private PhysicsObject physicsObject;
+    private final PhysicsObject physicsObject;
 
     public SurroundingChunkCacheController(PhysicsObject physicsObject) {
         this.physicsObject = physicsObject;
@@ -52,5 +50,9 @@ public class SurroundingChunkCacheController {
         } else {
             cachedChunks = new ChunkCache(physicsObject.getWorld(), min, max, 0);
         }
+    }
+
+    public ChunkCache getCachedChunks() {
+        return cachedChunks;
     }
 }

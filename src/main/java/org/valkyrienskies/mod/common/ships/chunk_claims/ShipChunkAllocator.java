@@ -1,8 +1,5 @@
 package org.valkyrienskies.mod.common.ships.chunk_claims;
 
-import lombok.Getter;
-import lombok.NonNull;
-import lombok.extern.log4j.Log4j2;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 
@@ -19,8 +16,6 @@ import net.minecraft.util.math.ChunkPos;
  * The coordinate of the center of chunks allocated * for ship # N would be ({@link #CHUNK_X_START},
  * {@link #CHUNK_Z_START} + N*{@link #MAX_CHUNK_LENGTH}).
  */
-@Log4j2
-@NonNull
 @SuppressWarnings("WeakerAccess")
 public class ShipChunkAllocator {
 
@@ -32,9 +27,7 @@ public class ShipChunkAllocator {
     public static final int CHUNK_X_START = 320000;
     public static final int CHUNK_Z_START = 0;
 
-    @Getter
     private int lastChunkX = CHUNK_X_START;
-    @Getter
     private int lastChunkZ = CHUNK_Z_START;
 
     /**
@@ -71,6 +64,14 @@ public class ShipChunkAllocator {
      */
     public VSChunkClaim allocateNextChunkClaim() {
         return new VSChunkClaim(new ChunkPos(lastChunkX, lastChunkZ += MAX_CHUNK_LENGTH));
+    }
+
+    public int getLastChunkX() {
+        return lastChunkX;
+    }
+
+    public int getLastChunkZ() {
+        return lastChunkZ;
     }
 
 }

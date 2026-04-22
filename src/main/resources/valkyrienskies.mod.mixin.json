@@ -1,0 +1,11 @@
+{
+  "required": true,
+  "package": "org.valkyrienskies.mixin.mod",
+  "plugin": "org.valkyrienskies.mod.common.ModMixinConfigPlugin",
+  "compatibilityLevel": "JAVA_8",
+  "target": "@env(MOD)",
+  "mixins": [
+    "spongeforge.MixinChunkSponge",
+    "spongeforge.MixinPacketUtil"
+  ]
+}

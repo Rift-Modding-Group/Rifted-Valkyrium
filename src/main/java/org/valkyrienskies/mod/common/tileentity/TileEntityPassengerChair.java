@@ -2,7 +2,6 @@ package org.valkyrienskies.mod.common.tileentity;
 
 import java.util.Optional;
 import java.util.UUID;
-import mcp.MethodsReturnNonnullByDefault;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
@@ -11,6 +10,7 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.WorldServer;
+import org.jetbrains.annotations.NotNull;
 import org.valkyrienskies.mod.common.ships.ship_transform.CoordinateSpaceType;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.entity.EntityMountableChair;
@@ -18,7 +18,6 @@ import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import valkyrienwarfare.api.TransformType;
 
-@MethodsReturnNonnullByDefault
 // TODO: FIX THIS CLASS
 public class TileEntityPassengerChair extends TileEntity /*implements IRelocationAwareTile*/ {
 
@@ -74,7 +73,7 @@ public class TileEntityPassengerChair extends TileEntity /*implements IRelocatio
     }
 
     @Override
-    public NBTTagCompound writeToNBT(NBTTagCompound compound) {
+    public @NotNull NBTTagCompound writeToNBT(NBTTagCompound compound) {
         compound.setBoolean("has_chair_entity", chairEntityUUID != null);
         if (chairEntityUUID != null) {
             compound.setUniqueId("chair_entity_uuid", chairEntityUUID);
@@ -102,7 +101,7 @@ public class TileEntityPassengerChair extends TileEntity /*implements IRelocatio
         }
     }
 
-    public TileEntity createRelocatedTile(BlockPos newPos, ShipTransform transform,
+    public @NotNull TileEntity createRelocatedTile(BlockPos newPos, ShipTransform transform,
         CoordinateSpaceType coordinateSpaceType) {
         TileEntityPassengerChair relocatedTile = new TileEntityPassengerChair();
         relocatedTile.setWorld(getWorld());

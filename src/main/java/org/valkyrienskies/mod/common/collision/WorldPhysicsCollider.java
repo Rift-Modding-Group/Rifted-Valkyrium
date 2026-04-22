@@ -85,7 +85,7 @@ public class WorldPhysicsCollider {
         for (int i = 0; i < cachedHitsToRemove.size(); i++) {
             cachedPotentialHits.remove(cachedHitsToRemove.get(i));
         }
-        cachedHitsToRemove.resetQuick();
+        cachedHitsToRemove.clear();
         if (ticksSinceCacheUpdate > CACHE_UPDATE_PERIOD) {
             updatePotentialCollisionCache();
             updateCollisionTasksCache = true;

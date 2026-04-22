@@ -17,7 +17,6 @@ import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.set.TIntSet;
 import gnu.trove.set.hash.TIntHashSet;
-import lombok.Getter;
 import net.minecraft.util.math.BlockPos;
 import org.apache.commons.lang3.NotImplementedException;
 import org.valkyrienskies.mod.common.util.datastructures.SmallBlockPosSet.SmallBlockPosSetDeserializer;
@@ -46,7 +45,6 @@ public class SmallBlockPosSet implements IBlockPosSet {
     private final TIntList compressedBlockPosList;
     @Nonnull
     private final TIntIntMap listValueToIndex;
-    @Getter
     private final int centerX, centerZ;
 
     public SmallBlockPosSet(int centerX, int centerZ) {
@@ -261,5 +259,13 @@ public class SmallBlockPosSet implements IBlockPosSet {
 
             return set;
         }
+    }
+
+    public int getCenterX() {
+        return centerX;
+    }
+
+    public int getCenterZ() {
+        return centerZ;
     }
 }

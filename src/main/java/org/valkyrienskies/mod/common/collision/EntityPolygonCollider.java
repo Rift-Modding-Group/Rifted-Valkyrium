@@ -1,6 +1,5 @@
 package org.valkyrienskies.mod.common.collision;
 
-import lombok.Getter;
 import org.joml.Vector3dc;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityCollisionObject;
 
@@ -13,15 +12,12 @@ import org.valkyrienskies.mod.common.ships.entity_interaction.EntityCollisionObj
  */
 public class EntityPolygonCollider {
 
-    @Getter
     private final Vector3dc[] collisionAxes;
-    @Getter
     private final EntityCollisionObject[] collisions;
     private final Polygon entity;
     private final Polygon block;
     private final Vector3dc entityVelocity;
     private boolean separated = false;
-    @Getter
     private int minDistanceIndex;
     private boolean originallySeparated;
 
@@ -75,5 +71,17 @@ public class EntityPolygonCollider {
 
     public boolean arePolygonsSeparated() {
         return separated;
+    }
+
+    public Vector3dc[] getCollisionAxes() {
+        return collisionAxes;
+    }
+
+    public EntityCollisionObject[] getCollisions() {
+        return collisions;
+    }
+
+    public int getMinDistanceIndex() {
+        return minDistanceIndex;
     }
 }

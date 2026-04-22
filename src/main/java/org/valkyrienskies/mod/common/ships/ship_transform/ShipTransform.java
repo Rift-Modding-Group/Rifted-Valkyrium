@@ -1,9 +1,6 @@
 package org.valkyrienskies.mod.common.ships.ship_transform;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import lombok.*;
-import lombok.experimental.NonFinal;
-import lombok.extern.log4j.Log4j2;
 import net.minecraft.entity.Entity;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.math.BlockPos;
@@ -15,6 +12,7 @@ import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import valkyrienwarfare.api.TransformType;
 
 import javax.annotation.concurrent.Immutable;
+import java.util.Objects;
 
 /**
  * Immutable wrapper around the rotation matrices used by ships. The immutability is extremely
@@ -27,13 +25,6 @@ import javax.annotation.concurrent.Immutable;
  * @author thebest108
  */
 @Immutable
-@With
-@Value
-@Log4j2
-@Builder(toBuilder = true)
-@NonFinal
-@AllArgsConstructor
-@NoArgsConstructor(force = true, access = AccessLevel.PRIVATE)
 public class ShipTransform {
 
     /**
@@ -49,6 +40,25 @@ public class ShipTransform {
 
     private final double posX, posY, posZ;
     private final Vector3dc centerCoord;
+
+    private ShipTransform() {
+        this.subspaceToGlobal = null;
+        this.globalToSubspace = null;
+        this.posX = 0;
+        this.posY = 0;
+        this.posZ = 0;
+        this.centerCoord = null;
+    }
+
+    public ShipTransform(Matrix4dc subspaceToGlobal, Matrix4dc globalToSubspace, double posX,
+        double posY, double posZ, Vector3dc centerCoord) {
+        this.subspaceToGlobal = Objects.requireNonNull(subspaceToGlobal, "subspaceToGlobal");
+        this.globalToSubspace = Objects.requireNonNull(globalToSubspace, "globalToSubspace");
+        this.posX = posX;
+        this.posY = posY;
+        this.posZ = posZ;
+        this.centerCoord = Objects.requireNonNull(centerCoord, "centerCoord");
+    }
 
     public ShipTransform(Vector3dc position, Vector3dc centerCoord) {
         this(position.x(), position.y(), position.z(), new Quaterniond(), centerCoord);
@@ -171,5 +181,29 @@ public class ShipTransform {
 
     public void transform(final Entity player, final TransformType globalToSubspace, final boolean transformEntityBoundingBox) {
         ValkyrienUtils.transformEntity(getTransformMatrix(globalToSubspace), player, transformEntityBoundingBox);
+    }
+
+    public Matrix4dc getSubspaceToGlobal() {
+        return subspaceToGlobal;
+    }
+
+    public Matrix4dc getGlobalToSubspace() {
+        return globalToSubspace;
+    }
+
+    public double getPosX() {
+        return posX;
+    }
+
+    public double getPosY() {
+        return posY;
+    }
+
+    public double getPosZ() {
+        return posZ;
+    }
+
+    public Vector3dc getCenterCoord() {
+        return centerCoord;
     }
 }

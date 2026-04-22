@@ -2,7 +2,6 @@ package org.valkyrienskies.mod.common.ships.ship_world;
 
 import com.google.common.collect.ImmutableList;
 import gnu.trove.iterator.TIntIterator;
-import lombok.Getter;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.init.Blocks;
 import net.minecraft.nbt.NBTTagCompound;
@@ -17,8 +16,7 @@ import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 import net.minecraft.world.gen.ChunkProviderServer;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.physics.BlockPhysicsDetails;
 import org.valkyrienskies.mod.common.ships.QueryableShipData;
@@ -36,9 +34,7 @@ import java.util.*;
 
 public class WorldServerShipManager implements IPhysObjectWorld {
 
-    @Getter
     private final WorldServer world;
-    @Getter
     private final VSWorldPhysicsLoop physicsLoop;
     private final Thread physicsThread;
     private final WorldShipLoadingController loadingController;
@@ -48,7 +44,6 @@ public class WorldServerShipManager implements IPhysObjectWorld {
     private final LinkedHashSet<UUID> loadQueue, unloadQueue, backgroundLoadQueue;
     private final Set<UUID> loadingInBackground;
     private ImmutableList<PhysicsObject> threadSafeLoadedShips;
-    private static final Logger logger = LogManager.getLogger();
 
     public WorldServerShipManager(World world) {
         this.world = (WorldServer) world;
@@ -69,7 +64,7 @@ public class WorldServerShipManager implements IPhysObjectWorld {
     private void enforceGameThread() {
         if (!world.isCallingFromMinecraftThread()) {
             //throw new CalledFromWrongThreadException("Wrong thread calling code: " + Thread.currentThread());
-            logger.warn("Wrong thread calling code: " + Thread.currentThread());
+            ValkyrienSkiesMod.LOGGER.warn("Wrong thread calling code: " + Thread.currentThread());
         }
     }
 
@@ -502,5 +497,14 @@ public class WorldServerShipManager implements IPhysObjectWorld {
             backgroundChunks.addAll(shipDataOptional.get().getChunkClaim().getClaimedChunks());
         }
         return backgroundChunks;
+    }
+
+    @Override
+    public WorldServer getWorld() {
+        return world;
+    }
+
+    public VSWorldPhysicsLoop getPhysicsLoop() {
+        return physicsLoop;
     }
 }

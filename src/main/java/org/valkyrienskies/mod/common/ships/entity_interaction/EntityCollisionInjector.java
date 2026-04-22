@@ -1,6 +1,4 @@
 package org.valkyrienskies.mod.common.ships.entity_interaction;
-
-import lombok.Value;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockHorizontal;
 import net.minecraft.block.BlockSlime;
@@ -583,7 +581,6 @@ public class EntityCollisionInjector {
         return Math.signum(orig) != Math.signum(modded);
     }
 
-    @Value
     public static class IntermediateMovementVariableStorage {
 
         @Nonnull
@@ -597,6 +594,19 @@ public class EntityCollisionInjector {
         public float oldFallDistance;
         @Nonnull
         public ShipData shipTouched;
+
+        public IntermediateMovementVariableStorage(@Nonnull Vector3dc dxyz,
+            @Nonnull Vector3dc origDxyz, @Nonnull Vector3dc origPosXyz,
+            boolean alreadyOnGround, double motionYBefore, float oldFallDistance,
+            @Nonnull ShipData shipTouched) {
+            this.dxyz = dxyz;
+            this.origDxyz = origDxyz;
+            this.origPosXyz = origPosXyz;
+            this.alreadyOnGround = alreadyOnGround;
+            this.motionYBefore = motionYBefore;
+            this.oldFallDistance = oldFallDistance;
+            this.shipTouched = shipTouched;
+        }
 
     }
 

@@ -1,8 +1,6 @@
 package org.valkyrienskies.mod.common;
 
 import com.google.common.collect.ImmutableList;
-import lombok.Getter;
-import lombok.extern.log4j.Log4j2;
 import net.minecraft.block.Block;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.player.EntityPlayer;
@@ -33,7 +31,8 @@ import net.minecraftforge.fml.common.network.NetworkRegistry;
 import net.minecraftforge.fml.common.network.simpleimpl.SimpleNetworkWrapper;
 import net.minecraftforge.fml.common.registry.GameRegistry;
 import net.minecraftforge.fml.relauncher.Side;
-import org.valkyrienskies.mixin.MixinLoaderForge;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.valkyrienskies.mod.client.gui.TabValkyrienSkies;
 import org.valkyrienskies.mod.common.block.BlockBoatChair;
 import org.valkyrienskies.mod.common.block.BlockCaptainsChair;
@@ -62,10 +61,10 @@ import org.valkyrienskies.mod.common.tileentity.TileEntityPassengerChair;
 import org.valkyrienskies.mod.common.tileentity.TileEntityWaterPump;
 import org.valkyrienskies.mod.fixes.darkness_lib_fix.VSDarknessLibAPILightProvider;
 import org.valkyrienskies.mod.proxy.CommonProxy;
+import sun.misc.Unsafe;
 import valkyrienwarfare.api.IPhysicsEntityManager;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ForkJoinPool;
@@ -74,11 +73,10 @@ import java.util.function.Function;
 @Mod(
     modid = ValkyrienSkiesMod.MOD_ID,
     useMetadata = true,
-    updateJSON = "https://raw.githubusercontent.com/ValkyrienSkies/Valkyrien-Skies/master/update.json",
     certificateFingerprint = ValkyrienSkiesMod.MOD_FINGERPRINT
 )
-@Log4j2
 public class ValkyrienSkiesMod {
+    public static final Logger LOGGER = LogManager.getLogger();
     // Used for registering stuff
     public static final List<Block> BLOCKS = new ArrayList<>();
     public static final List<Item> ITEMS = new ArrayList<>();
@@ -101,7 +99,6 @@ public class ValkyrienSkiesMod {
     /**
      * This service is directly responsible for running collision tasks.
      */
-    @Getter
     private static ForkJoinPool physicsThreadPool = null;
 
     public Block captainsChair;
@@ -119,53 +116,46 @@ public class ValkyrienSkiesMod {
     /**
      * Whether or not any known dependent mods are loaded.
      */
-    @Getter
     private static boolean isAnyModuleLoaded = false;
-
-    @Mod.EventHandler
-    public void onFingerprintViolation(FMLFingerprintViolationEvent event) {
-        if (MixinLoaderForge.isObfuscatedEnvironment) { //only print signature warning in obf
-            FMLLog.bigWarning(
-                "Valkyrien Skies JAR fingerprint corrupted, which means this copy of the mod "
-                    + "may have come from unofficial sources. Please check out our official website: "
-                    + "https://valkyrienskies.org");
-        }
-    }
 
     @EventHandler
     public void preInit(FMLPreInitializationEvent event) {
-        log.debug("Initializing configuration.");
+        LOGGER.debug("Initializing configuration.");
         runConfiguration();
 
-        log.debug("Instantiating the physics thread executor.");
+        LOGGER.debug("Instantiating the physics thread executor.");
         ValkyrienSkiesMod.physicsThreadPool = new ForkJoinPool(VSConfig.threadCount);
 
-        log.debug("Initializing networks.");
+        LOGGER.debug("Initializing networks.");
         registerNetworks(event);
 
 		VSCapabilityRegistry.registerCapabilities();
         proxy.preInit(event);
 
-        log.debug("Initializing the VS API.");
+        LOGGER.debug("Initializing the VS API.");
         try {
-            Field instanceField = IPhysicsEntityManager.class.getDeclaredField("INSTANCE");
-            // Make the field accessible
-            instanceField.setAccessible(true);
-            // Remove the final modifier
-            Field modifiersField = Field.class.getDeclaredField("modifiers");
-            modifiersField.setAccessible(true);
-            modifiersField.setInt(instanceField, instanceField.getModifiers() & ~Modifier.FINAL);
-            // Finally set the new value of the field.
-            instanceField.set(null, new VS_APIPhysicsEntityManager());
+            setPhysicsEntityManagerInstance(new VS_APIPhysicsEntityManager());
         } catch (Exception e) {
             e.printStackTrace();
-            log.fatal("FAILED TO INITIALIZE VS API!");
+            LOGGER.fatal("FAILED TO INITIALIZE VS API!");
         }
 
         registerItems();
 		registerBlocks();
 
 		registerDarknessLib();
+    }
+
+    private static void setPhysicsEntityManagerInstance(IPhysicsEntityManager manager)
+        throws ReflectiveOperationException {
+        Field unsafeField = Unsafe.class.getDeclaredField("theUnsafe");
+        unsafeField.setAccessible(true);
+        Unsafe unsafe = (Unsafe) unsafeField.get(null);
+
+        Field instanceField = IPhysicsEntityManager.class.getDeclaredField("INSTANCE");
+        Object staticFieldBase = unsafe.staticFieldBase(instanceField);
+        long staticFieldOffset = unsafe.staticFieldOffset(instanceField);
+        unsafe.putObjectVolatile(staticFieldBase, staticFieldOffset, manager);
     }
 
     private void registerDarknessLib() {
@@ -190,7 +180,7 @@ public class ValkyrienSkiesMod {
 
     @EventHandler
     public void init(FMLInitializationEvent event) {
-        log.info("Valkyrien Skies Initialization: We are running on {} threads; 4 or more "
+        LOGGER.info("Valkyrien Skies Initialization: We are running on {} threads; 4 or more "
             + "is recommended!", Runtime.getRuntime().availableProcessors());
         proxy.init(event);
 
@@ -298,7 +288,18 @@ public class ValkyrienSkiesMod {
         this.shipTracker = new ItemShipTracker("vs_ship_tracker", true);
     }
 
-    @Getter
     private static boolean isSpongePresent = false;
+
+    public static ForkJoinPool getPhysicsThreadPool() {
+        return physicsThreadPool;
+    }
+
+    public static boolean isAnyModuleLoaded() {
+        return isAnyModuleLoaded;
+    }
+
+    public static boolean isSpongePresent() {
+        return isSpongePresent;
+    }
 
 }

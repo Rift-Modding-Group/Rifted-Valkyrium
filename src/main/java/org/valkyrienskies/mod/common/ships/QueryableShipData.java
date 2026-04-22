@@ -5,14 +5,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.googlecode.cqengine.query.Query;
 import com.googlecode.cqengine.resultset.ResultSet;
-import lombok.extern.log4j.Log4j2;
-import mcp.MethodsReturnNonnullByDefault;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.World;
+import org.jetbrains.annotations.NotNull;
 import org.valkyrienskies.mod.common.config.VSConfig;
 
-import org.valkyrienskies.mod.common.ships.interpolation.ITransformInterpolator;
 import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
@@ -29,15 +27,11 @@ import static com.googlecode.cqengine.query.QueryFactory.equal;
 
 /**
  * A class that keeps track of ship data
+ *
+ * @param allShips Where every ship data instance is stored, regardless if the corresponding PhysicsObject is loaded in the World or not.
  */
-@MethodsReturnNonnullByDefault
-@Log4j2
 @SuppressWarnings("WeakerAccess")
-public class QueryableShipData implements Iterable<ShipData> {
-
-    // Where every ship data instance is stored, regardless if the corresponding PhysicsObject is
-    // loaded in the World or not.
-    private ConcurrentUpdatableIndexedCollection<ShipData> allShips;
+public record QueryableShipData(ConcurrentUpdatableIndexedCollection<ShipData> allShips) implements Iterable<ShipData> {
 
     public QueryableShipData() {
         this(new ConcurrentUpdatableIndexedCollection<>());
@@ -46,13 +40,13 @@ public class QueryableShipData implements Iterable<ShipData> {
     @JsonCreator // This tells Jackson to pass in allShips when serializing
     // The default thing that is passed in will be 'null' if none exists
     public QueryableShipData(
-        @JsonProperty("allShips") ConcurrentUpdatableIndexedCollection<ShipData> ships) {
+            @JsonProperty("allShips") ConcurrentUpdatableIndexedCollection<ShipData> allShips) {
 
-        if (ships == null) {
-            ships = new ConcurrentUpdatableIndexedCollection<>();
+        if (allShips == null) {
+            allShips = new ConcurrentUpdatableIndexedCollection<>();
         }
 
-        this.allShips = ships;
+        this.allShips = allShips;
 
         // For every ship data, set the 'owner' field to us -- kinda hacky but what can I do
         // I don't want to serialize a billion references to this
@@ -77,40 +71,41 @@ public class QueryableShipData implements Iterable<ShipData> {
     /**
      * @see ValkyrienUtils#getQueryableData(World)
      */
-    public static QueryableShipData get(World world) {
+    public static @NotNull QueryableShipData get(World world) {
         return ValkyrienUtils.getQueryableData(world);
     }
 
     /**
      * @deprecated Do not use -- thinking of better API choices
      */
+    @Override
     @Deprecated
-    public ConcurrentUpdatableIndexedCollection<ShipData> getAllShips() {
+    public @NotNull ConcurrentUpdatableIndexedCollection<ShipData> allShips() {
         return allShips;
     }
 
     /**
      * Retrieves a list of all ships.
      */
-    public List<ShipData> getShips() {
+    public @NotNull List<ShipData> getShips() {
         return ImmutableList.copyOf(allShips);
     }
 
-    public Optional<ShipData> getShipFromChunk(int chunkX, int chunkZ) {
+    public @NotNull Optional<ShipData> getShipFromChunk(int chunkX, int chunkZ) {
         return getShipFromChunk(ChunkPos.asLong(chunkX, chunkZ));
     }
 
-    public Optional<ShipData> getShipFromBlock(BlockPos pos) {
+    public @NotNull Optional<ShipData> getShipFromBlock(BlockPos pos) {
         return getShipFromChunk(pos.getX() >> 4, pos.getZ() >> 4);
     }
 
-    public Optional<ShipData> getShipFromChunk(long chunkLong) {
+    public @NotNull Optional<ShipData> getShipFromChunk(long chunkLong) {
         Query<ShipData> query = equal(ShipData.CHUNKS, chunkLong);
         try (ResultSet<ShipData> resultSet = allShips.retrieve(query)) {
             if (resultSet.size() > 1) {
                 throw new IllegalStateException(
-                    "How the heck did we get 2 or more ships both managing the chunk at "
-                        + chunkLong);
+                        "How the heck did we get 2 or more ships both managing the chunk at "
+                                + chunkLong);
             }
             if (resultSet.isEmpty()) {
                 return Optional.empty();
@@ -120,7 +115,7 @@ public class QueryableShipData implements Iterable<ShipData> {
         }
     }
 
-    public Optional<ShipData> getShip(UUID uuid) {
+    public @NotNull Optional<ShipData> getShip(UUID uuid) {
         Query<ShipData> query = equal(ShipData.UUID, uuid);
         try (ResultSet<ShipData> resultSet = allShips.retrieve(query)) {
             if (resultSet.isEmpty()) {
@@ -131,7 +126,7 @@ public class QueryableShipData implements Iterable<ShipData> {
         }
     }
 
-    public Optional<ShipData> getShipFromName(String name) {
+    public @NotNull Optional<ShipData> getShipFromName(String name) {
         Query<ShipData> query = equal(ShipData.NAME, name);
         try (ResultSet<ShipData> shipDataResultSet = allShips.retrieve(query)) {
             if (shipDataResultSet.isEmpty()) {
@@ -162,7 +157,7 @@ public class QueryableShipData implements Iterable<ShipData> {
      *
      * @return reference to the "real" ShipData object used by {@link IPhysObjectWorld} and {@link PhysicsObject}.
      */
-    public ShipData addOrUpdateShipPreservingPhysObj(ShipData ship, World world) {
+    public @NotNull ShipData addOrUpdateShipPreservingPhysObj(ShipData ship, World world) {
         Optional<ShipData> old = getShip(ship.getUuid());
         if (old.isPresent()) {
             PhysicsObject physicsObject = ValkyrienUtils.getPhysObjWorld(world).getPhysObjectFromUUID(ship.getUuid());
@@ -190,7 +185,7 @@ public class QueryableShipData implements Iterable<ShipData> {
     }
 
     public void registerUpdateListener(
-        BiConsumer<Iterable<ShipData>, Iterable<ShipData>> updateListener) {
+            BiConsumer<Iterable<ShipData>, Iterable<ShipData>> updateListener) {
         allShips.registerUpdateListener(updateListener);
     }
 
@@ -215,11 +210,11 @@ public class QueryableShipData implements Iterable<ShipData> {
     }
 
     @Override
-    public Iterator<ShipData> iterator() {
+    public @NotNull Iterator<ShipData> iterator() {
         return allShips.iterator();
     }
 
-    public Stream<ShipData> stream() {
+    public @NotNull Stream<ShipData> stream() {
         return allShips.stream();
     }
 }

@@ -1,14 +1,15 @@
 package org.valkyrienskies.mod.common.command.config;
 
-import lombok.Getter;
-
 abstract class ConfigCommandNode {
 
-    @Getter
-    private String name;
+    private final String name;
 
     ConfigCommandNode(String name) {
         this.name = name;
+    }
+
+    String getName() {
+        return name;
     }
 
 }

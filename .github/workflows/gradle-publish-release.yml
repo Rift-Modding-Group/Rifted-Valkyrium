@@ -31,7 +31,7 @@ jobs:
         run: ./gradlew setupDecompWorkspace build -PCustomReleaseVersion=$RELEASE_VERSION
 
       # The USERNAME and TOKEN need to correspond to the credentials environment variables used in
-      # the publishing section of your build.gradle
+      # the publishing section of your build.gradle.old
       - name: Publish to GitHub Packages
         run: ./gradlew publish -PCustomReleaseVersion=$RELEASE_VERSION
         env:

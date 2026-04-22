@@ -1,6 +1,5 @@
 package org.valkyrienskies.mod.common.collision;
 
-import lombok.Getter;
 import net.minecraft.util.math.AxisAlignedBB;
 import org.joml.Matrix4dc;
 import org.joml.Vector3d;
@@ -21,7 +20,6 @@ import javax.annotation.Nullable;
  */
 public class Polygon {
 
-    @Getter
     private final Vector3dc[] vertices;
     private AxisAlignedBB enclosedBBCache;
 
@@ -115,6 +113,10 @@ public class Polygon {
             enclosedBBCache = new AxisAlignedBB(mnX, mnY, mnZ, mxX, mxY, mxZ);
         }
         return enclosedBBCache;
+    }
+
+    public Vector3dc[] getVertices() {
+        return vertices;
     }
 
 }

@@ -2,8 +2,6 @@ package org.valkyrienskies.mod.common;
 
 import javax.annotation.Nonnull;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.valkyrienskies.mod.client.BaseModel;
 import org.valkyrienskies.mod.common.entity.EntityMountable;
 import org.valkyrienskies.mod.common.entity.EntityMountableChair;
@@ -22,18 +20,16 @@ import net.minecraftforge.fml.common.registry.EntityEntryBuilder;
 @Mod.EventBusSubscriber(modid = ValkyrienSkiesMod.MOD_ID)
 public class RegisterEvents {
 
-    private static final Logger logger = LogManager.getLogger(RegisterEvents.class);
-
     @SubscribeEvent
     public static void registerBlocks(@Nonnull final RegistryEvent.Register<Block> event) {
-        logger.debug("Registering blocks");
+        ValkyrienSkiesMod.LOGGER.debug("Registering blocks");
         Block[] blockArray = ValkyrienSkiesMod.BLOCKS.toArray(new Block[0]);
         event.getRegistry().registerAll(blockArray);
     }
 
     @SubscribeEvent
     public static void registerItems(@Nonnull final RegistryEvent.Register<Item> event) {
-        logger.debug("Registering items");
+        ValkyrienSkiesMod.LOGGER.debug("Registering items");
         event.getRegistry().registerAll(ValkyrienSkiesMod.ITEMS.toArray(new Item[0]));
     }
 

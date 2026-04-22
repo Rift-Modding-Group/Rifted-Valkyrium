@@ -1,7 +1,5 @@
 package org.valkyrienskies.mod.common.physics;
 
-import lombok.Getter;
-import lombok.Setter;
 import net.minecraft.block.Block;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.util.math.BlockPos;
@@ -37,7 +35,6 @@ public class PhysicsCalculations {
 
     private final PhysicsObject parent;
     private final WorldPhysicsCollider worldCollision;
-    @Getter
     private final WorldWaterCollider worldWaterCollider;
 
     public boolean actAsArchimedes = false;
@@ -54,13 +51,10 @@ public class PhysicsCalculations {
     private Quaterniondc physRotation;
     private double physX, physY, physZ;
 
-    @Getter
     private final Vector3d linearVelocity;
-    @Getter
     private final Vector3d angularVelocity;
 
     // If (forceToUseGameTransform == true) then reset the physics transform to the ShipData transform.
-    @Setter
     private boolean forceToUseGameTransform;
 
     public PhysicsCalculations(PhysicsObject parent) {
@@ -540,5 +534,21 @@ public class PhysicsCalculations {
 
     public Vector3dc getPhysCenterOfMass() {
         return physCenterOfMass;
+    }
+
+    public WorldWaterCollider getWorldWaterCollider() {
+        return worldWaterCollider;
+    }
+
+    public Vector3d getLinearVelocity() {
+        return linearVelocity;
+    }
+
+    public Vector3d getAngularVelocity() {
+        return angularVelocity;
+    }
+
+    public void setForceToUseGameTransform(boolean forceToUseGameTransform) {
+        this.forceToUseGameTransform = forceToUseGameTransform;
     }
 }

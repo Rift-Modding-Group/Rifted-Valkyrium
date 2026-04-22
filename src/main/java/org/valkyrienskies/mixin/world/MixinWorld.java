@@ -1,6 +1,5 @@
 package org.valkyrienskies.mixin.world;
 
-import com.azul.crs.jar.ZipTools;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import net.minecraft.block.state.IBlockState;

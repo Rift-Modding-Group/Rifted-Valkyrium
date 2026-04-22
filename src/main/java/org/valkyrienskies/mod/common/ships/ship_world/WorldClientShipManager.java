@@ -5,8 +5,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.ships.QueryableShipData;
 import org.valkyrienskies.mod.common.ships.ShipData;
@@ -23,7 +22,6 @@ public class WorldClientShipManager implements IPhysObjectWorld {
     // Use LinkedHashSet as a queue because it preserves order and doesn't allow duplicates
     private final LinkedHashSet<UUID> loadQueue, unloadQueue;
     private ImmutableList<PhysicsObject> threadSafeLoadedShips;
-    private static final Logger logger = LogManager.getLogger();
 
     public WorldClientShipManager(World world) {
         this.world = world;
@@ -36,7 +34,7 @@ public class WorldClientShipManager implements IPhysObjectWorld {
     private void enforceGameThread() throws CalledFromWrongThreadException {
         if (!Minecraft.getMinecraft().isCallingFromMinecraftThread()) {
             //throw new CalledFromWrongThreadException("Wrong thread calling code: " + Thread.currentThread());
-            logger.warn("Wrong thread calling code: " + Thread.currentThread());
+            ValkyrienSkiesMod.LOGGER.warn("Wrong thread calling code: " + Thread.currentThread());
         }
     }
 
@@ -57,12 +55,12 @@ public class WorldClientShipManager implements IPhysObjectWorld {
         // Load ships queued for loading
         for (final UUID toLoadID : loadQueue) {
             if (loadedShips.containsKey(toLoadID)) {
-                logger.error("Tried loading a for ship that was already loaded? UUID is\n" + toLoadID);
+                ValkyrienSkiesMod.LOGGER.error("Tried loading a for ship that was already loaded? UUID is\n" + toLoadID);
                 continue;
             }
             Optional<ShipData> toLoadOptional = queryableShipData.getShip(toLoadID);
             if (!toLoadOptional.isPresent()) {
-                logger.error("No ship found for UUID:\n" + toLoadID);
+                ValkyrienSkiesMod.LOGGER.error("No ship found for UUID:\n" + toLoadID);
                 continue;
             }
             ShipData shipData = toLoadOptional.get();
@@ -83,7 +81,7 @@ public class WorldClientShipManager implements IPhysObjectWorld {
         // Unload ships queued for unloading
         for (final UUID toUnloadID : unloadQueue) {
             if (!loadedShips.containsKey(toUnloadID)) {
-                logger.error("Tried unloading that isn't loaded? ID is\n" + toUnloadID);
+                ValkyrienSkiesMod.LOGGER.error("Tried unloading that isn't loaded? ID is\n" + toUnloadID);
                 continue;
             }
             PhysicsObject removedShip = loadedShips.get(toUnloadID);

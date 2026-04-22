@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.googlecode.cqengine.attribute.Attribute;
 import com.googlecode.cqengine.attribute.MultiValueAttribute;
 import com.googlecode.cqengine.query.option.QueryOptions;
-import lombok.*;
 import net.minecraft.util.math.AxisAlignedBB;
 import org.joml.Vector3d;
 import org.valkyrienskies.mod.common.ships.chunk_claims.VSChunkClaim;
@@ -22,6 +21,7 @@ import org.valkyrienskies.mod.common.util.jackson.annotations.PacketIgnore;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -32,14 +32,11 @@ import static com.googlecode.cqengine.query.QueryFactory.nullableAttribute;
  * One of these objects will represent a ship. You can obtain a physics object for that ship (if one
  * is available), by calling {@link IPhysObjectWorld#getPhysObjectFromUUID(UUID)}.
  */
-@Getter
-@NoArgsConstructor(access = AccessLevel.PRIVATE, force = true) // For Jackson
 public class ShipData {
 
     /**
      * The {@link QueryableShipData} that manages this
      */
-    @Getter(AccessLevel.NONE)
     private final transient ConcurrentUpdatableIndexedCollection<ShipData> owner;
 
     // region Data Fields
@@ -71,19 +68,15 @@ public class ShipData {
     @JsonDeserialize(as = SmallBlockPosSet.class)
     public IBlockPosSet activeForcePositions;
 
-    @Setter
     private ShipTransform shipTransform;
 
-    @Setter
     private ShipTransform prevTickShipTransform;
 
-    @Setter
     private AxisAlignedBB shipBB;
 
     /**
      * Whether or not physics are enabled on this physo
      */
-    @Setter
     private boolean physicsEnabled;
 
     /**
@@ -103,19 +96,34 @@ public class ShipData {
 
     // endregion
 
-    private ShipData(@NonNull ConcurrentUpdatableIndexedCollection<ShipData> owner,
-                    ShipPhysicsData physicsData, @Nonnull ShipInertiaData inertiaData, @NonNull ShipTransform shipTransform, @NonNull ShipTransform prevTickShipTransform, @NonNull AxisAlignedBB shipBB,
-                    boolean physicsEnabled, @NonNull VSChunkClaim chunkClaim, @NonNull UUID uuid, @NonNull String name) {
+    private ShipData() {
+        this.owner = null;
+        this.physicsData = null;
+        this.inertiaData = null;
+        this.shipTransform = null;
+        this.prevTickShipTransform = null;
+        this.shipBB = null;
+        this.physicsEnabled = false;
+        this.chunkClaim = null;
+        this.uuid = null;
+        this.name = null;
+        this.blockPositions = null;
+        this.activeForcePositions = null;
+    }
+
+    private ShipData(ConcurrentUpdatableIndexedCollection<ShipData> owner,
+                    ShipPhysicsData physicsData, @Nonnull ShipInertiaData inertiaData, ShipTransform shipTransform, ShipTransform prevTickShipTransform, AxisAlignedBB shipBB,
+                    boolean physicsEnabled, VSChunkClaim chunkClaim, UUID uuid, String name) {
         this.owner = owner;
         this.physicsData = physicsData;
-        this.inertiaData = inertiaData;
-        this.shipTransform = shipTransform;
-        this.prevTickShipTransform = prevTickShipTransform;
-        this.shipBB = shipBB;
+        this.inertiaData = Objects.requireNonNull(inertiaData, "inertiaData");
+        this.shipTransform = Objects.requireNonNull(shipTransform, "shipTransform");
+        this.prevTickShipTransform = Objects.requireNonNull(prevTickShipTransform, "prevTickShipTransform");
+        this.shipBB = Objects.requireNonNull(shipBB, "shipBB");
         this.physicsEnabled = physicsEnabled;
-        this.chunkClaim = chunkClaim;
-        this.uuid = uuid;
-        this.name = name;
+        this.chunkClaim = Objects.requireNonNull(chunkClaim, "chunkClaim");
+        this.uuid = Objects.requireNonNull(uuid, "uuid");
+        this.name = Objects.requireNonNull(name, "name");
 
         this.blockPositions = new SmallBlockPosSetAABB(chunkClaim.getCenterPos().getXStart(), 0,
                 chunkClaim.getCenterPos().getZStart(), 1024, 1024, 1024);
@@ -139,6 +147,68 @@ public class ShipData {
         return this;
     }
 
+    public ShipPhysicsData getPhysicsData() {
+        return physicsData;
+    }
+
+    public ShipInertiaData getInertiaData() {
+        return inertiaData;
+    }
+
+    @Nullable
+    public IBlockPosSetAABB getBlockPositions() {
+        return blockPositions;
+    }
+
+    @Nullable
+    public IBlockPosSet getActiveForcePositions() {
+        return activeForcePositions;
+    }
+
+    public ShipTransform getShipTransform() {
+        return shipTransform;
+    }
+
+    public void setShipTransform(ShipTransform shipTransform) {
+        this.shipTransform = shipTransform;
+    }
+
+    public ShipTransform getPrevTickShipTransform() {
+        return prevTickShipTransform;
+    }
+
+    public void setPrevTickShipTransform(ShipTransform prevTickShipTransform) {
+        this.prevTickShipTransform = prevTickShipTransform;
+    }
+
+    public AxisAlignedBB getShipBB() {
+        return shipBB;
+    }
+
+    public void setShipBB(AxisAlignedBB shipBB) {
+        this.shipBB = shipBB;
+    }
+
+    public boolean isPhysicsEnabled() {
+        return physicsEnabled;
+    }
+
+    public void setPhysicsEnabled(boolean physicsEnabled) {
+        this.physicsEnabled = physicsEnabled;
+    }
+
+    public VSChunkClaim getChunkClaim() {
+        return chunkClaim;
+    }
+
+    public UUID getUuid() {
+        return uuid;
+    }
+
+    public String getName() {
+        return name;
+    }
+
     // endregion
 
     // region Attributes
@@ -154,4 +224,3 @@ public class ShipData {
 
     // endregion
 }
-

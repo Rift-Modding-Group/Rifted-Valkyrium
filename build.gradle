@@ -1,340 +1,260 @@
-buildscript {
-    repositories {
-        mavenLocal()
-        jcenter()
-        mavenCentral()
-        maven {
-            name = "MinecraftForge"
-            url = "https://maven.daporkchop.net/"
-        }
-        maven {
-            name = "SpongePowered"
-            url = "https://repo.spongepowered.org/maven/"
-        }
-        maven {
-            url = "https://jitpack.io"
-        }
-    }
-    dependencies {
-        classpath ("com.anatawa12.forge:ForgeGradle:2.3-1.0.+"){
-            changing = true
-        }
-        classpath "org.spongepowered:mixingradle:0.6-SNAPSHOT"
-    }
-}
-
 plugins {
-    id "com.github.johnrengelman.shadow" version "4.0.4"
-    id "maven-publish"
+    id 'java'
+    id 'java-library'
+    id 'maven-publish'
+    id 'com.gradleup.shadow' version '9.4.0'
+    id 'org.jetbrains.gradle.plugin.idea-ext' version '1.4.1'
+    id 'xyz.wagyourtail.unimined' version '1.4.16-kappa'
+    id 'net.kyori.blossom' version '2.2.0'
 }
 
-apply plugin: "net.minecraftforge.gradle.forge"
-apply plugin: "org.spongepowered.mixin"
-apply plugin: "java"
+import org.jetbrains.gradle.ext.Gradle
 
-ext {
-    //general things
-    javaVersion = "1.8"
+apply from: 'gradle/scripts/helpers.gradle'
 
-    //determine the version
-    if (project.hasProperty('CustomReleaseVersion')) {
-        vsVersion = project.property('CustomReleaseVersion')
-    } else {
-        // Get the revision. Use `.execute([], file("."))`
-        // to always execute in the directory of build.gradle
-        def revision = "git rev-parse HEAD".execute([], file(".")).text
-        vsVersion = "1.0.0+" + revision.substring(0, 10)
+// Early Assertions
+assertProperty 'mod_version'
+assertProperty 'root_package'
+assertProperty 'mod_id'
+assertProperty 'mod_name'
+
+assertSubProperties 'use_access_transformer', 'access_transformer_locations'
+assertSubProperties 'is_coremod', 'coremod_includes_mod', 'coremod_plugin_class_name'
+assertSubProperties 'use_asset_mover', 'asset_mover_version'
+
+setDefaultProperty 'generate_sources_jar', true, false
+setDefaultProperty 'generate_javadocs_jar', true, false
+setDefaultProperty 'minecraft_username', true, 'Developer'
+setDefaultProperty 'extra_jvm_args', false, ''
+
+version = propertyString('mod_version')
+group = propertyString('root_package')
+
+base {
+    archivesName = propertyString('mod_id')
+}
+
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
     }
-
-    //minecraft things
-    mcpmappingsVersion = "stable_39"
-    minecraftforgeVersion = "14.23.5.2838"
-    minecraftVersion = "1.12.2"
-
-    //dependency things
-    cqengineVersion = "3.4.0"
-    jacksonVersion = "2.10.0"
-    javaxInjectVersion = "1"
-    lombokVersion = "1.18.10"
-    mixinVersion = "0.8.2"
-    spongeVersion = "1.12.2-2838-7.3.0"
-    vsApiVersion = "1.0.0.9"
-}
-
-version = "$vsVersion"
-group = "org.valkyrienskies"
-archivesBaseName = "valkyrien-skies"
-
-compileJava {
-    sourceCompatibility = targetCompatibility = "$javaVersion"
-}
-
-tasks.withType(JavaCompile) {
-    options.encoding = "UTF-8"
-}
-
-minecraft {
-    version = "$minecraftVersion-$minecraftforgeVersion"
-    runDir = "run"
-    mappings = "$mcpmappingsVersion"
-    makeObfSourceJar = false
-
-    coreMod = "org.valkyrienskies.mixin.MixinLoaderForge"
-
-    def args = [
-            "-Dmixin.checks.interfaces=true",
-            "-Dmixin.debug.export=true",
-            "-Dmixin.debug.verbose=true",
-            "-Dmixin.hotSwap=true",
-            "-Xmx2G",
-            "-XX:+UseG1GC",
-            "-ea",
-            "-da:io.netty..."
-    ]
-    clientJvmArgs += args
-    serverJvmArgs += args
+    if (propertyBool('generate_sources_jar')) {
+        withSourcesJar()
+    }
+    if (propertyBool('generate_javadocs_jar')) {
+        withJavadocJar()
+    }
 }
 
 configurations {
-    shade
-    compile.extendsFrom shade
+    contain
+    implementation.extendsFrom(contain)
+    modCompileOnly
+    compileOnly.extendsFrom(modCompileOnly)
+    modRuntimeOnly
+    runtimeOnly.extendsFrom(modRuntimeOnly)
+}
 
-    all { //hacky workaround
-        resolutionStrategy {
-            force("com.google.guava:guava:21.0")
+configurations.configureEach {
+    resolutionStrategy {
+        force 'org.apache.commons:commons-lang3:3.12.0'
+    }
+}
+
+String remapTaskName = propertyBool('enable_shadow') ? "remapShadowJar" : "remapJar"
+
+unimined.minecraft {
+    version "1.12.2"
+
+    mappings {
+        mcp("stable", "39-1.12")
+    }
+
+    cleanroom {
+        if (propertyBool('use_access_transformer')) {
+            accessTransformer "${rootProject.projectDir}/src/main/resources/${propertyString('access_transformer_locations')}"
+        }
+        loader "0.5.6-alpha"
+        runs.auth.username = minecraft_username
+        runs.all {
+            systemProperty("crl.dev.mixin", "${mod_id}.default.mixin.json,${mod_id}.mod.mixin.json")
+            def extraArgs = propertyString('extra_jvm_args')
+            if (extraArgs != null && !extraArgs.trim().isEmpty()) {
+                jvmArgs += extraArgs.split { "\\s+" }.toList()
+            }
+            if (propertyBool('enable_foundation_debug')) {
+                systemProperty("foundation.dump", "true")
+                systemProperty("foundation.verbose", "true")
+            }
+            if (propertyBool('is_coremod')) {
+                systemProperty("fml.coreMods.load", propertyString('coremod_plugin_class_name'))
+            }
+            return
         }
     }
-}
 
-repositories {
-    mavenCentral()
-    maven {
-        name = "SpongePowered"
-        url = "https://repo.spongepowered.org/maven/"
+    defaultRemapJar = false
+    
+    String jarTaskName = propertyBool('enable_shadow') ? "shadowJar" : "jar"
+    
+    remap(tasks.named(jarTaskName).get()) {
+        mixinRemap {
+            enableBaseMixin()
+            enableMixinExtra()
+        }
     }
-    maven {
-        name = "DaPorkchop_"
-        url = "https://maven.daporkchop.net/"
-    }
-    maven { url 'https://jitpack.io' }
-    jcenter()
-}
 
-// This is included here because of this garbage https://github.com/SpongePowered/SpongeForge/blob/stable-7/build.gradle#L40-L52
-// Basically I can't add compatibility for the newest SpongeForge without this
-// Thanks Sponge team!!! >:(
-configurations.all {
-    resolutionStrategy {
-        force 'com.typesafe:config:1.3.1'
+    mods {
+        remap(configurations.modCompileOnly)
+        remap(configurations.modRuntimeOnly)
     }
 }
 
 dependencies {
-    // mixin needs to be distributed with the mod, very important
-    shade("org.spongepowered:mixin:$mixinVersion") {
-        exclude module: "commons-io"
-        exclude module: "guava"
-        exclude module: "gson"
-        exclude module: "launchwrapper"
+    if (propertyBool('use_asset_mover')) {
+        implementation "com.cleanroommc:assetmover:${propertyString('asset_mover_version')}"
     }
-    // Mixin annotation processor creates the mixin obfuscation refmap
-    annotationProcessor("org.spongepowered:mixin:$mixinVersion:processor")
-    annotationProcessor("org.apache.logging.log4j:log4j-core:2.11.2")
-    
-    // Needs to be present at compile-time because we mix in to spongeforge, however marking it as
-    // compile makes forge load it as a mod in a dev environment, which is very annoying
-    compileOnly("org.spongepowered:spongeforge:$spongeVersion:dev") {
-        transitive = true
+    if (propertyBool('enable_junit_testing')) {
+        testImplementation 'org.junit.jupiter:junit-jupiter:6.0.3'
+        testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     }
-
-    // The VS API, just shade it into core no need to make it a standalone mod
-    shade "org.valkyrienskies:api:$vsApiVersion"
-
-    // VS World and Control, for local testing only, not shaded in
-    compile("org.valkyrienskies:Valkyrien-Skies-World:1d9df462f15c9125255ea086d7aeb75fe12e5877:all") {
-        transitive = false
-    }
-    compile("org.valkyrienskies:Valkyrien-Skies-Control:bc55aa179d643fd30d4c49a48a2491633033c5f3:all") {
-        transitive = false
-    }
-
-    // ODE4j physics engine (https://mvnrepository.com/artifact/org.ode4j/core)
-    // shade group: 'org.ode4j', name: 'core', version: '0.4.0' // 800KB
-    // shade group: 'org.ode4j', name: 'demo', version: '0.4.0'
-
-    // javax inject annotation
-    shade "javax.inject:javax.inject:$javaxInjectVersion" // 2KB
-
-    // CQEngine for in-memory nonpersistent database
-    // Provides Kryo
-    shade("com.googlecode.cqengine:cqengine:$cqengineVersion") {
-        exclude module: "sqlite-jdbc" //11.1 MB
-        exclude module: "antlr4-runtime" //648.0 KB
-        exclude module: "javassist" //1.5 MB
-        //exclude module: "typetools" //23.5 KB
-    }
-
-    // JOML
-    shade 'org.joml:joml:1.9.25' // 663 KB
-
-    // Jackson
-    shade "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
-    shade "com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:$jacksonVersion"
-    shade "com.fasterxml.jackson.module:jackson-module-parameter-names:$jacksonVersion"
-    shade "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:$jacksonVersion"
-
-    // Include all dependencies in the /dependencies folder
-    shade fileTree(include: ["*.jar"], dir: "dependencies")
-
-    // lombok
-    compileOnly "org.projectlombok:lombok:$lombokVersion"
-    annotationProcessor "org.projectlombok:lombok:$lombokVersion"
-
-    // junit tests
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.6.2'
-    testImplementation 'org.hamcrest:hamcrest:2.2'
 }
 
+apply from: 'gradle/scripts/dependencies.gradle'
+
 processResources {
-    // this will ensure that this task is redone when the versions change.
-    inputs.property "version", project.version
-    inputs.property "mcversion", project.minecraft.version
-
-    // replace stuff in mcmod.info, nothing else
-    from(sourceSets.main.resources.srcDirs) {
-        include "mcmod.info"
-
-        // replace version and mcversion
-        expand "version": project.version, "mcversion": project.minecraft.version
-    }
-
-    // copy everything else, thats not the mcmod.info
-    from(sourceSets.main.resources.srcDirs) {
-        exclude "mcmod.info"
-    }
-
-    // move _at.cfg into META-INF
     rename '(.+_at.cfg)', 'META-INF/$1'
 }
 
-mixin {
-    defaultObfuscationEnv searge
-    add sourceSets.main, "mixins.valkyrienskies.refmap.json"
+sourceSets {
+    main {
+        blossom {
+            javaSources {
+                property('mod_id', propertyString('mod_id'))
+                property('mod_name', propertyString('mod_name'))
+                property('mod_version', propertyString('mod_version'))
+                property('package', "${root_package}.${mod_id}")
+            }
+            resources {
+                property('mod_id', propertyString('mod_id'))
+                property('mod_name', propertyString('mod_name'))
+                property('mod_version', propertyString('mod_version'))
+                property('mod_description', propertyString('mod_description'))
+                property('mod_authors', propertyStringList('mod_authors', ',').collect {it.strip()}.join('", "'))
+                property('mod_credits', propertyString('mod_credits'))
+                property('mod_url', propertyString('mod_url'))
+                property('mod_update_json', propertyString('mod_update_json'))
+                property('mod_logo_path', propertyString('mod_logo_path'))
+            }
+        }
+    }
+}
+
+idea {
+    module {
+        inheritOutputDirs = true
+    }
+    project {
+        settings {
+            runConfigurations {
+                '1. Build'(Gradle) {
+                    taskNames = ["build"]
+                }
+                '2. Run Client'(Gradle) {
+                    taskNames = ["runClient"]
+                }
+                '3. Run Server'(Gradle) {
+                    taskNames = ["runServer"]
+                }
+            }
+            compiler.javac {
+                afterEvaluate {
+                    javacAdditionalOptions = '-encoding utf8'
+                    moduleJavacAdditionalOptions = [
+                            (project.name + '.main'): tasks.compileJava.options.compilerArgs.collect { '"' + it + '"' }.join(' ')
+                    ]
+                }
+            }
+        }
+    }
+}
+
+if (!propertyBool('enable_shadow')) {
+    shadowJar.enabled = false
+}
+
+compileJava {
+    sourceCompatibility = targetCompatibility = JavaVersion.VERSION_25
 }
 
 jar {
-    classifier = 'unshaded' // this is probably not the one you want
-    manifest.attributes(
-            "MixinConfigs": "mixins.valkyrienskies.json,mixins.valkyrienskies-sponge-compat.json",
-            "tweakClass": "org.spongepowered.asm.launch.MixinTweaker",
-            "FMLCorePluginContainsFMLMod": "true",
-            "FMLCorePlugin": "org.valkyrienskies.mixin.MixinLoaderForge",
-            "ForceLoadAsMod": "true",
-            "FMLAT": "valkyrienskies_at.cfg"
-    )
+    archiveClassifier = 'dev'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    if (configurations.contain.size() > 0) {
+        into('/') {
+            from configurations.contain
+        }
+    }
+    doFirst {
+        manifest {
+            def attribute_map = [:]
+            attribute_map['ModType'] = "CRL"
+            attribute_map['MixinConfigs'] = "${mod_id}.default.mixin.json,${mod_id}.mod.mixin.json"
+            if (configurations.contain.size() > 0) {
+                attribute_map['ContainedDeps'] = configurations.contain.collect { it.name }.join(' ')
+                attribute_map['NonModDeps'] = true
+            }
+            if (propertyBool('is_coremod')) {
+                attribute_map['FMLCorePlugin'] = propertyString('coremod_plugin_class_name')
+                if (propertyBool('coremod_includes_mod')) {
+                    attribute_map['FMLCorePluginContainsFMLMod'] = true
+                }
+            }
+            if (propertyBool('use_access_transformer')) {
+                attribute_map['FMLAT'] = propertyString('access_transformer_locations')
+            }
+            attributes(attribute_map)
+        }
+    }
+    finalizedBy(tasks.named(remapTaskName).get())
 }
+
 
 shadowJar {
-    classifier = null // No -all classifier
-    configurations = [project.configurations.shade]
-    relocate 'com.fasterxml', 'org.valkyrienskies.deps.com.fasterxml'
-    mergeServiceFiles() // https://github.com/johnrengelman/shadow/issues/304
+    configurations = [project.configurations.shadow]
+    archiveClassifier = "shadow"
 }
 
-reobf {
-    jar {
-        mappingType = "SEARGE"
-        classpath = sourceSets.main.compileClasspath
-    }
-    shadowJar{
-        mappingType = "SEARGE"
-        classpath = sourceSets.main.compileClasspath
-    }
-}
 
-build.dependsOn(reobfJar)
-build.dependsOn(reobfShadowJar)
-
-publishing {
-    /*repositories {
-        def ghpUser = project.findProperty("gpr.user") ?: System.getenv("USERNAME")
-        def ghpPassword = project.findProperty("gpr.key") ?: System.getenv("TOKEN")
-        if (ghpUser != null && ghpPassword != null) {
-            maven {
-                name = "GitHubPackages"
-                url = uri("https://maven.pkg.github.com/ValkyrienSkies/Valkyrien-Skies")
-                credentials {
-                    username = ghpUser
-                    password = ghpPassword
-                }
-            }
-        }
-        if (project.hasProperty("daporkchopMavenUsername") && project.hasProperty("daporkchopMavenPassword")) {
-            maven {
-                credentials {
-                    username = "$daporkchopMavenUsername"
-                    password = "$daporkchopMavenPassword"
-                }
-
-                name = "DaPorkchop_"
-                url = "https://maven.daporkchop.net/release/"
-            }
-        }
-    }*/
-    publications {
-        maven(MavenPublication) {
-            groupId = "org.valkyrienskies"
-            artifactId = "valkyrien-skies"
-            version = project.version
-
-            artifact jar {
-                classifier null
-            }
-            
-            artifact shadowJar {
-                classifier "all"
-            }
-            
-            artifact sourceJar {
-                classifier "sources"
-            }
-        }
-    }
-}
-
-//sets additional JVM args for genIntellijRuns
-task preIntellijRuns {
+tasks.named(remapTaskName).configure {
     doFirst {
-        StreamSupport.stream(configurations.compile.spliterator(), false).filter({
-            it.name.contains("mixin")
-        }).findAny().ifPresent({
-            minecraft.clientJvmArgs += "-javaagent:" + it.absolutePath
-            minecraft.serverJvmArgs += "-javaagent:" + it.absolutePath
-        })
+        logging.captureStandardOutput LogLevel.INFO
+    }
+    doLast {
+        logging.captureStandardOutput LogLevel.QUIET
     }
 }
-genIntellijRuns.dependsOn(preIntellijRuns)
 
-// Junit testing
+compileTestJava {
+    sourceCompatibility = targetCompatibility = JavaVersion.VERSION_25
+}
+
 test {
     useJUnitPlatform()
-}
-
-/*
-// Based on this tutorial https://darkhax.net/2017/10/jar-signing
-task signJar(type: SignJar, dependsOn: reobfShadowJar) {
-    onlyIf {
-        project.hasProperty('keyStore')
+    javaLauncher.set(javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(25)
+    })
+    if (propertyBool('show_testing_output')) {
+        testLogging {
+            showStandardStreams = true
+        }
     }
-
-    keyStore = project.findProperty('keyStore')
-    alias = project.findProperty('keyStoreAlias')
-    storePass = project.findProperty('keyStorePass')
-    keyPass = project.findProperty('keyStoreKeyPass')
-
-    inputFile = new File(shadowJar.getDestinationDir(), shadowJar.getArchiveName().replaceAll(".jar", "-all.jar"));
-    outputFile = inputFile
 }
 
-build.dependsOn signJar
- */
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+apply from: 'gradle/scripts/publishing.gradle'
+apply from: 'gradle/scripts/extra.gradle'

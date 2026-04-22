@@ -7,9 +7,9 @@ import javax.annotation.ParametersAreNonnullByDefault;
 
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.world.IBlockAccess;
+import org.jetbrains.annotations.NotNull;
 import org.valkyrienskies.mod.common.tileentity.TileEntityPassengerChair;
 
-import mcp.MethodsReturnNonnullByDefault;
 import net.minecraft.block.BlockHorizontal;
 import net.minecraft.block.material.Material;
 import net.minecraft.block.properties.PropertyDirection;
@@ -30,7 +30,6 @@ import net.minecraft.util.text.TextFormatting;
 import net.minecraft.world.World;
 import org.valkyrienskies.mod.common.util.BaseBlock;
 
-@MethodsReturnNonnullByDefault
 @ParametersAreNonnullByDefault
 public class BlockPassengerChair extends BaseBlock {
 
@@ -52,7 +51,7 @@ public class BlockPassengerChair extends BaseBlock {
     }
 
     @Override
-    public TileEntity createTileEntity(World world, IBlockState state) {
+    public @NotNull TileEntity createTileEntity(World world, IBlockState state) {
         return new TileEntityPassengerChair();
     }
 
@@ -91,7 +90,7 @@ public class BlockPassengerChair extends BaseBlock {
             .format("tooltip.valkyrienskies.passenger_chair"));
     }
 
-    private Vec3d getPlayerMountOffset(IBlockState state, BlockPos pos) {
+    private @NotNull Vec3d getPlayerMountOffset(IBlockState state, BlockPos pos) {
         EnumFacing facing = state.getValue(FACING);
         switch (facing) {
             case NORTH:
@@ -108,7 +107,7 @@ public class BlockPassengerChair extends BaseBlock {
     }
 
     @Override
-    public IBlockState getStateForPlacement(World worldIn, BlockPos pos, EnumFacing facing,
+    public @NotNull IBlockState getStateForPlacement(World worldIn, BlockPos pos, EnumFacing facing,
         float hitX, float hitY, float hitZ, int meta, EntityLivingBase placer) {
         return this.getDefaultState().withProperty(FACING,
             placer.isSneaking() ? placer.getHorizontalFacing().getOpposite()
@@ -116,12 +115,12 @@ public class BlockPassengerChair extends BaseBlock {
     }
 
     @Override
-    protected BlockStateContainer createBlockState() {
+    protected @NotNull BlockStateContainer createBlockState() {
         return new BlockStateContainer(this, FACING);
     }
 
     @Override
-    public IBlockState getStateFromMeta(int meta) {
+    public @NotNull IBlockState getStateFromMeta(int meta) {
         EnumFacing enumfacing = EnumFacing.byIndex(meta);
         if (enumfacing.getAxis() == EnumFacing.Axis.Y) {
             enumfacing = EnumFacing.NORTH;
@@ -135,7 +134,7 @@ public class BlockPassengerChair extends BaseBlock {
     }
 
     @Override
-    public BlockRenderLayer getRenderLayer() {
+    public @NotNull BlockRenderLayer getRenderLayer() {
         return BlockRenderLayer.CUTOUT;
     }
 

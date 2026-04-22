@@ -5,15 +5,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
-import lombok.Getter;
 
 /**
  * Any node which is not a {@link ConfigCommandEndNode}
  */
 class ConfigCommandParentNode extends ConfigCommandNode {
 
-    @Getter
-    private Map<String, ConfigCommandNode> children;
+    private final Map<String, ConfigCommandNode> children;
 
     /**
      * Create a parent node with an existing list of children.
@@ -88,5 +86,9 @@ class ConfigCommandParentNode extends ConfigCommandNode {
         return children.values().stream()
             .filter(c -> c.getName().toLowerCase().startsWith(prefix.toLowerCase()))
             .collect(Collectors.toList());
+    }
+
+    Map<String, ConfigCommandNode> getChildren() {
+        return children;
     }
 }

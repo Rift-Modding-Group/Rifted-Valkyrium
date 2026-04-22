@@ -1,8 +1,5 @@
 package org.valkyrienskies.mod.common.ships.ship_world;
 
-import lombok.Getter;
-import lombok.Setter;
-import lombok.experimental.Delegate;
 import net.minecraft.client.multiplayer.ChunkProviderClient;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.network.play.server.SPacketUnloadChunk;
@@ -29,10 +26,14 @@ import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.block_relocation.MoveBlocks;
 import org.valkyrienskies.mod.common.ships.chunk_claims.ClaimedChunkCacheController;
 import org.valkyrienskies.mod.common.ships.chunk_claims.SurroundingChunkCacheController;
+import org.valkyrienskies.mod.common.ships.chunk_claims.VSChunkClaim;
 import org.valkyrienskies.mod.common.ships.interpolation.ITransformInterpolator;
 import org.valkyrienskies.mod.common.ships.interpolation.SimpleEMATransformInterpolator;
+import org.valkyrienskies.mod.common.ships.physics_data.ShipInertiaData;
+import org.valkyrienskies.mod.common.ships.physics_data.ShipPhysicsData;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransformationManager;
+import org.valkyrienskies.mod.common.util.datastructures.IBlockPosSetAABB;
 import valkyrienwarfare.api.IPhysicsEntity;
 import valkyrienwarfare.api.TransformType;
 
@@ -43,6 +44,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -57,21 +59,16 @@ public class PhysicsObject implements IPhysicsEntity {
     public static int TICKS_SINCE_TELEPORT_TO_START_DRAGGING = 50;
 
     // region Fields
-    @Getter
     private final List<EntityPlayerMP> watchingPlayers;
     private final Set<IPhysicsBlockController> physicsControllers;
     private final Set<IPhysicsBlockController> physicsControllersImmutable;
-    @Getter
     private final PhysObjectRenderManager shipRenderer;
     /**
      * Just a random block position in the ship. Used to correct floating point errors and keep
      * track of the ship.
      */
-    @Getter
     private final BlockPos referenceBlockPos;
-    @Getter
     private final ShipTransformationManager shipTransformationManager;
-    @Getter
     private final PhysicsCalculations physicsCalculations;
 
     // The closest Chunks to the Ship cached in here
@@ -80,53 +77,41 @@ public class PhysicsObject implements IPhysicsEntity {
     /**
      * Used for faster memory access to the Chunks this object 'owns'
      */
-    @Getter
     private final ClaimedChunkCacheController claimedChunkCache;
 
-    @Getter
     private final World world;
 
     /**
      * Please never manually update this
      */
-    @Delegate
-    @Getter
     private final ShipData shipData;
 
     /**
      * Used by the client to smoothly interpolate the ShipTransform sent by the server, so that clients see smooth ship
      * movement.
      */
-    @Getter
     private final ITransformInterpolator transformInterpolator;
 
     /**
      * If true, this ship will slowly realign itself with the world, ignoring the normal rules of physics
      */
-    @Setter
-    @Getter
     private boolean shipAligningToGrid;
 
     /**
      * This determines if a ship is trying to deconstruct, and how it will deconstruct.
      */
-    @Setter
-    @Getter
     @Nonnull
     private DeconstructState deconstructState;
 
     // If (forceToUseShipDataTransform == true) then reset the physics transform to the ShipData transform.
-    @Setter
     private boolean forceToUseShipDataTransform;
 
     // Used to prevent players from thinking they're on a ship if this ship just got teleported.
-    @Setter @Getter
     private int ticksSinceShipTeleport;
 
     // Counts the number of ticks this PhysicsObject (not ShipData) has existed. Used to disable physics for the first DISABLE_PHYSICS_FOR_X_INITIAL_TICKS ticks.
     private int ticksExisted;
 
-    @Setter @Getter
     private ShipPilot shipPilot;
 
     // endregion
@@ -400,7 +385,6 @@ public class PhysicsObject implements IPhysicsEntity {
         shipRenderer.updateChunk(chunk);
     }
 
-    @Getter
     public enum DeconstructState {
         NOT_DECONSTRUCTING(false, false, false),
         DECONSTRUCT_NORMAL(true, true, true),
@@ -414,6 +398,18 @@ public class PhysicsObject implements IPhysicsEntity {
             this.deconstructShip = deconstructShip;
             this.copyBlocks = copyBlocks;
             this.mustBeAlignedBeforeDeconstruct = mustBeAlignedBeforeDeconstruct;
+        }
+
+        public boolean isDeconstructShip() {
+            return deconstructShip;
+        }
+
+        public boolean isCopyBlocks() {
+            return copyBlocks;
+        }
+
+        public boolean isMustBeAlignedBeforeDeconstruct() {
+            return mustBeAlignedBeforeDeconstruct;
         }
     }
 
@@ -453,5 +449,118 @@ public class PhysicsObject implements IPhysicsEntity {
         } else {
             return null;
         }
+    }
+
+    public List<EntityPlayerMP> getWatchingPlayers() {
+        return watchingPlayers;
+    }
+
+    public PhysObjectRenderManager getShipRenderer() {
+        return shipRenderer;
+    }
+
+    public BlockPos getReferenceBlockPos() {
+        return referenceBlockPos;
+    }
+
+    public ShipTransformationManager getShipTransformationManager() {
+        return shipTransformationManager;
+    }
+
+    public PhysicsCalculations getPhysicsCalculations() {
+        return physicsCalculations;
+    }
+
+    public ClaimedChunkCacheController getClaimedChunkCache() {
+        return claimedChunkCache;
+    }
+
+    public World getWorld() {
+        return world;
+    }
+
+    public ShipData getShipData() {
+        return shipData;
+    }
+
+    public ITransformInterpolator getTransformInterpolator() {
+        return transformInterpolator;
+    }
+
+    public boolean isShipAligningToGrid() {
+        return shipAligningToGrid;
+    }
+
+    public void setShipAligningToGrid(boolean shipAligningToGrid) {
+        this.shipAligningToGrid = shipAligningToGrid;
+    }
+
+    @Nonnull
+    public DeconstructState getDeconstructState() {
+        return deconstructState;
+    }
+
+    public void setDeconstructState(@Nonnull DeconstructState deconstructState) {
+        this.deconstructState = deconstructState;
+    }
+
+    public void setForceToUseShipDataTransform(boolean forceToUseShipDataTransform) {
+        this.forceToUseShipDataTransform = forceToUseShipDataTransform;
+    }
+
+    public int getTicksSinceShipTeleport() {
+        return ticksSinceShipTeleport;
+    }
+
+    public void setTicksSinceShipTeleport(int ticksSinceShipTeleport) {
+        this.ticksSinceShipTeleport = ticksSinceShipTeleport;
+    }
+
+    public ShipPilot getShipPilot() {
+        return shipPilot;
+    }
+
+    public void setShipPilot(ShipPilot shipPilot) {
+        this.shipPilot = shipPilot;
+    }
+
+    public VSChunkClaim getChunkClaim() {
+        return shipData.getChunkClaim();
+    }
+
+    public UUID getUuid() {
+        return shipData.getUuid();
+    }
+
+    public ShipTransform getShipTransform() {
+        return shipData.getShipTransform();
+    }
+
+    public ShipTransform getPrevTickShipTransform() {
+        return shipData.getPrevTickShipTransform();
+    }
+
+    public AxisAlignedBB getShipBB() {
+        return shipData.getShipBB();
+    }
+
+    public ShipPhysicsData getPhysicsData() {
+        return shipData.getPhysicsData();
+    }
+
+    public ShipInertiaData getInertiaData() {
+        return shipData.getInertiaData();
+    }
+
+    public IBlockPosSetAABB getBlockPositions() {
+        return shipData.getBlockPositions();
+    }
+
+    public boolean isPhysicsEnabled() {
+        return shipData.isPhysicsEnabled();
+    }
+
+    public String getName() {
+        return shipData.getName();
     }
 }

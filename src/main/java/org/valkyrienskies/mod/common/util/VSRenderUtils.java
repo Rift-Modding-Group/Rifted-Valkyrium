@@ -1,11 +1,13 @@
 package org.valkyrienskies.mod.common.util;
 
-import lombok.experimental.UtilityClass;
 import net.minecraft.entity.Entity;
 import org.joml.Vector3d;
 
-@UtilityClass
-public class VSRenderUtils {
+public final class VSRenderUtils {
+
+    private VSRenderUtils() {
+        throw new UnsupportedOperationException("Utility class");
+    }
 
     public static Vector3d getEntityPartialPosition(Entity entity, float partialTicks) {
         double x = entity.lastTickPosX + (entity.posX - entity.lastTickPosX) * partialTicks;

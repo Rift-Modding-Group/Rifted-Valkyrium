@@ -1,15 +1,14 @@
 package org.valkyrienskies.mod.common.command;
 
 import javax.annotation.ParametersAreNonnullByDefault;
-import mcp.MethodsReturnNonnullByDefault;
 import net.minecraft.command.CommandBase;
 import net.minecraft.command.ICommandSender;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.text.TextComponentString;
+import org.jetbrains.annotations.NotNull;
 
 @Deprecated
 @ParametersAreNonnullByDefault
-@MethodsReturnNonnullByDefault
 public class PhysSettingsCommand extends CommandBase {
 
     private static final String DEPRECATION_MESSAGE =
@@ -18,12 +17,12 @@ public class PhysSettingsCommand extends CommandBase {
             + "\"Valkyrien Skies\" and then \"Config\" to change physics settings. Thanks!";
 
     @Override
-    public String getName() {
+    public @NotNull String getName() {
         return "physsettings";
     }
 
     @Override
-    public String getUsage(ICommandSender sender) {
+    public @NotNull String getUsage(ICommandSender sender) {
         return DEPRECATION_MESSAGE;
     }
 

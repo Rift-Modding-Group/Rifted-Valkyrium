@@ -1,6 +1,5 @@
 package org.valkyrienskies.mod.common.ships.ship_world;
 
-import lombok.Getter;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import org.joml.Vector3d;
@@ -22,7 +21,6 @@ public class ShipPilot {
     private static final double ANGULAR_EMA_FILTER_CONSTANT = 2;
     private static final double STABILIZATION_TORQUE_CONSTANT = 7.5;
 
-    @Getter
     private final UUID pilot;
     private final float initialYaw;
     private Vector3d targetLinearVelocity;
@@ -119,5 +117,9 @@ public class ShipPilot {
         }
 
         return resultingTorque;
+    }
+
+    public UUID getPilot() {
+        return pilot;
     }
 }

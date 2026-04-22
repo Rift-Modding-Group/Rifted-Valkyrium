@@ -1,7 +1,5 @@
 package org.valkyrienskies.mod.common.util.datastructures;
 
-import lombok.Getter;
-
 /**
  * This is effectively a Map<Integer, Integer> with all the entries stored as "Nodes" in a LinkedList.
  * To get O(1) runtime, these LinkedList nodes are stored in an array.
@@ -25,9 +23,7 @@ public class FastMinMaxMap {
      */
     private final int[] backing;
     private final int capacity;
-    @Getter
     private int front, back;
-    @Getter
     private int size;
 
     /**
@@ -163,5 +159,17 @@ public class FastMinMaxMap {
             setPrev(i, -1);
             setNext(i, -1);
         }
+    }
+
+    public int getFront() {
+        return front;
+    }
+
+    public int getBack() {
+        return back;
+    }
+
+    public int getSize() {
+        return size;
     }
 }

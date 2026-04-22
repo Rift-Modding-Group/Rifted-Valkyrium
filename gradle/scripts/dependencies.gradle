@@ -1,0 +1,82 @@
+apply from: 'gradle/scripts/helpers.gradle'
+
+repositories {
+    // Other repositories described by default:
+    // CleanroomMC: https://maven.cleanroommc.com
+    maven {
+        name = 'CurseMaven'
+        url = 'https://cursemaven.com'
+    }
+    maven {
+        name = 'CleanroomCurseMaven'
+        url = 'https://curse.cleanroommc.com'
+    }
+    maven {
+        name = 'Modrinth'
+        url = 'https://api.modrinth.com/maven'
+    }
+    maven {
+        name 'SpongePowered'
+        url 'https://repo.spongepowered.org/repository/maven-public/'
+    }
+    maven {
+        name = "DaPorkchop_"
+        url = "https://maven.daporkchop.net/"
+    }
+    maven {
+        url = "https://jitpack.io"
+    }
+    mavenCentral()
+    mavenLocal() // Must be last for caching to work
+}
+
+dependencies {
+    compileOnly "com.cleanroommc:sponge-mixin:0.20.12+mixin.0.8.7"
+    compileOnly "org.jetbrains:annotations:26.0.2"
+    if (propertyBool('enable_lwjglx')) {
+        compileOnly "com.cleanroommc:lwjglx:1.0.0"
+    }
+    //sponge api
+    implementation ('org.spongepowered:spongeapi:7.4.0') {
+        exclude group: 'com.google.guava'
+        exclude group: 'com.google.errorprone'
+        exclude group: 'com.google.code.findbugs'
+        exclude group: 'org.ow2.asm'
+        exclude group: 'com.google.code.gson', module: 'gson'
+    }
+    //spongeforge lts
+    implementation 'curse.maven:spongeforge-1279505:6611085'
+    // The VS API, is added this way so that theres no need to make it a standalone mod
+    implementation "org.valkyrienskies:api:1.0.0.9"
+
+    // javax inject annotation
+    shadow "javax.inject:javax.inject:1" // 2KB
+
+    // Command framework
+    implementation "info.picocli:picocli:4.7.7"
+
+    // CQEngine for in-memory nonpersistent database
+    // Provides Kryo
+    implementation("com.googlecode.cqengine:cqengine:3.4.0") {
+        exclude module: "sqlite-jdbc" //11.1 MB
+        exclude module: "antlr4-runtime" //648.0 KB
+        exclude module: "javassist" //1.5 MB
+        //exclude module: "typetools" //23.5 KB
+    }
+
+    // JOML
+    shadow 'org.joml:joml:1.9.25' // 663 KB
+
+    // Jackson
+    implementation "com.fasterxml.jackson.core:jackson-databind:2.10.0"
+    implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.10.0"
+    implementation "com.fasterxml.jackson.module:jackson-module-parameter-names:2.10.0"
+    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.10.0"
+
+    // Include all dependencies in the /dependencies folder
+    shadow fileTree(include: ["*.jar"], dir: "dependencies")
+
+    // junit tests
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.6.2'
+    testImplementation 'org.hamcrest:hamcrest:2.2'
+}

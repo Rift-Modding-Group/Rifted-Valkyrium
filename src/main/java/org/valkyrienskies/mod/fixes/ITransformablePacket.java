@@ -33,17 +33,17 @@ public interface ITransformablePacket {
      */
     default void doPreProcessing(INetHandlerPlayServer server, boolean callingFromSponge) {
         if (isPacketOnMainThread(server, callingFromSponge)) {
-            // System.out.println("Pre packet process");
+            System.out.println("Pre packet process");
             NetHandlerPlayServer serverHandler = (NetHandlerPlayServer) server;
             EntityPlayerMP player = serverHandler.player;
             ShipData physicsObject = getPacketParent(serverHandler);
+            System.out.println("physicsObject: "+physicsObject);
             if (physicsObject != null) {
                 // First make a backup of the player position
                 ICapabilityEntityBackup entityBackup = player.getCapability(VSCapabilityRegistry.VS_ENTITY_BACKUP, null);
                 entityBackup.backupEntityPosition(player);
                 // Then put the player into ship coordinates.
-                physicsObject.getShipTransform()
-                        .transform(player, TransformType.GLOBAL_TO_SUBSPACE, true);
+                physicsObject.getShipTransform().transform(player, TransformType.GLOBAL_TO_SUBSPACE, true);
             }
         }
     }
@@ -53,13 +53,12 @@ public interface ITransformablePacket {
      */
     default void doPostProcessing(INetHandlerPlayServer server, boolean callingFromSponge) {
         if (isPacketOnMainThread(server, callingFromSponge)) {
+            System.out.println("Post packet process");
             NetHandlerPlayServer serverHandler = (NetHandlerPlayServer) server;
             EntityPlayerMP player = serverHandler.player;
             // If we made a backup in doPreProcessing(), then restore from that backup.
             ICapabilityEntityBackup entityBackup = player.getCapability(VSCapabilityRegistry.VS_ENTITY_BACKUP, null);
-            if (entityBackup.hasBackupPosition()) {
-                entityBackup.restoreEntityToBackup(player);
-            }
+            if (entityBackup.hasBackupPosition()) entityBackup.restoreEntityToBackup(player);
         }
     }
 

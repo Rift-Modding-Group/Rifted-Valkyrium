@@ -1,7 +1,5 @@
 package org.valkyrienskies.mod.common.command.config;
 
-import lombok.Getter;
-
 import javax.annotation.Nullable;
 import java.lang.reflect.Field;
 import java.util.List;
@@ -15,13 +13,10 @@ import java.util.function.Supplier;
  */
 class ConfigCommandEndNode extends ConfigCommandNode {
 
-    @Getter
     private final Consumer<String> optionSetter;
 
-    @Getter
     private final Supplier<?> optionGetter;
 
-    @Getter
     private final List<String> autocompletions;
 
     ConfigCommandEndNode(Field field, @Nullable Object object) {
@@ -45,6 +40,18 @@ class ConfigCommandEndNode extends ConfigCommandNode {
         this.optionSetter = optionSetter;
         this.optionGetter = getOption;
         this.autocompletions = autocompletions;
+    }
+
+    Consumer<String> getOptionSetter() {
+        return optionSetter;
+    }
+
+    Supplier<?> getOptionGetter() {
+        return optionGetter;
+    }
+
+    List<String> getAutocompletions() {
+        return autocompletions;
     }
 
 }

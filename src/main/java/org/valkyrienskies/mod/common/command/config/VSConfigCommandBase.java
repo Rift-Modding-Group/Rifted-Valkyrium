@@ -1,18 +1,18 @@
 package org.valkyrienskies.mod.common.command.config;
 
-import lombok.SneakyThrows;
-import mcp.MethodsReturnNonnullByDefault;
 import net.minecraft.command.CommandBase;
 import net.minecraft.command.ICommandSender;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.TextComponentString;
 import net.minecraft.util.text.TextFormatting;
+import org.jetbrains.annotations.NotNull;
 import org.valkyrienskies.mod.common.command.framework.VSCommandUtil;
 
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
@@ -25,7 +25,6 @@ import java.util.stream.Collectors;
  * <code>/vsconfig</code>
  */
 @ParametersAreNonnullByDefault
-@MethodsReturnNonnullByDefault
 public class VSConfigCommandBase extends CommandBase {
 
     private final String name;
@@ -67,7 +66,7 @@ public class VSConfigCommandBase extends CommandBase {
     }
 
     @Override
-    public List<String> getAliases() {
+    public @NotNull List<String> getAliases() {
         return this.aliases;
     }
 
@@ -94,11 +93,16 @@ public class VSConfigCommandBase extends CommandBase {
     }
 
     // TODO: allow usage of arrays
-    @SneakyThrows(IllegalAccessException.class)
     private static void processFieldForSubcategory(Class<?> subcategory, Field subcatField,
         ConfigCommandParentNode root) {
         // Note: subcatField should always be static
-        Object subcategoryObj = subcatField.get(null);
+        final Object subcategoryObj;
+        try {
+            subcategoryObj = subcatField.get(null);
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException("Failed to read config subcategory field " + subcatField,
+                e);
+        }
 
         ShortName subcatShortName = subcatField.getAnnotation(ShortName.class);
 
@@ -120,12 +124,12 @@ public class VSConfigCommandBase extends CommandBase {
     }
 
     @Override
-    public String getName() {
+    public @NotNull String getName() {
         return name;
     }
 
     @Override
-    public String getUsage(ICommandSender sender) {
+    public @NotNull String getUsage(ICommandSender sender) {
         return usage;
     }
 
@@ -149,7 +153,7 @@ public class VSConfigCommandBase extends CommandBase {
                 ((ConfigCommandEndNode) currentNode).getOptionSetter().accept(args[i + 1]);
                 try {
                     sync.invoke(null);
-                } catch (Exception e) {
+                } catch (IllegalAccessException | InvocationTargetException e) {
                     throw new RuntimeException(e); //blah blaah
                 }
                 sender.sendMessage(new TextComponentString("Set " + currentNode.getName() +
@@ -178,7 +182,7 @@ public class VSConfigCommandBase extends CommandBase {
 
     // TODO autocomplete boolean values, enums, autocompletion annotation
     @Override
-    public List<String> getTabCompletions(MinecraftServer server, ICommandSender sender,
+    public @NotNull List<String> getTabCompletions(MinecraftServer server, ICommandSender sender,
         String[] args, @Nullable BlockPos targetPos) {
 
         args = VSCommandUtil.toProperArgs(args);

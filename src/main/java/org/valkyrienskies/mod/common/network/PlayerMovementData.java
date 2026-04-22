@@ -1,26 +1,36 @@
 package org.valkyrienskies.mod.common.network;
 
-import lombok.Value;
 import net.minecraft.network.PacketBuffer;
 import org.joml.Vector3dc;
 import org.valkyrienskies.mod.common.util.JOML;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Objects;
 import java.util.UUID;
 
-@Value
 public class PlayerMovementData {
 
     @Nullable
-    UUID lastTouchedShipId;
-    int ticksSinceTouchedLastShip;
-    int ticksPartOfGround;
+    private final UUID lastTouchedShipId;
+    private final int ticksSinceTouchedLastShip;
+    private final int ticksPartOfGround;
     @Nonnull
-    Vector3dc playerPosInShip;
+    private final Vector3dc playerPosInShip;
     @Nonnull
-    Vector3dc playerLookInShip;
-    boolean onGround;
+    private final Vector3dc playerLookInShip;
+    private final boolean onGround;
+
+    public PlayerMovementData(@Nullable UUID lastTouchedShipId, int ticksSinceTouchedLastShip,
+        int ticksPartOfGround, @Nonnull Vector3dc playerPosInShip,
+        @Nonnull Vector3dc playerLookInShip, boolean onGround) {
+        this.lastTouchedShipId = lastTouchedShipId;
+        this.ticksSinceTouchedLastShip = ticksSinceTouchedLastShip;
+        this.ticksPartOfGround = ticksPartOfGround;
+        this.playerPosInShip = Objects.requireNonNull(playerPosInShip, "playerPosInShip");
+        this.playerLookInShip = Objects.requireNonNull(playerLookInShip, "playerLookInShip");
+        this.onGround = onGround;
+    }
 
     /**
      * Reads the raw packet data from the data stream.
@@ -56,5 +66,32 @@ public class PlayerMovementData {
         JOML.writeToByteBuf(playerPosInShip, packetBuffer);
         JOML.writeToByteBuf(playerLookInShip, packetBuffer);
         packetBuffer.writeBoolean(onGround);
+    }
+
+    @Nullable
+    public UUID getLastTouchedShipId() {
+        return lastTouchedShipId;
+    }
+
+    public int getTicksSinceTouchedLastShip() {
+        return ticksSinceTouchedLastShip;
+    }
+
+    public int getTicksPartOfGround() {
+        return ticksPartOfGround;
+    }
+
+    @Nonnull
+    public Vector3dc getPlayerPosInShip() {
+        return playerPosInShip;
+    }
+
+    @Nonnull
+    public Vector3dc getPlayerLookInShip() {
+        return playerLookInShip;
+    }
+
+    public boolean isOnGround() {
+        return onGround;
     }
 }

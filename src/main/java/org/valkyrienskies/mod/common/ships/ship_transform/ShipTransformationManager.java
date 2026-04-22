@@ -1,6 +1,5 @@
 package org.valkyrienskies.mod.common.ships.ship_transform;
 
-import lombok.Setter;
 import net.minecraft.util.math.AxisAlignedBB;
 import org.joml.Quaterniond;
 import org.joml.Quaterniondc;
@@ -17,16 +16,12 @@ public class ShipTransformationManager {
 
     private final PhysicsObject parent;
     public Vector3dc[] normals;
-    @Setter
     private ShipTransform currentTickTransform;
     private ShipTransform renderTransform;
-    @Setter
     private ShipTransform prevTickTransform;
     // Used exclusively by the physics engine; should never even be used by the
     // client.
-    @Setter
     private ShipTransform currentPhysicsTransform;
-    @Setter
     private ShipTransform prevPhysicsTransform;
 
     public ShipTransformationManager(PhysicsObject parent, ShipTransform initialTransform) {
@@ -223,6 +218,22 @@ public class ShipTransformationManager {
         // Put it all together to get the render transform.
         renderTransform = new ShipTransform(partialPos.x, partialPos.y,
             partialPos.z, partialRot, parent.getCenterCoord());
+    }
+
+    public void setCurrentTickTransform(ShipTransform currentTickTransform) {
+        this.currentTickTransform = currentTickTransform;
+    }
+
+    public void setPrevTickTransform(ShipTransform prevTickTransform) {
+        this.prevTickTransform = prevTickTransform;
+    }
+
+    public void setCurrentPhysicsTransform(ShipTransform currentPhysicsTransform) {
+        this.currentPhysicsTransform = currentPhysicsTransform;
+    }
+
+    public void setPrevPhysicsTransform(ShipTransform prevPhysicsTransform) {
+        this.prevPhysicsTransform = prevPhysicsTransform;
     }
 
 }

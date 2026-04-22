@@ -1,6 +1,4 @@
 package org.valkyrienskies.mod.common.ships.chunk_claims;
-
-import lombok.extern.log4j.Log4j2;
 import net.minecraft.server.management.PlayerChunkMap;
 import net.minecraft.server.management.PlayerChunkMapEntry;
 import net.minecraft.util.math.BlockPos;
@@ -20,7 +18,6 @@ import java.util.*;
  * The ClaimedChunkCacheController is a chunk cache controller used by the {@link PhysicsObject}. It
  * keeps all of a ship's chunks in cache for fast access.
  */
-@Log4j2
 public class ClaimedChunkCacheController implements Iterable<Chunk> {
 
     /**

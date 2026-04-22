@@ -1,9 +1,11 @@
 package org.valkyrienskies.mod.common.util.datastructures;
 
-import lombok.experimental.Delegate;
 import net.minecraft.util.math.BlockPos;
 
+import javax.annotation.Nonnull;
+import java.util.Collection;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
 
 /**
@@ -12,7 +14,6 @@ import java.util.Set;
  */
 public class NaiveBlockPosSet implements IBlockPosSet {
 
-    @Delegate
     private final Set<BlockPos> blockPosSet;
 
     public NaiveBlockPosSet() {
@@ -37,6 +38,47 @@ public class NaiveBlockPosSet implements IBlockPosSet {
     @Override
     public boolean canStore(int x, int y, int z) {
         return true;
+    }
+
+    @Override
+    public void clear() {
+        blockPosSet.clear();
+    }
+
+    @Override
+    public int size() {
+        return blockPosSet.size();
+    }
+
+    @Nonnull
+    @Override
+    public Iterator<BlockPos> iterator() {
+        return blockPosSet.iterator();
+    }
+
+    @Override
+    public boolean containsAll(@Nonnull Collection<?> c) {
+        return blockPosSet.containsAll(c);
+    }
+
+    @Override
+    public boolean addAll(@Nonnull Collection<? extends BlockPos> c) {
+        return blockPosSet.addAll(c);
+    }
+
+    @Override
+    public boolean retainAll(@Nonnull Collection<?> c) {
+        return blockPosSet.retainAll(c);
+    }
+
+    @Override
+    public Object[] toArray() {
+        return blockPosSet.toArray();
+    }
+
+    @Override
+    public <T> T[] toArray(@Nonnull T[] a) {
+        return blockPosSet.toArray(a);
     }
 
 }

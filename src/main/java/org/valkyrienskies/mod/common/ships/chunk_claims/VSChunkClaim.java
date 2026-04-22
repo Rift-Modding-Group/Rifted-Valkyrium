@@ -3,7 +3,6 @@ package org.valkyrienskies.mod.common.ships.chunk_claims;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Streams;
-import lombok.Value;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
@@ -24,7 +23,6 @@ import java.util.stream.Stream;
  */
 @Immutable
 
-@Value
 public final class VSChunkClaim implements Iterable<ChunkPos> {
 
     private final ChunkPos centerPos;
@@ -166,5 +164,13 @@ public final class VSChunkClaim implements Iterable<ChunkPos> {
 
     private static long getChunkPos(int chunkX, int chunkZ) {
         return ChunkPos.asLong(chunkX, chunkZ);
+    }
+
+    public ChunkPos getCenterPos() {
+        return centerPos;
+    }
+
+    public Set<Long> getClaimedChunks() {
+        return claimedChunks;
     }
 }

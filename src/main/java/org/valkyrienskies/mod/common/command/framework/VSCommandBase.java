@@ -1,7 +1,5 @@
 package org.valkyrienskies.mod.common.command.framework;
 
-import lombok.SneakyThrows;
-import mcp.MethodsReturnNonnullByDefault;
 import net.minecraft.command.CommandBase;
 import net.minecraft.command.ICommandSender;
 import net.minecraft.server.MinecraftServer;
@@ -10,6 +8,7 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.text.TextComponentString;
 import net.minecraft.world.World;
 import org.apache.commons.io.output.NullOutputStream;
+import org.jetbrains.annotations.NotNull;
 import org.valkyrienskies.mod.common.command.converters.ShipDataConverter;
 import org.valkyrienskies.mod.common.command.converters.Vec3dDataConverter;
 import org.valkyrienskies.mod.common.command.converters.WorldConverter;
@@ -27,7 +26,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @ParametersAreNonnullByDefault
-@MethodsReturnNonnullByDefault
 public class VSCommandBase<K> extends CommandBase {
 
     private final Class<K> cmdClass;
@@ -59,22 +57,22 @@ public class VSCommandBase<K> extends CommandBase {
     }
 
     @Override
-    public String getName() {
+    public @NotNull String getName() {
         return name;
     }
 
     @Override
-    public List<String> getAliases() {
+    public @NotNull List<String> getAliases() {
         return aliases;
     }
 
-    @SneakyThrows
     @Override
-    public List<String> getTabCompletions(MinecraftServer server, ICommandSender sender,
+    public @NotNull List<String> getTabCompletions(MinecraftServer server, ICommandSender sender,
         final String[] splitArgs, @Nullable BlockPos targetPos) {
 
         VSCommandFactory factory = new VSCommandFactory(sender);
-        CommandSpec spec = CommandSpec.forAnnotatedObject(factory.create(cmdClass), factory);
+        final Object commandObject = factory.create(cmdClass);
+        CommandSpec spec = CommandSpec.forAnnotatedObject(commandObject, factory);
 
         String[] args = VSCommandUtil.toTabCompleteArgs(splitArgs);
         List<CharSequence> candidates = new ArrayList<>();
@@ -90,7 +88,7 @@ public class VSCommandBase<K> extends CommandBase {
     }
 
     @Override
-    public String getUsage(ICommandSender sender) {
+    public @NotNull String getUsage(ICommandSender sender) {
         if (usage == null) {
             VSCommandFactory factory = new VSCommandFactory(sender);
             CommandLine commandLine = new CommandLine(factory.create(cmdClass), factory);
