@@ -33,11 +33,9 @@ public interface ITransformablePacket {
      */
     default void doPreProcessing(INetHandlerPlayServer server, boolean callingFromSponge) {
         if (isPacketOnMainThread(server, callingFromSponge)) {
-            System.out.println("Pre packet process");
             NetHandlerPlayServer serverHandler = (NetHandlerPlayServer) server;
             EntityPlayerMP player = serverHandler.player;
             ShipData physicsObject = getPacketParent(serverHandler);
-            System.out.println("physicsObject: "+physicsObject);
             if (physicsObject != null) {
                 // First make a backup of the player position
                 ICapabilityEntityBackup entityBackup = player.getCapability(VSCapabilityRegistry.VS_ENTITY_BACKUP, null);
@@ -53,7 +51,6 @@ public interface ITransformablePacket {
      */
     default void doPostProcessing(INetHandlerPlayServer server, boolean callingFromSponge) {
         if (isPacketOnMainThread(server, callingFromSponge)) {
-            System.out.println("Post packet process");
             NetHandlerPlayServer serverHandler = (NetHandlerPlayServer) server;
             EntityPlayerMP player = serverHandler.player;
             // If we made a backup in doPreProcessing(), then restore from that backup.

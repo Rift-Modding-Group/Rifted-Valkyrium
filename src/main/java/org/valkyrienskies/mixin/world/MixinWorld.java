@@ -45,13 +45,12 @@ import java.util.function.Function;
 @Mixin(value = World.class, priority = 2018)
 @Implements(@Interface(iface = MixinWorldIntrinsicMethods.class, prefix = "vs$", remap = Remap.NONE))
 public abstract class MixinWorld implements IWorldVS, IHasShipManager {
-
     private static final double MAX_ENTITY_RADIUS_ALT = 2;
     private static final double BOUNDING_BOX_EDGE_LIMIT = 120000000;
     private static final double BOUNDING_BOX_SIZE_LIMIT = 120000000;
-    private boolean shouldInterceptRayTrace = true;
+    private static boolean shouldInterceptRayTrace = true;
     // Pork added on to this already bad code because it was already like this so he doesn't feel bad about it
-    private PhysicsObject dontInterceptShip = null;
+    private static PhysicsObject dontInterceptShip = null;
 
     // The IWorldShipManager
     private IPhysObjectWorld manager = null;
@@ -319,28 +318,28 @@ public abstract class MixinWorld implements IWorldVS, IHasShipManager {
 
     @Override
     public void excludeShipFromRayTracer(PhysicsObject entity) {
-        if (this.dontInterceptShip != null) {
+        if (dontInterceptShip != null) {
             throw new IllegalStateException("excluded ship is already set!");
         }
-        this.dontInterceptShip = entity;
+        dontInterceptShip = entity;
     }
 
     @Override
     public void unexcludeShipFromRayTracer(PhysicsObject entity) {
-        if (this.dontInterceptShip != entity) {
+        if (dontInterceptShip != entity) {
             throw new IllegalStateException("must exclude the same ship!");
         }
-        this.dontInterceptShip = null;
+        dontInterceptShip = null;
     }
 
     @Inject(method = "rayTraceBlocks(Lnet/minecraft/util/math/Vec3d;Lnet/minecraft/util/math/Vec3d;ZZZ)Lnet/minecraft/util/math/RayTraceResult;", at = @At("HEAD"), cancellable = true)
     private void preRayTraceBlocks(Vec3d vec31, Vec3d vec32, boolean stopOnLiquid,
         boolean ignoreBlockWithoutBoundingBox,
         boolean returnLastUncollidableBlock, CallbackInfoReturnable<RayTraceResult> callbackInfo) {
-        if (this.shouldInterceptRayTrace) {
+        if (shouldInterceptRayTrace) {
             callbackInfo.setReturnValue(rayTraceBlocksIgnoreShip(vec31, vec32, stopOnLiquid,
                 ignoreBlockWithoutBoundingBox, returnLastUncollidableBlock,
-                this.dontInterceptShip));
+                dontInterceptShip));
         }
     }
 
@@ -348,7 +347,7 @@ public abstract class MixinWorld implements IWorldVS, IHasShipManager {
     public RayTraceResult rayTraceBlocksIgnoreShip(Vec3d vec31, Vec3d vec32, boolean stopOnLiquid,
                                                    boolean ignoreBlockWithoutBoundingBox, boolean returnLastUncollidableBlock,
                                                    PhysicsObject toIgnore) {
-        this.shouldInterceptRayTrace = false;
+        shouldInterceptRayTrace = false;
         RayTraceResult vanillaTrace = World.class.cast(this)
             .rayTraceBlocks(vec31, vec32, stopOnLiquid,
                 ignoreBlockWithoutBoundingBox, returnLastUncollidableBlock);
@@ -407,7 +406,7 @@ public abstract class MixinWorld implements IWorldVS, IHasShipManager {
             }
         }
 
-        this.shouldInterceptRayTrace = true;
+        shouldInterceptRayTrace = true;
         return vanillaTrace;
     }
 
@@ -415,7 +414,7 @@ public abstract class MixinWorld implements IWorldVS, IHasShipManager {
     public RayTraceResult rayTraceBlocksInShip(Vec3d vec31, Vec3d vec32, boolean stopOnLiquid,
                                                boolean ignoreBlockWithoutBoundingBox, boolean returnLastUncollidableBlock,
                                                PhysicsObject toUse) {
-        this.shouldInterceptRayTrace = false;
+        shouldInterceptRayTrace = false;
 
         final ShipTransform shipTransform = toUse.getShipTransformationManager()
                 .getRenderTransform();
@@ -432,11 +431,11 @@ public abstract class MixinWorld implements IWorldVS, IHasShipManager {
             // The hitVec must ALWAYS be in global coordinates.
             resultInShip.hitVec = shipTransform
                     .transform(resultInShip.hitVec, TransformType.SUBSPACE_TO_GLOBAL);
-            this.shouldInterceptRayTrace = true;
+            shouldInterceptRayTrace = true;
             return resultInShip;
         }
 
-        this.shouldInterceptRayTrace = true;
+        shouldInterceptRayTrace = true;
         return null;
     }
 
@@ -470,11 +469,12 @@ public abstract class MixinWorld implements IWorldVS, IHasShipManager {
     private RayTraceResult rayTraceBlocksForGetBlockDensity(World world, Vec3d start, Vec3d end) {
         if (VSConfig.explosionMode == ExplosionMode.VANILLA) {
             // Vanilla raytrace, ignore ships and perform the function like normal
-            this.shouldInterceptRayTrace = false;
+            shouldInterceptRayTrace = false;
             RayTraceResult result = rayTraceBlocks(start, end);
-            this.shouldInterceptRayTrace = true;
+            shouldInterceptRayTrace = true;
             return result;
-        } else if (VSConfig.explosionMode == ExplosionMode.SLOW_VANILLA) {
+        } 
+        else if (VSConfig.explosionMode == ExplosionMode.SLOW_VANILLA) {
             // Vanilla raytrace, include ships and perform the function like normal
             return rayTraceBlocks(start, end);
         }

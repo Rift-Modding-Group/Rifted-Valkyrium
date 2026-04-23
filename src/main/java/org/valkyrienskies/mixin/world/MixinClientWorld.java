@@ -31,9 +31,6 @@ import java.util.stream.Collectors;
  */
 @Mixin(World.class)
 public class MixinClientWorld {
-
-    private final World thisAsWorld = World.class.cast(this);
-
     /**
      * Cache to fix lag from the {@link VSConfig#accurateRain} setting.
      */
@@ -75,12 +72,9 @@ public class MixinClientWorld {
 
 
     @SideOnly(Side.CLIENT)
-    @Inject(method = "getCombinedLight(Lnet/minecraft/util/math/BlockPos;I)I", at = @At("HEAD"),
-        cancellable = true)
-    private void preGetCombinedLight(BlockPos pos, int lightValue,
-        CallbackInfoReturnable<Integer> callbackInfoReturnable) {
-
-        final World world = thisAsWorld;
+    @Inject(method = "getCombinedLight(Lnet/minecraft/util/math/BlockPos;I)I", at = @At("HEAD"), cancellable = true)
+    private void preGetCombinedLight(BlockPos pos, int lightValue, CallbackInfoReturnable<Integer> callbackInfoReturnable) {
+        final World world = (World) ((Object) this);
         if (ValkyrienUtils.notInFakeWorldBlacklist(world)) {
             try {
                 int i = world.getLightFromNeighborsFor(EnumSkyBlock.SKY, pos);
@@ -133,7 +127,8 @@ public class MixinClientWorld {
                 }
 
                 callbackInfoReturnable.setReturnValue(i << 20 | j << 4);
-            } catch (Exception e) {
+            }
+            catch (Exception e) {
                 System.err
                         .println("Something just went wrong here, getting default light value instead!");
                 e.printStackTrace();

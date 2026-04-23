@@ -560,6 +560,10 @@ public class PhysicsObject implements IPhysicsEntity {
         return shipData.isPhysicsEnabled();
     }
 
+    public void setPhysicsEnabled(boolean value) {
+        shipData.setPhysicsEnabled(value);
+    }
+
     public String getName() {
         return shipData.getName();
     }
