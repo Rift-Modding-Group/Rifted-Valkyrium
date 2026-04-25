@@ -71,31 +71,6 @@ public class ShipTransformationManager {
         return newNormals;
     }
 
-    /*
-    public void sendPositionToPlayers(int positionTickID) {
-        WrapperPositionMessage posMessage = null;
-        Matrix4dc gts = getCurrentPhysicsTransform().getGlobalToSubspace();
-        Matrix4dc stg = getCurrentPhysicsTransform().getSubspaceToGlobal();
-        // If it is the identity transform
-        if ((gts.properties() & Matrix4dc.PROPERTY_IDENTITY) != 0 &&
-            (stg.properties() & Matrix4dc.PROPERTY_IDENTITY) != 0) {
-            posMessage = new WrapperPositionMessage(
-                (PhysicsShipTransform) getCurrentPhysicsTransform(),
-                parent.getWrapperEntity().getEntityId(), positionTickID);
-        } else {
-            posMessage = new WrapperPositionMessage(parent.getWrapperEntity(), positionTickID);
-        }
-
-        // Do a standard loop here to avoid a concurrentModificationException. A standard for each loop could cause a crash.
-        for (int i = 0; i < parent.getWatchingPlayers().size(); i++) {
-            EntityPlayerMP player = parent.getWatchingPlayers().get(i);
-            if (player != null) {
-                ValkyrienSkiesMod.physWrapperNetwork.sendTo(posMessage, player);
-            }
-        }
-    }
-     */
-
     private static Vector3dc[] generateRotationNormals(ShipTransform shipTransform) {
         Vector3d[] norms = Polygon.generateAxisAlignedNorms();
         for (int i = 0; i < 3; i++) {

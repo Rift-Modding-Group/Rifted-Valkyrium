@@ -51,7 +51,6 @@ import java.util.Optional;
 
 @EventBusSubscriber(modid = ValkyrienSkiesMod.MOD_ID)
 public class EventsCommon {
-
     @Deprecated
     private static final Map<EntityPlayer, double[]> lastPositions = new HashMap<>();
 
@@ -141,7 +140,8 @@ public class EventsCommon {
                             "You can't go beyond 27000000 blocks because airships are stored there!"));
                     }
                 }
-            } catch (NullPointerException e) {
+            }
+            catch (NullPointerException e) {
                 ValkyrienSkiesMod.LOGGER.warn("Nullpointer EventsCommon.java:onPlayerTickEvent");
             }
 

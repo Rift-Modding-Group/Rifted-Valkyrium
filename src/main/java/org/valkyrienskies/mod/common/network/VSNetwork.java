@@ -25,7 +25,6 @@ import java.util.Optional;
  * ships.
  */
 public class VSNetwork {
-
     /**
      * Don't use this! Use world.notifyBlockUpdate() instead!
      */
@@ -38,12 +37,7 @@ public class VSNetwork {
     public static void sendToAllNearExcept(@Nullable EntityPlayer except, double x, double y,
         double z, double radius, int dimension, Packet<?> packetIn) {
         BlockPos pos = new BlockPos(x, y, z);
-        World worldIn;
-        if (except == null) {
-            worldIn = DimensionManager.getWorld(dimension);
-        } else {
-            worldIn = except.world;
-        }
+        World worldIn = except == null ? DimensionManager.getWorld(dimension) : except.world;
         Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(worldIn, pos);
         Vector3d packetPosition = new Vector3d(x, y, z);
         if (physicsObject.isPresent()) {
@@ -51,28 +45,27 @@ public class VSNetwork {
                 .getShipTransformationManager()
                 .getCurrentTickTransform()
                 .transformPosition(packetPosition, TransformType.SUBSPACE_TO_GLOBAL);
+
             // Special treatment for certain packets.
-            if (packetIn instanceof SPacketSoundEffect) {
-                SPacketSoundEffect soundEffect = (SPacketSoundEffect) packetIn;
-                packetIn = new SPacketSoundEffect(soundEffect.sound, soundEffect.category,
-                    packetPosition.x, packetPosition.y, packetPosition.z, soundEffect.soundVolume,
-                    soundEffect.soundPitch);
+            if (packetIn instanceof SPacketSoundEffect soundEffect) {
+                packetIn = new SPacketSoundEffect(
+                        soundEffect.sound, soundEffect.category,
+                        packetPosition.x, packetPosition.y, packetPosition.z,
+                        soundEffect.soundVolume, soundEffect.soundPitch
+                );
             }
 
-            if (packetIn instanceof SPacketEffect) {
-                SPacketEffect effect = (SPacketEffect) packetIn;
-                BlockPos blockpos = new BlockPos(packetPosition.x, packetPosition.y,
-                    packetPosition.z);
-                packetIn = new SPacketEffect(effect.soundType, blockpos, effect.soundData,
-                    effect.serverWide);
+            if (packetIn instanceof SPacketEffect effect) {
+                BlockPos blockpos = new BlockPos(packetPosition.x, packetPosition.y, packetPosition.z);
+                packetIn = new SPacketEffect(effect.soundType, blockpos, effect.soundData, effect.serverWide);
             }
         }
 
-        List<EntityPlayer> playerEntityList = ((WorldServer) worldIn).playerEntities;
+        List<EntityPlayer> playerEntityList = worldIn.playerEntities;
 
         // Original method here.
-        for (int i = 0; i < playerEntityList.size(); ++i) {
-            EntityPlayerMP entityplayermp = (EntityPlayerMP) playerEntityList.get(i);
+        for (EntityPlayer entityPlayer : playerEntityList) {
+            EntityPlayerMP entityplayermp = (EntityPlayerMP) entityPlayer;
 
             if (entityplayermp != except && entityplayermp.dimension == dimension) {
                 double d0 = x - entityplayermp.posX;
@@ -85,7 +78,7 @@ public class VSNetwork {
 
                 // Cover both cases; if player is in ship space or if player is in world space.
                 if ((d0 * d0 + d1 * d1 + d2 * d2 < radius * radius) || (d3 * d3 + d4 * d4 + d5 * d5
-                    < radius * radius)) {
+                        < radius * radius)) {
                     entityplayermp.connection.sendPacket(packetIn);
                 }
             }
