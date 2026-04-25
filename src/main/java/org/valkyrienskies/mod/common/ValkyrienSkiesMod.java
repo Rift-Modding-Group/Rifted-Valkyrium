@@ -15,13 +15,11 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.common.crafting.CraftingHelper;
 import net.minecraftforge.event.RegistryEvent;
-import net.minecraftforge.fml.common.FMLLog;
 import net.minecraftforge.fml.common.Loader;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventHandler;
 import net.minecraftforge.fml.common.Mod.Instance;
 import net.minecraftforge.fml.common.SidedProxy;
-import net.minecraftforge.fml.common.event.FMLFingerprintViolationEvent;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
@@ -54,15 +52,12 @@ import org.valkyrienskies.mod.common.network.ShipTransformUpdateMessage;
 import org.valkyrienskies.mod.common.network.ShipTransformUpdateMessageHandler;
 import org.valkyrienskies.mod.common.piloting.PilotControlsMessage;
 import org.valkyrienskies.mod.common.piloting.PilotControlsMessageHandler;
-import org.valkyrienskies.mod.common.ships.deprecated_api.VS_APIPhysicsEntityManager;
 import org.valkyrienskies.mod.common.tileentity.TileEntityBoatChair;
 import org.valkyrienskies.mod.common.tileentity.TileEntityCaptainsChair;
 import org.valkyrienskies.mod.common.tileentity.TileEntityPassengerChair;
 import org.valkyrienskies.mod.common.tileentity.TileEntityWaterPump;
 import org.valkyrienskies.mod.fixes.darkness_lib_fix.VSDarknessLibAPILightProvider;
 import org.valkyrienskies.mod.proxy.CommonProxy;
-import sun.misc.Unsafe;
-import valkyrienwarfare.api.IPhysicsEntityManager;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -91,7 +86,8 @@ public class ValkyrienSkiesMod {
 
     @SidedProxy(
         clientSide = "org.valkyrienskies.mod.proxy.ClientProxy",
-        serverSide = "org.valkyrienskies.mod.proxy.ServerProxy")
+        serverSide = "org.valkyrienskies.mod.proxy.ServerProxy"
+    )
     public static CommonProxy proxy;
 
     static final int VS_ENTITY_LOAD_DISTANCE = 128;
@@ -132,30 +128,10 @@ public class ValkyrienSkiesMod {
 		VSCapabilityRegistry.registerCapabilities();
         proxy.preInit(event);
 
-        LOGGER.debug("Initializing the VS API.");
-        try {
-            setPhysicsEntityManagerInstance(new VS_APIPhysicsEntityManager());
-        } catch (Exception e) {
-            e.printStackTrace();
-            LOGGER.fatal("FAILED TO INITIALIZE VS API!");
-        }
-
         registerItems();
 		registerBlocks();
 
 		registerDarknessLib();
-    }
-
-    private static void setPhysicsEntityManagerInstance(IPhysicsEntityManager manager)
-        throws ReflectiveOperationException {
-        Field unsafeField = Unsafe.class.getDeclaredField("theUnsafe");
-        unsafeField.setAccessible(true);
-        Unsafe unsafe = (Unsafe) unsafeField.get(null);
-
-        Field instanceField = IPhysicsEntityManager.class.getDeclaredField("INSTANCE");
-        Object staticFieldBase = unsafe.staticFieldBase(instanceField);
-        long staticFieldOffset = unsafe.staticFieldOffset(instanceField);
-        unsafe.putObjectVolatile(staticFieldBase, staticFieldOffset, manager);
     }
 
     private void registerDarknessLib() {
@@ -173,9 +149,8 @@ public class ValkyrienSkiesMod {
             final Object instance = instanceField.get(null);
             final List<Function<EntityPlayer, Integer>> lightProviders = (List<Function<EntityPlayer, Integer>>) lightProvidersField.get(instance);
             lightProviders.add(new VSDarknessLibAPILightProvider());
-        } catch (Exception e) {
-
         }
+        catch (Exception e) {}
     }
 
     @EventHandler
@@ -301,5 +276,4 @@ public class ValkyrienSkiesMod {
     public static boolean isSpongePresent() {
         return isSpongePresent;
     }
-
 }

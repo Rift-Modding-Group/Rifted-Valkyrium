@@ -107,6 +107,9 @@ public class EventsCommon {
         }
         World world = event.world;
         IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(world);
+        if (physObjectWorld == null) {
+            throw new IllegalStateException("Could not get ship manager from world!");
+        }
         switch (event.phase) {
             case START:
                 // Reset the air pocket status of all entities

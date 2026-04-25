@@ -16,6 +16,7 @@ import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
+import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import valkyrienwarfare.api.TransformType;
@@ -50,7 +51,12 @@ public class MixinWorldClient {
 
         final AxisAlignedBB shipDetectionBB = new AxisAlignedBB(posX - i, posY - i, posZ - i, posX + i, posY + i, posZ + i);
 
-        final List<PhysicsObject> nearbyShipObjects = ValkyrienUtils.getPhysObjWorld(thisAsWorldClient).getPhysObjectsInAABB(shipDetectionBB);
+        IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(thisAsWorldClient);
+        if (physObjectWorld == null) {
+            throw new IllegalStateException("Could not get ship manager from world!");
+        }
+
+        final List<PhysicsObject> nearbyShipObjects = physObjectWorld.getPhysObjectsInAABB(shipDetectionBB);
 
         final Vector3d temp0 = new Vector3d();
 

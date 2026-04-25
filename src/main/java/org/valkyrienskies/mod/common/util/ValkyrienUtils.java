@@ -63,12 +63,22 @@ public final class ValkyrienUtils {
      */
     @SuppressWarnings("ConstantConditions")
     public static @NotNull Optional<PhysicsObject> getPhysoManagingBlock(@Nullable World world, @Nullable BlockPos pos) {
+        IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(world);
+        if (physObjectWorld == null) {
+            throw new IllegalStateException("Could not get ship manager from world!");
+        }
+
         return getShipManagingBlock(world, pos)
-            .map(shipData -> getPhysObjWorld(world).getPhysObjectFromUUID(shipData.getUuid()));
+            .map(shipData -> physObjectWorld.getPhysObjectFromUUID(shipData.getUuid()));
     }
 
     public static @NotNull Optional<PhysicsObject> getPhysoManagingBlockThreadSafe(@Nullable World world, @Nullable BlockPos pos) {
-        for (PhysicsObject physicsObject : getPhysObjWorld(world).getAllLoadedThreadSafe()) {
+        IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(world);
+        if (physObjectWorld == null) {
+            throw new IllegalStateException("Could not get ship manager from world!");
+        }
+
+        for (PhysicsObject physicsObject : physObjectWorld.getAllLoadedThreadSafe()) {
             if (physicsObject.getChunkClaim().containsBlock(pos)) {
                 return Optional.of(physicsObject);
             }
@@ -203,19 +213,21 @@ public final class ValkyrienUtils {
             throw new IllegalStateException("This method cannot be invoked on client side!");
         }
         if (!(world instanceof WorldServer)) {
-            throw new IllegalStateException(
-                    "The world " + world + " wasn't an instance of WorldServer");
+            throw new IllegalStateException("The world " + world + " wasn't an instance of WorldServer");
         }
 
         // Create the ship data that we will use to make the ship with later.
         ShipData shipData = createNewShip(world, physicsInfuserPos);
 
         // Queue the ship spawn operation
-        ((WorldServerShipManager) ValkyrienUtils.getPhysObjWorld(world)).queueShipSpawn(shipData, physicsInfuserPos, blockFinderType);
+        IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(world);
+        if (!(physObjectWorld instanceof WorldServerShipManager serverShipManager)) return;
+        serverShipManager.queueShipSpawn(shipData, physicsInfuserPos, blockFinderType);
     }
 
-    public static @NotNull IPhysObjectWorld getPhysObjWorld(World world) {
-        return ((IHasShipManager) world).getManager();
+    public static @Nullable IPhysObjectWorld getPhysObjWorld(@Nullable World world) {
+        if (!(world instanceof IHasShipManager hasShipManager)) return null;
+        return hasShipManager.getManager();
     }
 
     /**

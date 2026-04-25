@@ -8,6 +8,7 @@ import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 import org.valkyrienskies.mod.common.piloting.ITileEntityPilotable;
+import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 
@@ -20,24 +21,29 @@ public class MessagePlayerStoppedPilotingHandler implements
     public IMessage onMessage(MessagePlayerStoppedPiloting message, MessageContext ctx) {
         IThreadListener mainThread = ctx.getServerHandler().server;
         mainThread.addScheduledTask(() -> {
-                    if (message.posToStopPiloting != null) {
-                        BlockPos pos = message.posToStopPiloting;
-                        EntityPlayerMP player = ctx.getServerHandler().player;
+            EntityPlayerMP player = ctx.getServerHandler().player;
+            if (message.posToStopPiloting != null) {
+                BlockPos pos = message.posToStopPiloting;
 
-                        TileEntity tileEntity = player.world.getTileEntity(pos);
+                TileEntity tileEntity = player.world.getTileEntity(pos);
 
-                        if (tileEntity instanceof ITileEntityPilotable) {
-                            ((ITileEntityPilotable) tileEntity).playerWantsToStopPiloting(player);
-                        }
-                    } else {
-                        final UUID shipID = message.shipIDToStopPiloting;
-                        final PhysicsObject physicsObject = ValkyrienUtils.getPhysObjWorld(ctx.getServerHandler().player.world).getPhysObjectFromUUID(shipID);
-                        if (physicsObject != null && physicsObject.getShipPilot() != null && ctx.getServerHandler().player.getUniqueID().equals(physicsObject.getShipPilot().getPilot())) {
-                            physicsObject.setShipPilot(null);
-                        }
-                    }
+                if (tileEntity instanceof ITileEntityPilotable tileEntityPilotable) {
+                    tileEntityPilotable.playerWantsToStopPiloting(player);
                 }
-        );
+            }
+            else {
+                final UUID shipID = message.shipIDToStopPiloting;
+                final IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(player.world);
+                if (physObjectWorld == null) return;
+                final PhysicsObject physicsObject = physObjectWorld.getPhysObjectFromUUID(shipID);
+                if (physicsObject != null
+                        && physicsObject.getShipPilot() != null
+                        && player.getUniqueID().equals(physicsObject.getShipPilot().getPilot())
+                ) {
+                    physicsObject.setShipPilot(null);
+                }
+            }
+        });
         return null;
     }
 

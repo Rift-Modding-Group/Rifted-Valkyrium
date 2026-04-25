@@ -5,6 +5,7 @@ import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.EnumSkyBlock;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldServer;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import org.joml.Vector3dc;
@@ -15,6 +16,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.valkyrienskies.mod.common.config.VSConfig;
+import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.JOML;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
@@ -82,7 +84,13 @@ public class MixinClientWorld {
                 AxisAlignedBB lightBB = new AxisAlignedBB(pos.getX() - 2, pos.getY() - 2,
                         pos.getZ() - 2, pos.getX() + 2, pos.getY() + 2, pos.getZ() + 2);
 
-                final List<PhysicsObject> physicsObjectList = ValkyrienUtils.getPhysObjWorld(world).getAllLoadedThreadSafe().stream().filter((physicsObject -> lightBB.intersects(physicsObject.getShipBB()))).collect(Collectors.toList());
+                IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(world);
+                if (physObjectWorld == null) {
+                    throw new IllegalStateException("Could not get ship manager from world!");
+                }
+                final List<PhysicsObject> physicsObjectList = physObjectWorld.getAllLoadedThreadSafe().stream()
+                        .filter((physicsObject -> lightBB.intersects(physicsObject.getShipBB())))
+                        .toList();
 
                 final BlockPos.MutableBlockPos mutableBlockPos = new BlockPos.MutableBlockPos();
 
@@ -117,14 +125,10 @@ public class MixinClientWorld {
                         }
                     }
 
-                    if (i > shipSkyLight) {
-                        i = shipSkyLight;
-                    }
+                    if (i > shipSkyLight) i = shipSkyLight;
                 }
 
-                if (j < lightValue) {
-                    j = lightValue;
-                }
+                if (j < lightValue) j = lightValue;
 
                 callbackInfoReturnable.setReturnValue(i << 20 | j << 4);
             }

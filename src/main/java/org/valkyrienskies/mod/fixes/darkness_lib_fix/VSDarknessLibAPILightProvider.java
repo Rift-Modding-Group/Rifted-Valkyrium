@@ -8,6 +8,7 @@ import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
+import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import valkyrienwarfare.api.TransformType;
@@ -20,10 +21,17 @@ public class VSDarknessLibAPILightProvider implements Function<EntityPlayer, Int
     public Integer apply(final EntityPlayer entityPlayer) {
         final World world = entityPlayer.world;
 
-        final AxisAlignedBB searchBB =
-                new AxisAlignedBB(entityPlayer.posX, entityPlayer.posY, entityPlayer.posZ, entityPlayer.posX, entityPlayer.posY, entityPlayer.posZ).grow(8);
+        final AxisAlignedBB searchBB = new AxisAlignedBB(
+                entityPlayer.posX, entityPlayer.posY, entityPlayer.posZ,
+                entityPlayer.posX, entityPlayer.posY, entityPlayer.posZ
+        ).grow(8);
 
-        final List<PhysicsObject> nearbyShips = ValkyrienUtils.getPhysObjWorld(world).getPhysObjectsInAABB(searchBB);
+        final IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(world);
+        if (physObjectWorld == null) {
+            throw new IllegalStateException("Could not get ship manager from world!");
+        }
+
+        final List<PhysicsObject> nearbyShips = physObjectWorld.getPhysObjectsInAABB(searchBB);
 
         final Vector3d temp0 = new Vector3d();
         final BlockPos.MutableBlockPos temp1 = new BlockPos.MutableBlockPos();

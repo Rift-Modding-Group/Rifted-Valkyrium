@@ -32,7 +32,6 @@ public class ShipTransformUpdateMessageHandler implements IMessageHandler<ShipTr
             @Override
             public void run() {
                 World world = Minecraft.getMinecraft().world;
-                IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(world);
                 QueryableShipData worldData = QueryableShipData.get(world);
 
                 for (Map.Entry<UUID, Tuple<ShipTransform, AxisAlignedBB>> transformUpdate : message.shipTransforms.entrySet()) {
@@ -40,12 +39,15 @@ public class ShipTransformUpdateMessageHandler implements IMessageHandler<ShipTr
                     final ShipTransform shipTransform = transformUpdate.getValue().getFirst();
                     final AxisAlignedBB shipBB = transformUpdate.getValue().getSecond();
 
-                    final PhysicsObject physicsObject = ValkyrienUtils.getPhysObjWorld(world).getPhysObjectFromUUID(shipID);
-                    if (physicsObject != null) {
-                        // Do not update the transform in ShipData, that will be done by PhysicsObject.tick()
-                        ITransformInterpolator interpolator = physicsObject.getTransformInterpolator();
-                        interpolator.onNewTransformPacket(shipTransform, shipBB);
-                    }
+                    IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(world);
+                    if (physObjectWorld == null) return;
+
+                    final PhysicsObject physicsObject = physObjectWorld.getPhysObjectFromUUID(shipID);
+                    if (physicsObject == null) return;
+
+                    // Do not update the transform in ShipData, that will be done by PhysicsObject.tick()
+                    ITransformInterpolator interpolator = physicsObject.getTransformInterpolator();
+                    interpolator.onNewTransformPacket(shipTransform, shipBB);
                 }
             }
         });

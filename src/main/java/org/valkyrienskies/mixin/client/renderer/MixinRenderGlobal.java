@@ -28,6 +28,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 
@@ -247,7 +248,12 @@ public abstract class MixinRenderGlobal {
         double d2 = entity.lastTickPosZ + (entity.posZ - entity.lastTickPosZ) * (double)partialTicks;
         icamera.setPosition(d0, d1, d2);
 
-        for (PhysicsObject physicsObject : ValkyrienUtils.getPhysObjWorld(world).getAllLoadedPhysObj()) {
+
+        IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(world);
+        if (physObjectWorld == null) {
+            throw new IllegalStateException("Could not get ship manager from world!");
+        }
+        for (PhysicsObject physicsObject : physObjectWorld.getAllLoadedPhysObj()) {
             GL11.glPushMatrix();
             if (physicsObject.getShipRenderer().shouldRender(icamera)) {
                 physicsObject.getShipRenderer()

@@ -8,6 +8,7 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
 import org.valkyrienskies.mod.common.ships.ship_world.WorldServerShipManager;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 
@@ -26,8 +27,11 @@ public class MixinChunkProviderServer {
      */
     @Inject(method = "tick", at = @At("HEAD"))
     private void preTick(CallbackInfoReturnable<Boolean> cir) {
-        WorldServerShipManager physObjectWorld = (WorldServerShipManager) ValkyrienUtils.getPhysObjWorld(world);
-        for (Long chunkPos : physObjectWorld.getBackgroundShipChunks()) {
+        IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(world);
+        if (!(physObjectWorld instanceof WorldServerShipManager serverShipManager)) {
+            throw new IllegalStateException("Could not get ship manager from world!");
+        }
+        for (Long chunkPos : serverShipManager.getBackgroundShipChunks()) {
             droppedChunks.remove(chunkPos);
         }
     }

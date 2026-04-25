@@ -42,6 +42,7 @@ import java.util.function.Function;
 
 // TODO: This class is horrible
 //       Who cares lol ~Tri0de
+//       Well I don't care at least xd ~Zoroark
 @Mixin(value = World.class, priority = 2018)
 @Implements(@Interface(iface = MixinWorldIntrinsicMethods.class, prefix = "vs$", remap = Remap.NONE))
 public abstract class MixinWorld implements IWorldVS, IHasShipManager {
@@ -49,8 +50,8 @@ public abstract class MixinWorld implements IWorldVS, IHasShipManager {
     private static final double BOUNDING_BOX_EDGE_LIMIT = 120000000;
     private static final double BOUNDING_BOX_SIZE_LIMIT = 120000000;
     private static boolean shouldInterceptRayTrace = true;
-    // Pork added on to this already bad code because it was already like this so he doesn't feel bad about it
-    private static PhysicsObject dontInterceptShip = null;
+    // Raytrace exclusion is call-context state, not world instance state.
+    private static final ThreadLocal<PhysicsObject> dontInterceptShip = ThreadLocal.withInitial(() -> null);
 
     // The IWorldShipManager
     private IPhysObjectWorld manager = null;
@@ -318,18 +319,18 @@ public abstract class MixinWorld implements IWorldVS, IHasShipManager {
 
     @Override
     public void excludeShipFromRayTracer(PhysicsObject entity) {
-        if (dontInterceptShip != null) {
+        if (dontInterceptShip.get() != null) {
             throw new IllegalStateException("excluded ship is already set!");
         }
-        dontInterceptShip = entity;
+        dontInterceptShip.set(entity);
     }
 
     @Override
     public void unexcludeShipFromRayTracer(PhysicsObject entity) {
-        if (dontInterceptShip != entity) {
+        if (dontInterceptShip.get() != entity) {
             throw new IllegalStateException("must exclude the same ship!");
         }
-        dontInterceptShip = null;
+        dontInterceptShip.remove();
     }
 
     @Inject(method = "rayTraceBlocks(Lnet/minecraft/util/math/Vec3d;Lnet/minecraft/util/math/Vec3d;ZZZ)Lnet/minecraft/util/math/RayTraceResult;", at = @At("HEAD"), cancellable = true)
@@ -339,7 +340,7 @@ public abstract class MixinWorld implements IWorldVS, IHasShipManager {
         if (shouldInterceptRayTrace) {
             callbackInfo.setReturnValue(rayTraceBlocksIgnoreShip(vec31, vec32, stopOnLiquid,
                 ignoreBlockWithoutBoundingBox, returnLastUncollidableBlock,
-                dontInterceptShip));
+                dontInterceptShip.get()));
         }
     }
 
@@ -479,7 +480,7 @@ public abstract class MixinWorld implements IWorldVS, IHasShipManager {
             return rayTraceBlocks(start, end);
         }
 
-        java.util.function.Predicate<BlockPos> canCollide = pos -> {
+        Predicate<BlockPos> canCollide = pos -> {
             IBlockState blockState = world.getBlockState(pos);
             return blockState.getBlock().canCollideCheck(blockState, false);
         };

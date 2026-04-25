@@ -154,18 +154,17 @@ public record QueryableShipData(ConcurrentUpdatableIndexedCollection<ShipData> a
 
     /**
      * Adds the ShipData if it doesn't exist, or updates the values of the old ShipData to match the input.
-     *
-     * @return reference to the "real" ShipData object used by {@link IPhysObjectWorld} and {@link PhysicsObject}.
      */
-    public @NotNull ShipData addOrUpdateShipPreservingPhysObj(ShipData ship, World world) {
+    public void addOrUpdateShipPreservingPhysObj(ShipData ship, World world) {
         Optional<ShipData> old = getShip(ship.getUuid());
         if (old.isPresent()) {
-            PhysicsObject physicsObject = ValkyrienUtils.getPhysObjWorld(world).getPhysObjectFromUUID(ship.getUuid());
-            if (physicsObject != null) {
-                // Ship transform updates are now done by ShipTransformUpdateMessageHandler
-                // ITransformInterpolator interpolator = physicsObject.getTransformInterpolator();
-                // interpolator.onNewTransformPacket(ship.getShipTransform(), ship.getShipBB());
-            } else {
+            IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(world);
+            if (physObjectWorld == null) {
+                throw new IllegalStateException("Could not get ship manager from world!");
+            }
+
+            PhysicsObject physicsObject = physObjectWorld.getPhysObjectFromUUID(ship.getUuid());
+            if (physicsObject == null) {
                 old.get().setShipTransform(ship.getShipTransform());
                 old.get().setPrevTickShipTransform(ship.getPrevTickShipTransform());
                 old.get().setShipBB(ship.getShipBB());
@@ -177,11 +176,8 @@ public record QueryableShipData(ConcurrentUpdatableIndexedCollection<ShipData> a
             old.get().getInertiaData().setGameMoITensor(ship.getInertiaData().getGameMoITensor());
             old.get().getInertiaData().setGameTickMass(ship.getInertiaData().getGameTickMass());
             old.get().getInertiaData().setGameTickCenterOfMass(ship.getInertiaData().getGameTickCenterOfMass());
-            return old.get();
-        } else {
-            this.allShips.add(ship);
-            return ship;
         }
+        else this.allShips.add(ship);
     }
 
     public void registerUpdateListener(

@@ -8,6 +8,7 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import org.joml.Vector3d;
 import org.valkyrienskies.mod.common.config.VSConfig;
+import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
 import org.valkyrienskies.mod.common.ships.ship_world.IWorldVS;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.JOML;
@@ -19,13 +20,19 @@ import java.util.List;
  * Why not just inline this code into MixinClientWorld? There's a strange mixin bug that causes MixinClientWorld to get
  * loaded on servers. However by using World.isRemote we can prevent this code from ever being loaded on server side
  * therefore preventing an incorrect side crash.
+ *
+ * Huh, strange. Wonder if I can move this to MixinClientWorld, its been years now :trollface: -Zoroark
  */
 public class FixAccurateRain {
 
     public static BlockPos getRainPosFromShips(final World world, final BlockPos originalHeight) {
         if (VSConfig.accurateRain && Minecraft.getMinecraft().player != null) {
             final AxisAlignedBB boundingBox = new AxisAlignedBB(originalHeight.getX() - .5, 0, originalHeight.getZ() - .5, originalHeight.getX() + .5, 255, originalHeight.getZ() + .5);
-            final List<PhysicsObject> physicsObjectList = ValkyrienUtils.getPhysObjWorld(world).getPhysObjectsInAABB(boundingBox);
+            final IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(world);
+            if (physObjectWorld == null) {
+                throw new IllegalStateException("Could not get ship manager from world!");
+            }
+            final List<PhysicsObject> physicsObjectList = physObjectWorld.getPhysObjectsInAABB(boundingBox);
 
             final Vec3d traceStart = new Vec3d(originalHeight.getX() + .5, Minecraft.getMinecraft().player.posY + 50, originalHeight.getZ() + .5);
             final Vec3d traceEnd = new Vec3d(originalHeight.getX() + .5, originalHeight.getY() + .5, originalHeight.getZ() + .5);

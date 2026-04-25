@@ -174,9 +174,7 @@ public class EventsClient {
     @SubscribeEvent
     public void onRenderTickEvent(RenderTickEvent event) {
         final World world = Minecraft.getMinecraft().world;
-        if (world == null) {
-            return; // No ships to worry about.
-        }
+        if (world == null) return; // No ships to worry about.
         double partialTicks = event.renderTickTime;
         if (Minecraft.getMinecraft().isGamePaused()) {
             partialTicks = Minecraft.getMinecraft().renderPartialTicksPaused;
@@ -186,6 +184,11 @@ public class EventsClient {
             lastPositionsMap.clear();
             for (PhysicsObject wrapper : ValkyrienUtils.getPhysosLoadedInWorld(world)) {
                 wrapper.getShipTransformationManager().updateRenderTransform(partialTicks);
+            }
+
+            IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(world);
+            if (physObjectWorld == null) {
+                throw new IllegalStateException("Could not get ship manager from world!");
             }
 
             // region Fix rendering movement of entities on ships
@@ -202,12 +205,12 @@ public class EventsClient {
             for (final Entity entity : world.getLoadedEntityList()) {
                 final EntityShipMovementData entityShipMovementData = ValkyrienUtils.getEntityShipMovementDataFor(entity);
                 if (entityShipMovementData.getLastTouchedShip() != null && entityShipMovementData.getTicksSinceTouchedShip() < VSConfig.ticksToStickToShip) {
-                    final PhysicsObject shipPhysicsObject = ValkyrienUtils.getPhysObjWorld(world).getPhysObjectFromUUID(
+                    final PhysicsObject shipPhysicsObject = physObjectWorld.getPhysObjectFromUUID(
                             entityShipMovementData.getLastTouchedShip().getUuid()
                     );
                     if (shipPhysicsObject == null) {
                         // This ship doesn't exist anymore, just remove it.
-                        IDraggable.class.cast(entity).setEntityShipMovementData(entityShipMovementData.withLastTouchedShip(null));
+                        ((IDraggable) entity).setEntityShipMovementData(entityShipMovementData.withLastTouchedShip(null));
                         continue;
                     }
                     final ShipTransform prevTickTransform = shipPhysicsObject.getPrevTickShipTransform();
@@ -234,8 +237,8 @@ public class EventsClient {
                     entity.lastTickPosZ = (entityShouldBeHere.z() - (entity.posZ * partialTicks)) / (1 - partialTicks);
                 }
             }
-            // endregion
-        } else {
+        }
+        else {
             // Once the rendering code has finished we restore the lastTickPos variables to their old values.
             for (final Entity entity : world.getLoadedEntityList()) {
                 if (lastPositionsMap.containsKey(entity)) {
@@ -248,18 +251,21 @@ public class EventsClient {
         }
     }
 
+    /**
+     * This appears to be for showing the bounding boxes for ships when viewing hitboxes
+     * after F3 + H (i think thats the key idk)
+     * */
     @SubscribeEvent
     public void onRenderWorldLastEvent(RenderWorldLastEvent event) {
         Minecraft mc = Minecraft.getMinecraft();
         World world = Minecraft.getMinecraft().world;
-        if (mc.getRenderManager().isDebugBoundingBox() && !mc.isReducedDebug() && world != null) {
-            float partialTicks = event.getPartialTicks();
-            Vector3dc offset =
-                VSRenderUtils.getEntityPartialPosition(mc.getRenderViewEntity(), partialTicks).negate();
+        if (!mc.getRenderManager().isDebugBoundingBox() || mc.isReducedDebug() || mc.getRenderViewEntity() == null || world == null) return;
 
-            for (PhysicsObject physo : ValkyrienUtils.getPhysosLoadedInWorld(world)) {
-                physo.getShipRenderer().renderDebugInfo(offset);
-            }
+        float partialTicks = event.getPartialTicks();
+        Vector3dc offset = VSRenderUtils.getEntityPartialPosition(mc.getRenderViewEntity(), partialTicks).negate();
+
+        for (PhysicsObject physo : ValkyrienUtils.getPhysosLoadedInWorld(world)) {
+            physo.getShipRenderer().renderDebugInfo(offset);
         }
     }
 
@@ -269,19 +275,18 @@ public class EventsClient {
      */
     @SubscribeEvent
     public void onChunkLoadEvent(ChunkEvent.Load event) {
-        if (!event.getWorld().isRemote) {
-            return;
-        }
+        if (!event.getWorld().isRemote) return;
         Chunk chunk = event.getChunk();
         QueryableShipData queryableShipData = QueryableShipData.get(event.getWorld());
         Optional<ShipData> shipClaimingOptional = queryableShipData.getShipFromChunk(chunk.x, chunk.z);
         if (shipClaimingOptional.isPresent()) {
             ShipData shipData = shipClaimingOptional.get();
             IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(event.getWorld());
-            PhysicsObject physicsObject = physObjectWorld.getPhysObjectFromUUID(shipData.getUuid());
-            if (physicsObject != null) {
-                physicsObject.updateChunk(chunk);
+            if (physObjectWorld == null) {
+                throw new IllegalStateException("Could not get ship manager from world!");
             }
+            PhysicsObject physicsObject = physObjectWorld.getPhysObjectFromUUID(shipData.getUuid());
+            if (physicsObject != null) physicsObject.updateChunk(chunk);
         }
     }
 }
