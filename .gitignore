@@ -16,6 +16,7 @@ org.*
 #build output
 /build/
 .gradle
+.gradle-local/
 /modules/
 /classes/
 /out/
