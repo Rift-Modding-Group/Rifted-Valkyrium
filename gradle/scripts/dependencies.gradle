@@ -26,6 +26,10 @@ repositories {
     maven {
         url = "https://jitpack.io"
     }
+    maven {
+        name = "Dogforce Games"
+        url = "https://dogforce-games.com/maven/"
+    }
     mavenCentral()
     mavenLocal() // Must be last for caching to work
 }
@@ -79,4 +83,10 @@ dependencies {
     // junit tests
     testImplementation 'org.junit.jupiter:junit-jupiter:5.6.2'
     testImplementation 'org.hamcrest:hamcrest:2.2'
+
+    // GraphLib is used by node tile entities to create a graph of nodes
+    implementation "gigaherz.graph:GraphLib:1.4.0"
+
+    //i hate kotlin with my entire heart and soul but its required for VS world to even work, hence this shit
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:2.3.20"
 }

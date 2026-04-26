@@ -1,0 +1,7 @@
+newmtl default
+illum 4
+Kd 0.588000 0.588000 0.588000
+Ka 0.588000 0.588000 0.588000
+Tf 1.000000 1.000000 1.000000 
+map_Kd vs_control:blocks/valkyrium_compressor/metal
+Ni 1.500000

@@ -1,0 +1,23 @@
+{
+    "type": "minecraft:crafting_shaped",
+    
+    "pattern":
+    [
+        "DDD",
+        "DDD",
+        "DDD"
+    ],
+    
+    "key":
+    {
+        "D": {
+            "item": "vs_world:valkyrium_crystal"
+        }
+    },
+    
+    "result":
+    {
+        "item": "vs_control:compacted_valkyrium",
+        "count": 1
+    }
+}

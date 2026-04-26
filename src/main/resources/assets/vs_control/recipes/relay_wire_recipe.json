@@ -1,0 +1,29 @@
+{
+    "type": "minecraft:crafting_shaped",
+
+    "pattern":
+    [
+        "SIS",
+        "ICI",
+        "SIS"
+    ],
+
+    "key":
+    {
+        "I": {
+            "item": "minecraft:iron_ingot"
+        },
+        "C": {
+            "item": "minecraft:redstone"
+        },
+        "S": {
+            "item": "minecraft:stick"
+        }
+    },
+
+    "result":
+    {
+        "item": "vs_control:relay_wire",
+        "count": 1
+    }
+}
