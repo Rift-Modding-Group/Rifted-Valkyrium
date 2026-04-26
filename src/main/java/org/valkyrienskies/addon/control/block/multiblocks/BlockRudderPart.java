@@ -95,7 +95,7 @@ public class BlockRudderPart extends BaseBlock implements ITileEntityProvider, I
         if (world.getTileEntity(pos) instanceof TileEntityRudderPart) {
             TileEntityRudderPart tileEntity = (TileEntityRudderPart) world
                 .getTileEntity(pos);
-            return null; // tileEntity.getForcePositionInShipSpace();
+            return tileEntity.getForcePositionInShipSpace();
         } else {
             return null;
         }
