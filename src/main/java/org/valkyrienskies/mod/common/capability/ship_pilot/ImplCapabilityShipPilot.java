@@ -9,7 +9,6 @@ import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import java.util.UUID;
 
 public class ImplCapabilityShipPilot implements IShipPilot {
-    //public BlockPos bedLocation;
     private PhysicsObject pilotedShip;
     private BlockPos blockBeingControlled;
     private ControllerInputType controlInputType;

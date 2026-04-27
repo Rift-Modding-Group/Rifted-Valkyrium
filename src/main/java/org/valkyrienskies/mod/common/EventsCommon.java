@@ -11,6 +11,7 @@ import net.minecraft.entity.passive.EntityPig;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayer.SleepResult;
 import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.util.MovementInput;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.TextComponentString;
@@ -18,6 +19,7 @@ import net.minecraft.util.text.TextFormatting;
 import net.minecraft.world.Explosion;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
+import net.minecraftforge.client.event.InputUpdateEvent;
 import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.entity.player.PlayerSleepInBedEvent;
@@ -35,8 +37,11 @@ import net.minecraftforge.fml.common.gameevent.TickEvent.WorldTickEvent;
 import net.minecraftforge.fml.relauncher.Side;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
+import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
+import org.valkyrienskies.mod.common.capability.ship_pilot.IShipPilot;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.entity.EntityMountable;
+import org.valkyrienskies.mod.common.piloting.ControllerInputType;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
 import org.valkyrienskies.mod.common.ships.entity_interaction.IDraggable;
 import org.valkyrienskies.mod.common.ships.ship_transform.CoordinateSpaceType;
@@ -275,4 +280,24 @@ public class EventsCommon {
         }
     }
 
+    /**
+     * A replacement for MovementInputFromOptions.class
+     *
+     * This blocks player movement when they're piloting the ship
+     * */
+    @SubscribeEvent
+    public static void onInputUpdate(InputUpdateEvent event) {
+        IShipPilot pilot = event.getEntityPlayer().getCapability(VSCapabilityRegistry.VS_SHIP_PILOT, null);
+
+        if (pilot == null) return;
+
+        ControllerInputType inputType = pilot.getControllerInputEnum();
+        if (inputType != null && inputType.shouldLockPlayerMovement()) {
+            MovementInput input = event.getMovementInput();
+            input.moveStrafe = 0.0F;
+            input.moveForward = 0.0F;
+            input.jump = false;
+            input.sneak = false;
+        }
+    }
 }

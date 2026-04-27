@@ -17,7 +17,6 @@
     "network.play.client.MixinCPacketPlayerPosition",
     "network.play.client.MixinCPacketPlayerPositionRotation",
     "network.play.client.MixinCPacketPlayerRotation",
-    "util.MixinMovementInputFromOptions",
     "world.MixinClientWorld",
     "client.renderer.MixinActiveRenderInfo",
     "client.multiplayer.MixinWorldClient"
