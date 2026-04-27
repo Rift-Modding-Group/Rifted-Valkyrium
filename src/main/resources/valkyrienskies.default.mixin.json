@@ -6,7 +6,6 @@
   "client": [
     "client.MixinMinecraft",
     "client.entity.MixinEntityPlayerSP",
-    "client.entity.MixinsAbstractClientPlayer",
     "client.particle.MixinParticleManager",
     "client.renderer.MixinEntityRenderer",
     "client.renderer.MixinRenderGlobal",
@@ -27,7 +26,6 @@
     "entity.MixinEntity",
     "entity.MixinEntityIntrinsic",
     "entity.MixinEntityMinecart",
-    "entity.player.MixinEntityPlayer",
     "network.MixinNetHandlerPlayServer",
     "network.play.client.MixinCPacketPlayer",
     "network.play.client.MixinCPacketPlayerDigging",

@@ -18,26 +18,23 @@ import net.minecraftforge.client.model.ModelLoader;
 import net.minecraftforge.client.model.ModelLoaderRegistry;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import org.valkyrienskies.addon.control.renderer.infuser_core_rendering.InfuserCoreBakedModel;
-import org.valkyrienskies.mod.common.piloting.IShipPilot;
+import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
+import org.valkyrienskies.mod.common.capability.ship_pilot.IShipPilot;
 import org.valkyrienskies.mod.common.piloting.ITileEntityPilotable;
 
 public class ControlEventsClient {
-
     @SubscribeEvent
     public void render(RenderGameOverlayEvent.Post event) {
         Minecraft minecraft = Minecraft.getMinecraft();
         EntityPlayer player = Minecraft.getMinecraft().player;
         FontRenderer fontRenderer = minecraft.fontRenderer;
-        if (fontRenderer != null && player != null && event.getType()
-            == RenderGameOverlayEvent.ElementType.TEXT) {
-            IShipPilot playerPilot = (IShipPilot) player;
+        if (fontRenderer != null && player != null && event.getType() == RenderGameOverlayEvent.ElementType.TEXT) {
+            IShipPilot playerPilot = player.getCapability(VSCapabilityRegistry.VS_SHIP_PILOT, null);
             if (playerPilot.isPiloting()) {
                 BlockPos tilePilotedPos = playerPilot.getPosBeingControlled();
                 TileEntity pilotedTile = player.getEntityWorld().getTileEntity(tilePilotedPos);
-                if (pilotedTile instanceof ITileEntityPilotable) {
-                    ITileEntityPilotable pilotedControlEntity = (ITileEntityPilotable) pilotedTile;
-                    ScaledResolution scaledresolution = new ScaledResolution(
-                        Minecraft.getMinecraft());
+                if (pilotedTile instanceof ITileEntityPilotable pilotedControlEntity) {
+                    ScaledResolution scaledresolution = new ScaledResolution(Minecraft.getMinecraft());
                     pilotedControlEntity.renderPilotText(fontRenderer, scaledresolution);
                 }
             }
@@ -81,7 +78,8 @@ public class ControlEventsClient {
                     .putObject(
                             new ModelResourceLocation(ValkyrienSkiesControl.MOD_ID + ":testmodel", "inventory"),
                             new InfuserCoreBakedModel(handModel, inventoryModel));
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             e.printStackTrace();
         }
 

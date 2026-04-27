@@ -16,6 +16,8 @@ import org.valkyrienskies.mod.common.capability.framework.VSDefaultCapabilityPro
 import org.valkyrienskies.mod.common.capability.framework.VSDefaultCapabilityProviderTransient;
 import org.valkyrienskies.mod.common.capability.framework.VSDefaultCapabilityStorage;
 import org.valkyrienskies.mod.common.capability.framework.VSDefaultCapabilityTransientStorage;
+import org.valkyrienskies.mod.common.capability.ship_pilot.IShipPilot;
+import org.valkyrienskies.mod.common.capability.ship_pilot.ImplCapabilityShipPilot;
 
 import javax.annotation.Nonnull;
 
@@ -28,6 +30,9 @@ public class VSCapabilityRegistry {
     @CapabilityInject(ICapabilityEntityBackup.class)
     public static final Capability<ICapabilityEntityBackup> VS_ENTITY_BACKUP = getNull();
 
+    @CapabilityInject(IShipPilot.class)
+    public static final Capability<IShipPilot> VS_SHIP_PILOT = getNull();
+
     @SubscribeEvent
     public static void attachWorldCapabilities(AttachCapabilitiesEvent<World> event) {
         event.addCapability(
@@ -38,8 +43,14 @@ public class VSCapabilityRegistry {
     @SubscribeEvent
     public static void attachEntityCapabilities(AttachCapabilitiesEvent<Entity> event) {
         event.addCapability(
-            new ResourceLocation(ValkyrienSkiesMod.MOD_ID, "entity_backup_capability"),
-            new VSDefaultCapabilityProviderTransient<>(VS_ENTITY_BACKUP));
+                new ResourceLocation(ValkyrienSkiesMod.MOD_ID, "entity_backup_capability"),
+                new VSDefaultCapabilityProviderTransient<>(VS_ENTITY_BACKUP)
+        );
+
+        event.addCapability(
+                new ResourceLocation(ValkyrienSkiesMod.MOD_ID, "ship_pilot"),
+                new VSDefaultCapabilityProviderTransient<>(VS_SHIP_PILOT)
+        );
     }
 
     public static void registerCapabilities() {
@@ -50,9 +61,15 @@ public class VSCapabilityRegistry {
         );
 
         CapabilityManager.INSTANCE.register(
-            ICapabilityEntityBackup.class,
-            new VSDefaultCapabilityTransientStorage<>(),
-            ImplCapabilityEntityBackup::new
+                ICapabilityEntityBackup.class,
+                new VSDefaultCapabilityTransientStorage<>(),
+                ImplCapabilityEntityBackup::new
+        );
+
+        CapabilityManager.INSTANCE.register(
+                IShipPilot.class,
+                new VSDefaultCapabilityTransientStorage<>(),
+                ImplCapabilityShipPilot::new
         );
     }
 

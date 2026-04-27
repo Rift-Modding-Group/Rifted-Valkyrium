@@ -7,7 +7,8 @@ import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
-import org.valkyrienskies.mod.common.piloting.IShipPilotClient;
+import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
+import org.valkyrienskies.mod.common.capability.ship_pilot.IShipPilot;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 
@@ -21,7 +22,7 @@ public class MessageStartPilotingHandler implements
     public IMessage onMessage(MessageStartPiloting message, MessageContext ctx) {
         IThreadListener mainThread = Minecraft.getMinecraft();
         mainThread.addScheduledTask(() -> {
-            IShipPilotClient pilot = (IShipPilotClient) Minecraft.getMinecraft().player;
+            IShipPilot pilot = Minecraft.getMinecraft().player.getCapability(VSCapabilityRegistry.VS_SHIP_PILOT, null);
 
             pilot.setControllerInputEnum(message.controlType);
 
@@ -29,17 +30,15 @@ public class MessageStartPilotingHandler implements
                 pilot.setPosBeingControlled(message.posToStartPiloting);
 
                 if (message.setPhysicsWrapperEntityToPilot) {
-                    Optional<PhysicsObject> physicsObject = ValkyrienUtils
-                            .getPhysoManagingBlock(Minecraft.getMinecraft().world, message.posToStartPiloting);
+                    Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(Minecraft.getMinecraft().world, message.posToStartPiloting);
                     if (physicsObject.isPresent()) {
                         pilot.setPilotedShip(physicsObject.get());
-                    } else {
-                        new IllegalStateException("Received incorrect piloting message!")
-                                .printStackTrace();
                     }
-                } else {
-                    pilot.setPilotedShip(null);
+                    else {
+                        new IllegalStateException("Received incorrect piloting message!").printStackTrace();
+                    }
                 }
+                else pilot.setPilotedShip(null);
             }
 
             if (message.shipPilotingId != null) pilot.setShipIDBeingControlled(message.shipPilotingId);

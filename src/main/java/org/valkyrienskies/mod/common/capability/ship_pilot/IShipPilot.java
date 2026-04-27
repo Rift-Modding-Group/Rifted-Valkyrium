@@ -1,16 +1,12 @@
-package org.valkyrienskies.mod.common.piloting;
+package org.valkyrienskies.mod.common.capability.ship_pilot;
 
 import net.minecraft.util.math.BlockPos;
+import org.valkyrienskies.mod.common.piloting.ControllerInputType;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 
 import java.util.UUID;
 
-/**
- * Todo: Convert to a forge capability.
- */
-@Deprecated
 public interface IShipPilot {
-
     PhysicsObject getPilotedShip();
 
     void setPilotedShip(PhysicsObject physicsObject);
@@ -19,10 +15,6 @@ public interface IShipPilot {
 
     boolean isPilotingATile();
 
-    /**
-     * Want to delete his, but can't because its used in vs-control
-     */
-    @Deprecated
     boolean isPiloting();
 
     BlockPos getPosBeingControlled();
@@ -38,4 +30,6 @@ public interface IShipPilot {
     void setControllerInputEnum(ControllerInputType type);
 
     void stopPilotingEverything();
+
+    void onClientTick();
 }

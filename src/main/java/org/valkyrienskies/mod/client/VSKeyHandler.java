@@ -10,8 +10,9 @@ import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import org.lwjgl.input.Keyboard;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
+import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
+import org.valkyrienskies.mod.common.capability.ship_pilot.IShipPilot;
 import org.valkyrienskies.mod.common.network.MessagePlayerStoppedPiloting;
-import org.valkyrienskies.mod.common.piloting.IShipPilotClient;
 
 public class VSKeyHandler {
 
@@ -74,11 +75,9 @@ public class VSKeyHandler {
     @SideOnly(Side.CLIENT)
     @SubscribeEvent
     public void playerTick(PlayerTickEvent event) {
-        if (event.side == Side.SERVER) {
-            return;
-        }
+        if (event.side == Side.SERVER) return;
         if (event.phase == Phase.START) {
-            IShipPilotClient clientPilot = (IShipPilotClient) event.player;
+            IShipPilot clientPilot = event.player.getCapability(VSCapabilityRegistry.VS_SHIP_PILOT, null);
             clientPilot.onClientTick();
 
             if (dismountKey.isKeyDown() && clientPilot.isPilotingATile()) {

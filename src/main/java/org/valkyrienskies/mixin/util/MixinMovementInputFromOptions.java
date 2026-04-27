@@ -7,8 +7,9 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
+import org.valkyrienskies.mod.common.capability.ship_pilot.IShipPilot;
 import org.valkyrienskies.mod.common.piloting.ControllerInputType;
-import org.valkyrienskies.mod.common.piloting.IShipPilot;
 
 /**
  * Lazy programming, this can probably be replaced with forge hooks.
@@ -18,10 +19,9 @@ import org.valkyrienskies.mod.common.piloting.IShipPilot;
 @Deprecated
 @Mixin(MovementInputFromOptions.class)
 public abstract class MixinMovementInputFromOptions extends MovementInput {
-
     @Inject(method = "updatePlayerMoveState", at = @At("HEAD"), cancellable = true)
     public void preUpdatePlayerMoveState(CallbackInfo callbackInfo) {
-        IShipPilot pilot = (IShipPilot) Minecraft.getMinecraft().player;
+        IShipPilot pilot = Minecraft.getMinecraft().player.getCapability(VSCapabilityRegistry.VS_SHIP_PILOT, null);
 
         if (pilot != null) {
             ControllerInputType inputTypeEnum = pilot.getControllerInputEnum();

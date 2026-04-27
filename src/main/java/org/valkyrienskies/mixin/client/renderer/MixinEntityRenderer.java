@@ -6,8 +6,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.ActiveRenderInfo;
 import net.minecraft.client.renderer.EntityRenderer;
 import net.minecraft.client.renderer.GlStateManager;
-import net.minecraft.client.renderer.RenderGlobal;
-import net.minecraft.client.settings.GameSettings;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.passive.EntityAnimal;
@@ -16,19 +14,15 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.math.Vec3d;
 import org.joml.Quaterniond;
-import org.joml.Quaterniondc;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
-import org.lwjgl.util.vector.Quaternion;
-import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.*;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.valkyrienskies.mod.common.piloting.IShipPilot;
-import org.valkyrienskies.mod.common.ships.entity_interaction.EntityMoveInjectionMethods;
+import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
+import org.valkyrienskies.mod.common.capability.ship_pilot.IShipPilot;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.ship_world.IWorldVS;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityShipMountData;
@@ -139,10 +133,11 @@ public abstract class MixinEntityRenderer {
                 }
 
             }
-        } else if (this.mc.gameSettings.thirdPersonView > 0) {
+        }
+        else if (this.mc.gameSettings.thirdPersonView > 0) {
             double d3 = this.thirdPersonDistancePrev + (4.0F - this.thirdPersonDistancePrev) * partialTicks;
 
-            IShipPilot shipPilot = (IShipPilot) Minecraft.getMinecraft().player;
+            IShipPilot shipPilot = this.mc.player.getCapability(VSCapabilityRegistry.VS_SHIP_PILOT, null);
 
             if (shipPilot.isPilotingShip()) {
                 //TODO: Make this number scale with the Ship
@@ -171,23 +166,19 @@ public abstract class MixinEntityRenderer {
                     f4 = f4 * 0.1F;
                     f5 = f5 * 0.1F;
 
-                    IShipPilot pilot = (IShipPilot) Minecraft.getMinecraft().player;
+                    IShipPilot pilotNew = this.mc.player.getCapability(VSCapabilityRegistry.VS_SHIP_PILOT, null);
 
-                    ((IWorldVS) this.mc.world)
-                            .excludeShipFromRayTracer(((IShipPilot) this.mc.player).getPilotedShip());
+                    ((IWorldVS) this.mc.world).excludeShipFromRayTracer(pilotNew.getPilotedShip());
 
                     // RayTraceResult raytraceresult = EntityMoveInjectionMethods.rayTraceBlocksIgnoreShip(Minecraft.getMinecraft().world, new Vec3d(d0 + f3, d1 + f4, d2 + f5), new Vec3d(d0 - d4 + f3 + f5, d1 - d6 + f4, d2 - d5 + f5), false, false, false, pilot.getPilotedShip());
-                    RayTraceResult raytraceresult = mc.world.rayTraceBlocks(new Vec3d(d0 + (double)f3, d1 + (double)f4, d2 + (double)f5), new Vec3d(d0 - d4 + (double)f3 + (double)f5, d1 - d6 + (double)f4, d2 - d5 + (double)f5));
+                    RayTraceResult raytraceresult = this.mc.world.rayTraceBlocks(new Vec3d(d0 + (double)f3, d1 + (double)f4, d2 + (double)f5), new Vec3d(d0 - d4 + (double)f3 + (double)f5, d1 - d6 + (double)f4, d2 - d5 + (double)f5));
 
-                    ((IWorldVS) this.mc.world)
-                            .unexcludeShipFromRayTracer(((IShipPilot) this.mc.player).getPilotedShip());
+                    ((IWorldVS) this.mc.world).unexcludeShipFromRayTracer(pilotNew.getPilotedShip());
 
                     if (raytraceresult != null) {
                         double d7 = raytraceresult.hitVec.distanceTo(new Vec3d(d0, d1, d2));
 
-                        if (d7 < d3) {
-                            d3 = d7;
-                        }
+                        if (d7 < d3) d3 = d7;
                     }
                 }
 
