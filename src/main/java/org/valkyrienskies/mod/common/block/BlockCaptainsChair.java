@@ -43,51 +43,47 @@ public class BlockCaptainsChair extends BlockPilotableBasic {
 
     public double getChairYaw(IBlockState state, BlockPos pos) {
         EnumFacing enumFace = state.getValue(BlockCaptainsChair.FACING);
-        double chairYaw = -enumFace.getHorizontalAngle() - 90;
-        return chairYaw;
+        return -enumFace.getHorizontalAngle() - 90;
     }
 
     @Override
-    public boolean onBlockActivated(World worldIn, BlockPos pos, IBlockState state,
-        EntityPlayer playerIn, EnumHand hand, EnumFacing side, float hitX, float hitY, float hitZ) {
-        if (!worldIn.isRemote) {
-            Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(worldIn, pos);
-            if (physicsObject.isPresent()) {
-                    TileEntity tileEntity = worldIn.getTileEntity(pos);
-                    if (tileEntity instanceof TileEntityCaptainsChair) {
-                        Vector3d playerPos = new Vector3d(playerIn.posX, playerIn.posY, playerIn.posZ);
+    public boolean onBlockActivated(
+            World worldIn, BlockPos pos, IBlockState state,
+        EntityPlayer playerIn, EnumHand hand, EnumFacing side, float hitX, float hitY, float hitZ
+    ) {
+        if (worldIn.isRemote) return true;
 
-                        physicsObject.get()
-                            .getShipTransformationManager()
-                            .getCurrentTickTransform()
-                            .transformPosition(playerPos, TransformType.SUBSPACE_TO_GLOBAL);
+        Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(worldIn, pos);
+        if (physicsObject.isEmpty()) return true;
 
-                        playerIn.posX = playerPos.x;
-                        playerIn.posY = playerPos.y;
-                        playerIn.posZ = playerPos.z;
+        TileEntity tileEntity = worldIn.getTileEntity(pos);
+        if (!(tileEntity instanceof TileEntityCaptainsChair captainsChair)) return true;
 
-                        // Only mount the player if they're standing on the ship.
-                        final EntityShipMovementData entityShipMovementData = ValkyrienUtils.getEntityShipMovementDataFor(playerIn);
-                        if (entityShipMovementData.getTicksSinceTouchedShip() == 0 &&
-                                (entityShipMovementData.getLastTouchedShip() == physicsObject.get().getShipData())) {
-                            Vector3dc localMountPos = getPlayerMountOffset(state, pos);
-                            ValkyrienUtils.fixEntityToShip(playerIn, localMountPos,
-                                    physicsObject.get());
-                        }
+        Vector3d playerPos = new Vector3d(playerIn.posX, playerIn.posY, playerIn.posZ);
+        physicsObject.get()
+                .getShipTransformationManager()
+                .getCurrentTickTransform()
+                .transformPosition(playerPos, TransformType.SUBSPACE_TO_GLOBAL);
 
-                        ((TileEntityCaptainsChair) tileEntity).setPilotEntity(playerIn);
-                        physicsObject.get()
-                                .getShipTransformationManager()
-                                .getCurrentTickTransform()
-                                .transformPosition(playerPos, TransformType.GLOBAL_TO_SUBSPACE);
+        playerIn.posX = playerPos.x;
+        playerIn.posY = playerPos.y;
+        playerIn.posZ = playerPos.z;
 
-                        playerIn.posX = playerPos.x;
-                        playerIn.posY = playerPos.y;
-                        playerIn.posZ = playerPos.z;
-                    }
+        //-----mount the player to the chair-----
+        //final EntityShipMovementData entityShipMovementData = ValkyrienUtils.getEntityShipMovementDataFor(playerIn);
+        Vector3dc localMountPos = this.getPlayerMountOffset(state, pos);
+        ValkyrienUtils.fixEntityToShip(playerIn, localMountPos, physicsObject.get());
 
-            }
-        }
+        //-----set piloting-----
+        captainsChair.setPilotEntity(playerIn);
+        physicsObject.get()
+                .getShipTransformationManager()
+                .getCurrentTickTransform()
+                .transformPosition(playerPos, TransformType.GLOBAL_TO_SUBSPACE);
+
+        playerIn.posX = playerPos.x;
+        playerIn.posY = playerPos.y;
+        playerIn.posZ = playerPos.z;
 
         return true;
     }

@@ -8,7 +8,7 @@ import java.util.UUID;
 
 /*
  * TODO: this class is to be changed so that its only for players that
- *  are directly controlling the ship (aka from the pilots chair.
+ *  are directly controlling the ship (aka from the captains chair).
  */
 public interface IShipPilot {
     PhysicsObject getPilotedShip();
