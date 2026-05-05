@@ -10,6 +10,7 @@ import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 
+@Deprecated
 public class PilotControlsMessageHandler implements
         IMessageHandler<PilotControlsMessage, IMessage> {
 
@@ -22,10 +23,12 @@ public class PilotControlsMessageHandler implements
                 BlockPos posFor = message.controlBlockPos;
                 TileEntity tile = worldObj.getTileEntity(posFor);
 
+                /*
                 if (tile instanceof ITileEntityPilotable) {
                     ((ITileEntityPilotable) tile)
                             .onPilotControlsMessage(message, ctx.getServerHandler().player);
                 }
+                 */
             } else {
                 final PhysicsObject physicsObject = ValkyrienUtils.getPhysObjWorld(ctx.getServerHandler().player.world).getPhysObjectFromUUID(message.shipFor);
                 if (physicsObject != null && physicsObject.getShipPilot() != null && physicsObject.getShipPilot().getPilot().equals(ctx.getServerHandler().player.getUniqueID())) {

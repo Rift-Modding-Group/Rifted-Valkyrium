@@ -4,6 +4,7 @@ import net.minecraft.util.math.BlockPos;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.piloting.ControllerInputType;
 import org.valkyrienskies.mod.common.piloting.PilotControlsMessage;
+import org.valkyrienskies.mod.common.piloting.PilotControlsMessageNew;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 
 import java.util.UUID;
@@ -90,15 +91,6 @@ public class ImplCapabilityShipPilot implements IShipPilot {
     }
 
     private void sendPilotKeysToServer(ControllerInputType type, UUID shipPiloting) {
-        PilotControlsMessage keyMessage = new PilotControlsMessage();
-        if (type == null) {
-            System.out.println("This is totally wrong");
-            type = ControllerInputType.CaptainsChair;
-        }
-        // System.out.println(blockBeingControlled);
-        keyMessage.assignKeyBooleans(shipPiloting, type);
-        keyMessage.controlBlockPos = this.getPosBeingControlled();
-
-        ValkyrienSkiesMod.controlNetwork.sendToServer(keyMessage);
+        ValkyrienSkiesMod.controlNetwork.sendToServer(new PilotControlsMessageNew(shipPiloting, this.getPosBeingControlled()));
     }
 }

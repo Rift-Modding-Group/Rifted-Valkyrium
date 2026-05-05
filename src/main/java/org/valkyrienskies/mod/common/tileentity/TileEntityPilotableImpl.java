@@ -14,6 +14,7 @@ import org.valkyrienskies.mod.common.network.MessageStopPiloting;
 import org.valkyrienskies.mod.common.piloting.ControllerInputType;
 import org.valkyrienskies.mod.common.piloting.ITileEntityPilotable;
 import org.valkyrienskies.mod.common.piloting.PilotControlsMessage;
+import org.valkyrienskies.mod.common.piloting.PilotControlsMessageNew;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import valkyrienwarfare.api.TransformType;
@@ -36,11 +37,9 @@ public abstract class TileEntityPilotableImpl extends TileEntity implements
         this.pilotPlayerEntity = null;
     }
 
-    @Override
-    public final void onPilotControlsMessage(PilotControlsMessage message, EntityPlayerMP sender) {
-        if (sender.getUniqueID().equals(pilotPlayerEntity)) {
-            processControlMessage(message, sender);
-        }
+    public final void onPilotControlsMessage(PilotControlsMessageNew message, EntityPlayerMP sender) {
+        if (!sender.getUniqueID().equals(pilotPlayerEntity)) return;
+        this.processControlMessage(message, sender);
     }
 
     @Override
@@ -103,6 +102,7 @@ public abstract class TileEntityPilotableImpl extends TileEntity implements
      *
      * @return
      */
+    @Deprecated
     public abstract ControllerInputType getControlInputType();
 
     /**
@@ -121,7 +121,7 @@ public abstract class TileEntityPilotableImpl extends TileEntity implements
      *
      * @return
      */
-    public abstract void processControlMessage(PilotControlsMessage message, EntityPlayerMP sender);
+    public abstract void processControlMessage(PilotControlsMessageNew message, EntityPlayerMP sender);
 
     /**
      * @param player

@@ -9,24 +9,26 @@ import org.joml.Vector3d;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.block.BlockCaptainsChair;
 import org.valkyrienskies.mod.common.piloting.ControllerInputType;
+import org.valkyrienskies.mod.common.piloting.PilotControls;
 import org.valkyrienskies.mod.common.piloting.PilotControlsMessage;
+import org.valkyrienskies.mod.common.piloting.PilotControlsMessageNew;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import valkyrienwarfare.api.TransformType;
 
 public class TileEntityCaptainsChair extends TileEntityPilotableImpl {
-
-    @Override
-    public void processControlMessage(PilotControlsMessage message, EntityPlayerMP sender) {
+    public void processControlMessage(PilotControlsMessageNew message, EntityPlayerMP sender) {
         IBlockState blockState = getWorld().getBlockState(getPos());
-        if (blockState.getBlock() == ValkyrienSkiesMod.INSTANCE.captainsChair) {
-            PhysicsObject physicsObject = getParentPhysicsEntity();
-            if (physicsObject != null) {
-                processCalculationsForControlMessageAndApplyCalculations(physicsObject, message,
-                    blockState);
-            }
-        } else {
-            setPilotEntity(null);
+        if (blockState.getBlock() != ValkyrienSkiesMod.INSTANCE.captainsChair) {
+            this.setPilotEntity(null);
+            return;
         }
+
+        PhysicsObject physicsObject = getParentPhysicsEntity();
+        if (physicsObject == null) return;
+
+        this.processCalculationsForControlMessageAndApplyCalculations(
+                physicsObject, message, blockState
+        );
     }
 
     @Override
@@ -53,12 +55,11 @@ public class TileEntityCaptainsChair extends TileEntityPilotableImpl {
     }
 
     private void processCalculationsForControlMessageAndApplyCalculations(
-            PhysicsObject controlledShip, PilotControlsMessage message, IBlockState state) {
-        BlockPos chairPosition = getPos();
+            PhysicsObject controlledShip, PilotControlsMessageNew message, IBlockState state
+    ) {
+        if (controlledShip.isShipAligningToGrid()) return;
 
-        if (controlledShip.isShipAligningToGrid()) {
-            return;
-        }
+        BlockPos chairPosition = this.getPos();
 
         double pilotPitch = 0D;
         double pilotYaw = ((BlockCaptainsChair) state.getBlock()).getChairYaw(state, chairPosition);
@@ -83,10 +84,10 @@ public class TileEntityCaptainsChair extends TileEntityPilotableImpl {
         Vector3d shipUp = new Vector3d(0, 1, 0);
         Vector3d shipUpPosIdeal = new Vector3d(0, 1, 0);
 
-        if (message.airshipForward_KeyDown) {
+        if (PilotControls.controlIsPressed(message.getUsedControls(), PilotControls.FORWARD)) {
             idealLinearVelocity.add(playerDirection);
         }
-        if (message.airshipBackward_KeyDown) {
+        if (PilotControls.controlIsPressed(message.getUsedControls(), PilotControls.BACKWARD)) {
             idealLinearVelocity.sub(playerDirection);
         }
 
@@ -95,20 +96,20 @@ public class TileEntityCaptainsChair extends TileEntityPilotableImpl {
         controlledShip.getShipTransformationManager().getCurrentTickTransform()
             .transformDirection(shipUp, TransformType.SUBSPACE_TO_GLOBAL);
 
-        if (message.airshipUp_KeyDown) {
+        if (PilotControls.controlIsPressed(message.getUsedControls(), PilotControls.UP)) {
             idealLinearVelocity.add(upDirection.mul(.5, new Vector3d()));
         }
-        if (message.airshipDown_KeyDown) {
+        if (PilotControls.controlIsPressed(message.getUsedControls(), PilotControls.DOWN)) {
             idealLinearVelocity.add(downDirection.mul(.5, new Vector3d()));
         }
 
         double sidePitch = 0;
 
-        if (message.airshipRight_KeyDown) {
+        if (PilotControls.controlIsPressed(message.getUsedControls(), PilotControls.RIGHT)) {
             idealAngularDirection.sub(shipUp);
             sidePitch -= 10;
         }
-        if (message.airshipLeft_KeyDown) {
+        if (PilotControls.controlIsPressed(message.getUsedControls(), PilotControls.LEFT)) {
             idealAngularDirection.add(shipUp);
             sidePitch += 10;
         }
@@ -134,7 +135,7 @@ public class TileEntityCaptainsChair extends TileEntityPilotableImpl {
         idealLinearVelocity.mul(20);
 
         // Move the ship faster if the player holds the sprint key.
-        if (message.airshipSprinting) {
+        if (PilotControls.controlIsPressed(message.getUsedControls(), PilotControls.SPRINT)) {
             idealLinearVelocity.mul(2);
         }
 

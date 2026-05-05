@@ -35,13 +35,6 @@ public abstract class TileEntityNodePilotableImpl extends BasicNodeTileEntity im
     }
 
     @Override
-    public final void onPilotControlsMessage(PilotControlsMessage message, EntityPlayerMP sender) {
-        if (sender.getUniqueID().equals(pilotPlayerEntity)) {
-            processControlMessage(message, sender);
-        }
-    }
-
-    @Override
     public final EntityPlayer getPilotEntity() {
         if (pilotPlayerEntity != null) {
             return getWorld().getPlayerEntityByUUID(pilotPlayerEntity);

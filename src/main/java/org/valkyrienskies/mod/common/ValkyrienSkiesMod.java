@@ -52,6 +52,7 @@ import org.valkyrienskies.mod.common.network.ShipTransformUpdateMessage;
 import org.valkyrienskies.mod.common.network.ShipTransformUpdateMessageHandler;
 import org.valkyrienskies.mod.common.piloting.PilotControlsMessage;
 import org.valkyrienskies.mod.common.piloting.PilotControlsMessageHandler;
+import org.valkyrienskies.mod.common.piloting.PilotControlsMessageNew;
 import org.valkyrienskies.mod.common.tileentity.TileEntityBoatChair;
 import org.valkyrienskies.mod.common.tileentity.TileEntityCaptainsChair;
 import org.valkyrienskies.mod.common.tileentity.TileEntityPassengerChair;
@@ -176,12 +177,14 @@ public class ValkyrienSkiesMod {
         controlNetwork = NetworkRegistry.INSTANCE.newSimpleChannel("valkyrien_piloting");
         controlNetwork.registerMessage(PilotControlsMessageHandler.class,
                 PilotControlsMessage.class, 0, Side.SERVER);
+        controlNetwork.registerMessage(PilotControlsMessageNew.Handler.class,
+                PilotControlsMessageNew.class, 1, Side.SERVER);
         controlNetwork.registerMessage(MessageStartPilotingHandler.class,
-                MessageStartPiloting.class, 1, Side.CLIENT);
+                MessageStartPiloting.class, 2, Side.CLIENT);
         controlNetwork.registerMessage(MessageStopPilotingHandler.class,
-                MessageStopPiloting.class, 2, Side.CLIENT);
+                MessageStopPiloting.class, 3, Side.CLIENT);
         controlNetwork.registerMessage(MessagePlayerStoppedPilotingHandler.class,
-                MessagePlayerStoppedPiloting.class, 3, Side.SERVER);
+                MessagePlayerStoppedPiloting.class, 4, Side.SERVER);
 
         physWrapperTransformUpdateNetwork = NetworkRegistry.INSTANCE.newSimpleChannel("vs_ship_transforms");
         physWrapperTransformUpdateNetwork.registerMessage(ShipTransformUpdateMessageHandler.class,

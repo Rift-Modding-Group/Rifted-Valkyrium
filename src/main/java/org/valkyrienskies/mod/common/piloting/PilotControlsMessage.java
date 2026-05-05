@@ -8,6 +8,7 @@ import org.valkyrienskies.mod.client.VSKeyHandler;
 
 import java.util.UUID;
 
+@Deprecated
 public class PilotControlsMessage implements IMessage {
 
     public static boolean airshipUp_KeyPressedLast;

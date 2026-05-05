@@ -45,3 +45,6 @@ Thumbs.db
 
 # logs
 /logs/*
+
+# kotlin (ew) stuff
+*.salive
