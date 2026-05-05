@@ -114,12 +114,6 @@ public class VSConfig extends VSConfigTemplate {
     })
     public static boolean chairRecipes = true;
 
-    @Name("Warn If No Modules")
-    @Comment({
-        "Send a warning if no known modules are installed"
-    })
-    public static boolean warnNoModules = true;
-
     @Name("Fake Dimensions")
     @Comment({
         "A compatibility option: dimensions that are incapable of generating the VSWorldDataCapability are to be added to this list",

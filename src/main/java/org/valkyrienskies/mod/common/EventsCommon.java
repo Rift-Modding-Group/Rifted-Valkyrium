@@ -56,15 +56,14 @@ import java.util.Optional;
 
 @EventBusSubscriber(modid = ValkyrienSkiesMod.MOD_ID)
 public class EventsCommon {
-    @Deprecated
+    @Deprecated //im not sure why this is marked as deprecated... maybe remove the tag?
     private static final Map<EntityPlayer, double[]> lastPositions = new HashMap<>();
 
     @SubscribeEvent
     public static void onPlayerSleepInBedEvent(PlayerSleepInBedEvent event) {
         EntityPlayer player = event.getEntityPlayer();
         BlockPos pos = event.getPos();
-        Optional<PhysicsObject> physicsObject = ValkyrienUtils
-            .getPhysoManagingBlock(player.getEntityWorld(), pos);
+        Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(player.getEntityWorld(), pos);
 
         if (physicsObject.isPresent()) {
             if (player instanceof EntityPlayerMP) {
@@ -131,29 +130,28 @@ public class EventsCommon {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onPlayerTickEvent(PlayerTickEvent event) {
-        if (!event.player.world.isRemote) {
-            EntityPlayerMP p = (EntityPlayerMP) event.player;
+        if (event.player.world.isRemote) return;
+        EntityPlayerMP p = (EntityPlayerMP) event.player;
 
-            double[] pos = lastPositions.computeIfAbsent(p, k -> new double[3]);
-            try {
-                if (pos[0] != p.posX || pos[2] != p.posZ) { // Player has moved
-                    if (Math.abs(p.posX) > 27000000
+        double[] pos = lastPositions.computeIfAbsent(p, k -> new double[3]);
+        try {
+            if (pos[0] != p.posX || pos[2] != p.posZ) { // Player has moved
+                if (Math.abs(p.posX) > 27000000
                         || Math.abs(p.posZ) > 27000000) { // Player is outside of world
-                        // border, tp them back
-                        p.attemptTeleport(pos[0], pos[1], pos[2]);
-                        p.sendMessage(new TextComponentString(
+                    // border, tp them back
+                    p.attemptTeleport(pos[0], pos[1], pos[2]);
+                    p.sendMessage(new TextComponentString(
                             "You can't go beyond 27000000 blocks because airships are stored there!"));
-                    }
                 }
             }
-            catch (NullPointerException e) {
-                ValkyrienSkiesMod.LOGGER.warn("Nullpointer EventsCommon.java:onPlayerTickEvent");
-            }
-
-            pos[0] = p.posX;
-            pos[1] = p.posY;
-            pos[2] = p.posZ;
         }
+        catch (NullPointerException e) {
+            ValkyrienSkiesMod.LOGGER.warn("Nullpointer EventsCommon.java:onPlayerTickEvent");
+        }
+
+        pos[0] = p.posX;
+        pos[1] = p.posY;
+        pos[2] = p.posZ;
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
@@ -163,7 +161,8 @@ public class EventsCommon {
         IHasShipManager shipManager = (IHasShipManager) world;
         if (!event.getWorld().isRemote) {
             shipManager.setManager(WorldServerShipManager::new);
-        } else {
+        }
+        else {
             shipManager.setManager(WorldClientShipManager::new);
         }
     }
@@ -187,34 +186,12 @@ public class EventsCommon {
         }
     }
 
-    private static final List<String> MEMED = ImmutableList.of("Drake_Eldridge", "thebest108", "DaPorkChop_");
-
     @SubscribeEvent
     public static void onJoin(PlayerLoggedInEvent event) {
-        if (VSConfig.warnNoModules && !ValkyrienSkiesMod.isAnyModuleLoaded()) {
-            event.player.sendMessage(new TextComponentString("Neither Valkyrien Skies Control nor " +
-                "Valkyrien Skies World are loaded. It's recommended you install them. You can disable this message " +
-                "by typing the command '/vsc warnNoModules false'"));
-        }
+        if (event.player.world.isRemote) return;
 
-        if (!event.player.world.isRemote) {
-            EntityPlayerMP player = (EntityPlayerMP) event.player;
-            lastPositions.put(player, new double[]{0D, 256D, 0D});
-
-            if (MEMED.contains(player.getName())) {
-                WorldServer server = (WorldServer) event.player.world;
-
-                // 20% chance of getting memed on!
-                if (Math.random() < .2) {
-                    server.server.getPlayerList()
-                        .sendMessage(new TextComponentString(
-                            TextFormatting.BLUE + "An absolute " + TextFormatting.RED
-                                + TextFormatting.ITALIC + "legend" + TextFormatting.BLUE
-                                + " has arrived! Welcome " + TextFormatting.GOLD
-                                + TextFormatting.BOLD + player.getName()));
-                }
-            }
-        }
+        EntityPlayerMP player = (EntityPlayerMP) event.player;
+        lastPositions.put(player, new double[]{0D, 256D, 0D});
     }
 
     @SubscribeEvent

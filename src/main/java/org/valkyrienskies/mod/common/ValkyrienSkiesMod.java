@@ -109,11 +109,6 @@ public class ValkyrienSkiesMod {
 
     private static final List<String> MODULES = ImmutableList.of("vs_control", "vs_world");
 
-    /**
-     * Whether or not any known dependent mods are loaded.
-     */
-    private static boolean isAnyModuleLoaded = false;
-
     @EventHandler
     public void preInit(FMLPreInitializationEvent event) {
         LOGGER.debug("Initializing configuration.");
@@ -159,7 +154,6 @@ public class ValkyrienSkiesMod {
             + "is recommended!", Runtime.getRuntime().availableProcessors());
         proxy.init(event);
 
-        isAnyModuleLoaded = MODULES.stream().anyMatch(Loader::isModLoaded);
         isSpongePresent = Loader.isModLoaded("spongeforge");
     }
 
@@ -267,10 +261,6 @@ public class ValkyrienSkiesMod {
 
     public static ForkJoinPool getPhysicsThreadPool() {
         return physicsThreadPool;
-    }
-
-    public static boolean isAnyModuleLoaded() {
-        return isAnyModuleLoaded;
     }
 
     public static boolean isSpongePresent() {
