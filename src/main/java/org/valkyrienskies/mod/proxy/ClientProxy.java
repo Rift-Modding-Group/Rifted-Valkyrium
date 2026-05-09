@@ -23,8 +23,6 @@ public class ClientProxy extends CommonProxy {
             new ModelResourceLocation(item.getRegistryName(), "inventory"));
     }
 
-    private final VSKeyHandler keyEvents = new VSKeyHandler();
-
     @Override
     public void preInit(FMLPreInitializationEvent e) {
         super.preInit(e);
@@ -32,7 +30,7 @@ public class ClientProxy extends CommonProxy {
 
         // Register events
         MinecraftForge.EVENT_BUS.register(new EventsClient());
-        MinecraftForge.EVENT_BUS.register(keyEvents);
+        MinecraftForge.EVENT_BUS.register(new VSKeyHandler());
 
         // Register VS Minecraft resource reload listener.
         IReloadableResourceManager mcResourceManager = (IReloadableResourceManager) Minecraft

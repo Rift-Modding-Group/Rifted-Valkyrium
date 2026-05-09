@@ -23,8 +23,7 @@ import org.valkyrienskies.mod.common.block.BlockPilotableBasic;
 import javax.annotation.Nullable;
 import java.util.List;
 
-public class BlockSpeedTelegraph extends BlockPilotableBasic {
-
+public class BlockSpeedTelegraph extends BlockNodeControlBasic {
     public static final PropertyDirection FACING = BlockHorizontal.FACING;
 
     public BlockSpeedTelegraph() {

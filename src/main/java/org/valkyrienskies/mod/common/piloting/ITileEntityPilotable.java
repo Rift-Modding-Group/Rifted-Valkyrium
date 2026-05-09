@@ -13,7 +13,7 @@ import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 *  the entire ship
 * */
 public interface ITileEntityPilotable {
-    void onPilotControlsMessage(PilotControlsMessageNew message, EntityPlayerMP sender);
+    void onPilotControlsMessage(PilotControlsMessage message, EntityPlayerMP sender);
 
     EntityPlayer getPilotEntity();
 
@@ -35,7 +35,6 @@ public interface ITileEntityPilotable {
      * @param gameResolution
      */
     @SideOnly(Side.CLIENT)
-    default void renderPilotText(FontRenderer renderer, ScaledResolution gameResolution) {
-
-    }
+    @Deprecated
+    default void renderPilotText(FontRenderer renderer, ScaledResolution gameResolution) {}
 }

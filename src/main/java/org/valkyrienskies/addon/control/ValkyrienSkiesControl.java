@@ -26,16 +26,18 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.valkyrienskies.addon.control.block.multiblocks.*;
 import org.valkyrienskies.addon.control.block.torque.TileEntityRotationAxle;
-import org.valkyrienskies.addon.control.capability.ICapabilityLastRelay;
-import org.valkyrienskies.addon.control.capability.ImplCapabilityLastRelay;
-import org.valkyrienskies.addon.control.capability.StorageLastRelay;
+import org.valkyrienskies.addon.control.capability.controlNodeUser.ICapabilityControlNodeUser;
+import org.valkyrienskies.addon.control.capability.controlNodeUser.ImplCapabilityControlNodeUser;
+import org.valkyrienskies.addon.control.capability.controlNodeUser.StorageControlNodeUser;
+import org.valkyrienskies.addon.control.capability.lastRelay.ICapabilityLastRelay;
+import org.valkyrienskies.addon.control.capability.lastRelay.ImplCapabilityLastRelay;
+import org.valkyrienskies.addon.control.capability.lastRelay.StorageLastRelay;
 import org.valkyrienskies.addon.control.config.VSControlConfig;
 import org.valkyrienskies.addon.control.item.ItemPhysicsCore;
 import org.valkyrienskies.addon.control.item.ItemRelayWire;
 import org.valkyrienskies.addon.control.item.ItemVSWrench;
 import org.valkyrienskies.addon.control.item.ItemVanishingWire;
-import org.valkyrienskies.addon.control.network.VSGuiButtonHandler;
-import org.valkyrienskies.addon.control.network.VSGuiButtonMessage;
+import org.valkyrienskies.addon.control.network.*;
 import org.valkyrienskies.addon.control.proxy.CommonProxyControl;
 import org.valkyrienskies.addon.control.tileentity.*;
 import org.valkyrienskies.addon.world.ValkyrienSkiesWorld;
@@ -59,6 +61,7 @@ public class ValkyrienSkiesControl {
     public static final String MOD_ID = "vs_control";
 
     public static SimpleNetworkWrapper controlGuiNetwork;
+    public static SimpleNetworkWrapper controlNodeNetwork;
 
     // MOD INSTANCE
     @Instance(MOD_ID)
@@ -71,6 +74,9 @@ public class ValkyrienSkiesControl {
 
     @CapabilityInject(ICapabilityLastRelay.class)
     public static final Capability<ICapabilityLastRelay> lastRelayCapability = null;
+
+    @CapabilityInject(ICapabilityControlNodeUser.class)
+    public static final Capability<ICapabilityControlNodeUser> controlNodeUserCapability = null;
 
     private final Logger log = LogManager.getLogger(ValkyrienSkiesControl.class);
     public BlocksValkyrienSkiesControl vsControlBlocks;
@@ -180,10 +186,9 @@ public class ValkyrienSkiesControl {
     }
 
     private void registerCapabilities() {
-        CapabilityManager.INSTANCE.register(ICapabilityLastRelay.class, new StorageLastRelay(),
-            ImplCapabilityLastRelay::new);
+        CapabilityManager.INSTANCE.register(ICapabilityLastRelay.class, new StorageLastRelay(), ImplCapabilityLastRelay::new);
+        CapabilityManager.INSTANCE.register(ICapabilityControlNodeUser.class, new StorageControlNodeUser(), ImplCapabilityControlNodeUser::new);
     }
-
 
 
 	private static ResourceLocation getNameForRecipe(ItemStack output) {
@@ -199,8 +204,33 @@ public class ValkyrienSkiesControl {
 
 	private void registerNetworks() {
         controlGuiNetwork = NetworkRegistry.INSTANCE.newSimpleChannel("vs-control");
-        controlGuiNetwork.registerMessage(VSGuiButtonHandler.class,
-                VSGuiButtonMessage.class, 1, Side.SERVER);
+        controlGuiNetwork.registerMessage(
+                VSGuiButtonMessage.Handler.class,
+                VSGuiButtonMessage.class,
+                1, Side.SERVER
+        );
+
+        controlNodeNetwork = NetworkRegistry.INSTANCE.newSimpleChannel("vs-control-control-node");
+        controlNodeNetwork.registerMessage(
+                VSNodeControlMessage.Handler.class,
+                VSNodeControlMessage.class,
+                0, Side.SERVER
+        );
+        controlNodeNetwork.registerMessage(
+                VSStartUsingControlNodeMessage.Handler.class,
+                VSStartUsingControlNodeMessage.class,
+                1, Side.CLIENT
+        );
+        controlNodeNetwork.registerMessage(
+                VSStopUsingControlNodeMessage.Handler.class,
+                VSStopUsingControlNodeMessage.class,
+                2, Side.CLIENT
+        );
+        controlNodeNetwork.registerMessage(
+                VSStoppedUsingControlNodeMessage.Handler.class,
+                VSStoppedUsingControlNodeMessage.class,
+                3, Side.SERVER
+        );
     }
 
     /**

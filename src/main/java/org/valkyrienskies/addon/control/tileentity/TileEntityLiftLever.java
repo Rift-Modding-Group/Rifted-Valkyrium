@@ -14,17 +14,16 @@ import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import org.joml.Vector3d;
 import org.valkyrienskies.addon.control.block.multiblocks.TileEntityValkyriumCompressorPart;
+import org.valkyrienskies.addon.control.network.VSNodeControlMessage;
+import org.valkyrienskies.addon.control.nodeControls.NodeControl;
 import org.valkyrienskies.addon.control.nodenetwork.VSNode_TileEntity;
-import org.valkyrienskies.mod.common.piloting.ControllerInputType;
-import org.valkyrienskies.mod.common.piloting.PilotControlsMessage;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import valkyrienwarfare.api.TransformType;
 
 import java.util.Optional;
 
-public class TileEntityLiftLever extends TileEntityNodePilotableImpl {
-
+public class TileEntityLiftLever extends TileEntityControlNodeImpl {
     private static final double LEVER_PULL_RATE = .075D;
     // Between 0 and 1, where .5 is the middle.
     private float leverOffset;
@@ -52,11 +51,6 @@ public class TileEntityLiftLever extends TileEntityNodePilotableImpl {
     }
 
     @Override
-    public ControllerInputType getControlInputType() {
-        return ControllerInputType.LiftLever;
-    }
-
-    @Override
     public void update() {
         if (this.getWorld().isRemote) {
             this.prevLeverOffset = this.leverOffset;
@@ -78,16 +72,15 @@ public class TileEntityLiftLever extends TileEntityNodePilotableImpl {
                 }
                 hasHeightBeenSet = true;
             }
-            if (this.getPilotEntity() == null) {
-                leverOffset += .5 * (.5 - leverOffset);
-            } else {
-                this.markDirty();
+            if (this.getUserEntity() == null) {
+                leverOffset += (float) (.5 * (.5 - leverOffset));
             }
-            if (!isPilotSprinting) {
-                targetYPosition += (leverOffset - .5) / 2D;
-            } else {
-                targetYPosition += (leverOffset - .5) * 1.25D;
+            else this.markDirty();
+
+            if (!this.isPilotSprinting) {
+                this.targetYPosition += (this.leverOffset - .5) / 2D;
             }
+            else this.targetYPosition += (this.leverOffset - .5) * 1.25D;
 
             VSNode_TileEntity thisNode = this.getNode();
             Optional<PhysicsObject> physicsObject = ValkyrienUtils
@@ -95,9 +88,7 @@ public class TileEntityLiftLever extends TileEntityNodePilotableImpl {
 
             if (physicsObject.isPresent()) {
                 // The linear velocity of the ship
-                Vector3d linearVel = physicsObject.get()
-                    .getPhysicsCalculations()
-                    .getVelocityAtPoint(new Vector3d());
+                Vector3d linearVel = physicsObject.get().getPhysicsCalculations().getVelocityAtPoint(new Vector3d());
                 // The global coordinates of this tile entity
                 Vector3d tilePos = new Vector3d(getPos().getX() + .5, getPos().getY() + .5,
                     getPos().getZ() + .5);
@@ -110,7 +101,7 @@ public class TileEntityLiftLever extends TileEntityNodePilotableImpl {
                 double heightWithIntegral = tilePos.y + linearVel.y * .3D;
                 double heightDelta = targetYPosition - heightWithIntegral;
                 double multiplier = heightDelta / 2D;
-                multiplier = Math.max(0, Math.min(1, multiplier));
+                multiplier = Math.clamp(multiplier, 0, 1);
 
                 for (GraphObject object : thisNode.getGraph().getObjects()) {
                     VSNode_TileEntity otherNode = (VSNode_TileEntity) object;
@@ -148,65 +139,62 @@ public class TileEntityLiftLever extends TileEntityNodePilotableImpl {
     }
 
     @Override
-    public void processControlMessage(PilotControlsMessage message, EntityPlayerMP sender) {
-        isPilotSprinting = message.airshipSprinting;
-        if (isPilotSprinting) {
-            pilotSprintTicks++;
-        } else {
-            pilotSprintTicks = 0;
-        }
+    public void onNodeControlsMessage(VSNodeControlMessage message, EntityPlayerMP sender) {
+        this.isPilotSprinting = NodeControl.LIFT_LEVER_CONTROLS.controlIsPressed(message.getUsedControls(), NodeControl.Enum.SPRINT);
+        if (this.isPilotSprinting) this.pilotSprintTicks++;
+        else this.pilotSprintTicks = 0;
 
-        if (message.airshipForward_KeyDown) {
+        if (NodeControl.LIFT_LEVER_CONTROLS.controlIsPressed(message.getUsedControls(), NodeControl.Enum.UP)) {
             // liftPercentage++;
-            leverOffset += LEVER_PULL_RATE;
+            this.leverOffset += (float) LEVER_PULL_RATE;
             if (pilotSprintTicks > 0 && pilotSprintTicks < 5) {
-                leverOffset += 20 * LEVER_PULL_RATE;
+                this.leverOffset += (float) (20 * LEVER_PULL_RATE);
             }
         }
-        if (message.airshipBackward_KeyDown) {
+        if (NodeControl.LIFT_LEVER_CONTROLS.controlIsPressed(message.getUsedControls(), NodeControl.Enum.DOWN)) {
             // liftPercentage--;
-            leverOffset -= LEVER_PULL_RATE;
+            this.leverOffset -= (float) LEVER_PULL_RATE;
             if (pilotSprintTicks > 0 && pilotSprintTicks < 5) {
-                leverOffset -= 20 * LEVER_PULL_RATE;
+                this.leverOffset -= (float) (20 * LEVER_PULL_RATE);
             }
         }
 
-        if (!message.airshipForward_KeyDown && !message.airshipBackward_KeyDown) {
-            if (leverOffset > .5 + LEVER_PULL_RATE) {
-                leverOffset -= LEVER_PULL_RATE / 2;
-            } else if (leverOffset < .5 - LEVER_PULL_RATE) {
-                leverOffset += LEVER_PULL_RATE / 2;
-            } else {
-                leverOffset = .5f;
+        if (!NodeControl.LIFT_LEVER_CONTROLS.controlIsPressed(message.getUsedControls(), NodeControl.Enum.UP)
+                && !NodeControl.LIFT_LEVER_CONTROLS.controlIsPressed(message.getUsedControls(), NodeControl.Enum.DOWN)
+        ) {
+            if (this.leverOffset > 0.5 + LEVER_PULL_RATE) {
+                this.leverOffset -= (float) (LEVER_PULL_RATE / 2);
             }
+            else if (this.leverOffset < 0.5 - LEVER_PULL_RATE) {
+                this.leverOffset += (float) (LEVER_PULL_RATE / 2);
+            }
+            else this.leverOffset = .5f;
         }
 
-        if (message.airshipSprinting) {
-            if (pilotSprintTicks > 0 && pilotSprintTicks < 5) {
-                leverOffset = Math.max(0f, Math.min(1f, leverOffset));
-            } else {
-                leverOffset = Math.max(.1f, Math.min(.9f, leverOffset));
+        if (this.isPilotSprinting) {
+            if (this.pilotSprintTicks > 0 && this.pilotSprintTicks < 5) {
+                this.leverOffset = Math.clamp(this.leverOffset, 0f, 1f);
             }
-        } else {
-            leverOffset = Math.max(.25f, Math.min(.75f, leverOffset));
+            else this.leverOffset = Math.clamp(this.leverOffset, 0.1f, 0.9f);
         }
+        else this.leverOffset = Math.clamp(this.leverOffset, 0.25f, 0.75f);
     }
 
     @Override
     public NBTTagCompound writeToNBT(NBTTagCompound compound) {
         NBTTagCompound toReturn = super.writeToNBT(compound);
-        compound.setFloat("leverOffset", leverOffset);
-        compound.setDouble("targetYPosition", targetYPosition);
-        compound.setBoolean("hasHeightBeenSet", hasHeightBeenSet);
+        compound.setFloat("leverOffset", this.leverOffset);
+        compound.setDouble("targetYPosition", this.targetYPosition);
+        compound.setBoolean("hasHeightBeenSet", this.hasHeightBeenSet);
         return toReturn;
     }
 
     @Override
     public void readFromNBT(NBTTagCompound compound) {
         super.readFromNBT(compound);
-        leverOffset = compound.getFloat("leverOffset");
-        targetYPosition = compound.getDouble("targetYPosition");
-        hasHeightBeenSet = compound.getBoolean("hasHeightBeenSet");
+        this.leverOffset = compound.getFloat("leverOffset");
+        this.targetYPosition = compound.getDouble("targetYPosition");
+        this.hasHeightBeenSet = compound.getBoolean("hasHeightBeenSet");
     }
 
     @Override

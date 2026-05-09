@@ -12,15 +12,15 @@ import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import org.valkyrienskies.addon.control.block.BlockSpeedTelegraph;
+import org.valkyrienskies.addon.control.network.VSNodeControlMessage;
+import org.valkyrienskies.addon.control.nodeControls.NodeControl;
 import org.valkyrienskies.addon.control.nodenetwork.VSNode_TileEntity;
 import org.valkyrienskies.mod.common.network.VSNetwork;
-import org.valkyrienskies.mod.common.piloting.ControllerInputType;
-import org.valkyrienskies.mod.common.piloting.PilotControlsMessage;
 
 import java.util.Collection;
 import java.util.Optional;
 
-public class TileEntitySpeedTelegraph extends TileEntityNodePilotableImpl implements ITickable {
+public class TileEntitySpeedTelegraph extends TileEntityControlNodeImpl implements ITickable {
 
     private ShipChadburnState telegraphState;
     // The following fields are only used by the client for smooth interpolation
@@ -37,12 +37,12 @@ public class TileEntitySpeedTelegraph extends TileEntityNodePilotableImpl implem
     }
 
     @Override
-    public void processControlMessage(PilotControlsMessage message, EntityPlayerMP sender) {
+    public void onNodeControlsMessage(VSNodeControlMessage message, EntityPlayerMP sender) {
         int deltaOrdinal = 0;
-        if (message.airshipLeft_KeyPressed) {
+        if (NodeControl.SPEED_TELEGRAPH_CONTROLS.controlIsPressed(message.getUsedControls(), NodeControl.Enum.LEFT)) {
             deltaOrdinal -= 1;
         }
-        if (message.airshipRight_KeyPressed) {
+        if (NodeControl.SPEED_TELEGRAPH_CONTROLS.controlIsPressed(message.getUsedControls(), NodeControl.Enum.RIGHT)) {
             deltaOrdinal += 1;
         }
         IBlockState blockState = this.getWorld().getBlockState(getPos());
@@ -52,11 +52,10 @@ public class TileEntitySpeedTelegraph extends TileEntityNodePilotableImpl implem
                 deltaOrdinal *= -1;
             }
         }
-        int newTelegraphOrdinal = telegraphState.ordinal();
+        int newTelegraphOrdinal = this.telegraphState.ordinal();
         newTelegraphOrdinal += deltaOrdinal;
-        newTelegraphOrdinal = Math
-            .max(0, Math.min(ShipChadburnState.values().length - 1, newTelegraphOrdinal));
-        telegraphState = ShipChadburnState.values()[newTelegraphOrdinal];
+        newTelegraphOrdinal = Math.clamp(newTelegraphOrdinal, 0, ShipChadburnState.values().length - 1);
+        this.telegraphState = ShipChadburnState.values()[newTelegraphOrdinal];
         this.markDirty();
     }
 
@@ -137,13 +136,7 @@ public class TileEntitySpeedTelegraph extends TileEntityNodePilotableImpl implem
         return toReturn;
     }
 
-    @Override
-    public ControllerInputType getControlInputType() {
-        return ControllerInputType.Telegraph;
-    }
-
     private enum ShipChadburnState {
-
         FULL_AHEAD(-120, 4), HALF_AHEAD(-80, 2), SLOW_AHEAD(-40, 1), STOP(0, 0), SLOW_ASTERN(40,
             -1), HALF_ASTERN(80, -2), FULL_ASTERN(120, -4);
 

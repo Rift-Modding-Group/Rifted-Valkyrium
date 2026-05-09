@@ -1,4 +1,4 @@
-package org.valkyrienskies.mod.common.piloting;
+package org.valkyrienskies.addon.control.network;
 
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.PacketBuffer;
@@ -9,20 +9,17 @@ import net.minecraft.world.World;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
+import org.valkyrienskies.addon.control.tileentity.ITileEntityControlNode;
 
-import java.util.UUID;
-
-public class PilotControlsMessageNew implements IMessage {
-    private UUID pilotedShip;
+public class VSNodeControlMessage implements IMessage {
     private BlockPos controllerPos;
     private int usedControls;
 
-    public PilotControlsMessageNew() {}
+    public VSNodeControlMessage() {}
 
-    public PilotControlsMessageNew(UUID pilotedShip, BlockPos controllerPos) {
-        this.pilotedShip = pilotedShip;
+    public VSNodeControlMessage(BlockPos controllerPos, int usedControls) {
         this.controllerPos = controllerPos;
-        this.usedControls = PilotControls.getUsedControls();
+        this.usedControls = usedControls;
     }
 
     public int getUsedControls() {
@@ -33,7 +30,6 @@ public class PilotControlsMessageNew implements IMessage {
     public void fromBytes(ByteBuf buf) {
         PacketBuffer packetBuf = new PacketBuffer(buf);
 
-        this.pilotedShip = packetBuf.readUniqueId();
         this.controllerPos = packetBuf.readBlockPos();
         this.usedControls = packetBuf.readInt();
     }
@@ -42,24 +38,24 @@ public class PilotControlsMessageNew implements IMessage {
     public void toBytes(ByteBuf buf) {
         PacketBuffer packetBuf = new PacketBuffer(buf);
 
-        packetBuf.writeUniqueId(this.pilotedShip);
         packetBuf.writeBlockPos(this.controllerPos);
         packetBuf.writeInt(this.usedControls);
     }
 
-    public static class Handler implements IMessageHandler<PilotControlsMessageNew, IMessage> {
+    public static class Handler implements IMessageHandler<VSNodeControlMessage, IMessage> {
         @Override
-        public IMessage onMessage(PilotControlsMessageNew message, MessageContext ctx) {
+        public IMessage onMessage(VSNodeControlMessage message, MessageContext ctx) {
             IThreadListener mainThread = ctx.getServerHandler().server;
             mainThread.addScheduledTask(() -> {
-                if (message.controllerPos == null) return;
+                if (message.controllerPos != null) {
+                    World worldObj = ctx.getServerHandler().player.world;
+                    BlockPos posFor = message.controllerPos;
+                    TileEntity tile = worldObj.getTileEntity(posFor);
 
-                World worldObj = ctx.getServerHandler().player.world;
-                BlockPos posFor = message.controllerPos;
-                TileEntity tile = worldObj.getTileEntity(posFor);
-
-                if (!(tile instanceof ITileEntityPilotable pilotable)) return;
-                pilotable.onPilotControlsMessage(message, ctx.getServerHandler().player);
+                    if (tile instanceof ITileEntityControlNode controlNode) {
+                        controlNode.onNodeControlsMessage(message, ctx.getServerHandler().player);
+                    }
+                }
             });
             return null;
         }

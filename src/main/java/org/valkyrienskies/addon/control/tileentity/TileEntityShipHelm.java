@@ -18,17 +18,17 @@ import org.joml.Vector3d;
 import org.valkyrienskies.addon.control.ValkyrienSkiesControl;
 import org.valkyrienskies.addon.control.block.BlockShipHelm;
 import org.valkyrienskies.addon.control.block.multiblocks.TileEntityRudderPart;
+import org.valkyrienskies.addon.control.network.VSNodeControlMessage;
+import org.valkyrienskies.addon.control.nodeControls.NodeControl;
 import org.valkyrienskies.addon.control.nodenetwork.VSNode_TileEntity;
 import org.valkyrienskies.mod.common.network.VSNetwork;
-import org.valkyrienskies.mod.common.piloting.ControllerInputType;
-import org.valkyrienskies.mod.common.piloting.PilotControlsMessage;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import valkyrienwarfare.api.TransformType;
 
 import java.util.Optional;
 
-public class TileEntityShipHelm extends TileEntityNodePilotableImpl implements ITickable {
+public class TileEntityShipHelm extends TileEntityControlNodeImpl implements ITickable {
 
     public double compassAngle = 0;
     public double lastCompassAngle = 0;
@@ -44,9 +44,10 @@ public class TileEntityShipHelm extends TileEntityNodePilotableImpl implements I
             calculateCompassAngle();
             lastWheelRotation = wheelRotation;
             wheelRotation += (nextWheelRotation - wheelRotation) * .25D;
-        } else {
+        }
+        else {
             // Only decay rotation when there's no pilot
-            if (this.getPilotEntity() == null) {
+            if (this.getUserEntity() == null) {
                 double friction = .05D;
                 double toOriginRate = .05D;
                 if (Math.abs(wheelRotation) < 1.5) {
@@ -115,26 +116,22 @@ public class TileEntityShipHelm extends TileEntityNodePilotableImpl implements I
 
         Optional<PhysicsObject> physicsObject = ValkyrienUtils
             .getPhysoManagingBlock(getWorld(), getPos());
-        if (physicsObject.isPresent()) {
-            physicsObject.get()
+        // RotationMatrices.applyTransform(wrapper.wrapping.coordTransform.lToWTransform,
+        // compassPoint);
+        physicsObject.ifPresent(object -> object
                 .getShipTransformationManager()
                 .getCurrentTickTransform()
-                .transformPosition(compassPoint, TransformType.SUBSPACE_TO_GLOBAL);
-            // RotationMatrices.applyTransform(wrapper.wrapping.coordTransform.lToWTransform,
-            // compassPoint);
-        }
+                .transformPosition(compassPoint, TransformType.SUBSPACE_TO_GLOBAL));
 
         Vector3d compassDirection = new Vector3d(compassPoint);
         compassDirection.sub(spawnPos.getX(), spawnPos.getY(), spawnPos.getZ());
 
-        if (physicsObject.isPresent()) {
-            physicsObject.get()
+        // RotationMatrices.doRotationOnly(wrapper.wrapping.coordTransform.wToLTransform,
+        // compassDirection);
+        physicsObject.ifPresent(object -> object
                 .getShipTransformationManager()
                 .getCurrentTickTransform()
-                .transformDirection(compassDirection, TransformType.GLOBAL_TO_SUBSPACE);
-            // RotationMatrices.doRotationOnly(wrapper.wrapping.coordTransform.wToLTransform,
-            // compassDirection);
-        }
+                .transformDirection(compassDirection, TransformType.GLOBAL_TO_SUBSPACE));
 
         compassDirection.normalize();
         compassAngle = Math.toDegrees(Math.atan2(compassDirection.x, compassDirection.z))
@@ -156,30 +153,26 @@ public class TileEntityShipHelm extends TileEntityNodePilotableImpl implements I
     }
 
     @Override
-    public ControllerInputType getControlInputType() {
-        return ControllerInputType.ShipHelm;
-    }
-
-    @Override
-    public void processControlMessage(PilotControlsMessage message, EntityPlayerMP sender) {
+    public void onNodeControlsMessage(VSNodeControlMessage message, EntityPlayerMP sender) {
         double rotationDelta = 0;
-        if (message.airshipLeft_KeyDown) {
+        if (NodeControl.HELM_CONTROLS.controlIsPressed(message.getUsedControls(), NodeControl.Enum.LEFT)) {
             rotationDelta -= 12.5D;
         }
-        if (message.airshipRight_KeyDown) {
+        if (NodeControl.HELM_CONTROLS.controlIsPressed(message.getUsedControls(), NodeControl.Enum.RIGHT)) {
             rotationDelta += 12.5D;
         }
         IBlockState blockState = this.getWorld().getBlockState(getPos());
         if (blockState.getBlock() instanceof BlockShipHelm) {
             EnumFacing facing = blockState.getValue(BlockShipHelm.FACING);
             if (this.isPlayerInFront(sender, facing)) {
-                wheelRotation += rotationDelta;
-            } else {
-                wheelRotation -= rotationDelta;
+                this.wheelRotation += rotationDelta;
+            }
+            else {
+                this.wheelRotation -= rotationDelta;
             }
         }
         double max_rotation = 720D;
-        wheelRotation = Math.min(Math.max(wheelRotation, -max_rotation), max_rotation);
+        this.wheelRotation = Math.clamp(this.wheelRotation, -max_rotation, max_rotation);
     }
 
     @SideOnly(Side.CLIENT)

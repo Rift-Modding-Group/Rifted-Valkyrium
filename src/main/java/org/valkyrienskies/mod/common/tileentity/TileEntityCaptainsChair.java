@@ -8,15 +8,13 @@ import org.joml.Matrix3d;
 import org.joml.Vector3d;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.block.BlockCaptainsChair;
-import org.valkyrienskies.mod.common.piloting.ControllerInputType;
 import org.valkyrienskies.mod.common.piloting.PilotControls;
 import org.valkyrienskies.mod.common.piloting.PilotControlsMessage;
-import org.valkyrienskies.mod.common.piloting.PilotControlsMessageNew;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import valkyrienwarfare.api.TransformType;
 
 public class TileEntityCaptainsChair extends TileEntityPilotableImpl {
-    public void processControlMessage(PilotControlsMessageNew message, EntityPlayerMP sender) {
+    public void processControlMessage(PilotControlsMessage message, EntityPlayerMP sender) {
         IBlockState blockState = getWorld().getBlockState(getPos());
         if (blockState.getBlock() != ValkyrienSkiesMod.INSTANCE.captainsChair) {
             this.setPilotEntity(null);
@@ -29,16 +27,6 @@ public class TileEntityCaptainsChair extends TileEntityPilotableImpl {
         this.processCalculationsForControlMessageAndApplyCalculations(
                 physicsObject, message, blockState
         );
-    }
-
-    @Override
-    public ControllerInputType getControlInputType() {
-        return ControllerInputType.CaptainsChair;
-    }
-
-    @Override
-    public boolean setClientPilotingEntireShip() {
-        return true;
     }
 
     @Override
@@ -55,7 +43,7 @@ public class TileEntityCaptainsChair extends TileEntityPilotableImpl {
     }
 
     private void processCalculationsForControlMessageAndApplyCalculations(
-            PhysicsObject controlledShip, PilotControlsMessageNew message, IBlockState state
+            PhysicsObject controlledShip, PilotControlsMessage message, IBlockState state
     ) {
         if (controlledShip.isShipAligningToGrid()) return;
 

@@ -1,4 +1,4 @@
-package org.valkyrienskies.mod.common.network;
+package org.valkyrienskies.addon.control.network;
 
 import io.netty.buffer.ByteBuf;
 import net.minecraft.entity.player.EntityPlayerMP;
@@ -9,28 +9,28 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
-import org.valkyrienskies.mod.common.piloting.ITileEntityPilotable;
+import org.valkyrienskies.addon.control.tileentity.ITileEntityControlNode;
 import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 
 import java.util.UUID;
 
-public class MessagePlayerStoppedPiloting implements IMessage {
-    public BlockPos posToStopPiloting;
-    public UUID shipIDToStopPiloting;
+public class VSStoppedUsingControlNodeMessage implements IMessage {
+    public BlockPos posToStopUsing;
+    public UUID shipIDToStopUsing;
 
-    public MessagePlayerStoppedPiloting(BlockPos posToStopPiloting) {
-        this.posToStopPiloting = posToStopPiloting;
-        this.shipIDToStopPiloting = null;
+    public VSStoppedUsingControlNodeMessage() {}
+
+    public VSStoppedUsingControlNodeMessage(BlockPos posToStopUsing) {
+        this.posToStopUsing = posToStopUsing;
+        this.shipIDToStopUsing = null;
     }
 
-    public MessagePlayerStoppedPiloting(UUID shipIDToStopPiloting) {
-        this.posToStopPiloting = null;
-        this.shipIDToStopPiloting = shipIDToStopPiloting;
+    public VSStoppedUsingControlNodeMessage(UUID shipIDToStopUsing) {
+        this.posToStopUsing = null;
+        this.shipIDToStopUsing = shipIDToStopUsing;
     }
-
-    public MessagePlayerStoppedPiloting() {}
 
     @Override
     public void fromBytes(ByteBuf buf) {
@@ -38,54 +38,44 @@ public class MessagePlayerStoppedPiloting implements IMessage {
         final boolean isBlockPos = packetBuf.readBoolean();
         final boolean isUUID = packetBuf.readBoolean();
 
-        if (isBlockPos) {
-            posToStopPiloting = new BlockPos(
-                    packetBuf.readInt(),
-                    packetBuf.readInt(),
-                    packetBuf.readInt()
-            );
-        }
-        if (isUUID) {
-            shipIDToStopPiloting = packetBuf.readUniqueId();
-        }
+        if (isBlockPos) this.posToStopUsing = packetBuf.readBlockPos();
+        if (isUUID) this.shipIDToStopUsing = packetBuf.readUniqueId();
+
     }
 
     @Override
     public void toBytes(ByteBuf buf) {
         PacketBuffer packetBuf = new PacketBuffer(buf);
 
-        packetBuf.writeBoolean(posToStopPiloting != null);
-        packetBuf.writeBoolean(shipIDToStopPiloting != null);
+        packetBuf.writeBoolean(this.posToStopUsing != null);
+        packetBuf.writeBoolean(this.shipIDToStopUsing != null);
 
-        if (posToStopPiloting != null) {
-            packetBuf.writeInt(posToStopPiloting.getX());
-            packetBuf.writeInt(posToStopPiloting.getY());
-            packetBuf.writeInt(posToStopPiloting.getZ());
+        if (this.posToStopUsing != null) {
+            packetBuf.writeBlockPos(this.posToStopUsing);
         }
 
-        if (shipIDToStopPiloting != null) {
-            packetBuf.writeUniqueId(shipIDToStopPiloting);
+        if (this.shipIDToStopUsing != null) {
+            packetBuf.writeUniqueId(this.shipIDToStopUsing);
         }
-        //use absolute coordinates instead of writeBlockPos in case we ever add compatibility with cubic chunks
     }
 
-    public static class Handler implements IMessageHandler<MessagePlayerStoppedPiloting, IMessage> {
+    public static class Handler implements IMessageHandler<VSStoppedUsingControlNodeMessage, IMessage> {
         @Override
-        public IMessage onMessage(MessagePlayerStoppedPiloting message, MessageContext ctx) {
+        public IMessage onMessage(VSStoppedUsingControlNodeMessage message, MessageContext ctx) {
             IThreadListener mainThread = ctx.getServerHandler().server;
             mainThread.addScheduledTask(() -> {
                 EntityPlayerMP player = ctx.getServerHandler().player;
-                if (message.posToStopPiloting != null) {
-                    BlockPos pos = message.posToStopPiloting;
+                if (message.posToStopUsing != null) {
+                    BlockPos pos = message.posToStopUsing;
 
                     TileEntity tileEntity = player.world.getTileEntity(pos);
 
-                    if (tileEntity instanceof ITileEntityPilotable tileEntityPilotable) {
-                        tileEntityPilotable.playerWantsToStopPiloting(player);
+                    if (tileEntity instanceof ITileEntityControlNode tileEntityControlNode) {
+                        tileEntityControlNode.playerWantsToStopUsing(player);
                     }
                 }
                 else {
-                    final UUID shipID = message.shipIDToStopPiloting;
+                    final UUID shipID = message.shipIDToStopUsing;
                     final IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(player.world);
                     if (physObjectWorld == null) return;
                     final PhysicsObject physicsObject = physObjectWorld.getPhysObjectFromUUID(shipID);

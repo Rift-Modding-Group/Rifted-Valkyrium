@@ -41,18 +41,11 @@ import org.valkyrienskies.mod.common.command.framework.VSCommandRegistry;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.item.ItemShipTracker;
 import org.valkyrienskies.mod.common.network.MessagePlayerStoppedPiloting;
-import org.valkyrienskies.mod.common.network.MessagePlayerStoppedPilotingHandler;
 import org.valkyrienskies.mod.common.network.MessageStartPiloting;
-import org.valkyrienskies.mod.common.network.MessageStartPilotingHandler;
 import org.valkyrienskies.mod.common.network.MessageStopPiloting;
-import org.valkyrienskies.mod.common.network.MessageStopPilotingHandler;
 import org.valkyrienskies.mod.common.network.ShipIndexDataMessage;
-import org.valkyrienskies.mod.common.network.ShipIndexDataMessageHandler;
 import org.valkyrienskies.mod.common.network.ShipTransformUpdateMessage;
-import org.valkyrienskies.mod.common.network.ShipTransformUpdateMessageHandler;
 import org.valkyrienskies.mod.common.piloting.PilotControlsMessage;
-import org.valkyrienskies.mod.common.piloting.PilotControlsMessageHandler;
-import org.valkyrienskies.mod.common.piloting.PilotControlsMessageNew;
 import org.valkyrienskies.mod.common.tileentity.TileEntityBoatChair;
 import org.valkyrienskies.mod.common.tileentity.TileEntityCaptainsChair;
 import org.valkyrienskies.mod.common.tileentity.TileEntityPassengerChair;
@@ -171,24 +164,40 @@ public class ValkyrienSkiesMod {
 
     private void registerNetworks(FMLStateEvent event) {
         physWrapperNetwork = NetworkRegistry.INSTANCE.newSimpleChannel("valkyrien_skies");
-        physWrapperNetwork.registerMessage(ShipIndexDataMessageHandler.class,
-                ShipIndexDataMessage.class, 0, Side.CLIENT);
+        physWrapperNetwork.registerMessage(
+                ShipIndexDataMessage.Handler.class,
+                ShipIndexDataMessage.class,
+                0, Side.CLIENT
+        );
 
         controlNetwork = NetworkRegistry.INSTANCE.newSimpleChannel("valkyrien_piloting");
-        controlNetwork.registerMessage(PilotControlsMessageHandler.class,
-                PilotControlsMessage.class, 0, Side.SERVER);
-        controlNetwork.registerMessage(PilotControlsMessageNew.Handler.class,
-                PilotControlsMessageNew.class, 1, Side.SERVER);
-        controlNetwork.registerMessage(MessageStartPilotingHandler.class,
-                MessageStartPiloting.class, 2, Side.CLIENT);
-        controlNetwork.registerMessage(MessageStopPilotingHandler.class,
-                MessageStopPiloting.class, 3, Side.CLIENT);
-        controlNetwork.registerMessage(MessagePlayerStoppedPilotingHandler.class,
-                MessagePlayerStoppedPiloting.class, 4, Side.SERVER);
+        controlNetwork.registerMessage(
+                PilotControlsMessage.Handler.class,
+                PilotControlsMessage.class,
+                0, Side.SERVER
+        );
+        controlNetwork.registerMessage(
+                MessageStartPiloting.Handler.class,
+                MessageStartPiloting.class,
+                1, Side.CLIENT
+        );
+        controlNetwork.registerMessage(
+                MessageStopPiloting.Handler.class,
+                MessageStopPiloting.class,
+                2, Side.CLIENT
+        );
+        controlNetwork.registerMessage(
+                MessagePlayerStoppedPiloting.Handler.class,
+                MessagePlayerStoppedPiloting.class,
+                3, Side.SERVER
+        );
 
         physWrapperTransformUpdateNetwork = NetworkRegistry.INSTANCE.newSimpleChannel("vs_ship_transforms");
-        physWrapperTransformUpdateNetwork.registerMessage(ShipTransformUpdateMessageHandler.class,
-                ShipTransformUpdateMessage.class, 0, Side.CLIENT);
+        physWrapperTransformUpdateNetwork.registerMessage(
+                ShipTransformUpdateMessage.Handler.class,
+                ShipTransformUpdateMessage.class,
+                0, Side.CLIENT
+        );
     }
 
     void registerRecipes(RegistryEvent.Register<IRecipe> event) {

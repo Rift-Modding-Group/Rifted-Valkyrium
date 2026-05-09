@@ -17,7 +17,9 @@ import net.minecraftforge.client.model.IModel;
 import net.minecraftforge.client.model.ModelLoader;
 import net.minecraftforge.client.model.ModelLoaderRegistry;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import org.valkyrienskies.addon.control.capability.controlNodeUser.ICapabilityControlNodeUser;
 import org.valkyrienskies.addon.control.renderer.infuser_core_rendering.InfuserCoreBakedModel;
+import org.valkyrienskies.addon.control.tileentity.ITileEntityControlNode;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.ship_pilot.IShipPilot;
 import org.valkyrienskies.mod.common.piloting.ITileEntityPilotable;
@@ -29,15 +31,14 @@ public class ControlEventsClient {
         EntityPlayer player = Minecraft.getMinecraft().player;
         FontRenderer fontRenderer = minecraft.fontRenderer;
         if (fontRenderer != null && player != null && event.getType() == RenderGameOverlayEvent.ElementType.TEXT) {
-            IShipPilot playerPilot = player.getCapability(VSCapabilityRegistry.VS_SHIP_PILOT, null);
-            if (playerPilot.isPiloting()) {
-                BlockPos tilePilotedPos = playerPilot.getPosBeingControlled();
-                TileEntity pilotedTile = player.getEntityWorld().getTileEntity(tilePilotedPos);
-                if (pilotedTile instanceof ITileEntityPilotable pilotedControlEntity) {
-                    ScaledResolution scaledresolution = new ScaledResolution(Minecraft.getMinecraft());
-                    pilotedControlEntity.renderPilotText(fontRenderer, scaledresolution);
-                }
-            }
+            ICapabilityControlNodeUser nodeUser = Minecraft.getMinecraft().player.getCapability(ValkyrienSkiesControl.controlNodeUserCapability, null);
+            if (nodeUser == null || nodeUser.getUsedControlNodePos() == null) return;
+
+            TileEntity pilotedTile = player.getEntityWorld().getTileEntity(nodeUser.getUsedControlNodePos());
+            if (!(pilotedTile instanceof ITileEntityControlNode usedControlNode)) return;
+
+            ScaledResolution scaledresolution = new ScaledResolution(Minecraft.getMinecraft());
+            usedControlNode.renderPilotText(fontRenderer, scaledresolution);
         }
     }
 

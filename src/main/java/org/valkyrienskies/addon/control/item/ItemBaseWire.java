@@ -15,7 +15,7 @@ import net.minecraft.util.text.TextComponentString;
 import net.minecraft.util.text.TextFormatting;
 import net.minecraft.world.World;
 import org.valkyrienskies.addon.control.ValkyrienSkiesControl;
-import org.valkyrienskies.addon.control.capability.ICapabilityLastRelay;
+import org.valkyrienskies.addon.control.capability.lastRelay.ICapabilityLastRelay;
 import org.valkyrienskies.addon.control.config.VSControlConfig;
 import org.valkyrienskies.addon.control.nodenetwork.EnumWireType;
 import org.valkyrienskies.addon.control.nodenetwork.IVSNode;

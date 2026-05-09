@@ -15,7 +15,6 @@ import org.valkyrienskies.mod.common.capability.ship_pilot.IShipPilot;
 import org.valkyrienskies.mod.common.network.MessagePlayerStoppedPiloting;
 
 public class VSKeyHandler {
-
     private static final String VS_KEYBIND_IDENTIFIER = "Valkyrien Skies";
 
     // Movement Keys
@@ -78,6 +77,8 @@ public class VSKeyHandler {
         if (event.side == Side.SERVER) return;
         if (event.phase == Phase.START) {
             IShipPilot clientPilot = event.player.getCapability(VSCapabilityRegistry.VS_SHIP_PILOT, null);
+            if (clientPilot == null) return;
+
             clientPilot.onClientTick();
 
             if (dismountKey.isKeyDown() && clientPilot.isPilotingATile()) {

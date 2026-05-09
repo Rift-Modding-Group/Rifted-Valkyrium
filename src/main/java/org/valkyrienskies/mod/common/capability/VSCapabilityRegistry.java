@@ -1,6 +1,7 @@
 package org.valkyrienskies.mod.common.capability;
 
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.World;
 import net.minecraftforge.common.capabilities.Capability;
@@ -47,10 +48,12 @@ public class VSCapabilityRegistry {
                 new VSDefaultCapabilityProviderTransient<>(VS_ENTITY_BACKUP)
         );
 
-        event.addCapability(
-                new ResourceLocation(ValkyrienSkiesMod.MOD_ID, "ship_pilot"),
-                new VSDefaultCapabilityProviderTransient<>(VS_SHIP_PILOT)
-        );
+        if (event.getObject() instanceof EntityPlayer) {
+            event.addCapability(
+                    new ResourceLocation(ValkyrienSkiesMod.MOD_ID, "ship_pilot"),
+                    new VSDefaultCapabilityProviderTransient<>(VS_SHIP_PILOT)
+            );
+        }
     }
 
     public static void registerCapabilities() {

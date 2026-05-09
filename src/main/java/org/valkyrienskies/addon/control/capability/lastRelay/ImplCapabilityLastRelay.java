@@ -1,4 +1,4 @@
-package org.valkyrienskies.addon.control.capability;
+package org.valkyrienskies.addon.control.capability.lastRelay;
 
 import net.minecraft.util.math.BlockPos;
 

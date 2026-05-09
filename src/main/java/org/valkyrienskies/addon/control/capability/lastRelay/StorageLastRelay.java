@@ -1,4 +1,4 @@
-package org.valkyrienskies.addon.control.capability;
+package org.valkyrienskies.addon.control.capability.lastRelay;
 
 import net.minecraft.nbt.NBTBase;
 import net.minecraft.nbt.NBTTagIntArray;

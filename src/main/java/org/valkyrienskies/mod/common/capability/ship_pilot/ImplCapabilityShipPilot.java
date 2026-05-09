@@ -2,9 +2,7 @@ package org.valkyrienskies.mod.common.capability.ship_pilot;
 
 import net.minecraft.util.math.BlockPos;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
-import org.valkyrienskies.mod.common.piloting.ControllerInputType;
 import org.valkyrienskies.mod.common.piloting.PilotControlsMessage;
-import org.valkyrienskies.mod.common.piloting.PilotControlsMessageNew;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 
 import java.util.UUID;
@@ -12,7 +10,6 @@ import java.util.UUID;
 public class ImplCapabilityShipPilot implements IShipPilot {
     private PhysicsObject pilotedShip;
     private BlockPos blockBeingControlled;
-    private ControllerInputType controlInputType;
     private UUID pilotedShipID;
 
     @Override
@@ -61,21 +58,10 @@ public class ImplCapabilityShipPilot implements IShipPilot {
     }
 
     @Override
-    public ControllerInputType getControllerInputEnum() {
-        return this.controlInputType;
-    }
-
-    @Override
-    public void setControllerInputEnum(ControllerInputType type) {
-        this.controlInputType = type;
-    }
-
-    @Override
     public void stopPilotingEverything() {
         this.setPilotedShip(null);
         this.setShipIDBeingControlled(null);
         this.setPosBeingControlled(null);
-        this.setControllerInputEnum(null);
     }
 
     @Override
@@ -86,11 +72,8 @@ public class ImplCapabilityShipPilot implements IShipPilot {
                 shipId = getPilotedShip().getUuid();
             }
             else shipId = getShipIDBeingControlled();
-            this.sendPilotKeysToServer(this.getControllerInputEnum(), shipId);
-        }
-    }
 
-    private void sendPilotKeysToServer(ControllerInputType type, UUID shipPiloting) {
-        ValkyrienSkiesMod.controlNetwork.sendToServer(new PilotControlsMessageNew(shipPiloting, this.getPosBeingControlled()));
+            ValkyrienSkiesMod.controlNetwork.sendToServer(new PilotControlsMessage(shipId, this.getPosBeingControlled()));
+        }
     }
 }

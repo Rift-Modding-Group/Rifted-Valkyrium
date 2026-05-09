@@ -21,8 +21,7 @@ import org.valkyrienskies.mod.common.block.BlockPilotableBasic;
 import javax.annotation.Nullable;
 import java.util.List;
 
-public class BlockShipHelm extends BlockPilotableBasic {
-
+public class BlockShipHelm extends BlockNodeControlBasic {
     public static final PropertyDirection FACING = BlockHorizontal.FACING;
 
     public BlockShipHelm() {
@@ -64,9 +63,7 @@ public class BlockShipHelm extends BlockPilotableBasic {
 
     @Override
     public int getMetaFromState(IBlockState state) {
-        int i = state.getValue(FACING)
-            .getIndex();
-        return i;
+        return state.getValue(FACING).getIndex();
     }
 
     @Override

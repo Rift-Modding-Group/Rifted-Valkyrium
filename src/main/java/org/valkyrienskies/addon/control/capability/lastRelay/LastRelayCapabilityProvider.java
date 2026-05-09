@@ -1,4 +1,4 @@
-package org.valkyrienskies.addon.control.capability;
+package org.valkyrienskies.addon.control.capability.lastRelay;
 
 import net.minecraft.nbt.NBTTagIntArray;
 import net.minecraft.util.EnumFacing;
@@ -6,7 +6,7 @@ import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.ICapabilitySerializable;
 import org.valkyrienskies.addon.control.ValkyrienSkiesControl;
 
-public class LastNodeCapabilityProvider implements ICapabilitySerializable<NBTTagIntArray> {
+public class LastRelayCapabilityProvider implements ICapabilitySerializable<NBTTagIntArray> {
 
     private ICapabilityLastRelay inst = ValkyrienSkiesControl.lastRelayCapability
         .getDefaultInstance();

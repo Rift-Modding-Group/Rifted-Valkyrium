@@ -21,7 +21,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
 
-public class BlockLiftLever extends BlockPilotableBasic {
+public class BlockLiftLever extends BlockNodeControlBasic {
 
     public BlockLiftLever() {
         super("lift_lever", Material.IRON, 5.0F);

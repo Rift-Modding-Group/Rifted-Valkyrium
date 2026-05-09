@@ -11,10 +11,8 @@ import org.joml.Vector3d;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.network.MessageStartPiloting;
 import org.valkyrienskies.mod.common.network.MessageStopPiloting;
-import org.valkyrienskies.mod.common.piloting.ControllerInputType;
 import org.valkyrienskies.mod.common.piloting.ITileEntityPilotable;
 import org.valkyrienskies.mod.common.piloting.PilotControlsMessage;
-import org.valkyrienskies.mod.common.piloting.PilotControlsMessageNew;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import valkyrienwarfare.api.TransformType;
@@ -37,15 +35,15 @@ public abstract class TileEntityPilotableImpl extends TileEntity implements
         this.pilotPlayerEntity = null;
     }
 
-    public final void onPilotControlsMessage(PilotControlsMessageNew message, EntityPlayerMP sender) {
+    public final void onPilotControlsMessage(PilotControlsMessage message, EntityPlayerMP sender) {
         if (!sender.getUniqueID().equals(pilotPlayerEntity)) return;
         this.processControlMessage(message, sender);
     }
 
     @Override
     public final EntityPlayer getPilotEntity() {
-        if (pilotPlayerEntity != null) {
-            return getWorld().getPlayerEntityByUUID(pilotPlayerEntity);
+        if (this.pilotPlayerEntity != null) {
+            return getWorld().getPlayerEntityByUUID(this.pilotPlayerEntity);
         }
         return null;
     }
@@ -57,29 +55,26 @@ public abstract class TileEntityPilotableImpl extends TileEntity implements
             sendPilotUpdatePackets((EntityPlayerMP) toSet, (EntityPlayerMP) oldPlayer);
         }
         if (toSet != null) {
-            pilotPlayerEntity = toSet.getUniqueID();
-            onStartTileUsage();
-        } else {
-            pilotPlayerEntity = null;
-            onStopTileUsage();
+            this.pilotPlayerEntity = toSet.getUniqueID();
+            this.onStartTileUsage();
+        }
+        else {
+            this.pilotPlayerEntity = null;
+            this.onStopTileUsage();
         }
     }
 
     @Override
     public final void playerWantsToStopPiloting(EntityPlayer player) {
         if (player == getPilotEntity()) {
-            setPilotEntity(null);
+            this.setPilotEntity(null);
         }
     }
 
     @Override
     public final PhysicsObject getParentPhysicsEntity() {
         Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(world, pos);
-        if (physicsObject.isPresent()) {
-            return physicsObject.get();
-        } else {
-            return null;
-        }
+        return physicsObject.orElse(null);
     }
 
     // Always call this before setting the pilotPlayerEntity to equal newPilot
@@ -90,29 +85,9 @@ public abstract class TileEntityPilotableImpl extends TileEntity implements
             ValkyrienSkiesMod.controlNetwork.sendTo(stopMessage, oldPilot);
         }
         if (newPilot != null) {
-            MessageStartPiloting startMessage = new MessageStartPiloting(getPos(),
-                setClientPilotingEntireShip(),
-                getControlInputType());
+            MessageStartPiloting startMessage = new MessageStartPiloting(this.getPos());
             ValkyrienSkiesMod.controlNetwork.sendTo(startMessage, newPilot);
         }
-    }
-
-    /**
-     * Unique for each tileentity type
-     *
-     * @return
-     */
-    @Deprecated
-    public abstract ControllerInputType getControlInputType();
-
-    /**
-     * Returns true if this control type is piloting the ship.
-     *
-     * @return
-     */
-    @Deprecated
-    public boolean setClientPilotingEntireShip() {
-        return false;
     }
 
     /**
@@ -121,7 +96,7 @@ public abstract class TileEntityPilotableImpl extends TileEntity implements
      *
      * @return
      */
-    public abstract void processControlMessage(PilotControlsMessageNew message, EntityPlayerMP sender);
+    public abstract void processControlMessage(PilotControlsMessage message, EntityPlayerMP sender);
 
     /**
      * @param player

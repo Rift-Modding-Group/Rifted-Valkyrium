@@ -5,6 +5,7 @@ import net.minecraft.entity.player.EntityPlayerMP;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.valkyrienskies.mod.common.physics.PhysicsCalculations;
+import org.valkyrienskies.mod.common.piloting.PilotControls;
 import org.valkyrienskies.mod.common.piloting.PilotControlsMessage;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import valkyrienwarfare.api.TransformType;
@@ -38,29 +39,29 @@ public class ShipPilot {
 
         // Linear velocity
         final Vector3d newTargetLinearVelocity = new Vector3d();
-        if (message.airshipForward_KeyDown) {
+        if (PilotControls.controlIsPressed(message.getUsedControls(), PilotControls.FORWARD)) {
             newTargetLinearVelocity.x += MAX_LINEAR_VELOCITY;
         }
-        if (message.airshipBackward_KeyDown) {
+        if (PilotControls.controlIsPressed(message.getUsedControls(), PilotControls.BACKWARD)) {
             newTargetLinearVelocity.x -= MAX_LINEAR_VELOCITY;
         }
-        if (message.airshipSprinting) {
+        if (PilotControls.controlIsPressed(message.getUsedControls(), PilotControls.SPRINT)) {
             newTargetLinearVelocity.mul(2);
         }
         newTargetLinearVelocity.rotateAxis(Math.toRadians(pilotYaw), 0, 1, 0);
 
         // Angular velocity
         final Vector3d newTargetAngularVelocity = new Vector3d();
-        if (message.airshipLeft_KeyDown) {
+        if (PilotControls.controlIsPressed(message.getUsedControls(), PilotControls.LEFT)) {
             newTargetAngularVelocity.y += MAX_ANGULAR_VELOCITY;
         }
-        if (message.airshipRight_KeyDown) {
+        if (PilotControls.controlIsPressed(message.getUsedControls(), PilotControls.RIGHT)) {
             newTargetAngularVelocity.y -= MAX_ANGULAR_VELOCITY;
         }
 
         // Update the target velocities
-        targetLinearVelocity = newTargetLinearVelocity;
-        targetAngularVelocity = newTargetAngularVelocity;
+        this.targetLinearVelocity = newTargetLinearVelocity;
+        this.targetAngularVelocity = newTargetAngularVelocity;
 
         // Check if we need to stop piloting
 
