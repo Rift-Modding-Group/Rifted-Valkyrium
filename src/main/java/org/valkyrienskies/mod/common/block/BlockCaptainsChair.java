@@ -94,8 +94,6 @@ public class BlockCaptainsChair extends BlockPilotableBasic {
         List<String> itemInformation, ITooltipFlag advanced) {
         itemInformation.add(TextFormatting.ITALIC + "" + TextFormatting.BLUE + I18n
             .format("tooltip.valkyrienskies.captains_chair_1"));
-        itemInformation.add(TextFormatting.RED + "" + TextFormatting.ITALIC + I18n
-            .format("tooltip.valkyrienskies.captains_chair_2"));
     }
 
     private Vector3dc getPlayerMountOffset(IBlockState state, BlockPos pos) {

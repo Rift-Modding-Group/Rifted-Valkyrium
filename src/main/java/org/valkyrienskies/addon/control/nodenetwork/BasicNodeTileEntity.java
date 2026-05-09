@@ -60,7 +60,7 @@ public abstract class BasicNodeTileEntity extends TileEntity implements IVSNodeP
 
     @Override
     public VSNode_TileEntity getNode() {
-        return tileNode;
+        return this.tileNode;
     }
 
     @Override
@@ -82,14 +82,14 @@ public abstract class BasicNodeTileEntity extends TileEntity implements IVSNodeP
     @Override
     public void validate() {
         this.tileEntityInvalid = false;
-        getNode().validate();
+        this.getNode().validate();
     }
 
     @Override
     public void update() {
-        if (firstUpdate) {
-            firstUpdate = false;
-            init();
+        if (this.firstUpdate) {
+            this.firstUpdate = false;
+            this.init();
         }
     }
 
@@ -101,12 +101,11 @@ public abstract class BasicNodeTileEntity extends TileEntity implements IVSNodeP
     }
 
     private void init() {
-        if (tileNode.getGraph() == null) {
-            return;
-        }
+        if (this.tileNode.getGraph() == null) return;
         try {
-            tileNode.getGraph().addNeighours(tileNode, tileNode.getNeighbours());
-        } catch (Exception e) {
+            this.tileNode.getGraph().addNeighours(tileNode, tileNode.getNeighbours());
+        }
+        catch (Exception e) {
             System.err.println("Node TileEntity error at " + getPos());
             e.printStackTrace();
         }
@@ -138,8 +137,9 @@ public abstract class BasicNodeTileEntity extends TileEntity implements IVSNodeP
         tileEntNBT.setIntArray(VSNode_TileEntity.NBT_DATA_KEY, newData);
         // Finally call the create tile entity method.
         try {
-            return TileEntity.create(world, tileEntNBT);
-        } catch (Exception e) {
+            return TileEntity.create(this.world, tileEntNBT);
+        }
+        catch (Exception e) {
             e.printStackTrace();
             return null;
         }

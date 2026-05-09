@@ -177,6 +177,8 @@ public class VSNode_TileEntity implements IVSNode {
 
     @Override
     public void readFromNBT(NBTTagCompound compound) {
+        this.linkedNodesPos.clear();
+        this.linkedWireTypes.clear();
         int[] data = compound.getIntArray(NBT_DATA_KEY);
         for (int i = 0; i < data.length; i += 4) {
             this.linkedNodesPos.add(new BlockPos(data[i], data[i + 1], data[i + 2]));

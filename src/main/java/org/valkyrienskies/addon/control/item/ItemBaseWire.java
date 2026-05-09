@@ -52,45 +52,49 @@ public class ItemBaseWire extends BaseItem {
 
         if (currentTile instanceof IVSNodeProvider && !worldIn.isRemote) {
             ICapabilityLastRelay inst = stack.getCapability(ValkyrienSkiesControl.lastRelayCapability, null);
-            if (inst != null) {
-                if (!inst.hasLastRelay()) {
-                    inst.setLastRelay(pos);
-                    // Draw a wire in the player's hand after this
-                } else {
-                    BlockPos lastPos = inst.getLastRelay();
-                    double distanceSq = lastPos.distanceSq(pos);
-                    TileEntity lastPosTile = worldIn.getTileEntity(lastPos);
+            if (inst == null) return EnumActionResult.PASS;
+            if (!inst.hasLastRelay()) {
+                inst.setLastRelay(pos);
+                // Draw a wire in the player's hand after this
+            }
+            else {
+                BlockPos lastPos = inst.getLastRelay();
+                if (lastPos == null) return EnumActionResult.PASS;
 
-                    if (!lastPos.equals(pos) && lastPosTile != null && currentTile != null) {
-                        if (distanceSq < VSControlConfig.relayWireLength * VSControlConfig.relayWireLength) {
-                            IVSNode lastPosNode = ((IVSNodeProvider) lastPosTile).getNode();
-                            IVSNode currentPosNode = ((IVSNodeProvider) currentTile).getNode();
-                            if (lastPosNode != null && currentPosNode != null) {
-                                if (currentPosNode.isLinkedToNode(lastPosNode)) {
-                                    currentPosNode.breakConnection(lastPosNode);
-                                    // Break connection and give player the correct wire back
-                                    ItemStack drop = new ItemStack(wireType.toItem());
-                                    if (player.inventory.addItemStackToInventory(drop)) {
-                                        player.dropItem(drop, false);
-                                    }
-                                } else if (currentPosNode.canLinkToOtherNode(lastPosNode)) {
-                                    currentPosNode.makeConnection(lastPosNode, this.wireType);
-                                    stack.damageItem(1, player);
-                                } else {
-                                    player.sendMessage(new TextComponentString(TextFormatting.RED +
-                                        I18n.format("message.vs_control.error_relay_wire_limit", VSControlConfig.networkRelayLimit)));
+                double distanceSq = lastPos.distanceSq(pos);
+                TileEntity lastPosTile = worldIn.getTileEntity(lastPos);
+
+                if (!lastPos.equals(pos) && lastPosTile != null) {
+                    if (distanceSq < VSControlConfig.relayWireLength * VSControlConfig.relayWireLength) {
+                        IVSNode lastPosNode = ((IVSNodeProvider) lastPosTile).getNode();
+                        IVSNode currentPosNode = ((IVSNodeProvider) currentTile).getNode();
+                        if (lastPosNode != null && currentPosNode != null) {
+                            if (currentPosNode.isLinkedToNode(lastPosNode)) {
+                                currentPosNode.breakConnection(lastPosNode);
+                                // Break connection and give player the correct wire back
+                                ItemStack drop = new ItemStack(wireType.toItem());
+                                if (player.inventory.addItemStackToInventory(drop)) {
+                                    player.dropItem(drop, false);
                                 }
-                                inst.setLastRelay(null);
                             }
-                        } else {
-                            player.sendMessage(new TextComponentString(TextFormatting.RED
-                                + I18n.format("message.vs_control.error_relay_wire_length")));
+                            else if (currentPosNode.canLinkToOtherNode(lastPosNode)) {
+                                currentPosNode.makeConnection(lastPosNode, this.wireType);
+                                stack.damageItem(1, player);
+                            }
+                            else {
+                                player.sendMessage(new TextComponentString(TextFormatting.RED +
+                                        I18n.format("message.vs_control.error_relay_wire_limit", VSControlConfig.networkRelayLimit)));
+                            }
                             inst.setLastRelay(null);
                         }
-                    } else {
-                        inst.setLastRelay(pos);
+                    }
+                    else {
+                        player.sendMessage(new TextComponentString(TextFormatting.RED
+                                + I18n.format("message.vs_control.error_relay_wire_length")));
+                        inst.setLastRelay(null);
                     }
                 }
+                else inst.setLastRelay(pos);
             }
         }
 

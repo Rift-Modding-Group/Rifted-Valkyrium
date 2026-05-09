@@ -8,4 +8,4 @@ This fork also requires the [Cleanroom](https://cleanroommc.com/) modloader to w
 Currently this fork does the following:
 * Bundle VS Core (aka this mod) back with [VS Control](https://www.curseforge.com/minecraft/mc-mods/valkyrien-skies-control) and [VS World](https://www.curseforge.com/minecraft/mc-mods/valkyrien-skies-world).
 * Fix the broken rudders at last
-* Cleanup some of the code and segregated stuff meant for VS Core from VS Control
+* Cleanup some of the code and segregated some stuff meant for VS Core from VS Control
