@@ -19,6 +19,8 @@ import org.valkyrienskies.addon.control.nodenetwork.EnumWireType;
 import org.valkyrienskies.addon.control.nodenetwork.VSNode_TileEntity;
 import org.valkyrienskies.addon.control.tileentity.TileEntityNetworkRelay;
 
+import java.util.Map;
+
 public class BasicNodeTileEntityRenderer extends TileEntitySpecialRenderer<TileEntityNetworkRelay> {
 
     private static final float[][] colours = { // RGBA
@@ -36,10 +38,8 @@ public class BasicNodeTileEntityRenderer extends TileEntitySpecialRenderer<TileE
             GL11.glTranslated(.5D, -1D, .5D);
             // GL11.glTranslated(0, y, 0);
 
-            int i = 0;
-            for (BlockPos otherPos : tileNode.getLinkedNodesPos()) {
-                TileEntity otherTile = getWorld().getTileEntity(otherPos);
-                EnumWireType wireType = tileNode.getLinkedWireTypes().get(i++);
+            for (Map.Entry<BlockPos, EnumWireType> nodeEntry : tileNode.getLinkedNodesAndWireTypes().entrySet()) {
+                TileEntity otherTile = this.getWorld().getTileEntity(nodeEntry.getKey());
                 if (otherTile instanceof TileEntityNetworkRelay) {
                     // Don't render the same connection twice.
                     if (otherTile.getPos().compareTo(te.getPos()) < 0) {
@@ -47,7 +47,7 @@ public class BasicNodeTileEntityRenderer extends TileEntitySpecialRenderer<TileE
                     }
                 }
 
-                if (wireType == EnumWireType.VANISHING) {
+                if (nodeEntry.getValue() == EnumWireType.VANISHING) {
                     EntityLivingBase entity = (EntityLivingBase) Minecraft.getMinecraft().player;
                     ItemStack stackR = entity.getHeldItem(EnumHand.MAIN_HAND);
                     ItemStack stackL = entity.getHeldItem(EnumHand.OFF_HAND);
@@ -63,11 +63,11 @@ public class BasicNodeTileEntityRenderer extends TileEntitySpecialRenderer<TileE
                 double startY = te.getPos().getY();
                 double startZ = te.getPos().getZ();
 
-                double endX = (startX * 2) - otherPos.getX();
-                double endY = (startY * 2) - otherPos.getY() - 1.5;
-                double endZ = (startZ * 2) - otherPos.getZ();
+                double endX = (startX * 2) - nodeEntry.getKey().getX();
+                double endY = (startY * 2) - nodeEntry.getKey().getY() - 1.5;
+                double endZ = (startZ * 2) - nodeEntry.getKey().getZ();
 
-                renderWire(x, y, z, startX, startY, startZ, endX, endY, endZ, wireType.ordinal());
+                this.renderWire(x, y, z, startX, startY, startZ, endX, endY, endZ, nodeEntry.getValue().ordinal());
 
                 // GL11.glEnd();
                 GL11.glPopMatrix();

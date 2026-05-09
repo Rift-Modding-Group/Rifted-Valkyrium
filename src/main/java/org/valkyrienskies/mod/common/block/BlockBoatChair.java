@@ -46,62 +46,50 @@ public class BlockBoatChair extends BlockPilotableBasic implements IBlockForcePr
     @Override
     public boolean onBlockActivated(World worldIn, BlockPos pos, IBlockState state,
                                     EntityPlayer playerIn, EnumHand hand, EnumFacing side, float hitX, float hitY, float hitZ) {
-        if (!worldIn.isRemote) {
-            Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(worldIn, pos);
-            if (physicsObject.isPresent()) {
-                TileEntity tileEntity = worldIn.getTileEntity(pos);
-                if (tileEntity instanceof TileEntityBoatChair) {
-                    Vector3d playerPos = new Vector3d(playerIn.posX, playerIn.posY, playerIn.posZ);
+        if (worldIn.isRemote) return true;
+        Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(worldIn, pos);
+        if (physicsObject.isEmpty()) return true;
 
-                    physicsObject.get()
-                            .getShipTransformationManager()
-                            .getCurrentTickTransform()
-                            .transformPosition(playerPos, TransformType.SUBSPACE_TO_GLOBAL);
+        TileEntity tileEntity = worldIn.getTileEntity(pos);
+        if (!(tileEntity instanceof TileEntityBoatChair boatChair)) return true;
 
-                    playerIn.posX = playerPos.x;
-                    playerIn.posY = playerPos.y;
-                    playerIn.posZ = playerPos.z;
+        Vector3d playerPos = new Vector3d(playerIn.posX, playerIn.posY, playerIn.posZ);
+        physicsObject.get()
+                .getShipTransformationManager()
+                .getCurrentTickTransform()
+                .transformPosition(playerPos, TransformType.SUBSPACE_TO_GLOBAL);
 
-                    // Only mount the player if they're standing on the ship.
-                    final EntityShipMovementData entityShipMovementData = ValkyrienUtils.getEntityShipMovementDataFor(playerIn);
-                    if (entityShipMovementData.getTicksSinceTouchedShip() == 0 &&
-                            (entityShipMovementData.getLastTouchedShip() == physicsObject.get().getShipData())) {
-                        Vector3dc localMountPos = getPlayerMountOffset(state, pos);
-                        ValkyrienUtils.fixEntityToShip(playerIn, localMountPos,
-                                physicsObject.get());
-                    }
+        playerIn.posX = playerPos.x;
+        playerIn.posY = playerPos.y;
+        playerIn.posZ = playerPos.z;
 
-                    ((TileEntityBoatChair) tileEntity).setPilotEntity(playerIn);
-                    physicsObject.get()
-                            .getShipTransformationManager()
-                            .getCurrentTickTransform()
-                            .transformPosition(playerPos, TransformType.GLOBAL_TO_SUBSPACE);
+        //-----mount the player to the chair-----
+        Vector3dc localMountPos = this.getPlayerMountOffset(state, pos);
+        ValkyrienUtils.fixEntityToShip(playerIn, localMountPos, physicsObject.get());
 
-                    playerIn.posX = playerPos.x;
-                    playerIn.posY = playerPos.y;
-                    playerIn.posZ = playerPos.z;
-                }
+        //-----set piloting-----
+        boatChair.setPilotEntity(playerIn);
+        physicsObject.get()
+                .getShipTransformationManager()
+                .getCurrentTickTransform()
+                .transformPosition(playerPos, TransformType.GLOBAL_TO_SUBSPACE);
 
-            }
-        }
+        playerIn.posX = playerPos.x;
+        playerIn.posY = playerPos.y;
+        playerIn.posZ = playerPos.z;
 
         return true;
     }
 
     private Vector3dc getPlayerMountOffset(IBlockState state, BlockPos pos) {
         EnumFacing facing = state.getValue(FACING);
-        switch (facing) {
-            case NORTH:
-                return new Vector3d(pos.getX() + .5D, pos.getY(), pos.getZ() + .6D);
-            case SOUTH:
-                return new Vector3d(pos.getX() + .5D, pos.getY(), pos.getZ() + .4D);
-            case WEST:
-                return new Vector3d(pos.getX() + .6D, pos.getY(), pos.getZ() + .5D);
-            case EAST:
-                return new Vector3d(pos.getX() + .4D, pos.getY(), pos.getZ() + .5D);
-            default:
-                return new Vector3d(pos.getX() + .5D, pos.getY() + .5D, pos.getZ() + .5D);
-        }
+        return switch (facing) {
+            case NORTH -> new Vector3d(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.6D);
+            case SOUTH -> new Vector3d(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.4D);
+            case WEST -> new Vector3d(pos.getX() + 0.6D, pos.getY(), pos.getZ() + 0.5D);
+            case EAST -> new Vector3d(pos.getX() + 0.4D, pos.getY(), pos.getZ() + 0.5D);
+            default -> new Vector3d(pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D);
+        };
     }
 
     @Override

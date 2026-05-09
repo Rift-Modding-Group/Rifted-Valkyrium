@@ -13,31 +13,22 @@ import javax.annotation.Nullable;
 import java.util.*;
 
 public class VSNode_TileEntity implements IVSNode {
-
     private final TileEntity parentTile;
-    // No duplicate connections, use Set<Node> to guarantee this
-    private final Set<BlockPos> linkedNodesPos;
-    private final List<EnumWireType> linkedWireTypes;
-    // A wrapper unmodifiable Set that allows external classes to see an immutable
-    // version of linkedNodesPos.
-    private final Set<BlockPos> immutableLinkedNodesPos;
-    private final List<EnumWireType> immutableLinkedWireTypes;
+    //key is the blockpos of node it connects to, val is the wire that goes to that blockpos
+    private final HashMap<BlockPos, EnumWireType> linkedNodesAndWireTypes;
+    // A wrapper unmodifiable HashMap that allows external classes to see an immutable
+    // version of linkedNodesAndWireTypes.
+    private final Map<BlockPos, EnumWireType> immutableLinkedNodesAndWireTypes;
     private final int maximumConnections;
     private boolean isValid;
-    private PhysicsObject parentPhysicsObject;
     private Graph nodeGraph;
-    private EnumWireType wireType;
 
     public VSNode_TileEntity(TileEntity parent, int maximumConnections) {
         this.parentTile = parent;
-        this.linkedNodesPos = new HashSet<>();
-        this.linkedWireTypes = new ArrayList<EnumWireType>();
-        this.immutableLinkedNodesPos = Collections.unmodifiableSet(linkedNodesPos);
-        this.immutableLinkedWireTypes = Collections.unmodifiableList(linkedWireTypes);
+        this.linkedNodesAndWireTypes = new HashMap<>();
+        this.immutableLinkedNodesAndWireTypes = Collections.unmodifiableMap(this.linkedNodesAndWireTypes);
         this.isValid = false;
-        this.parentPhysicsObject = null;
         this.maximumConnections = maximumConnections;
-        this.wireType = EnumWireType.RELAY;
         Graph.integrate(this, Collections.EMPTY_LIST,
             (graph) -> new BasicNodeTileEntity.GraphData());
     }
@@ -66,7 +57,8 @@ public class VSNode_TileEntity implements IVSNode {
             } else {
                 return vsNode;
             }
-        } else {
+        }
+        else {
             return null;
             // throw new IllegalStateException("VSNode_TileEntity of different class");
         }
@@ -76,26 +68,22 @@ public class VSNode_TileEntity implements IVSNode {
     public Iterable<IVSNode> getDirectlyConnectedNodes() {
         // assertValidity();
         List<IVSNode> nodesList = new ArrayList<IVSNode>();
-        for (BlockPos pos : linkedNodesPos) {
+        for (BlockPos pos : this.linkedNodesAndWireTypes.keySet()) {
             IVSNode node = getVSNode_TileEntity(getNodeWorld(), pos);
-            if (node != null) {
-                nodesList.add(node);
-            }
+            if (node != null) nodesList.add(node);
         }
         return nodesList;
     }
 
     @Override
     public void makeConnection(IVSNode other, EnumWireType wireType) {
-        assertValidity();
-        boolean contains = linkedNodesPos.contains(other.getNodePos());
-        if (!contains) {
-            linkedNodesPos.add(other.getNodePos());
-            linkedWireTypes.add(wireType);
-            parentTile.markDirty();
+        this.assertValidity();
+        if (!this.linkedNodesAndWireTypes.containsKey(other.getNodePos())) {
+            this.linkedNodesAndWireTypes.put(other.getNodePos(), wireType);
+            this.parentTile.markDirty();
             other.makeConnection(this, wireType);
-            sendNodeUpdates();
-            List stupid = Collections.singletonList(other);
+            this.sendNodeUpdates();
+            List<GraphObject> stupid = Collections.singletonList(other);
             getGraph().addNeighours(this, stupid);
         }
     }
@@ -103,19 +91,18 @@ public class VSNode_TileEntity implements IVSNode {
     @Override
     public void breakConnection(IVSNode other) {
         assertValidity();
-        boolean contains = linkedNodesPos.contains(other.getNodePos());
-        if (contains) {
-            linkedNodesPos.remove(other.getNodePos());
-            linkedWireTypes.remove(other.getWireType());
-            parentTile.markDirty();
+        if (this.linkedNodesAndWireTypes.containsKey(other.getNodePos())) {
+            this.linkedNodesAndWireTypes.remove(other.getNodePos());
+            this.parentTile.markDirty();
             other.breakConnection(this);
-            sendNodeUpdates();
+            this.sendNodeUpdates();
             try {
                 // TODO: For some reason null graphs show up. Not sure why, but it seems safe to just ignore them.
                 if (this.getGraph() != null) {
-                    getGraph().removeNeighbour(this, other);
+                    this.getGraph().removeNeighbour(this, other);
                 }
-            } catch (Exception e) {
+            }
+            catch (Exception e) {
                 e.printStackTrace();
             }
         }
@@ -123,79 +110,64 @@ public class VSNode_TileEntity implements IVSNode {
 
     @Override
     public BlockPos getNodePos() {
-        assertValidity();
-        return parentTile.getPos();
-    }
-    @Override
-    public EnumWireType getWireType() {
-        return this.wireType;
+        this.assertValidity();
+        return this.parentTile.getPos();
     }
 
     @Override
     public void validate() {
-        isValid = true;
+        this.isValid = true;
     }
 
     @Override
     public void invalidate() {
-        isValid = false;
+        this.isValid = false;
     }
 
     @Override
     public boolean isValid() {
-        return isValid;
+        return this.isValid;
     }
 
     @Override
     public World getNodeWorld() {
-        return parentTile.getWorld();
+        return this.parentTile.getWorld();
     }
 
     @Override
-    public Set<BlockPos> getLinkedNodesPos() {
-        return immutableLinkedNodesPos;
-    }
-
-    @Override
-    public List<EnumWireType> getLinkedWireTypes() {
-        return immutableLinkedWireTypes;
+    public Map<BlockPos, EnumWireType> getLinkedNodesAndWireTypes() {
+        return this.immutableLinkedNodesAndWireTypes;
     }
 
     @Override
     public void writeToNBT(NBTTagCompound compound) {
-        int[] data = new int[getLinkedNodesPos().size() * 4];
+        int[] data = new int[this.linkedNodesAndWireTypes.size() * 4];
         int i = 0;
-        int types = 0;
-        for (BlockPos pos : getLinkedNodesPos()) {
-            data[i++] = pos.getX();
-            data[i++] = pos.getY();
-            data[i++] = pos.getZ();
-            data[i++] = linkedWireTypes.get(types++).ordinal();
+        for (Map.Entry<BlockPos, EnumWireType> entry : this.linkedNodesAndWireTypes.entrySet()) {
+            data[i++] = entry.getKey().getX();
+            data[i++] = entry.getKey().getY();
+            data[i++] = entry.getKey().getZ();
+            data[i++] = entry.getValue().ordinal();
         }
         compound.setIntArray(NBT_DATA_KEY, data);
     }
 
     @Override
     public void readFromNBT(NBTTagCompound compound) {
-        this.linkedNodesPos.clear();
-        this.linkedWireTypes.clear();
+        this.linkedNodesAndWireTypes.clear();
         int[] data = compound.getIntArray(NBT_DATA_KEY);
         for (int i = 0; i < data.length; i += 4) {
-            this.linkedNodesPos.add(new BlockPos(data[i], data[i + 1], data[i + 2]));
-            this.linkedWireTypes.add(EnumWireType.values()[data[i + 3]]);
+            BlockPos blockPos = new BlockPos(data[i], data[i + 1], data[i + 2]);
+            EnumWireType enumWireType = EnumWireType.values()[data[i + 3]];
+            this.linkedNodesAndWireTypes.put(blockPos, enumWireType);
         }
-    }
-
-    @Override
-    public PhysicsObject getPhysicsObject() {
-        return parentPhysicsObject;
     }
 
     @Override
     public void sendNodeUpdates() {
         if (!this.getNodeWorld().isRemote) {
             // System.out.println("help");
-            if (!parentTile.isInvalid()) {
+            if (!this.parentTile.isInvalid()) {
                 VSNetwork.sendTileToAllNearby(this.parentTile);
             }
         }
@@ -210,37 +182,25 @@ public class VSNode_TileEntity implements IVSNode {
 
     @Override
     public void shiftConnections(BlockPos offset) {
-        if (isValid()) {
+        if (this.isValid()) {
             throw new IllegalStateException(
                 "Cannot shift the connections of a Node while it is valid and in use!");
         }
-        List<BlockPos> shiftedNodesPos = new ArrayList<BlockPos>(linkedNodesPos.size());
-        for (BlockPos originalPos : linkedNodesPos) {
-            shiftedNodesPos.add(originalPos.add(offset));
+        HashMap<BlockPos, EnumWireType> shiftedNodesAndWireTypes = new HashMap<>();
+        for (Map.Entry<BlockPos, EnumWireType> entry : this.linkedNodesAndWireTypes.entrySet()) {
+            shiftedNodesAndWireTypes.put(entry.getKey().add(offset), entry.getValue());
         }
-        linkedNodesPos.clear();
-        linkedNodesPos.addAll(shiftedNodesPos);
-    }
-
-    @Override
-    public void setParentPhysicsObject(PhysicsObject parent) {
-        if (isValid()) {
-            throw new IllegalStateException(
-                "Cannot change the parent physics object of a Node while it is valid and in use!");
-        }
-        this.parentPhysicsObject = parent;
+        this.linkedNodesAndWireTypes.clear();
+        this.linkedNodesAndWireTypes.putAll(shiftedNodesAndWireTypes);
     }
 
     @Override
     public boolean equals(Object other) {
-        if (this == other) {
-            return true;
-        } else if (other instanceof VSNode_TileEntity) {
-            VSNode_TileEntity otherNode = (VSNode_TileEntity) other;
+        if (this == other) return true;
+        else if (other instanceof VSNode_TileEntity otherNode) {
             return otherNode.getNodePos().equals(this.getNodePos());
-        } else {
-            return false;
         }
+        return false;
     }
 
     @Override
@@ -253,28 +213,15 @@ public class VSNode_TileEntity implements IVSNode {
         this.nodeGraph = graph;
     }
 
-    private List<GraphObject> getNeighbors() {
-        List<GraphObject> neighbors = new ArrayList<GraphObject>();
-        for (BlockPos pos : getLinkedNodesPos()) {
-            IVSNode node = getVSNode_TileEntity(this.getNodeWorld(), pos);
-            if (node == null) {
-                throw new IllegalStateException();
-            }
-            neighbors.add(node);
-        }
-        return neighbors;
-    }
-
     @Override
     public List<GraphObject> getNeighbours() {
         List<GraphObject> nodesList = new ArrayList<GraphObject>();
-        for (BlockPos pos : linkedNodesPos) {
+        for (BlockPos pos : this.linkedNodesAndWireTypes.keySet()) {
             IVSNode node = getVSNode_TileEntity(getNodeWorld(), pos);
             if (node != null) {
                 if (node.getGraph() == null) {
                     System.err.println("Graph node at " + node.getNodePos() + " was missing a graph! So we added one.");
-                    Graph.integrate(node, Collections.EMPTY_LIST,
-                            (graph) -> new BasicNodeTileEntity.GraphData());
+                    Graph.integrate(node, Collections.EMPTY_LIST, (graph) -> new BasicNodeTileEntity.GraphData());
                 }
                 nodesList.add(node);
             }

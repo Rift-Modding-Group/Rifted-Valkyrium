@@ -8,6 +8,7 @@ import net.minecraft.world.World;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -49,13 +50,9 @@ public interface IVSNode extends GraphObject {
      */
     BlockPos getNodePos();
 
-    EnumWireType getWireType();
-
     World getNodeWorld();
 
-    Set<BlockPos> getLinkedNodesPos();
-
-    List<EnumWireType> getLinkedWireTypes();
+    Map<BlockPos, EnumWireType> getLinkedNodesAndWireTypes();
 
     void writeToNBT(NBTTagCompound compound);
 
@@ -68,8 +65,8 @@ public interface IVSNode extends GraphObject {
     }
 
     default boolean canLinkToOtherNode(IVSNode other) {
-        return getLinkedNodesPos().size() < getMaximumConnections()
-            && other.getLinkedNodesPos().size() < other.getMaximumConnections();
+        return this.getLinkedNodesAndWireTypes().size() < this.getMaximumConnections()
+            && other.getLinkedNodesAndWireTypes().size() < other.getMaximumConnections();
     }
 
     void sendNodeUpdates();
@@ -78,13 +75,6 @@ public interface IVSNode extends GraphObject {
      * Can only be called while this node is invalid. Otherwise an IllegalStateException is thrown.
      */
     void shiftConnections(BlockPos offset);
-
-    /**
-     * Should only be called when after shiftConnections()
-     */
-    void setParentPhysicsObject(PhysicsObject parent);
-
-    PhysicsObject getPhysicsObject();
 
     List<GraphObject> getNeighbours();
 
@@ -96,6 +86,6 @@ public interface IVSNode extends GraphObject {
      * @return True if the nodes are linked.
      */
     default boolean isLinkedToNode(IVSNode other) {
-        return getLinkedNodesPos().contains(other.getNodePos());
+        return getLinkedNodesAndWireTypes().containsKey(other.getNodePos());
     }
 }

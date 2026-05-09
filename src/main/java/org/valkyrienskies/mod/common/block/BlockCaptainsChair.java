@@ -70,7 +70,6 @@ public class BlockCaptainsChair extends BlockPilotableBasic {
         playerIn.posZ = playerPos.z;
 
         //-----mount the player to the chair-----
-        //final EntityShipMovementData entityShipMovementData = ValkyrienUtils.getEntityShipMovementDataFor(playerIn);
         Vector3dc localMountPos = this.getPlayerMountOffset(state, pos);
         ValkyrienUtils.fixEntityToShip(playerIn, localMountPos, physicsObject.get());
 
@@ -98,18 +97,13 @@ public class BlockCaptainsChair extends BlockPilotableBasic {
 
     private Vector3dc getPlayerMountOffset(IBlockState state, BlockPos pos) {
         EnumFacing facing = state.getValue(FACING);
-        switch (facing) {
-            case NORTH:
-                return new Vector3d(pos.getX() + .5D, pos.getY(), pos.getZ() + .6D);
-            case SOUTH:
-                return new Vector3d(pos.getX() + .5D, pos.getY(), pos.getZ() + .4D);
-            case WEST:
-                return new Vector3d(pos.getX() + .6D, pos.getY(), pos.getZ() + .5D);
-            case EAST:
-                return new Vector3d(pos.getX() + .4D, pos.getY(), pos.getZ() + .5D);
-            default:
-                return new Vector3d(pos.getX() + .5D, pos.getY() + .5D, pos.getZ() + .5D);
-        }
+        return switch (facing) {
+            case NORTH -> new Vector3d(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.6D);
+            case SOUTH -> new Vector3d(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.4D);
+            case WEST -> new Vector3d(pos.getX() + 0.6D, pos.getY(), pos.getZ() + 0.5D);
+            case EAST -> new Vector3d(pos.getX() + 0.4D, pos.getY(), pos.getZ() + 0.5D);
+            default -> new Vector3d(pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D);
+        };
     }
 
     @Override
