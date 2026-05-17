@@ -56,12 +56,6 @@ public class ImplCapabilityControlNodeUser implements ICapabilityControlNodeUser
         if (this.usedControlNodePos == null) return 0;
         TileEntity tileEntity = Minecraft.getMinecraft().world.getTileEntity(this.usedControlNodePos);
         if (!(tileEntity instanceof TileEntityControlNodeImpl teControlNode)) return 0;
-
-        return switch (teControlNode) {
-            case TileEntityShipHelm tileEntityShipHelm -> NodeControl.HELM_CONTROLS.getControls();
-            case TileEntityLiftLever tileEntityLiftLever -> NodeControl.LIFT_LEVER_CONTROLS.getControls();
-            case TileEntitySpeedTelegraph tileEntitySpeedTelegraph -> NodeControl.SPEED_TELEGRAPH_CONTROLS.getControls();
-            default -> 0;
-        };
+        return teControlNode.getNodeControls().getControls();
     }
 }

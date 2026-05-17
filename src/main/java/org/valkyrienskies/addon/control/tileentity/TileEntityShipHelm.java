@@ -20,15 +20,28 @@ import org.valkyrienskies.addon.control.block.BlockShipHelm;
 import org.valkyrienskies.addon.control.block.multiblocks.TileEntityRudderPart;
 import org.valkyrienskies.addon.control.network.VSNodeControlMessage;
 import org.valkyrienskies.addon.control.nodeControls.NodeControl;
+import org.valkyrienskies.addon.control.nodeControls.NodeKeyHandler;
 import org.valkyrienskies.addon.control.nodenetwork.VSNode_TileEntity;
 import org.valkyrienskies.mod.common.network.VSNetwork;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import valkyrienwarfare.api.TransformType;
 
+import java.util.Map;
 import java.util.Optional;
 
 public class TileEntityShipHelm extends TileEntityControlNodeImpl implements ITickable {
+    private final NodeControl controls = new NodeControl(
+            Map.of(
+                    NodeControl.Enum.LEFT, 0,
+                    NodeControl.Enum.RIGHT, 1
+            ),
+            Map.of(
+                    NodeControl.Enum.LEFT, NodeKeyHandler.helmLeft::isKeyDown,
+                    NodeControl.Enum.RIGHT, NodeKeyHandler.helmRight::isKeyDown
+            ),
+            NodeControl.InputMode.HELD
+    );
 
     public double compassAngle = 0;
     public double lastCompassAngle = 0;
@@ -155,10 +168,10 @@ public class TileEntityShipHelm extends TileEntityControlNodeImpl implements ITi
     @Override
     public void onNodeControlsMessage(VSNodeControlMessage message, EntityPlayerMP sender) {
         double rotationDelta = 0;
-        if (NodeControl.HELM_CONTROLS.controlIsPressed(message.getUsedControls(), NodeControl.Enum.LEFT)) {
+        if (this.controls.controlIsPressed(message.getUsedControls(), NodeControl.Enum.LEFT)) {
             rotationDelta -= 12.5D;
         }
-        if (NodeControl.HELM_CONTROLS.controlIsPressed(message.getUsedControls(), NodeControl.Enum.RIGHT)) {
+        if (this.controls.controlIsPressed(message.getUsedControls(), NodeControl.Enum.RIGHT)) {
             rotationDelta += 12.5D;
         }
         IBlockState blockState = this.getWorld().getBlockState(getPos());
@@ -173,6 +186,11 @@ public class TileEntityShipHelm extends TileEntityControlNodeImpl implements ITi
         }
         double max_rotation = 720D;
         this.wheelRotation = Math.clamp(this.wheelRotation, -max_rotation, max_rotation);
+    }
+
+    @Override
+    public NodeControl getNodeControls() {
+        return this.controls;
     }
 
     @SideOnly(Side.CLIENT)

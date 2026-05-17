@@ -7,6 +7,7 @@ import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import org.valkyrienskies.addon.control.network.VSNodeControlMessage;
+import org.valkyrienskies.addon.control.nodeControls.NodeControl;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 
 /**
@@ -30,6 +31,12 @@ public interface ITileEntityControlNode {
     //default void onStopTileUsage() {}
 
     /**
+     * On the client it collects info on the control buttons associated with the control node
+     * being pressed. This info then gets sent to the server.
+     * */
+    NodeControl getNodeControls();
+
+    /**
      * This is called during the post render of every frame in Minecraft. Override this to allow a
      * pilotable node tileentity to display info as text on the screen.
      *
@@ -37,7 +44,5 @@ public interface ITileEntityControlNode {
      * @param gameResolution
      */
     @SideOnly(Side.CLIENT)
-    default void renderPilotText(FontRenderer renderer, ScaledResolution gameResolution) {
-
-    }
+    default void renderPilotText(FontRenderer renderer, ScaledResolution gameResolution) {}
 }

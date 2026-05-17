@@ -56,6 +56,8 @@ configurations {
     compileOnly.extendsFrom(modCompileOnly)
     modRuntimeOnly
     runtimeOnly.extendsFrom(modRuntimeOnly)
+    testCompileOnly.extendsFrom(compileOnly)
+    testImplementation.extendsFrom(shadow)
 }
 
 configurations.configureEach {
@@ -111,6 +113,24 @@ unimined.minecraft {
         remap(configurations.modCompileOnly)
         remap(configurations.modRuntimeOnly)
     }
+}
+
+unimined.minecraft(sourceSets.test) {
+    version "1.12.2"
+
+    mappings {
+        mcp("stable", "39-1.12")
+    }
+
+    cleanroom {
+        if (propertyBool('use_access_transformer')) {
+            accessTransformer "${rootProject.projectDir}/src/main/resources/${propertyString('access_transformer_locations')}"
+        }
+        loader "0.5.7-alpha"
+    }
+
+    defaultRemapJar = false
+    createJarTask = false
 }
 
 dependencies {

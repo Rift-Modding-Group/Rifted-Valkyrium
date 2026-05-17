@@ -14,14 +14,26 @@ import net.minecraftforge.fml.relauncher.SideOnly;
 import org.valkyrienskies.addon.control.block.BlockSpeedTelegraph;
 import org.valkyrienskies.addon.control.network.VSNodeControlMessage;
 import org.valkyrienskies.addon.control.nodeControls.NodeControl;
+import org.valkyrienskies.addon.control.nodeControls.NodeKeyHandler;
 import org.valkyrienskies.addon.control.nodenetwork.VSNode_TileEntity;
 import org.valkyrienskies.mod.common.network.VSNetwork;
 
 import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 
 public class TileEntitySpeedTelegraph extends TileEntityControlNodeImpl implements ITickable {
-
+    private final NodeControl controls = new NodeControl(
+            Map.of(
+                    NodeControl.Enum.LEFT, 0,
+                    NodeControl.Enum.RIGHT, 1
+            ),
+            Map.of(
+                    NodeControl.Enum.LEFT, NodeKeyHandler.speedTelegraphLeft::isKeyDown,
+                    NodeControl.Enum.RIGHT, NodeKeyHandler.speedTelegraphRight::isKeyDown
+            ),
+            NodeControl.InputMode.NEW_PRESS
+    );
     private ShipChadburnState telegraphState;
     // The following fields are only used by the client for smooth interpolation
     // rendering between state enums.
@@ -39,10 +51,10 @@ public class TileEntitySpeedTelegraph extends TileEntityControlNodeImpl implemen
     @Override
     public void onNodeControlsMessage(VSNodeControlMessage message, EntityPlayerMP sender) {
         int deltaOrdinal = 0;
-        if (NodeControl.SPEED_TELEGRAPH_CONTROLS.controlIsPressed(message.getUsedControls(), NodeControl.Enum.LEFT)) {
+        if (this.controls.controlIsPressed(message.getUsedControls(), NodeControl.Enum.LEFT)) {
             deltaOrdinal -= 1;
         }
-        if (NodeControl.SPEED_TELEGRAPH_CONTROLS.controlIsPressed(message.getUsedControls(), NodeControl.Enum.RIGHT)) {
+        if (this.controls.controlIsPressed(message.getUsedControls(), NodeControl.Enum.RIGHT)) {
             deltaOrdinal += 1;
         }
         IBlockState blockState = this.getWorld().getBlockState(getPos());
@@ -57,6 +69,11 @@ public class TileEntitySpeedTelegraph extends TileEntityControlNodeImpl implemen
         newTelegraphOrdinal = Math.clamp(newTelegraphOrdinal, 0, ShipChadburnState.values().length - 1);
         this.telegraphState = ShipChadburnState.values()[newTelegraphOrdinal];
         this.markDirty();
+    }
+
+    @Override
+    public NodeControl getNodeControls() {
+        return this.controls;
     }
 
 
@@ -103,14 +120,12 @@ public class TileEntitySpeedTelegraph extends TileEntityControlNodeImpl implemen
             for (GraphObject object : connectedGraphObjects) {
                 VSNode_TileEntity otherNode = (VSNode_TileEntity) object;
                 TileEntity tile = otherNode.getParentTile();
-                if (tile instanceof TileEntityGearbox) {
-                    TileEntityGearbox masterTile = (TileEntityGearbox) tile;
+                if (tile instanceof TileEntityGearbox masterTile) {
                     // This is a transient problem that only occurs during world loading.
-                    if (telegraphState == ShipChadburnState.STOP) {
+                    if (this.telegraphState == ShipChadburnState.STOP) {
                         masterTile.setOutputRatio(Optional.empty());
-                    } else {
-                        masterTile.setOutputRatio(Optional.of(telegraphState.gearboxOutputRatio));
                     }
+                    else masterTile.setOutputRatio(Optional.of(this.telegraphState.gearboxOutputRatio));
                 }
             }
             VSNetwork.sendTileToAllNearby(this);
@@ -137,8 +152,13 @@ public class TileEntitySpeedTelegraph extends TileEntityControlNodeImpl implemen
     }
 
     private enum ShipChadburnState {
-        FULL_AHEAD(-120, 4), HALF_AHEAD(-80, 2), SLOW_AHEAD(-40, 1), STOP(0, 0), SLOW_ASTERN(40,
-            -1), HALF_ASTERN(80, -2), FULL_ASTERN(120, -4);
+        FULL_AHEAD(-120, 4),
+        HALF_AHEAD(-80, 2),
+        SLOW_AHEAD(-40, 1),
+        STOP(0, 0),
+        SLOW_ASTERN(40, -1),
+        HALF_ASTERN(80, -2),
+        FULL_ASTERN(120, -4);
 
         // The rotation in degrees in the clockwise direction relative to midnight.
         public final double renderRotation;

@@ -16,15 +16,30 @@ import org.joml.Vector3d;
 import org.valkyrienskies.addon.control.block.multiblocks.TileEntityValkyriumCompressorPart;
 import org.valkyrienskies.addon.control.network.VSNodeControlMessage;
 import org.valkyrienskies.addon.control.nodeControls.NodeControl;
+import org.valkyrienskies.addon.control.nodeControls.NodeKeyHandler;
 import org.valkyrienskies.addon.control.nodenetwork.VSNode_TileEntity;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import valkyrienwarfare.api.TransformType;
 
+import java.util.Map;
 import java.util.Optional;
 
 public class TileEntityLiftLever extends TileEntityControlNodeImpl {
     private static final double LEVER_PULL_RATE = .075D;
+    private final NodeControl controls = new NodeControl(
+            Map.of(
+                    NodeControl.Enum.UP, 0,
+                    NodeControl.Enum.DOWN, 1,
+                    NodeControl.Enum.SPRINT, 2
+            ),
+            Map.of(
+                    NodeControl.Enum.UP, NodeKeyHandler.liftLeverUp::isKeyDown,
+                    NodeControl.Enum.DOWN, NodeKeyHandler.liftLeverDown::isKeyDown,
+                    NodeControl.Enum.SPRINT, NodeKeyHandler.liftLeverSprint::isKeyDown
+            ),
+            NodeControl.InputMode.HELD
+    );
     // Between 0 and 1, where .5 is the middle.
     private float leverOffset;
     // Used by the client to smoothly render the lever animation
@@ -140,18 +155,18 @@ public class TileEntityLiftLever extends TileEntityControlNodeImpl {
 
     @Override
     public void onNodeControlsMessage(VSNodeControlMessage message, EntityPlayerMP sender) {
-        this.isPilotSprinting = NodeControl.LIFT_LEVER_CONTROLS.controlIsPressed(message.getUsedControls(), NodeControl.Enum.SPRINT);
+        this.isPilotSprinting = this.controls.controlIsPressed(message.getUsedControls(), NodeControl.Enum.SPRINT);
         if (this.isPilotSprinting) this.pilotSprintTicks++;
         else this.pilotSprintTicks = 0;
 
-        if (NodeControl.LIFT_LEVER_CONTROLS.controlIsPressed(message.getUsedControls(), NodeControl.Enum.UP)) {
+        if (this.controls.controlIsPressed(message.getUsedControls(), NodeControl.Enum.UP)) {
             // liftPercentage++;
             this.leverOffset += (float) LEVER_PULL_RATE;
             if (pilotSprintTicks > 0 && pilotSprintTicks < 5) {
                 this.leverOffset += (float) (20 * LEVER_PULL_RATE);
             }
         }
-        if (NodeControl.LIFT_LEVER_CONTROLS.controlIsPressed(message.getUsedControls(), NodeControl.Enum.DOWN)) {
+        if (this.controls.controlIsPressed(message.getUsedControls(), NodeControl.Enum.DOWN)) {
             // liftPercentage--;
             this.leverOffset -= (float) LEVER_PULL_RATE;
             if (pilotSprintTicks > 0 && pilotSprintTicks < 5) {
@@ -159,8 +174,8 @@ public class TileEntityLiftLever extends TileEntityControlNodeImpl {
             }
         }
 
-        if (!NodeControl.LIFT_LEVER_CONTROLS.controlIsPressed(message.getUsedControls(), NodeControl.Enum.UP)
-                && !NodeControl.LIFT_LEVER_CONTROLS.controlIsPressed(message.getUsedControls(), NodeControl.Enum.DOWN)
+        if (!this.controls.controlIsPressed(message.getUsedControls(), NodeControl.Enum.UP)
+                && !this.controls.controlIsPressed(message.getUsedControls(), NodeControl.Enum.DOWN)
         ) {
             if (this.leverOffset > 0.5 + LEVER_PULL_RATE) {
                 this.leverOffset -= (float) (LEVER_PULL_RATE / 2);
@@ -168,7 +183,7 @@ public class TileEntityLiftLever extends TileEntityControlNodeImpl {
             else if (this.leverOffset < 0.5 - LEVER_PULL_RATE) {
                 this.leverOffset += (float) (LEVER_PULL_RATE / 2);
             }
-            else this.leverOffset = .5f;
+            else this.leverOffset = 0.5f;
         }
 
         if (this.isPilotSprinting) {
@@ -178,6 +193,11 @@ public class TileEntityLiftLever extends TileEntityControlNodeImpl {
             else this.leverOffset = Math.clamp(this.leverOffset, 0.1f, 0.9f);
         }
         else this.leverOffset = Math.clamp(this.leverOffset, 0.25f, 0.75f);
+    }
+
+    @Override
+    public NodeControl getNodeControls() {
+        return this.controls;
     }
 
     @Override

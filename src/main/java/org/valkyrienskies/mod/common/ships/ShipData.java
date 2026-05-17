@@ -213,8 +213,10 @@ public class ShipData {
 
     // region Attributes
 
-    public static final Attribute<ShipData, String> NAME = nullableAttribute(ShipData::getName);
-    public static final Attribute<ShipData, UUID> UUID = attribute(ShipData::getUuid);
+    public static final Attribute<ShipData, String> NAME =
+        nullableAttribute(ShipData.class, String.class, "name", ShipData::getName);
+    public static final Attribute<ShipData, UUID> UUID =
+        attribute(ShipData.class, UUID.class, "uuid", ShipData::getUuid);
     public static final Attribute<ShipData, Long> CHUNKS = new MultiValueAttribute<ShipData, Long>() {
         @Override
         public Set<Long> getValues(ShipData physo, QueryOptions queryOptions) {

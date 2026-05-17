@@ -52,15 +52,8 @@ public class VSStartUsingControlNodeMessage implements IMessage {
                 if (message.posUseFrom != null) {
                     nodeUser.setUsedControlNodePos(message.posUseFrom);
                     Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(Minecraft.getMinecraft().world, message.posUseFrom);
-                    if (physicsObject.isPresent()) {
-                        nodeUser.setShip(physicsObject.get());
-                    }
-                    else {
-                        new IllegalStateException("Received incorrect piloting message!").printStackTrace();
-                    }
+                    physicsObject.ifPresent(nodeUser::setShip);
                 }
-
-                //if (message.shipPilotingId != null) pilot.setShipIDBeingControlled(message.shipPilotingId);
             });
             return null;
         }
