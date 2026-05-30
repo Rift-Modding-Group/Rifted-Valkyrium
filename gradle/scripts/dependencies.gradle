@@ -51,17 +51,17 @@ dependencies {
     //spongeforge lts
     implementation 'curse.maven:spongeforge-1279505:6611085'
     // The VS API, is added this way so that theres no need to make it a standalone mod
-    implementation "org.valkyrienskies:api:1.0.0.9"
+    shadow "org.valkyrienskies:api:1.0.0.9"
 
     // javax inject annotation
     shadow "javax.inject:javax.inject:1" // 2KB
 
     // Command framework
-    implementation "info.picocli:picocli:4.7.7"
+    shadow "info.picocli:picocli:4.7.7"
 
     // CQEngine for in-memory nonpersistent database
     // Provides Kryo
-    implementation("com.googlecode.cqengine:cqengine:3.4.0") {
+    shadow("com.googlecode.cqengine:cqengine:3.4.0") {
         exclude module: "sqlite-jdbc" //11.1 MB
         exclude module: "antlr4-runtime" //648.0 KB
         exclude module: "javassist" //1.5 MB
@@ -72,10 +72,10 @@ dependencies {
     shadow 'org.joml:joml:1.9.25' // 663 KB
 
     // Jackson
-    implementation "com.fasterxml.jackson.core:jackson-databind:2.10.0"
-    implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.10.0"
-    implementation "com.fasterxml.jackson.module:jackson-module-parameter-names:2.10.0"
-    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.10.0"
+    shadow "com.fasterxml.jackson.core:jackson-databind:2.10.0"
+    shadow "com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.10.0"
+    shadow "com.fasterxml.jackson.module:jackson-module-parameter-names:2.10.0"
+    shadow "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.10.0"
 
     //picocli jar
     shadow fileTree("dependencies/picocli-4.0.1.jar")

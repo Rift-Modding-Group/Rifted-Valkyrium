@@ -6,7 +6,10 @@ import java.util.function.Function;
 
 /**
  * Used to get the ship manager from world objects.
+ *
+ * TODO: turn into a world capability.
  */
+@Deprecated
 public interface IHasShipManager {
 
     IPhysObjectWorld getManager();

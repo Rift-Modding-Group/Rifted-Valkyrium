@@ -1,14 +1,12 @@
-package org.valkyrienskies.mod.common.ships.ship_world;
+package org.valkyrienskies.mod.common.capability.ship_world;
 
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.math.Vec3d;
+import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
+import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 
-/**
- * TODO: turn into a world capability.
- */
-@Deprecated
-public interface IWorldVS {
-
+public interface IShipWorld {
+    //-----originally from IWorldVS-----
     /**
      * Makes a physics wrapper entity be ignored by the {@link net.minecraft.world.World#rayTraceBlocks(Vec3d,
      * Vec3d, boolean, boolean, boolean)} method (and overloads thereof).
@@ -30,6 +28,11 @@ public interface IWorldVS {
                                             PhysicsObject toIgnore);
 
     RayTraceResult rayTraceBlocksInShip(Vec3d vec31, Vec3d vec32, boolean stopOnLiquid,
-                                            boolean ignoreBlockWithoutBoundingBox, boolean returnLastUncollidableBlock,
-                                            PhysicsObject toUse);
+                                        boolean ignoreBlockWithoutBoundingBox, boolean returnLastUncollidableBlock,
+                                        PhysicsObject toUse);
+
+    //-----originally from IHasShipManager-----
+    IPhysObjectWorld getManager();
+
+    void setManager(IPhysObjectWorld physObjectWorld);
 }

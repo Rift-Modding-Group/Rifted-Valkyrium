@@ -17,7 +17,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Consumer;
 
 public class ImplRotationNodeWorld implements IRotationNodeWorld {
-
     // Null IFF parentWorld != null
     @Nullable
     private final WeakReference<PhysicsObject> parent;
