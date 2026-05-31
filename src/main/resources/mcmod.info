@@ -3,16 +3,18 @@
     "modid": "valkyrienskies",
     "name": "Rifted Valkyrium",
     "description": "Valkyrien Skies 1, rifted and revitalized!",
-    "version": "1.0.9",
+    "version": "0.1.0",
     "mcversion": "${mcversion}",
     "authorList": [
+      "ANightDazingZoroark",
+      "LordDarthDan",
       "triode_",
       "DaPorkchop_",
       "DEL",
       "RubyJunk"
     ],
     "credits": "",
-    "logoFile": "vs_logo.png",
+    "logoFile": "rv_logo.png",
     "screenshots": [],
     "dependencies": []
   }

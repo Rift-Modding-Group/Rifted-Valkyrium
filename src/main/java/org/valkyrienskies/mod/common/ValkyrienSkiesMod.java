@@ -61,8 +61,7 @@ import java.util.function.Function;
 
 @Mod(
     modid = ValkyrienSkiesMod.MOD_ID,
-    useMetadata = true,
-    certificateFingerprint = ValkyrienSkiesMod.MOD_FINGERPRINT
+    useMetadata = true
 )
 public class ValkyrienSkiesMod {
     public static final Logger LOGGER = LogManager.getLogger();
@@ -72,7 +71,6 @@ public class ValkyrienSkiesMod {
 
     // MOD INFO CONSTANTS
     public static final String MOD_ID = "valkyrienskies";
-    static final String MOD_FINGERPRINT = "b308676914a5e7d99459c1d2fb298744387899a7";
 
     // MOD INSTANCE
     @Instance(MOD_ID)

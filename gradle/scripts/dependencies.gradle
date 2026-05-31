@@ -50,14 +50,18 @@ dependencies {
     }
     //spongeforge lts
     implementation 'curse.maven:spongeforge-1279505:6611085'
+
     // The VS API, is added this way so that theres no need to make it a standalone mod
     shadow "org.valkyrienskies:api:1.0.0.9"
+    implementation "org.valkyrienskies:api:1.0.0.9"
 
     // javax inject annotation
     shadow "javax.inject:javax.inject:1" // 2KB
+    implementation "javax.inject:javax.inject:1" // 2KB
 
     // Command framework
     shadow "info.picocli:picocli:4.7.7"
+    implementation "info.picocli:picocli:4.7.7"
 
     // CQEngine for in-memory nonpersistent database
     // Provides Kryo
@@ -67,9 +71,16 @@ dependencies {
         exclude module: "javassist" //1.5 MB
         //exclude module: "typetools" //23.5 KB
     }
+    implementation("com.googlecode.cqengine:cqengine:3.4.0") {
+        exclude module: "sqlite-jdbc" //11.1 MB
+        exclude module: "antlr4-runtime" //648.0 KB
+        exclude module: "javassist" //1.5 MB
+        //exclude module: "typetools" //23.5 KB
+    }
 
     // JOML
     shadow 'org.joml:joml:1.9.25' // 663 KB
+    implementation 'org.joml:joml:1.9.25' // 663 KB
 
     // Jackson
     shadow "com.fasterxml.jackson.core:jackson-databind:2.10.0"
@@ -77,8 +88,14 @@ dependencies {
     shadow "com.fasterxml.jackson.module:jackson-module-parameter-names:2.10.0"
     shadow "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.10.0"
 
+    implementation "com.fasterxml.jackson.core:jackson-databind:2.10.0"
+    implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.10.0"
+    implementation "com.fasterxml.jackson.module:jackson-module-parameter-names:2.10.0"
+    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.10.0"
+
     //picocli jar
     shadow fileTree("dependencies/picocli-4.0.1.jar")
+    implementation fileTree("dependencies/picocli-4.0.1.jar")
 
     //celeritas jar for compat
     implementation files("dependencies/celeritas-forge-mc12.2-2.4.0-dev.jar")
@@ -88,6 +105,7 @@ dependencies {
     testImplementation 'org.hamcrest:hamcrest:2.2'
 
     // GraphLib is used by node tile entities to create a graph of nodes
+    shadow "gigaherz.graph:GraphLib:1.4.0"
     implementation "gigaherz.graph:GraphLib:1.4.0"
 
     //i hate kotlin with my entire heart and soul but its required for VS world to even work, hence this shit

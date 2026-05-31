@@ -19,7 +19,7 @@ public class ModMixinConfigPlugin implements IMixinConfigPlugin {
 
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
-        return switch (mixinClassName.split("\\.")[5]) {
+        return switch (mixinClassName.split("\\.")[4]) {
             case "spongeforge" -> Loader.isModLoaded("spongeforge");
             default -> true;
         };

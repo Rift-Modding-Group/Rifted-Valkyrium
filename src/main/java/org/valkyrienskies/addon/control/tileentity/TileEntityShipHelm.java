@@ -82,7 +82,7 @@ public class TileEntityShipHelm extends TileEntityControlNodeImpl implements ITi
                     BlockPos masterPos = tileRudderPart.getMultiblockOrigin();
                     TileEntityRudderPart masterTile = (TileEntityRudderPart) tile.getWorld().getTileEntity(masterPos);
                     // This is a transient problem that only occurs during world loading.
-                    if (masterTile != null) masterTile.setRudderAngle(-this.wheelRotation / 8D);
+                    if (masterTile != null) masterTile.setRudderAngle(this.wheelRotation / 8D);
                 }
 
             }
