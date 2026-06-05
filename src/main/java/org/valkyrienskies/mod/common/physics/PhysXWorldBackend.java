@@ -16,11 +16,11 @@ public class PhysXWorldBackend {
     @NotNull
     public final PxFoundation foundation;
     @NotNull
+    public final PxTolerancesScale tolerances;
+    @NotNull
     public final PxPhysics physics;
     @NotNull
     public final PxDefaultCpuDispatcher cpuDispatcher;
-    @NotNull
-    public final PxVec3 gravityVec;
     @NotNull
     public final PxScene scene;
 
@@ -30,23 +30,23 @@ public class PhysXWorldBackend {
                 new PxDefaultAllocator(),
                 new PxDefaultErrorCallback()
         );
-
-        PxTolerancesScale tolerances = new PxTolerancesScale();
+        this.tolerances = new PxTolerancesScale();
         this.physics = PxTopLevelFunctions.CreatePhysics(
                 PxTopLevelFunctions.getPHYSICS_VERSION(),
                 this.foundation,
-                tolerances
+                this.tolerances
         );
-
         this.cpuDispatcher = PxTopLevelFunctions.DefaultCpuDispatcherCreate(VSConfig.threadCount);
 
-        this.gravityVec = new PxVec3((float) VSConfig.gravityVecX, (float) VSConfig.gravityVecY, (float) VSConfig.gravityVecZ);
-
-        PxSceneDesc sceneDesc = new PxSceneDesc(tolerances);
-        sceneDesc.setGravity(this.gravityVec);
+        PxVec3 gravityVec = new PxVec3((float) VSConfig.gravityVecX, (float) VSConfig.gravityVecY, (float) VSConfig.gravityVecZ);
+        PxSceneDesc sceneDesc = new PxSceneDesc(this.tolerances);
+        sceneDesc.setGravity(gravityVec);
         sceneDesc.setCpuDispatcher(this.cpuDispatcher);
         sceneDesc.setFilterShader(PxTopLevelFunctions.DefaultFilterShader());
         this.scene = this.physics.createScene(sceneDesc);
+
+        gravityVec.destroy();
+        sceneDesc.destroy();
     }
 
     //to use to upload the physics stuff
@@ -56,5 +56,11 @@ public class PhysXWorldBackend {
     }
 
     //this is gonna be used to destroy all the physics stuff on unloading the world/dimension
-    public void close() {}
+    public void close() {
+        this.foundation.release();
+        this.tolerances.destroy();
+        this.physics.release();
+        //this.cpuDispatcher.destroy();
+        this.scene.release();
+    }
 }
