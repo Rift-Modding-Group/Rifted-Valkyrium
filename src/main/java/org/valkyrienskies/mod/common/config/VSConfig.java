@@ -204,9 +204,9 @@ public class VSConfig extends VSConfigTemplate {
     @Name("Block Mass")
     @Comment({
             "Override the auto generated mass value of blocks.",
-            "The units of mass are kg."
+            "Mass values must be one of four enum values: NONE, LIGHT, HEAVY, and VERY_HEAVY."
     })
-    public static String[] blockMass = {"minecraft:grass=1500", "minecraft:obsidian=20000"};
+    public static String[] blockMass = {"minecraft:grass=LIGHT", "minecraft:obsidian=VERY_HEAVY"};
 
     public static Vector3dc gravity() {
         return new Vector3d(gravityVecX, gravityVecY, gravityVecZ);

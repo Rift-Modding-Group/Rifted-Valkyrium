@@ -17,24 +17,17 @@ import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Map;
 
-/**
- * TODO: replace numerical masses with just enums that each have fixed masses
- * */
 public class BlockPhysicsDetails {
-
-    static final String BLOCK_MASS_VERSION = "v0.1";
-    // A 1x1x1 cube of DEFAULT is 500kg.
-    private final static double DEFAULT_MASS = 500D;
-
     /**
      * Blocks mapped to their mass.
      */
-    private static final HashMap<Block, Double> blockToMass = new HashMap<>();
+    private static final Map<Block, Mass> blockToMass = new HashMap<>();
     /**
-     * Material.mapped to their mass.
+     * Materials mapped to their mass.
      */
-    private static final HashMap<Material, Double> materialMass = new HashMap<>();
+    private static final Map<Material, Mass> materialMass = new HashMap<>();
     /**
      * Blocks that should not be infused with physics.
      */
@@ -54,56 +47,56 @@ public class BlockPhysicsDetails {
             .map(str -> str.split("="))
             .filter(arr -> arr.length == 2)
             .forEach(arr ->
-                blockToMass.put(Block.getBlockFromName(arr[0]), Double.parseDouble(arr[1])));
+                blockToMass.put(Block.getBlockFromName(arr[0]), Mass.valueOf(arr[1])));
     }
 
     private static void generateMaterialMasses() {
-        materialMass.put(Material.AIR, 0.0);
-        materialMass.put(Material.ANVIL, 8000.0);
-        materialMass.put(Material.BARRIER, 0.0);
-        materialMass.put(Material.CACTUS, 400.0);
-        materialMass.put(Material.CAKE, 100.0);
-        materialMass.put(Material.CARPET, 100.0);
-        materialMass.put(Material.CIRCUITS, 200.0);
-        materialMass.put(Material.CLAY, 2000.0);
-        materialMass.put(Material.CLOTH, 100.0);
-        materialMass.put(Material.CORAL, 2000.0);
-        materialMass.put(Material.CRAFTED_SNOW, 500.0);
-        materialMass.put(Material.DRAGON_EGG, 500.0);
-        materialMass.put(Material.FIRE, 0.0);
-        materialMass.put(Material.GLASS, 2000.0);
-        materialMass.put(Material.GOURD, 1500.0);
-        materialMass.put(Material.GRASS, 1500.0);
-        materialMass.put(Material.GROUND, 1500.0);
-        materialMass.put(Material.ICE, 500.0);
-        materialMass.put(Material.IRON, 8000.0);
-        materialMass.put(Material.LAVA, 2500.0);
-        materialMass.put(Material.LEAVES, 100.0);
-        materialMass.put(Material.PACKED_ICE, 500.0);
-        materialMass.put(Material.PISTON, 3000.0);
-        materialMass.put(Material.PLANTS, 300.0);
-        materialMass.put(Material.PORTAL, 0.0);
-        materialMass.put(Material.REDSTONE_LIGHT, 100.0);
-        materialMass.put(Material.ROCK, 3000.0);
-        materialMass.put(Material.SAND, 2000.0);
-        materialMass.put(Material.SNOW, 500.0);
-        materialMass.put(Material.SPONGE, 100.0);
-        materialMass.put(Material.STRUCTURE_VOID, 0.0);
-        materialMass.put(Material.TNT, 2000.0);
-        materialMass.put(Material.VINE, 300.0);
-        materialMass.put(Material.WATER, 1000.0);
-        materialMass.put(Material.WEB, 100.0);
-        materialMass.put(Material.WOOD, 500.0);
+        materialMass.put(Material.AIR, Mass.NONE);
+        materialMass.put(Material.ANVIL, Mass.HEAVY);
+        materialMass.put(Material.BARRIER, Mass.NONE);
+        materialMass.put(Material.CACTUS, Mass.LIGHT);
+        materialMass.put(Material.CAKE, Mass.NONE);
+        materialMass.put(Material.CARPET, Mass.NONE);
+        materialMass.put(Material.CIRCUITS, Mass.NONE);
+        materialMass.put(Material.CLAY, Mass.HEAVY);
+        materialMass.put(Material.CLOTH, Mass.NONE);
+        materialMass.put(Material.CORAL, Mass.HEAVY);
+        materialMass.put(Material.CRAFTED_SNOW, Mass.LIGHT);
+        materialMass.put(Material.DRAGON_EGG, Mass.LIGHT);
+        materialMass.put(Material.FIRE, Mass.NONE);
+        materialMass.put(Material.GLASS, Mass.LIGHT);
+        materialMass.put(Material.GOURD, Mass.LIGHT);
+        materialMass.put(Material.GRASS, Mass.LIGHT);
+        materialMass.put(Material.GROUND, Mass.LIGHT);
+        materialMass.put(Material.ICE, Mass.LIGHT);
+        materialMass.put(Material.IRON, Mass.HEAVY);
+        materialMass.put(Material.LAVA, Mass.LIGHT);
+        materialMass.put(Material.LEAVES, Mass.NONE);
+        materialMass.put(Material.PACKED_ICE, Mass.LIGHT);
+        materialMass.put(Material.PISTON, Mass.LIGHT);
+        materialMass.put(Material.PLANTS, Mass.NONE);
+        materialMass.put(Material.PORTAL, Mass.NONE);
+        materialMass.put(Material.REDSTONE_LIGHT, Mass.NONE);
+        materialMass.put(Material.ROCK, Mass.HEAVY);
+        materialMass.put(Material.SAND, Mass.LIGHT);
+        materialMass.put(Material.SNOW, Mass.LIGHT);
+        materialMass.put(Material.SPONGE, Mass.LIGHT);
+        materialMass.put(Material.STRUCTURE_VOID, Mass.LIGHT);
+        materialMass.put(Material.TNT, Mass.LIGHT);
+        materialMass.put(Material.VINE, Mass.LIGHT);
+        materialMass.put(Material.WATER, Mass.LIGHT);
+        materialMass.put(Material.WEB, Mass.NONE);
+        materialMass.put(Material.WOOD, Mass.LIGHT);
     }
 
     private static void generateBlockMasses() {
-        blockToMass.put(Blocks.AIR, 0.0);
-        blockToMass.put(Blocks.FIRE, 0.0);
-        blockToMass.put(Blocks.FLOWING_WATER, 0.0);
-        blockToMass.put(Blocks.FLOWING_LAVA, 0.0);
-        blockToMass.put(Blocks.WATER, 0.0);
-        blockToMass.put(Blocks.LAVA, 0.0);
-        blockToMass.put(Blocks.BEDROCK, 50000.0);
+        blockToMass.put(Blocks.AIR, Mass.NONE);
+        blockToMass.put(Blocks.FIRE, Mass.NONE);
+        blockToMass.put(Blocks.FLOWING_WATER, Mass.NONE);
+        blockToMass.put(Blocks.FLOWING_LAVA, Mass.NONE);
+        blockToMass.put(Blocks.WATER, Mass.NONE);
+        blockToMass.put(Blocks.LAVA, Mass.NONE);
+        blockToMass.put(Blocks.BEDROCK, Mass.VERY_HEAVY);
     }
 
     private static void generateBlocksToNotPhysicsInfuse() {
@@ -122,15 +115,15 @@ public class BlockPhysicsDetails {
     }
 
     private static double getMassOfMaterial(Material material) {
-        return materialMass.getOrDefault(material, DEFAULT_MASS);
+        return materialMass.getOrDefault(material, Mass.LIGHT).mass;
     }
 
     private static double getMassOfBlock(Block block) {
-        if (block instanceof BlockLiquid) {
-            return 0D;
-        } else if (blockToMass.get(block) != null) {
-            return blockToMass.get(block);
-        } else {
+        if (block instanceof BlockLiquid) return Mass.NONE.mass;
+        else if (blockToMass.get(block) != null) {
+            return blockToMass.get(block).mass;
+        }
+        else {
             return getMassOfMaterial(block.getDefaultState().getMaterial());
         }
     }
@@ -143,11 +136,9 @@ public class BlockPhysicsDetails {
         PhysicsObject obj, Vector3d toSet) {
         Block block = state.getBlock();
         if (block instanceof IBlockForceProvider) {
-            Vector3dc forceVector = ((IBlockForceProvider) block).getBlockForceInWorldSpace(world, pos, state,
-                    obj, secondsToApply);
-            if (forceVector == null) {
-                toSet.zero();
-            } else {
+            Vector3dc forceVector = ((IBlockForceProvider) block).getBlockForceInWorldSpace(world, pos, state, obj, secondsToApply);
+            if (forceVector == null) toSet.zero();
+            else {
                 toSet.x = forceVector.x();
                 toSet.y = forceVector.y();
                 toSet.z = forceVector.z();
@@ -163,4 +154,19 @@ public class BlockPhysicsDetails {
         return block instanceof IBlockForceProvider || block instanceof IBlockTorqueProvider;
     }
 
+    /**
+     * Each mass enum is to have a fixed numerical mass.
+     * */
+    public enum Mass {
+        NONE(0),
+        LIGHT(500),
+        HEAVY(8000),
+        VERY_HEAVY(20000);
+
+        public final int mass;
+
+        Mass(int mass) {
+            this.mass = mass;
+        }
+    }
 }
