@@ -15,7 +15,6 @@
 *.properties text=auto eol=lf
 *.cfg text=auto eol=lf
 *.info text=auto eol=lf
-*.lang text=auto eol=lf
 *.atom text=auto eol=lf
 *.obj text=auto eol=lf
 *.mtl text=auto eol=lf
