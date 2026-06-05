@@ -108,4 +108,14 @@ dependencies {
     shadow "gigaherz.graph:GraphLib:1.4.0"
     implementation "gigaherz.graph:GraphLib:1.4.0"
 
+    //nvidia physx
+    //java bindings
+    shadow "de.fabmax:physx-jni:2.7.1"
+    implementation "de.fabmax:physx-jni:2.7.1"
+
+    //native libraries
+    runtimeOnly "de.fabmax:physx-jni:2.7.1:natives-windows"
+    runtimeOnly "de.fabmax:physx-jni:2.7.1:natives-linux"
+    runtimeOnly "de.fabmax:physx-jni:2.7.1:natives-macos"
+    runtimeOnly "de.fabmax:physx-jni:2.7.1:natives-macos-arm64"
 }

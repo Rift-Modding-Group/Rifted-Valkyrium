@@ -1,4 +1,4 @@
-package org.valkyrienskies.mod.common.physics;
+package org.valkyrienskies.mod.common.physicsOld;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.state.IBlockState;
@@ -13,8 +13,8 @@ import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.valkyrienskies.mod.common.block.IBlockForceProvider;
 import org.valkyrienskies.mod.common.block.IBlockTorqueProvider;
-import org.valkyrienskies.mod.common.collision.WorldPhysicsCollider;
-import org.valkyrienskies.mod.common.collision.WorldWaterCollider;
+import org.valkyrienskies.mod.common.collisionOld.WorldPhysicsCollider;
+import org.valkyrienskies.mod.common.collisionOld.WorldWaterCollider;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;

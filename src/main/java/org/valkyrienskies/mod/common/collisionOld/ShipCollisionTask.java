@@ -1,7 +1,6 @@
-package org.valkyrienskies.mod.common.collision;
+package org.valkyrienskies.mod.common.collisionOld;
 
 import net.minecraft.block.state.IBlockState;
-import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos.MutableBlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.chunk.Chunk;

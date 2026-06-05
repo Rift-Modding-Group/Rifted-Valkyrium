@@ -1,4 +1,4 @@
-package org.valkyrienskies.mod.common.collision;
+package org.valkyrienskies.mod.common.collisionOld;
 
 import org.joml.Vector3dc;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityCollisionObject;

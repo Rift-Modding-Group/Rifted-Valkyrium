@@ -6,7 +6,7 @@ import org.joml.Vector3d;
 import org.joml.Vector3dc;
 
 /**
- * Stores data used by {@link org.valkyrienskies.mod.common.physics.PhysicsCalculations}
+ * Stores data used by {@link org.valkyrienskies.mod.common.physicsOld.PhysicsCalculations}
  */
 public class ShipPhysicsData {
     @JsonSerialize(as = Vector3d.class)

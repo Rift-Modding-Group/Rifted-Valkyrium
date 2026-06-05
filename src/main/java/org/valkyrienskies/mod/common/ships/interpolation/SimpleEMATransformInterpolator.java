@@ -2,7 +2,7 @@ package org.valkyrienskies.mod.common.ships.interpolation;
 
 import net.minecraft.util.math.AxisAlignedBB;
 import org.joml.*;
-import org.valkyrienskies.mod.common.collision.Polygon;
+import org.valkyrienskies.mod.common.collisionOld.Polygon;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import valkyrienwarfare.api.TransformType;
 

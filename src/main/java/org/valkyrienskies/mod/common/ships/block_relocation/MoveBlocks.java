@@ -7,12 +7,11 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
-import org.valkyrienskies.mod.common.physics.BlockPhysicsDetails;
+import org.valkyrienskies.mod.common.physicsOld.BlockPhysicsDetails;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 
 import javax.annotation.Nullable;
-import java.util.Optional;
 
 public class MoveBlocks {
 

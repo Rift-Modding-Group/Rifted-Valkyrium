@@ -18,7 +18,7 @@ import net.minecraft.world.gen.ChunkProviderServer;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.config.VSConfig;
-import org.valkyrienskies.mod.common.physics.BlockPhysicsDetails;
+import org.valkyrienskies.mod.common.physicsOld.BlockPhysicsDetails;
 import org.valkyrienskies.mod.common.ships.QueryableShipData;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.block_relocation.BlockFinder;

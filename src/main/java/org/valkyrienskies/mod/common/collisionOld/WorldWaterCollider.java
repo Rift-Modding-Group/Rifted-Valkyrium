@@ -1,4 +1,4 @@
-package org.valkyrienskies.mod.common.collision;
+package org.valkyrienskies.mod.common.collisionOld;
 
 import gnu.trove.list.TIntList;
 import gnu.trove.list.array.TIntArrayList;
@@ -13,7 +13,7 @@ import org.apache.commons.lang3.tuple.Triple;
 import org.joml.Vector3d;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.config.VSConfig;
-import org.valkyrienskies.mod.common.physics.PhysicsCalculations;
+import org.valkyrienskies.mod.common.physicsOld.PhysicsCalculations;
 import org.valkyrienskies.mod.common.ships.block_relocation.SpatialDetector;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.datastructures.IBitOctree;

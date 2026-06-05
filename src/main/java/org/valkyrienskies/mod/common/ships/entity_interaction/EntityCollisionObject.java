@@ -2,7 +2,7 @@ package org.valkyrienskies.mod.common.ships.entity_interaction;
 
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
-import org.valkyrienskies.mod.common.collision.Polygon;
+import org.valkyrienskies.mod.common.collisionOld.Polygon;
 
 /**
  * An enhanced version of the collision Object, designed to prevent entities from moving through a

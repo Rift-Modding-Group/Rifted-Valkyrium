@@ -4,9 +4,7 @@ import net.minecraft.block.state.IBlockState;
 import net.minecraft.util.math.BlockPos;
 import org.joml.Matrix3d;
 import org.joml.Vector3d;
-import org.valkyrienskies.mod.common.physics.BlockPhysicsDetails;
-import org.valkyrienskies.mod.common.ships.physics_data.IPhysicsObjectCenterOfMassProvider;
-import org.valkyrienskies.mod.common.ships.physics_data.ShipInertiaData;
+import org.valkyrienskies.mod.common.physicsOld.BlockPhysicsDetails;
 
 public class BasicCenterOfMassProvider implements IPhysicsObjectCenterOfMassProvider {
 

@@ -12,7 +12,7 @@ import net.minecraft.world.World;
 import org.joml.Vector3dc;
 import org.valkyrienskies.addon.control.tileentity.TileEntityGyroscopeStabilizer;
 import org.valkyrienskies.mod.common.block.IBlockTorqueProvider;
-import org.valkyrienskies.mod.common.physics.PhysicsCalculations;
+import org.valkyrienskies.mod.common.physicsOld.PhysicsCalculations;
 import org.valkyrienskies.mod.common.util.BaseBlock;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 
