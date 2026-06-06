@@ -10,8 +10,6 @@ import javax.annotation.ParametersAreNonnullByDefault;
  * Manages the center of mass, as well as the inertia matrix of a provided ShipInertiaData.
  */
 public interface IPhysicsObjectCenterOfMassProvider {
-
     @ParametersAreNonnullByDefault
     void onSetBlockState(ShipInertiaData data, BlockPos pos, IBlockState oldState, IBlockState newState);
-
 }

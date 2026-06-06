@@ -5,7 +5,6 @@ import org.valkyrienskies.mod.common.ships.chunk_claims.ShipChunkAllocator;
 
 
 public class VSWorldData {
-
     private final QueryableShipData queryableShipData = new QueryableShipData();
 
     private final ShipChunkAllocator shipChunkAllocator = new ShipChunkAllocator();
@@ -17,5 +16,4 @@ public class VSWorldData {
     public ShipChunkAllocator getShipChunkAllocator() {
         return shipChunkAllocator;
     }
-
 }

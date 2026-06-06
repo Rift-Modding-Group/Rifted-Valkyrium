@@ -7,7 +7,5 @@ package org.valkyrienskies.mod.common.ships.ship_transform;
  * @author thebest108
  */
 public enum CoordinateSpaceType {
-
     GLOBAL_COORDINATES, SUBSPACE_COORDINATES
-
 }

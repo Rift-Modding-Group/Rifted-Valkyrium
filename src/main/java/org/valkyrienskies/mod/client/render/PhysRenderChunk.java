@@ -19,7 +19,7 @@ import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 import net.minecraftforge.client.ForgeHooksClient;
 import net.minecraftforge.client.MinecraftForgeClient;
 import org.lwjgl.opengl.GL11;
-import org.valkyrienskies.mod.common.collisionOld.Polygon;
+import org.valkyrienskies.mod.common.util.TransformedAABB;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import valkyrienwarfare.api.TransformType;
 
@@ -55,7 +55,7 @@ public class PhysRenderChunk {
             IVSRenderChunk renderChunk = renderChunks[i];
             if (renderChunk != null) {
                 AxisAlignedBB renderChunkBB = new AxisAlignedBB(chunk.x << 4, renderChunk.minY(), chunk.z << 4, (chunk.x << 4) + 16, renderChunk.minY() + 16, (chunk.z << 4) + 16);
-                Polygon polygon = new Polygon(renderChunkBB, toRender.getShipTransformationManager().getRenderTransform(), TransformType.SUBSPACE_TO_GLOBAL);
+                TransformedAABB polygon = new TransformedAABB(renderChunkBB, toRender.getShipTransformationManager().getRenderTransform(), TransformType.SUBSPACE_TO_GLOBAL);
                 AxisAlignedBB inWorldBB = polygon.getEnclosedAABB();
 
                 // Only render chunks that can be shown by the camera.

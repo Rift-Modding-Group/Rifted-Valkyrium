@@ -3,7 +3,7 @@ package org.valkyrienskies.mod.common.ships.block_relocation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.BlockPos.MutableBlockPos;
 import net.minecraft.world.World;
-import org.valkyrienskies.mod.common.physicsOld.BlockPhysicsDetails;
+import org.valkyrienskies.mod.common.physics.BlockPhysicsDetails;
 
 public class ShipBlockPosFinder extends SpatialDetector {
 

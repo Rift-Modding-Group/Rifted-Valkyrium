@@ -2,7 +2,7 @@ package org.valkyrienskies.mod.common.ships.entity_interaction;
 
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
-import org.valkyrienskies.mod.common.collisionOld.Polygon;
+import org.valkyrienskies.mod.common.util.TransformedAABB;
 
 /**
  * An enhanced version of the collision Object, designed to prevent entities from moving through a
@@ -13,14 +13,14 @@ import org.valkyrienskies.mod.common.collisionOld.Polygon;
 public class EntityCollisionObject {
 
     private final Vector3dc axis;
-    private final Polygon movable, fixed;
+    private final TransformedAABB movable, fixed;
     private double penetrationDistance;
     private boolean separated;
     private final Vector3dc entityVelocity;
     private boolean originallyCollided;
     private double velDot;
 
-    public EntityCollisionObject(Polygon movable_, Polygon stationary, Vector3dc axes, Vector3dc entityVel) {
+    public EntityCollisionObject(TransformedAABB movable_, TransformedAABB stationary, Vector3dc axes, Vector3dc entityVel) {
         axis = axes;
         movable = movable_;
         fixed = stationary;

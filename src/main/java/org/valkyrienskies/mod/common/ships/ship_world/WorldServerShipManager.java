@@ -16,9 +16,10 @@ import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 import net.minecraft.world.gen.ChunkProviderServer;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
+import org.jspecify.annotations.NonNull;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.config.VSConfig;
-import org.valkyrienskies.mod.common.physicsOld.BlockPhysicsDetails;
+import org.valkyrienskies.mod.common.physics.BlockPhysicsDetails;
 import org.valkyrienskies.mod.common.ships.QueryableShipData;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.block_relocation.BlockFinder;
@@ -26,6 +27,7 @@ import org.valkyrienskies.mod.common.ships.block_relocation.IRelocationAwareTile
 import org.valkyrienskies.mod.common.ships.block_relocation.SpatialDetector;
 import org.valkyrienskies.mod.common.ships.physics_data.BasicCenterOfMassProvider;
 import org.valkyrienskies.mod.common.ships.physics_data.IPhysicsObjectCenterOfMassProvider;
+import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.util.multithreaded.CalledFromWrongThreadException;
 import org.valkyrienskies.mod.common.util.multithreaded.VSWorldPhysicsLoop;
 
@@ -33,7 +35,6 @@ import javax.annotation.Nonnull;
 import java.util.*;
 
 public class WorldServerShipManager implements IPhysObjectWorld {
-
     private final WorldServer world;
     private final VSWorldPhysicsLoop physicsLoop;
     private final Thread physicsThread;
@@ -57,12 +58,12 @@ public class WorldServerShipManager implements IPhysObjectWorld {
         this.loadingInBackground = new HashSet<>();
         this.threadSafeLoadedShips = ImmutableList.of();
 
-        this.physicsThread = new Thread(physicsLoop);
+        this.physicsThread = new Thread(this.physicsLoop);
         this.physicsThread.start();
     }
 
     private void enforceGameThread() {
-        if (!world.isCallingFromMinecraftThread()) {
+        if (!this.world.isCallingFromMinecraftThread()) {
             //throw new CalledFromWrongThreadException("Wrong thread calling code: " + Thread.currentThread());
             ValkyrienSkiesMod.LOGGER.warn("Wrong thread calling code: " + Thread.currentThread());
         }
@@ -71,6 +72,13 @@ public class WorldServerShipManager implements IPhysObjectWorld {
     @Override
     public void onWorldUnload() {
         this.physicsLoop.kill();
+        this.physicsThread.interrupt();
+        try {
+            this.physicsThread.join(5000L);
+        }
+        catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     @Override
@@ -270,6 +278,8 @@ public class WorldServerShipManager implements IPhysObjectWorld {
                 chunk.generateSkylightMap();
             }
 
+            preserveInfuserPlacementAfterCenterOfMassChange(toSpawn);
+
             // Then delete the copied blocks from the old chunks
             blocksIterator = detector.foundSet.iterator();
             while (blocksIterator.hasNext()) {
@@ -346,8 +356,25 @@ public class WorldServerShipManager implements IPhysObjectWorld {
         spawnQueue.clear();
     }
 
+    private static void preserveInfuserPlacementAfterCenterOfMassChange(ShipData shipData) {
+        ShipTransform originalTransform = shipData.getShipTransform();
+        org.joml.Vector3dc oldCenter = originalTransform.getCenterCoord();
+        org.joml.Vector3dc newCenter = shipData.getInertiaData().getGameTickCenterOfMass();
+        org.joml.Vector3d positionOffset = newCenter.sub(oldCenter, new org.joml.Vector3d());
+        ShipTransform correctedTransform = new ShipTransform(
+            originalTransform.getPosX() + positionOffset.x,
+            originalTransform.getPosY() + positionOffset.y,
+            originalTransform.getPosZ() + positionOffset.z,
+            originalTransform.rotationQuaternion(valkyrienwarfare.api.TransformType.SUBSPACE_TO_GLOBAL),
+            newCenter
+        );
+        shipData.setShipTransform(correctedTransform);
+        shipData.setPrevTickShipTransform(correctedTransform);
+        shipData.getPhysicsData().markCollisionShapeDirty();
+    }
+
     private void injectChunkIntoWorldServer(@Nonnull Chunk chunk, int x, int z) {
-        ChunkProviderServer provider = world.getChunkProvider();
+        ChunkProviderServer provider = this.world.getChunkProvider();
         provider.loadedChunks.put(ChunkPos.asLong(x, z), chunk);
         chunk.onLoad();
         chunk.checkLight();
@@ -355,7 +382,7 @@ public class WorldServerShipManager implements IPhysObjectWorld {
     }
 
     private void loadAndUnloadShips() {
-        QueryableShipData queryableShipData = QueryableShipData.get(world);
+        QueryableShipData queryableShipData = QueryableShipData.get(this.world);
         // Load the ships that are required immediately.
         for (final UUID toLoadID : loadQueue) {
             Optional<ShipData> toLoadOptional = queryableShipData.getShip(toLoadID);
@@ -373,23 +400,23 @@ public class WorldServerShipManager implements IPhysObjectWorld {
             if (VSConfig.showAnnoyingDebugOutput) {
                 System.out.println("Attempting to load ship " + toLoad);
             }
-            PhysicsObject physicsObject = new PhysicsObject(world, toLoad);
+            PhysicsObject physicsObject = new PhysicsObject(this.world, toLoad);
             PhysicsObject old = loadedShips.put(toLoad.getUuid(), physicsObject);
             if (old != null) {
                 throw new IllegalStateException("How did we already have a ship loaded for " + toLoad);
             }
         }
-        loadQueue.clear();
+        this.loadQueue.clear();
 
         // Load ships that aren't required immediately in the background.
-        for (final UUID toLoadID : backgroundLoadQueue) {
+        for (final UUID toLoadID : this.backgroundLoadQueue) {
             // Skip if this ship is already being loaded in the background,.
-            if (loadingInBackground.contains(toLoadID)) {
+            if (this.loadingInBackground.contains(toLoadID)) {
                 continue; // Already loading this ship in the background
             }
 
             // Make sure there isn't an already loaded ship with this UUID.
-            if (loadedShips.containsKey(toLoadID)) {
+            if (this.loadedShips.containsKey(toLoadID)) {
                 // continue; // temp, need to fix WorldShipLoadingController.determineLoadAndUnload()
                 throw new IllegalStateException("Tried loading a ShipData that was already loaded? Ship ID is\n"
                         + toLoadID);
@@ -401,12 +428,12 @@ public class WorldServerShipManager implements IPhysObjectWorld {
             }
 
             ShipData toLoad = toLoadOptional.get();
-            loadingInBackground.add(toLoadID);
+            this.loadingInBackground.add(toLoadID);
 
             if (VSConfig.showAnnoyingDebugOutput) {
                 System.out.println("Attempting to load " + toLoad + " in the background.");
             }
-            ChunkProviderServer chunkProviderServer = world.getChunkProvider();
+            ChunkProviderServer chunkProviderServer = this.world.getChunkProvider();
             for (ChunkPos chunkPos : toLoad.getChunkClaim()) {
                 @Nonnull Runnable returnTask = () -> {
                     if (VSConfig.showAnnoyingDebugOutput) {
@@ -416,12 +443,12 @@ public class WorldServerShipManager implements IPhysObjectWorld {
                 chunkProviderServer.loadChunk(chunkPos.x, chunkPos.z, returnTask);
             }
         }
-        backgroundLoadQueue.clear();
+        this.backgroundLoadQueue.clear();
 
         // Unload far away ships immediately.
-        for (final UUID toUnloadID : unloadQueue) {
+        for (final UUID toUnloadID : this.unloadQueue) {
             // Make sure we have a ship with this ID that can be unloaded
-            if (!loadedShips.containsKey(toUnloadID)) {
+            if (!this.loadedShips.containsKey(toUnloadID)) {
                 throw new IllegalStateException("Tried unloading a ShipData that isn't loaded? Ship ID is\n"
                         + toUnloadID);
             }
@@ -432,20 +459,20 @@ public class WorldServerShipManager implements IPhysObjectWorld {
                 System.out.println("Attempting to unload " + physicsObject);
             }
             physicsObject.unload();
-            boolean success = loadedShips.remove(toUnloadID, physicsObject);
+            boolean success = this.loadedShips.remove(toUnloadID, physicsObject);
 
             if (!success) {
                 throw new IllegalStateException("How did we fail to unload " + physicsObject.getShipData());
             }
         }
-        unloadQueue.clear();
+        this.unloadQueue.clear();
     }
 
     @Nonnull
     @Override
     public Iterable<PhysicsObject> getAllLoadedPhysObj() throws CalledFromWrongThreadException {
         enforceGameThread();
-        return loadedShips.values();
+        return this.loadedShips.values();
     }
 
     @Nonnull
@@ -458,19 +485,19 @@ public class WorldServerShipManager implements IPhysObjectWorld {
      * Thread safe way to queue a ship spawn. (Not the same as {@link #queueShipLoad(UUID)}.
      */
     public void queueShipSpawn(@Nonnull ShipData data, @Nonnull BlockPos spawnPos, @Nonnull BlockFinder.BlockFinderType blockFinderType) {
-        enforceGameThread();
+        this.enforceGameThread();
         this.spawnQueue.add(ImmutableTriple.of(spawnPos, data, blockFinderType));
     }
 
     @Override
     public void queueShipLoad(@Nonnull UUID shipID) {
-        enforceGameThread();
+        this.enforceGameThread();
         this.loadQueue.add(shipID);
     }
 
     @Override
     public void queueShipUnload(@Nonnull UUID shipID) {
-        enforceGameThread();
+        this.enforceGameThread();
         this.unloadQueue.add(shipID);
     }
 
@@ -478,7 +505,7 @@ public class WorldServerShipManager implements IPhysObjectWorld {
      * Thread safe way to queue a ship to be loaded in the background.
      */
     public void queueShipLoadBackground(@Nonnull UUID shipID) {
-        enforceGameThread();
+        this.enforceGameThread();
         backgroundLoadQueue.add(shipID);
     }
 
@@ -486,12 +513,12 @@ public class WorldServerShipManager implements IPhysObjectWorld {
      * Used to prevent the world from unloading the chunks of ships loading in background.
      */
     public Iterable<Long> getBackgroundShipChunks() throws CalledFromWrongThreadException {
-        enforceGameThread();
+        this.enforceGameThread();
         List<Long> backgroundChunks = new ArrayList<>();
-        QueryableShipData queryableShipData = QueryableShipData.get(world);
-        for (UUID shipID : loadingInBackground) {
+        QueryableShipData queryableShipData = QueryableShipData.get(this.world);
+        for (UUID shipID : this.loadingInBackground) {
             Optional<ShipData> shipDataOptional = queryableShipData.getShip(shipID);
-            if (!shipDataOptional.isPresent()) {
+            if (shipDataOptional.isEmpty()) {
                 throw new IllegalStateException("Ship data not present for:\n" + shipID);
             }
             backgroundChunks.addAll(shipDataOptional.get().getChunkClaim().getClaimedChunks());
@@ -500,11 +527,12 @@ public class WorldServerShipManager implements IPhysObjectWorld {
     }
 
     @Override
+    @NonNull
     public WorldServer getWorld() {
-        return world;
+        return this.world;
     }
 
     public VSWorldPhysicsLoop getPhysicsLoop() {
-        return physicsLoop;
+        return this.physicsLoop;
     }
 }

@@ -8,10 +8,6 @@ import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 
-/*
-* TODO: make this only for tileentities that will allow the player to control
-*  the entire ship
-* */
 public interface ITileEntityPilotable {
     void onPilotControlsMessage(PilotControlsMessage message, EntityPlayerMP sender);
 

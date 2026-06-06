@@ -20,7 +20,7 @@ import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.VSWorldDataCapability;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
 import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
-import org.valkyrienskies.mod.common.collisionOld.Polygon;
+import org.valkyrienskies.mod.common.util.TransformedAABB;
 import org.valkyrienskies.mod.common.entity.EntityMountable;
 import org.valkyrienskies.mod.common.entity.EntityShipMovementData;
 import org.valkyrienskies.mod.common.ships.QueryableShipData;
@@ -107,7 +107,7 @@ public final class ValkyrienUtils {
         if (physicsObject.isPresent()) {
             // We're in a physics object; convert the bounding box to a polygon; put its coordinates
             // in global space, and then return the bounding box that encloses all the points.
-            Polygon bbAsPoly = new Polygon(axisAlignedBB, physicsObject.get()
+            TransformedAABB bbAsPoly = new TransformedAABB(axisAlignedBB, physicsObject.get()
                     .getShipTransformationManager()
                     .getCurrentTickTransform(), TransformType.SUBSPACE_TO_GLOBAL);
             return bbAsPoly.getEnclosedAABB();
@@ -290,7 +290,7 @@ public final class ValkyrienUtils {
         if (transformEntityBoundingBox) {
             // Transform the bounding box too
             final AxisAlignedBB oldBB = entity.getEntityBoundingBox();
-            final Polygon newBBPoly = new Polygon(oldBB, transform);
+            final TransformedAABB newBBPoly = new TransformedAABB(oldBB, transform);
             final AxisAlignedBB newBB = newBBPoly.getEnclosedAABB();
 
             final double oldBBSize = (oldBB.maxX - oldBB.minX) * (oldBB.maxY - oldBB.minY) * (oldBB.maxZ - oldBB.minZ);

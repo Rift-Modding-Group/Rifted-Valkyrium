@@ -1,4 +1,4 @@
-package org.valkyrienskies.mod.common.physicsOld;
+package org.valkyrienskies.mod.common.physics;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockLiquid;
@@ -9,14 +9,17 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
+import org.valkyrienskies.addon.control.ValkyrienSkiesControl;
+import org.valkyrienskies.addon.control.block.BlockPhysicsInfuser;
+import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.block.IBlockForceProvider;
 import org.valkyrienskies.mod.common.block.IBlockTorqueProvider;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 public class BlockPhysicsDetails {
@@ -43,11 +46,46 @@ public class BlockPhysicsDetails {
     }
 
     private static void onSync() {
-        Arrays.stream(VSConfig.blockMass)
-            .map(str -> str.split("="))
-            .filter(arr -> arr.length == 2)
-            .forEach(arr ->
-                blockToMass.put(Block.getBlockFromName(arr[0]), Mass.valueOf(arr[1])));
+        blockToMass.clear();
+        generateBlockMasses();
+        if (VSConfig.blockMass == null) return;
+        for (String entry : VSConfig.blockMass) {
+            applyConfiguredBlockMass(entry);
+        }
+    }
+
+    //helper for applying block mass from config
+    private static void applyConfiguredBlockMass(String entry) {
+        if (entry == null || entry.trim().isEmpty()) return;
+
+        String[] split = entry.split("=", 2);
+        if (split.length != 2) {
+            ValkyrienSkiesMod.LOGGER.warn("Ignoring invalid blockMass entry '{}'; expected modid:block=MASS", entry);
+            return;
+        }
+
+        String blockName = normalizeBlockName(split[0]);
+        Block block = Block.getBlockFromName(blockName);
+        if (block == null) {
+            ValkyrienSkiesMod.LOGGER.warn("Ignoring blockMass entry '{}'; unknown block '{}'", entry, blockName);
+            return;
+        }
+
+        try {
+            Mass mass = Mass.valueOf(split[1].trim().toUpperCase(Locale.ROOT));
+            blockToMass.put(block, mass);
+        }
+        catch (IllegalArgumentException ex) {
+            ValkyrienSkiesMod.LOGGER.warn("Ignoring blockMass entry '{}'; unknown mass '{}'", entry, split[1].trim());
+        }
+    }
+
+    private static String normalizeBlockName(String blockName) {
+        String normalized = blockName.trim().toLowerCase(Locale.ROOT);
+        if (!normalized.contains(":")) {
+            return "minecraft:" + normalized;
+        }
+        return normalized;
     }
 
     private static void generateMaterialMasses() {
@@ -97,6 +135,8 @@ public class BlockPhysicsDetails {
         blockToMass.put(Blocks.WATER, Mass.NONE);
         blockToMass.put(Blocks.LAVA, Mass.NONE);
         blockToMass.put(Blocks.BEDROCK, Mass.VERY_HEAVY);
+
+        blockToMass.put(ValkyrienSkiesControl.INSTANCE.vsControlBlocks.networkRelay, Mass.NONE);
     }
 
     private static void generateBlocksToNotPhysicsInfuse() {
@@ -119,24 +159,25 @@ public class BlockPhysicsDetails {
     }
 
     private static double getMassOfBlock(Block block) {
+        //prioritize block mass
+        Mass blockMass = blockToMass.get(block);
+        if (blockMass != null) return blockMass.mass;
         if (block instanceof BlockLiquid) return Mass.NONE.mass;
-        else if (blockToMass.get(block) != null) {
-            return blockToMass.get(block).mass;
-        }
-        else {
-            return getMassOfMaterial(block.getDefaultState().getMaterial());
-        }
+
+        //use material otherwise
+        return getMassOfMaterial(block.getDefaultState().getMaterial());
     }
 
     /**
      * Assigns the output parameter of toSet to be the force Vector for the given IBlockState.
      */
-    static void getForceFromState(IBlockState state, BlockPos pos, World world,
-        double secondsToApply,
-        PhysicsObject obj, Vector3d toSet) {
+    public static void getForceFromState(
+            IBlockState state, BlockPos pos, World world, double secondsToApply,
+            PhysicsObject obj, Vector3d toSet
+    ) {
         Block block = state.getBlock();
-        if (block instanceof IBlockForceProvider) {
-            Vector3dc forceVector = ((IBlockForceProvider) block).getBlockForceInWorldSpace(world, pos, state, obj, secondsToApply);
+        if (block instanceof IBlockForceProvider blockForceProvider) {
+            Vector3dc forceVector = blockForceProvider.getBlockForceInWorldSpace(world, pos, state, obj, secondsToApply);
             if (forceVector == null) toSet.zero();
             else {
                 toSet.x = forceVector.x();

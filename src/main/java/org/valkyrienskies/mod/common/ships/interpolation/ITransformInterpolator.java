@@ -9,7 +9,6 @@ import javax.annotation.Nonnull;
  * An interface that allows for different ship interpolation algorithms to be implemented easily.
  */
 public interface ITransformInterpolator {
-
     /**
      * Sends the latest transform and AABB to the interpolator.
      */

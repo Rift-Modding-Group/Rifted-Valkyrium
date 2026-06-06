@@ -4,7 +4,6 @@ import net.minecraft.util.math.Vec3d;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 
 public class EntityShipMountData {
-
     private final boolean isMounted;
     private final PhysicsObject mountedShip;
     private final Vec3d mountPos;

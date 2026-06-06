@@ -25,15 +25,12 @@ import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
-import org.valkyrienskies.mod.common.collisionOld.EntityPolygonCollider;
-import org.valkyrienskies.mod.common.collisionOld.PhysPolygonCollider;
-import org.valkyrienskies.mod.common.collisionOld.Polygon;
-import org.valkyrienskies.mod.common.collisionOld.ShipPolygon;
 import org.valkyrienskies.mod.common.entity.EntityMountable;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.JOML;
+import org.valkyrienskies.mod.common.util.TransformedAABB;
 import org.valkyrienskies.mod.common.util.VSMath;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import valkyrienwarfare.api.TransformType;
@@ -45,8 +42,7 @@ import java.util.List;
 import java.util.Optional;
 
 public class EntityCollisionInjector {
-
-    private static final double errorSignificance = .001D;
+    private static final double errorSignificance = 0.001D;
 
     // Returns false if game should use default collision
     @Nullable
@@ -60,8 +56,8 @@ public class EntityCollisionInjector {
         final double origPosZ = entity.posZ;
         boolean isLiving = entity instanceof EntityLivingBase;
         Vec3d velocity = new Vec3d(dx, dy, dz);
-        Polygon playerBeforeMove = new Polygon(entity.getEntityBoundingBox());
-        List<Polygon> colPolys = getCollidingPolygonsAndDoBlockCols(entity, velocity);
+        TransformedAABB playerBeforeMove = new TransformedAABB(entity.getEntityBoundingBox());
+        List<ShipCollisionBox> colPolys = getCollidingPolygonsAndDoBlockCols(entity, velocity);
 
         PhysicsObject worldBelow = null;
 
@@ -94,8 +90,6 @@ public class EntityCollisionInjector {
 
             final Vector3dc originalVelocityDirection = new Vector3d(intendedXVel, intendedYVel, intendedZVel).normalize();
             final World world = entity.world;
-            final Polygon playerPolygon = new Polygon(base.getEntityBoundingBox());
-
             for (final Triple<PhysicsObject, BlockPos, IBlockState> ladderCollision : ladderCollisions) {
                 final IBlockState ladderState = ladderCollision.getRight();
 
@@ -111,10 +105,8 @@ public class EntityCollisionInjector {
                     final ShipTransform shipTransform = ladderCollision.getLeft().getShipTransform();
                     // Grow the ladder BB by a small margin (makes the ladder experience better imo)
                     final AxisAlignedBB ladderBB = ladderCollision.getRight().getBoundingBox(world, ladderCollision.getMiddle()).offset(ladderCollision.getMiddle()).grow(.4);
-                    final Polygon ladderPoly = new Polygon(ladderBB, shipTransform.getSubspaceToGlobal());
-                    // Determine if the player is actually colliding with the ladder
-                    final PhysPolygonCollider collider = new PhysPolygonCollider(playerPolygon, ladderPoly, ladderCollision.getLeft().getShipTransformationManager().normals);
-                    collider.processData();
+                    final AxisAlignedBB ladderInWorld = new TransformedAABB(ladderBB, shipTransform.getSubspaceToGlobal()).getEnclosedAABB();
+                    final boolean playerCollidesWithLadder = base.getEntityBoundingBox().intersects(ladderInWorld);
 
                     shipTransform.transformDirection(ladderNormal, TransformType.SUBSPACE_TO_GLOBAL);
 
@@ -144,7 +136,7 @@ public class EntityCollisionInjector {
                         if (isPlayerSneakingOnLadder && dy < 0) {
                             dy = 0;
                         }
-                        if (!collider.seperated && isPlayerGoingTowardsLadder) {
+                        if (playerCollidesWithLadder && isPlayerGoingTowardsLadder) {
                             dy = .2;
                         }
                     } else {
@@ -162,9 +154,7 @@ public class EntityCollisionInjector {
 
         final Vector3dc velVec = new Vector3d(dx, dy, dz);
 
-        for (Polygon poly : colPolys) {
-            if (poly instanceof ShipPolygon) {
-                ShipPolygon shipPoly = (ShipPolygon) poly;
+        for (ShipCollisionBox shipPoly : colPolys) {
                 try {
 
                     EntityPolygonCollider fast = new EntityPolygonCollider(playerBeforeMove,
@@ -213,16 +203,15 @@ public class EntityCollisionInjector {
                                             boolean collidesWithAnything = false;
                                             {
                                                 final AxisAlignedBB newEntityBBShrunk = axisalignedbb.shrink(.15);
-                                                final Polygon newEntityBBShrunkPolygon = new Polygon(newEntityBBShrunk);
-                                                for (Polygon potentialStepCollision : colPolys) {
-                                                    if (potentialStepCollision == poly) {
+                                                final TransformedAABB newEntityBBShrunkPolygon = new TransformedAABB(newEntityBBShrunk);
+                                                for (ShipCollisionBox potentialStepCollision : colPolys) {
+                                                    if (potentialStepCollision == shipPoly) {
                                                         continue; // Don't run this on ourself
                                                     }
                                                     if (potentialStepCollision.getEnclosedAABB().intersects(newEntityBBShrunk)) {
                                                         // Finer check
-                                                        ShipPolygon potentialStepCollisionShipPoly = (ShipPolygon) potentialStepCollision;
                                                         final EntityPolygonCollider checkIfStepCollidesWithBlock = new EntityPolygonCollider(newEntityBBShrunkPolygon,
-                                                                potentialStepCollisionShipPoly, potentialStepCollisionShipPoly.normals, new Vector3d());
+                                                                potentialStepCollision, potentialStepCollision.normals, new Vector3d());
 
                                                         checkIfStepCollidesWithBlock.processData();
 
@@ -274,8 +263,6 @@ public class EntityCollisionInjector {
                 } catch (Exception e) {
                     // Do nothing
                 }
-            }
-
         }
 
         AxisAlignedBB axisalignedbb = entity.getEntityBoundingBox()
@@ -473,11 +460,11 @@ public class EntityCollisionInjector {
     }
 
     /*
-     * This method generates an arrayList of Polygons that the player is colliding
+     * This method generates an arrayList of ship collision boxes that the player is colliding
      * with
      */
-    public static ArrayList<Polygon> getCollidingPolygonsAndDoBlockCols(Entity entity, Vec3d velocity) {
-        ArrayList<Polygon> collisions = new ArrayList<Polygon>();
+    public static ArrayList<ShipCollisionBox> getCollidingPolygonsAndDoBlockCols(Entity entity, Vec3d velocity) {
+        ArrayList<ShipCollisionBox> collisions = new ArrayList<>();
 
         IShipWorld shipWorld = entity.getEntityWorld().getCapability(VSCapabilityRegistry.VS_SHIP_WORLD, null);
         if (shipWorld == null) return collisions;
@@ -489,7 +476,7 @@ public class EntityCollisionInjector {
         // and the Player
         for (PhysicsObject wrapper : ships) {
             try {
-                Polygon playerInLocal = new Polygon(entityBB,
+                TransformedAABB playerInLocal = new TransformedAABB(entityBB,
                     wrapper.getShipTransformationManager()
                         .getCurrentTickTransform(),
                     TransformType.GLOBAL_TO_SUBSPACE);
@@ -507,7 +494,7 @@ public class EntityCollisionInjector {
                 }
 
                 for (AxisAlignedBB inLocal : collidingBBs) {
-                    ShipPolygon poly = new ShipPolygon(inLocal,
+                    ShipCollisionBox poly = new ShipCollisionBox(inLocal,
                         wrapper.getShipTransformationManager()
                             .getCurrentTickTransform(),
                         TransformType.SUBSPACE_TO_GLOBAL,
@@ -618,7 +605,7 @@ public class EntityCollisionInjector {
         if (!isSpectator) {
             final AxisAlignedBB bb = entity.getEntityBoundingBox();
             for (PhysicsObject physicsObject : collidingShips) {
-                final Polygon playerPolyInShip = new Polygon(bb, physicsObject.getShipTransform(), TransformType.GLOBAL_TO_SUBSPACE);
+                final TransformedAABB playerPolyInShip = new TransformedAABB(bb, physicsObject.getShipTransform(), TransformType.GLOBAL_TO_SUBSPACE);
 
                 final AxisAlignedBB playerPolyInShipBB = playerPolyInShip.getEnclosedAABB();
 
@@ -640,6 +627,18 @@ public class EntityCollisionInjector {
             }
         }
         return ladderCollisions;
+    }
+
+    static class ShipCollisionBox extends TransformedAABB {
+
+        final Vector3dc[] normals;
+        final PhysicsObject shipFrom;
+
+        ShipCollisionBox(AxisAlignedBB bb, ShipTransform transformation, TransformType type, Vector3dc[] normals, PhysicsObject shipFrom) {
+            super(bb, transformation, type);
+            this.normals = normals;
+            this.shipFrom = shipFrom;
+        }
     }
 
 }

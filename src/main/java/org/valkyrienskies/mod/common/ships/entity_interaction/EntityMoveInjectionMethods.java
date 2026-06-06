@@ -19,11 +19,10 @@ import java.util.Optional;
  */
 public class EntityMoveInjectionMethods {
 
-    public static IntermediateMovementVariableStorage handleMove(MoverType type, double dx,
-        double dy, double dz, Entity this_) {
-        if (this_ instanceof EntityPlayer && ((EntityPlayer) this_).isSpectator()) {
-            return null;
-        }
+    public static IntermediateMovementVariableStorage handleMove(
+            MoverType type, double dx, double dy, double dz, Entity this_
+    ) {
+        if (this_ instanceof EntityPlayer && ((EntityPlayer) this_).isSpectator()) return null;
 
         double movDistSq = (dx * dx) + (dy * dy) + (dz * dz);
 
@@ -36,9 +35,7 @@ public class EntityMoveInjectionMethods {
             Optional<PhysicsObject> physicsObject = ValkyrienUtils
                 .getPhysoManagingBlock(this_.world, newPosInBlock);
 
-            if (!physicsObject.isPresent()) {
-                return null;
-            }
+            if (physicsObject.isEmpty()) return null;
 
             Vector3d endPos = new Vector3d(newX, newY, newZ);
             physicsObject.get()

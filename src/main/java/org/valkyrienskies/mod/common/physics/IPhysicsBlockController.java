@@ -1,10 +1,9 @@
-package org.valkyrienskies.mod.common.physicsOld;
+package org.valkyrienskies.mod.common.physics;
 
 import net.minecraft.util.math.BlockPos;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 
 public interface IPhysicsBlockController extends Comparable<IPhysicsBlockController> {
-
     int getPriority();
 
     void setPriority(int newPriority);

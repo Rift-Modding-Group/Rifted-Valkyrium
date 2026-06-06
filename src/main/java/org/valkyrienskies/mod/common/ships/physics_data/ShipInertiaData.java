@@ -11,7 +11,6 @@ import javax.annotation.Nonnull;
  * Stores the data of the ship mas and inertia matrix.
  */
 public class ShipInertiaData {
-
     double gameTickMass = 0;
     @Nonnull
     Matrix3dc gameMoITensor = new Matrix3d();

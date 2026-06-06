@@ -208,10 +208,6 @@ public class VSConfig extends VSConfigTemplate {
     })
     public static String[] blockMass = {"minecraft:grass=LIGHT", "minecraft:obsidian=VERY_HEAVY"};
 
-    public static Vector3dc gravity() {
-        return new Vector3d(gravityVecX, gravityVecY, gravityVecZ);
-    }
-
     /**
      * Synchronizes the data in this class and the data in the forge configuration
      */
