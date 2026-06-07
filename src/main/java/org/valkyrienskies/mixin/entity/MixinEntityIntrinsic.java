@@ -1,6 +1,7 @@
 package org.valkyrienskies.mixin.entity;
 
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityList;
 import net.minecraft.entity.MoverType;
 import net.minecraft.world.World;
 import org.joml.Vector3d;
@@ -11,6 +12,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
+import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.entity.EntityShipMovementData;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityCollisionInjector;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityCollisionInjector.IntermediateMovementVariableStorage;
@@ -48,7 +50,7 @@ public abstract class MixinEntityIntrinsic {
         Entity thisEntity = (Entity) ((Object) this);
 
         // Only run this code if Minecraft invoked move().
-        if (didMinecraftInvokeMove) {
+        if (!VSConfig.collisionTransparentEntitiesSet.contains(EntityList.getKey(thisEntity)) && didMinecraftInvokeMove) {
             alteredMovement = EntityMoveInjectionMethods
                 .handleMove(type, dx, dy, dz, thisEntity);
             if (alteredMovement != null) {

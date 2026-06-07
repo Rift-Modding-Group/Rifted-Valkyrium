@@ -34,6 +34,8 @@ import valkyrienwarfare.api.TransformType;
 
 import java.util.*;
 
+import static org.valkyrienskies.mod.common.util.ValkyrienUtils.getEntityShipMovementDataFor;
+
 @Mixin(value = NetHandlerPlayServer.class)
 public abstract class MixinNetHandlerPlayServer {
 
@@ -113,7 +115,12 @@ public abstract class MixinNetHandlerPlayServer {
                     target = "Lnet/minecraft/world/WorldServer;getCollisionBoxes(Lnet/minecraft/entity/Entity;Lnet/minecraft/util/math/AxisAlignedBB;)Ljava/util/List;"
             ))
     private List<AxisAlignedBB> removeStuckInBlockMovementCheck(WorldServer worldServer, Entity entityIn, AxisAlignedBB aabb) {
-        return ImmutableList.of();
+        EntityShipMovementData entityShipMovementData = getEntityShipMovementDataFor(player);
+        if (entityShipMovementData.getLastTouchedShip() != null) {
+            return ImmutableList.of();
+        } else {
+            return player.getServerWorld().getCollisionBoxes(player, player.getEntityBoundingBox().shrink(0.0625F));
+        }
     }
 
     /**
@@ -126,7 +133,12 @@ public abstract class MixinNetHandlerPlayServer {
                     ordinal = 1
             ))
     private double allowMovementToBeVeryWrong(double originalConstant) {
-        return 10;
+        EntityShipMovementData entityShipMovementData = getEntityShipMovementDataFor(player);
+        if (entityShipMovementData.getLastTouchedShip() != null) {
+            return 10;
+        } else {
+            return 0.0625;
+        }
     }
 
     /**
@@ -202,20 +214,21 @@ public abstract class MixinNetHandlerPlayServer {
             final double playerPitchInGlobal = pitchYawTuple.getFirst();
             final double playerYawInGlobal = pitchYawTuple.getSecond();
 
-            // Idk if this is needed, but I'm too bothered to change it
-            packetPlayer.moving = true;
+            if (lastTouchedShip != null) {
+                packetPlayer.moving = true;
 
-            // Then update the packet values to match the ones above.
-            packetPlayer.x = playerPosInShip.x();
-            packetPlayer.y = playerPosInShip.y();
-            packetPlayer.z = playerPosInShip.z();
-            packetPlayer.yaw = (float) playerYawInGlobal;
-            packetPlayer.pitch = (float) playerPitchInGlobal;
+                // Then update the packet values to match the ones above.
+                packetPlayer.x = playerPosInShip.x();
+                packetPlayer.y = playerPosInShip.y();
+                packetPlayer.z = playerPosInShip.z();
+                packetPlayer.yaw = (float) playerYawInGlobal;
+                packetPlayer.pitch = (float) playerPitchInGlobal;
 
-            // Set the player motion values to tell the NetHandlerPlayServer that the player is allowed to move this fast.
-            this.player.motionX = packetPlayer.x - this.firstGoodX;
-            this.player.motionY = packetPlayer.y - this.firstGoodY;
-            this.player.motionZ = packetPlayer.z - this.firstGoodZ;
+                // Set the player motion values to tell the NetHandlerPlayServer that the player is allowed to move this fast.
+                this.player.motionX = packetPlayer.x - this.firstGoodX;
+                this.player.motionY = packetPlayer.y - this.firstGoodY;
+                this.player.motionZ = packetPlayer.z - this.firstGoodZ;
+            }
 
             // Update the player draggable
             IEntityShipDraggable entityShipDraggable = this.player.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);

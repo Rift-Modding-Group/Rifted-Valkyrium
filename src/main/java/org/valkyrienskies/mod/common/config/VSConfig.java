@@ -1,5 +1,7 @@
 package org.valkyrienskies.mod.common.config;
 
+import com.google.common.collect.Sets;
+import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.common.config.Config;
 import net.minecraftforge.common.config.Config.*;
 import net.minecraftforge.common.config.ConfigManager;
@@ -10,6 +12,10 @@ import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.command.config.ShortName;
+
+import java.util.Arrays;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 // NOTE: When updating names/comments remember to update them in the lang files.
 @SuppressWarnings("WeakerAccess") // NOTE: Any forge config option MUST be "public"
@@ -151,6 +157,17 @@ public class VSConfig extends VSConfigTemplate {
     @Comment("Prevents rain from going inside ships. Warning: mildly laggy")
     public static boolean accurateRain = true;
 
+    @Name("No Fall Damage")
+    @Comment("Prevents entities to take fall damage when on ship")
+    public static boolean noFallDamageOnShip = true;
+
+    @Name("Collision Transparent Entities")
+    @Comment("Entities which should move through ships without stopping")
+    public static String[] collisionTransparentEntities = {"tfc:falling_block"};
+
+    @Ignore
+    public static Set<ResourceLocation> collisionTransparentEntitiesSet;
+
     @Name("Multithreading Settings")
     @ShortName("multithreadingSettings")
     @Comment("For advanced users only")
@@ -218,6 +235,15 @@ public class VSConfig extends VSConfigTemplate {
     public static void sync() {
         ConfigManager.sync(ValkyrienSkiesMod.MOD_ID, Type.INSTANCE);
         VSConfig.onSync();
+        updateCached();
+    }
+
+    private static void updateCached() {
+        collisionTransparentEntitiesSet = Arrays.stream(collisionTransparentEntities).map(ResourceLocation::new).collect(Collectors.toSet());
+    }
+
+    static {
+        updateCached();
     }
 
     @Mod.EventBusSubscriber(modid = ValkyrienSkiesMod.MOD_ID)

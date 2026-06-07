@@ -292,6 +292,7 @@ public class WorldServerShipManager implements IPhysObjectWorld {
                 // THIS IS TEMP because its extremely inefficient.
                 // Come up with a clever way to let clients figure this out in the future.
                 world.notifyBlockUpdate(srcLocationPos, srcState, Blocks.AIR.getDefaultState(), 3);
+                world.notifyNeighborsOfStateChange(srcLocationPos, Blocks.AIR, false);
 
                 // Finally, delete the old IBlockState and TileEntity from the old Chunk
                 chunkToSet.getBlockStorageArray()[storageIndex]

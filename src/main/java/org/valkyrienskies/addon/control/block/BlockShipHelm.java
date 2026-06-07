@@ -17,6 +17,7 @@ import net.minecraft.util.text.TextFormatting;
 import net.minecraft.world.World;
 import org.valkyrienskies.addon.control.tileentity.TileEntityShipHelm;
 import org.valkyrienskies.mod.common.block.BlockPilotableBasic;
+import org.valkyrienskies.mod.common.piloting.ITileEntityPilotable;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -86,4 +87,14 @@ public class BlockShipHelm extends BlockNodeControlBasic {
         return new TileEntityShipHelm();
     }
 
+    @Override
+    public void breakBlock(World worldIn, BlockPos pos, IBlockState state) {
+        if (!worldIn.isRemote) {
+            TileEntity tileIn = worldIn.getTileEntity(pos);
+            if (tileIn instanceof ITileEntityPilotable) {
+                ((ITileEntityPilotable) tileIn).setPilotEntity(null);
+            }
+        }
+        super.breakBlock(worldIn, pos, state);
+    }
 }

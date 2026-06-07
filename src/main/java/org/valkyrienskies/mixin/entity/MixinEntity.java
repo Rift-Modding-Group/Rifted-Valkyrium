@@ -4,6 +4,7 @@ import net.minecraft.block.material.Material;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.MoverType;
 import net.minecraft.entity.item.EntityBoat;
+import net.minecraft.util.DamageSource;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
@@ -18,6 +19,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
+import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityShipMountData;
@@ -26,6 +28,8 @@ import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import valkyrienwarfare.api.TransformType;
 
 import java.util.Optional;
+
+import static org.valkyrienskies.mod.common.util.ValkyrienUtils.getLastShipTouchedByEntity;
 
 @Mixin(Entity.class)
 public abstract class MixinEntity {
@@ -176,7 +180,7 @@ public abstract class MixinEntity {
 
     @Redirect(method = "createRunningParticles", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/math/MathHelper;floor(D)I", ordinal = 0))
     private int runningParticlesFirstFloor(double d) {
-        final ShipData lastTouchedShip = ValkyrienUtils.getLastShipTouchedByEntity(thisAsEntity);
+        final ShipData lastTouchedShip = getLastShipTouchedByEntity(thisAsEntity);
         if (lastTouchedShip == null) {
             searchVector = null;
             return MathHelper.floor(d);
@@ -281,5 +285,16 @@ public abstract class MixinEntity {
         if (entityShipDraggable == null || !entityShipDraggable.getInAirPocket()) return;
 
         cir.setReturnValue(false);
+    }
+
+    @Inject(method = "isEntityInvulnerable", at = @At("HEAD"), cancellable = true)
+    private void isEntityInvulnerable(DamageSource damageSource, CallbackInfoReturnable<Boolean> cir) {
+        if (VSConfig.noFallDamageOnShip && damageSource == DamageSource.FALL) {
+            final ShipData lastTouchedShip = getLastShipTouchedByEntity(thisAsEntity);
+
+            if (lastTouchedShip != null) {
+                cir.setReturnValue(true);
+            }
+        }
     }
 }
