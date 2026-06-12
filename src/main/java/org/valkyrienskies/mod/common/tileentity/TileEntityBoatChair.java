@@ -16,6 +16,10 @@ import valkyrienwarfare.api.TransformType;
 
 import javax.annotation.Nullable;
 
+/**
+ * note to self: still not decided on if boat chairs should force ship to
+ * balance like on captains chair
+ * */
 public class TileEntityBoatChair extends TileEntityPilotableImpl {
     private static final double MAX_LINEAR_VELOCITY = 12;
     private static final double MAX_ANGULAR_VELOCITY = Math.PI / 2;
@@ -25,6 +29,22 @@ public class TileEntityBoatChair extends TileEntityPilotableImpl {
 
     private Vector3dc targetLinearVelocity = new Vector3d();
     private Vector3dc targetAngularVelocity = new Vector3d();
+
+    @Override
+    public void onStopTileUsage() {
+        this.targetLinearVelocity = new Vector3d();
+        this.targetAngularVelocity = new Vector3d();
+
+        //stop all active velocities and forces
+        PhysicsObject physicsObject = this.getParentPhysicsEntity();
+        if (physicsObject != null) {
+            PhysicsCalculations physicsCalculations = physicsObject.getPhysicsCalculations();
+            physicsCalculations.getLinearVelocity().zero();
+            physicsCalculations.getAngularVelocity().zero();
+            physicsCalculations.getForce().zero();
+            physicsCalculations.getTorque().zero();
+        }
+    }
 
     @Override
     public void processControlMessage(PilotControlsMessage message, EntityPlayerMP sender) {
@@ -61,9 +81,8 @@ public class TileEntityBoatChair extends TileEntityPilotableImpl {
     @Nullable
     public Vector3dc getBlockForceInShipSpace(World world, BlockPos pos, IBlockState state, PhysicsObject physicsObject, double secondsToApply) {
         // Don't add force if theres no pilot
-        if (getPilotEntity() == null) {
-            return null;
-        }
+        if (this.getPilotEntity() == null) return null;
+
         final ShipTransform shipTransform = physicsObject.getShipTransformationManager().getCurrentPhysicsTransform();
 
         final Vector3dc idealLinearVelocity = shipTransform.transformDirectionNew(new Vector3d(targetLinearVelocity), TransformType.SUBSPACE_TO_GLOBAL);
@@ -85,9 +104,8 @@ public class TileEntityBoatChair extends TileEntityPilotableImpl {
     @Nullable
     public Vector3dc getTorqueInGlobal(PhysicsCalculations physicsCalculations) {
         // Don't add force if theres no pilot
-        if (getPilotEntity() == null) {
-            return null;
-        }
+        if (this.getPilotEntity() == null) return null;
+
         final PhysicsObject physicsObject = physicsCalculations.getParent();
         final ShipTransform shipTransform = physicsObject.getShipTransformationManager().getCurrentPhysicsTransform();
 
@@ -120,11 +138,4 @@ public class TileEntityBoatChair extends TileEntityPilotableImpl {
 
         return resultingTorque;
     }
-
-    @Override
-    public void onStopTileUsage() {
-        targetLinearVelocity = new Vector3d();
-        targetAngularVelocity = new Vector3d();
-    }
-
 }

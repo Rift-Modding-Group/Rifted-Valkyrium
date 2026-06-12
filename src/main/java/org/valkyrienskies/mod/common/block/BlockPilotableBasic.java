@@ -10,12 +10,22 @@ import net.minecraft.util.EnumHand;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import org.valkyrienskies.mod.common.piloting.ITileEntityPilotable;
+import org.valkyrienskies.mod.common.tileentity.TileEntityPilotableImpl;
 import org.valkyrienskies.mod.common.util.BaseBlock;
 
 public abstract class BlockPilotableBasic extends BaseBlock implements ITileEntityProvider {
     public BlockPilotableBasic(String name, Material mat, float hardness) {
         super(name, mat, 0.0F, true);
         this.setHardness(hardness);
+    }
+
+    @Override
+    public void breakBlock(World worldIn, BlockPos pos, IBlockState state) {
+        TileEntity tileEntity = worldIn.getTileEntity(pos);
+        if (tileEntity instanceof TileEntityPilotableImpl pilotable && !pilotable.isInvalid()) {
+            pilotable.onBlockBroken();
+        }
+        super.breakBlock(worldIn, pos, state);
     }
 
     @Override

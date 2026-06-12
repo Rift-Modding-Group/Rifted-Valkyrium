@@ -3,12 +3,18 @@ package org.valkyrienskies.mod.common.tileentity;
 import java.util.Optional;
 import java.util.UUID;
 
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumFacing;
+import net.minecraft.util.math.BlockPos;
 import org.joml.Vector3d;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
+import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
+import org.valkyrienskies.mod.common.capability.ship_pilot.IShipPilot;
+import org.valkyrienskies.mod.common.entity.EntityMountable;
+import org.valkyrienskies.mod.common.network.MessagePlayerStoppedPiloting;
 import org.valkyrienskies.mod.common.network.MessageStartPiloting;
 import org.valkyrienskies.mod.common.network.MessageStopPiloting;
 import org.valkyrienskies.mod.common.piloting.ITileEntityPilotable;
@@ -73,6 +79,20 @@ public abstract class TileEntityPilotableImpl extends TileEntity implements ITil
     public final PhysicsObject getParentPhysicsEntity() {
         Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(world, pos);
         return physicsObject.orElse(null);
+    }
+
+    @Override
+    public void onBlockBroken() {
+        EntityPlayer pilot = this.getPilotEntity();
+        if (pilot == null) return;
+
+        //delete the entity associated w the chair
+        Entity mount = pilot.getRidingEntity();
+        pilot.dismountRidingEntity();
+        if (mount instanceof EntityMountable) mount.setDead();
+
+        //stop player piloting
+        this.setPilotEntity(null);
     }
 
     // Always call this before setting the pilotPlayerEntity to equal newPilot

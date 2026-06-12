@@ -35,7 +35,6 @@ import java.util.List;
 import java.util.Optional;
 
 public class BlockCaptainsChair extends BlockPilotableBasic implements IBlockForceProvider {
-
     public static final PropertyDirection FACING = BlockHorizontal.FACING;
 
     public BlockCaptainsChair() {
@@ -86,15 +85,6 @@ public class BlockCaptainsChair extends BlockPilotableBasic implements IBlockFor
         playerIn.posZ = playerPos.z;
 
         return true;
-    }
-
-    @Override
-    public void breakBlock(World worldIn, BlockPos pos, IBlockState state) {
-        TileEntity captainsChair = worldIn.getTileEntity(pos);
-        if (captainsChair instanceof TileEntityCaptainsChair && !captainsChair.isInvalid()) {
-            ((TileEntityCaptainsChair) captainsChair).onBlockBroken(state);
-        }
-        super.breakBlock(worldIn, pos, state);
     }
 
     @Override

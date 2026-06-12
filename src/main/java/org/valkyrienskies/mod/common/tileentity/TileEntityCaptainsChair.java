@@ -1,6 +1,7 @@
 package org.valkyrienskies.mod.common.tileentity;
 
 import net.minecraft.block.state.IBlockState;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.util.ITickable;
 import net.minecraft.util.math.BlockPos;
@@ -9,6 +10,7 @@ import org.joml.Matrix3d;
 import org.joml.Vector3d;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.block.BlockCaptainsChair;
+import org.valkyrienskies.mod.common.entity.EntityMountable;
 import org.valkyrienskies.mod.common.physics.PhysicsCalculations;
 import org.valkyrienskies.mod.common.piloting.PilotControls;
 import org.valkyrienskies.mod.common.piloting.PilotControlsMessage;
@@ -16,21 +18,6 @@ import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import valkyrienwarfare.api.TransformType;
 
 public class TileEntityCaptainsChair extends TileEntityPilotableImpl implements ITickable {
-    public void processControlMessage(PilotControlsMessage message, EntityPlayerMP sender) {
-        IBlockState blockState = this.getWorld().getBlockState(getPos());
-        if (blockState.getBlock() != ValkyrienSkiesMod.INSTANCE.captainsChair) {
-            this.setPilotEntity(null);
-            return;
-        }
-
-        PhysicsObject physicsObject = this.getParentPhysicsEntity();
-        if (physicsObject == null) return;
-
-        this.processCalculationsForControlMessageAndApplyCalculations(
-                physicsObject, message, blockState
-        );
-    }
-
     @Override
     public final void onStartTileUsage() {
         this.applyChairStabilization(false);
@@ -40,7 +27,7 @@ public class TileEntityCaptainsChair extends TileEntityPilotableImpl implements 
     public final void onStopTileUsage() {
         this.applyChairStabilization(true);
 
-        //stop all velocities and forces
+        //stop all active velocities and forces
         PhysicsObject physicsObject = this.getParentPhysicsEntity();
         if (physicsObject != null) {
             PhysicsCalculations physicsCalculations = physicsObject.getPhysicsCalculations();
@@ -98,7 +85,11 @@ public class TileEntityCaptainsChair extends TileEntityPilotableImpl implements 
         }
     }
 
-    public void onBlockBroken(IBlockState state) {
+    @Override
+    public void onBlockBroken() {
+        super.onBlockBroken();
+
+        //revert to normal ship behavior
         PhysicsObject physicsObject = this.getParentPhysicsEntity();
         if (physicsObject != null && !this.hasAnotherCaptainsChair(physicsObject)) {
             physicsObject.getPhysicsCalculations().actAsArchimedes = false;
@@ -117,15 +108,22 @@ public class TileEntityCaptainsChair extends TileEntityPilotableImpl implements 
         return false;
     }
 
-    private void processCalculationsForControlMessageAndApplyCalculations(
-            PhysicsObject controlledShip, PilotControlsMessage message, IBlockState state
-    ) {
-        if (controlledShip.isShipAligningToGrid()) return;
+    @Override
+    public void processControlMessage(PilotControlsMessage message, EntityPlayerMP sender) {
+        IBlockState blockState = this.getWorld().getBlockState(getPos());
+        if (blockState.getBlock() != ValkyrienSkiesMod.INSTANCE.captainsChair) {
+            this.setPilotEntity(null);
+            return;
+        }
+
+        PhysicsObject physicsObject = this.getParentPhysicsEntity();
+        if (physicsObject == null) return;
+        if (physicsObject.isShipAligningToGrid()) return;
 
         BlockPos chairPosition = this.getPos();
 
         double pilotPitch = 0D;
-        double pilotYaw = ((BlockCaptainsChair) state.getBlock()).getChairYaw(state, chairPosition);
+        double pilotYaw = ((BlockCaptainsChair) blockState.getBlock()).getChairYaw(blockState, chairPosition);
         double pilotRoll = 0D;
 
         Matrix3d pilotRotationMatrix = new Matrix3d();
@@ -154,10 +152,10 @@ public class TileEntityCaptainsChair extends TileEntityPilotableImpl implements 
             idealLinearVelocity.sub(playerDirection);
         }
 
-        controlledShip.getShipTransformationManager().getCurrentTickTransform()
-            .transformDirection(idealLinearVelocity, TransformType.SUBSPACE_TO_GLOBAL);
-        controlledShip.getShipTransformationManager().getCurrentTickTransform()
-            .transformDirection(shipUp, TransformType.SUBSPACE_TO_GLOBAL);
+        physicsObject.getShipTransformationManager().getCurrentTickTransform()
+                .transformDirection(idealLinearVelocity, TransformType.SUBSPACE_TO_GLOBAL);
+        physicsObject.getShipTransformationManager().getCurrentTickTransform()
+                .transformDirection(shipUp, TransformType.SUBSPACE_TO_GLOBAL);
 
         if (PilotControls.controlIsPressed(message.getUsedControls(), PilotControls.UP)) {
             idealLinearVelocity.add(upDirection.mul(0.5, new Vector3d()));
@@ -178,8 +176,8 @@ public class TileEntityCaptainsChair extends TileEntityPilotableImpl implements 
         }
 
         Vector3d sidesRotationAxis = new Vector3d(playerDirection);
-        controlledShip.getShipTransformationManager().getCurrentTickTransform()
-            .transformDirection(sidesRotationAxis, TransformType.SUBSPACE_TO_GLOBAL);
+        physicsObject.getShipTransformationManager().getCurrentTickTransform()
+                .transformDirection(sidesRotationAxis, TransformType.SUBSPACE_TO_GLOBAL);
 
         AxisAngle4d rotationSidesTransform = new AxisAngle4d(Math.toRadians(sidePitch), sidesRotationAxis.x, sidesRotationAxis.y,
                 sidesRotationAxis.z);
@@ -202,15 +200,15 @@ public class TileEntityCaptainsChair extends TileEntityPilotableImpl implements 
             idealLinearVelocity.mul(2);
         }
 
-        double lerpFactor = .2;
-        Vector3d linearMomentumDif = controlledShip.getPhysicsCalculations().getLinearVelocity().sub(idealLinearVelocity, new Vector3d());
+        double lerpFactor = 0.2;
+        Vector3d linearMomentumDif = physicsObject.getPhysicsCalculations().getLinearVelocity().sub(idealLinearVelocity, new Vector3d());
 
-        Vector3d angularVelocityDif = controlledShip.getPhysicsCalculations().getAngularVelocity().sub(idealAngularDirection, new Vector3d());
+        Vector3d angularVelocityDif = physicsObject.getPhysicsCalculations().getAngularVelocity().sub(idealAngularDirection, new Vector3d());
 
         linearMomentumDif.mul(lerpFactor);
         angularVelocityDif.mul(lerpFactor);
 
-        controlledShip.getPhysicsCalculations().getLinearVelocity().sub(linearMomentumDif);
-        controlledShip.getPhysicsCalculations().getAngularVelocity().sub(angularVelocityDif);
+        physicsObject.getPhysicsCalculations().getLinearVelocity().sub(linearMomentumDif);
+        physicsObject.getPhysicsCalculations().getAngularVelocity().sub(angularVelocityDif);
     }
 }
