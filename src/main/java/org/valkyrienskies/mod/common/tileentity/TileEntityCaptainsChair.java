@@ -2,7 +2,6 @@ package org.valkyrienskies.mod.common.tileentity;
 
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.ITickable;
 import net.minecraft.util.math.BlockPos;
 import org.joml.AxisAngle4d;
@@ -17,8 +16,6 @@ import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import valkyrienwarfare.api.TransformType;
 
 public class TileEntityCaptainsChair extends TileEntityPilotableImpl implements ITickable {
-    private boolean maintainYDisplacement;
-
     public void processControlMessage(PilotControlsMessage message, EntityPlayerMP sender) {
         IBlockState blockState = this.getWorld().getBlockState(getPos());
         if (blockState.getBlock() != ValkyrienSkiesMod.INSTANCE.captainsChair) {
@@ -36,61 +33,88 @@ public class TileEntityCaptainsChair extends TileEntityPilotableImpl implements 
 
     @Override
     public final void onStartTileUsage() {
-        this.maintainYDisplacement = true;
-        this.markDirty();
-        PhysicsObject physicsObject = this.getParentPhysicsEntity();
-        if (physicsObject != null) {
-            physicsObject.getPhysicsCalculations().actAsArchimedes = true;
-        }
+        this.applyChairStabilization(false);
     }
 
     @Override
     public final void onStopTileUsage() {
-        this.maintainYDisplacement = true;
-        this.markDirty();
-        this.applyYDisplacementHold();
+        this.applyChairStabilization(true);
+
+        //stop all velocities and forces
+        PhysicsObject physicsObject = this.getParentPhysicsEntity();
+        if (physicsObject != null) {
+            PhysicsCalculations physicsCalculations = physicsObject.getPhysicsCalculations();
+            physicsCalculations.getLinearVelocity().zero();
+            physicsCalculations.getAngularVelocity().zero();
+            physicsCalculations.getForce().zero();
+            physicsCalculations.getTorque().zero();
+        }
     }
 
     @Override
     public void update() {
-        if (this.getWorld().isRemote || !this.maintainYDisplacement || this.getPilotEntity() != null) return;
-        this.applyYDisplacementHold();
+        if (this.getWorld().isRemote) return;
+        this.applyChairStabilization(this.getPilotEntity() == null);
     }
 
     /**
      * This ensures that the ship this chair is attached to maintains its y position when in the air.
-     * Must be ticked and upon dismounting.
+     * Must be ticked while the chair is on a ship.
      * */
-    private void applyYDisplacementHold() {
+    private void applyChairStabilization(boolean holdYDisplacement) {
         PhysicsObject physicsObject = this.getParentPhysicsEntity();
         if (physicsObject != null) {
             PhysicsCalculations physicsCalculations = physicsObject.getPhysicsCalculations();
             physicsCalculations.actAsArchimedes = true;
-            physicsCalculations.getLinearVelocity().y = 0;
+
+            //apply angular stabilization
+            Vector3d shipUp = new Vector3d(0, 1, 0);
+            physicsObject.getShipTransformationManager()
+                    .getCurrentPhysicsTransform()
+                    .transformDirection(shipUp, TransformType.SUBSPACE_TO_GLOBAL);
+
+            Vector3d idealUp = new Vector3d(0, 1, 0);
+            Vector3d targetAngularVelocity = new Vector3d();
+            double angleBetween = shipUp.angle(idealUp);
+            if (angleBetween > 0.01D) {
+                Vector3d correctionAxis = shipUp.cross(idealUp, new Vector3d());
+                if (correctionAxis.lengthSquared() > PhysicsCalculations.EPSILON) {
+                    correctionAxis.normalize();
+                    targetAngularVelocity.set(correctionAxis).mul(angleBetween * 2D);
+                }
+            }
+
+            Vector3d angularVelocity = physicsCalculations.getAngularVelocity();
+            Vector3d stabilizationDifference = new Vector3d(
+                    angularVelocity.x - targetAngularVelocity.x,
+                    0,
+                    angularVelocity.z - targetAngularVelocity.z
+            );
+            stabilizationDifference.mul(0.2D);
+            angularVelocity.sub(stabilizationDifference);
+
+            //hold y displacement (aka block ship from falling)
+            if (holdYDisplacement) physicsCalculations.getLinearVelocity().y = 0;
         }
-    }
-
-    @Override
-    public NBTTagCompound writeToNBT(NBTTagCompound compound) {
-        NBTTagCompound toReturn = super.writeToNBT(compound);
-        compound.setBoolean("maintainYDisplacement", this.maintainYDisplacement);
-        return toReturn;
-    }
-
-    @Override
-    public void readFromNBT(NBTTagCompound compound) {
-        super.readFromNBT(compound);
-        this.maintainYDisplacement = compound.getBoolean("maintainYDisplacement");
     }
 
     public void onBlockBroken(IBlockState state) {
-        this.maintainYDisplacement = false;
-        this.markDirty();
-
         PhysicsObject physicsObject = this.getParentPhysicsEntity();
-        if (physicsObject != null) {
+        if (physicsObject != null && !this.hasAnotherCaptainsChair(physicsObject)) {
             physicsObject.getPhysicsCalculations().actAsArchimedes = false;
         }
+    }
+
+    //make sure theres no other captains chairs
+    private boolean hasAnotherCaptainsChair(PhysicsObject physicsObject) {
+        for (BlockPos blockPos : physicsObject.getBlockPositions()) {
+            if (blockPos.equals(this.getPos())) continue;
+            IBlockState blockState = physicsObject.getWorld().getBlockState(blockPos);
+            if (blockState.getBlock() == ValkyrienSkiesMod.INSTANCE.captainsChair) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void processCalculationsForControlMessageAndApplyCalculations(

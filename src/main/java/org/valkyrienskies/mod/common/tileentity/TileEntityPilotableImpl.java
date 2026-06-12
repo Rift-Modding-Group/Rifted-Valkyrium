@@ -23,9 +23,7 @@ import javax.annotation.Nullable;
  * A basic implementation of the ITileEntityPilotable interface, other tile entities can extend this
  * for easy controls.
  */
-public abstract class TileEntityPilotableImpl extends TileEntity implements
-    ITileEntityPilotable {
-
+public abstract class TileEntityPilotableImpl extends TileEntity implements ITileEntityPilotable {
     // Do NOT make this a reference to pilotPlayerEntity.
     @Nullable
     private UUID pilotPlayerEntity;
@@ -50,9 +48,9 @@ public abstract class TileEntityPilotableImpl extends TileEntity implements
 
     @Override
     public final void setPilotEntity(EntityPlayer toSet) {
-        if (!getWorld().isRemote) {
+        if (!this.getWorld().isRemote) {
             EntityPlayer oldPlayer = getPilotEntity();
-            sendPilotUpdatePackets((EntityPlayerMP) toSet, (EntityPlayerMP) oldPlayer);
+            this.sendPilotUpdatePackets((EntityPlayerMP) toSet, (EntityPlayerMP) oldPlayer);
         }
         if (toSet != null) {
             this.pilotPlayerEntity = toSet.getUniqueID();
@@ -66,7 +64,7 @@ public abstract class TileEntityPilotableImpl extends TileEntity implements
 
     @Override
     public final void playerWantsToStopPiloting(EntityPlayer player) {
-        if (player == getPilotEntity()) {
+        if (player == this.getPilotEntity()) {
             this.setPilotEntity(null);
         }
     }

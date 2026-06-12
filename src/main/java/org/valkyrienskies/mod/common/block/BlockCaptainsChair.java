@@ -24,6 +24,7 @@ import net.minecraftforge.fml.relauncher.SideOnly;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.valkyrienskies.mod.common.entity.EntityShipMovementData;
+import org.valkyrienskies.mod.common.physics.PhysicsCalculations;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.tileentity.TileEntityCaptainsChair;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
@@ -33,7 +34,7 @@ import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Optional;
 
-public class BlockCaptainsChair extends BlockPilotableBasic {
+public class BlockCaptainsChair extends BlockPilotableBasic implements IBlockForceProvider {
 
     public static final PropertyDirection FACING = BlockHorizontal.FACING;
 
@@ -94,6 +95,31 @@ public class BlockCaptainsChair extends BlockPilotableBasic {
             ((TileEntityCaptainsChair) captainsChair).onBlockBroken(state);
         }
         super.breakBlock(worldIn, pos, state);
+    }
+
+    @Override
+    @Nullable
+    public Vector3dc getBlockForceInShipSpace(
+            World world,
+            BlockPos pos,
+            IBlockState state,
+            PhysicsObject physicsObject,
+            double secondsToApply
+    ) {
+        PhysicsCalculations physicsCalculations = physicsObject.getPhysicsCalculations();
+        physicsCalculations.actAsArchimedes = true;
+
+        TileEntity tileEntity = world.getTileEntity(pos);
+        if (!(tileEntity instanceof TileEntityCaptainsChair captainsChair) || captainsChair.getPilotEntity() == null) {
+            physicsCalculations.getLinearVelocity().y = 0;
+        }
+
+        return null;
+    }
+
+    @Override
+    public boolean shouldLocalForceBeRotated(World world, BlockPos pos, IBlockState state, double secondsToApply) {
+        return false;
     }
 
     @Override

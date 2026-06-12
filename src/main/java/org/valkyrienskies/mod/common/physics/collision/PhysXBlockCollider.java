@@ -8,6 +8,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.NotNull;
 import org.valkyrienskies.mod.common.physics.PhysXCollisionFilters;
+import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import physx.common.PxTransform;
 import physx.physics.PxMaterial;
 import physx.physics.PxPhysics;
@@ -19,22 +20,39 @@ import physx.physics.PxShapeFlagEnum;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 /**
  * Information involving the blockpos to collide with the ship is contained here.
  * */
 public class PhysXBlockCollider extends AbstractPhysXCollisionObject {
+    public static final double ACTOR_SCAN_GROW = 3D;
+
+    @NotNull
+    private final World world;
+    @NotNull
     private final BlockPos pos;
+    @NotNull
+    private final IBlockState state;
     private final boolean liquid;
+    @NotNull
     private final PxRigidStatic actor;
     @NotNull
     private final PxMaterial material;
     private final int stateHash;
 
-    public PhysXBlockCollider(@NotNull PxPhysics physics, @NotNull PxScene scene, World world, BlockPos pos, IBlockState state) {
+    public PhysXBlockCollider(
+            @NotNull PxPhysics physics,
+            @NotNull PxScene scene,
+            @NotNull World world,
+            @NotNull BlockPos pos,
+            @NotNull IBlockState state
+    ) {
         super(physics, scene);
+        this.world = world;
         this.pos = pos.toImmutable();
+        this.state = state;
         this.liquid = isLiquid(state);
         this.material = physics.createMaterial(0.8f, 0.8f, 0.02f);
         this.stateHash = state.hashCode();
@@ -53,18 +71,64 @@ public class PhysXBlockCollider extends AbstractPhysXCollisionObject {
         return this.stateHash == state.hashCode() && this.liquid == isLiquid(state);
     }
 
-    public boolean isLiquid() {
-        return this.liquid;
+    @NotNull
+    public World getWorld() {
+        return this.world;
     }
 
+    @NotNull
     public BlockPos getPos() {
         return this.pos;
+    }
+
+    @NotNull
+    public IBlockState getState() {
+        return this.state;
     }
 
     @Override
     @NotNull
     public PxMaterial getMaterial() {
         return this.material;
+    }
+
+    @Override
+    public boolean isStillValid(@NotNull World hostWorld, @NotNull Collection<PhysicsObject> shipsWithPhysics) {
+        if (this.world != hostWorld) return false;
+
+        IBlockState currentState = this.world.getBlockState(this.pos);
+        if (!isCollidableWorldState(currentState) || !this.matches(currentState)) {
+            return false;
+        }
+
+        for (PhysicsObject ship : shipsWithPhysics) {
+            AxisAlignedBB shipAabb = ship.getPhysicsTransformAABB();
+            if (shipAabb != null && this.isWithinShipScan(hostWorld, shipAabb)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public void updateBeforeSimulation(
+            @NotNull World hostWorld,
+            @NotNull Collection<PhysicsObject> shipsWithPhysics,
+            @NotNull List<AbstractPhysXCollisionObject> collisionObjects,
+            double timeStep
+    ) {}
+
+    @Override
+    public void updateAfterSimulation(
+            @NotNull World hostWorld,
+            @NotNull Collection<PhysicsObject> shipsWithPhysics,
+            @NotNull List<AbstractPhysXCollisionObject> collisionObjects,
+            double timeStep
+    ) {}
+
+    @Override
+    public boolean isLiquidBlockIntersecting(@NotNull AxisAlignedBB box) {
+        return this.liquid && box.intersects(new AxisAlignedBB(this.pos));
     }
 
     @Override
@@ -75,6 +139,19 @@ public class PhysXBlockCollider extends AbstractPhysXCollisionObject {
 
     @Override //no shapes to release down here xd
     protected void releaseShapes() {}
+
+    private boolean isWithinShipScan(World hostWorld, AxisAlignedBB shipAabb) {
+        AxisAlignedBB scan = shipAabb.grow(ACTOR_SCAN_GROW);
+        int minX = (int) Math.floor(scan.minX);
+        int minY = Math.max(0, (int) Math.floor(scan.minY));
+        int minZ = (int) Math.floor(scan.minZ);
+        int maxX = (int) Math.ceil(scan.maxX);
+        int maxY = Math.min(hostWorld.getHeight() - 1, (int) Math.ceil(scan.maxY));
+        int maxZ = (int) Math.ceil(scan.maxZ);
+        return this.pos.getX() >= minX && this.pos.getX() <= maxX
+                && this.pos.getY() >= minY && this.pos.getY() <= maxY
+                && this.pos.getZ() >= minZ && this.pos.getZ() <= maxZ;
+    }
 
     private void attachBoxShape(AxisAlignedBB worldBox, boolean trigger) {
         PxShape shape = this.createBoxShape(worldBox);
@@ -116,22 +193,26 @@ public class PhysXBlockCollider extends AbstractPhysXCollisionObject {
                 boxes.clear();
             }
         }
-        if (boxes.isEmpty() && (forceFullBlock || state.getMaterial().blocksMovement())) {
-            AxisAlignedBB fallback = getFallbackCollisionBox(world, pos, state);
+        if (boxes.isEmpty()) {
+            AxisAlignedBB fallback = getFallbackCollisionBox(world, pos, state, forceFullBlock);
             if (fallback != null) boxes.add(fallback);
         }
         return boxes;
     }
 
     @Nullable
-    private static AxisAlignedBB getFallbackCollisionBox(World world, BlockPos pos, IBlockState state) {
+    private static AxisAlignedBB getFallbackCollisionBox(World world, BlockPos pos, IBlockState state, boolean forceFullBlock) {
+        if (forceFullBlock) return new AxisAlignedBB(pos);
+
         try {
             AxisAlignedBB local = state.getCollisionBoundingBox(world, pos);
             if (local != null) return local.offset(pos);
         }
         //fall back to a full block below
-        catch (Throwable ignored) {}
+        catch (Throwable ignored) {
+            if (state.getMaterial().blocksMovement()) return new AxisAlignedBB(pos);
+        }
 
-        return new AxisAlignedBB(pos);
+        return null;
     }
 }

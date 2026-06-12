@@ -2,21 +2,15 @@ package org.valkyrienskies.mod.common.physics;
 
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.item.EntityItem;
-import net.minecraft.entity.projectile.EntityFireball;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.init.Blocks;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
-import net.minecraft.world.chunk.Chunk;
 import org.jetbrains.annotations.NotNull;
-import org.joml.Vector3d;
 import org.valkyrienskies.mod.common.config.VSConfig;
+import org.valkyrienskies.mod.common.physics.collision.AbstractPhysXCollisionObject;
 import org.valkyrienskies.mod.common.physics.collision.PhysXBlockCollider;
 import org.valkyrienskies.mod.common.physics.collision.PhysXEntityBody;
 import org.valkyrienskies.mod.common.physics.collision.PhysXShipBody;
-import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import physx.PxTopLevelFunctions;
 import physx.common.PxVec3;
@@ -24,16 +18,10 @@ import physx.physics.PxPhysics;
 import physx.physics.PxScene;
 import physx.physics.PxSceneDesc;
 import physx.physics.PxSceneFlagEnum;
-import valkyrienwarfare.api.TransformType;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 /**
  * One PhysX scene for a loaded Minecraft dimension.
@@ -43,13 +31,6 @@ import java.util.UUID;
 public class PhysXWorldBackend {
     private static final int MAX_WORLD_BLOCK_ACTORS_PER_TICK = 12000;
     private static final int MAX_ENTITY_ACTORS_PER_TICK = 512;
-    private static final int MAX_BUOYANCY_BLOCKS_PER_TICK = 8192;
-    private static final double WORLD_ACTOR_SCAN_GROW = 3D;
-    private static final double ENTITY_ACTOR_SCAN_GROW = 2D;
-    private static final double WATER_DENSITY = 1000D;
-    private static final double WATER_VERTICAL_DAMPING = 1800D;
-    private static final double WATER_HORIZONTAL_DAMPING = 450D;
-    private static final double BLOCK_HALF_EXTENT = 0.5D;
 
     @NotNull
     private final PhysXRuntime runtime;
@@ -58,9 +39,7 @@ public class PhysXWorldBackend {
     @NotNull
     public final PxScene scene;
 
-    private final Map<UUID, PhysXShipBody> shipBodies = new HashMap<>();
-    private final Map<BlockPos, PhysXBlockCollider> worldBlockActors = new HashMap<>();
-    private final Map<Integer, PhysXEntityBody> entityActors = new HashMap<>();
+    private final List<AbstractPhysXCollisionObject> collisionObjects = new ArrayList<>();
     private boolean closed;
 
     public PhysXWorldBackend() {
@@ -91,63 +70,35 @@ public class PhysXWorldBackend {
     public synchronized void update(World hostWorld, Collection<PhysicsObject> shipsWithPhysics, double timeStep) {
         if (this.closed) return;
 
-        this.syncShipActors(shipsWithPhysics);
-        this.syncWorldBlockActors(hostWorld, shipsWithPhysics);
-        this.syncEntityActors(hostWorld, shipsWithPhysics);
+        this.syncCollisionObjects(hostWorld, shipsWithPhysics);
+        this.updateCollisionObjectsBeforeSimulation(hostWorld, shipsWithPhysics, timeStep);
 
-        for (PhysicsObject ship : shipsWithPhysics) {
-            try {
-                ship.getPhysicsCalculations().prePhysXTick(timeStep);
-                PhysXShipBody body = this.shipBodies.computeIfAbsent(ship.getUuid(), ignored -> new PhysXShipBody(this.physics, this.scene, ship));
-                this.applyLiquidForces(hostWorld, ship);
-                body.syncBeforeSimulation(ship);
-            }
-            catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
+        if (this.scene.simulate((float) timeStep)) this.scene.fetchResults(true);
 
-        if (this.scene.simulate((float) timeStep)) {
-            this.scene.fetchResults(true);
-        }
-
-        for (PhysicsObject ship : shipsWithPhysics) {
-            PhysXShipBody body = this.shipBodies.get(ship.getUuid());
-            if (body != null) {
-                try {
-                    body.readBackTo(ship);
-                }
-                catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        }
+        this.updateCollisionObjectsAfterSimulation(hostWorld, shipsWithPhysics, timeStep);
     }
 
-    //-----ship managing-----
-    private void syncShipActors(Collection<PhysicsObject> shipsWithPhysics) {
-        Set<UUID> loadedShipIds = new HashSet<>();
-        for (PhysicsObject ship : shipsWithPhysics) {
-            loadedShipIds.add(ship.getUuid());
-        }
-        Iterator<Map.Entry<UUID, PhysXShipBody>> iterator = this.shipBodies.entrySet().iterator();
-        while (iterator.hasNext()) {
-            Map.Entry<UUID, PhysXShipBody> entry = iterator.next();
-            if (!loadedShipIds.contains(entry.getKey())) {
-                entry.getValue().release();
-                iterator.remove();
-            }
-        }
-    }
+    /**
+     * For updating list of collision objects from the world.
+     * */
+    private void syncCollisionObjects(World hostWorld, Collection<PhysicsObject> shipsWithPhysics) {
+        this.removeInvalidCollisionObjects(hostWorld, shipsWithPhysics);
 
-    //-----block pos managing-----
-    private void syncWorldBlockActors(World hostWorld, Collection<PhysicsObject> shipsWithPhysics) {
-        Set<BlockPos> touched = new HashSet<>();
-        int scanned = 0;
+        //sync ships
+        for (PhysicsObject ship : shipsWithPhysics) {
+            this.addCollisionObject(
+                    collisionObject -> collisionObject instanceof PhysXShipBody shipBody && shipBody.getShip().getUuid().equals(ship.getUuid()),
+                    () -> new PhysXShipBody(this.physics, this.scene, ship)
+            );
+        }
+
+        //sync blocks
+        int scannedBlocks = 0;
+        blockScan:
         for (PhysicsObject ship : shipsWithPhysics) {
             AxisAlignedBB shipAabb = ship.getPhysicsTransformAABB();
             if (shipAabb == null) continue;
-            AxisAlignedBB scan = shipAabb.grow(WORLD_ACTOR_SCAN_GROW);
+            AxisAlignedBB scan = shipAabb.grow(PhysXBlockCollider.ACTOR_SCAN_GROW);
             int minX = (int) Math.floor(scan.minX);
             int minY = Math.max(0, (int) Math.floor(scan.minY));
             int minZ = (int) Math.floor(scan.minZ);
@@ -158,155 +109,105 @@ public class PhysXWorldBackend {
             for (int x = minX; x <= maxX; x++) {
                 for (int z = minZ; z <= maxZ; z++) {
                     for (int y = minY; y <= maxY; y++) {
-                        if (scanned++ > MAX_WORLD_BLOCK_ACTORS_PER_TICK) {
-                            this.pruneUntouchedWorldActors(touched);
-                            return;
-                        }
+                        if (scannedBlocks++ > MAX_WORLD_BLOCK_ACTORS_PER_TICK) break blockScan;
                         mutablePos.setPos(x, y, z);
                         IBlockState state = hostWorld.getBlockState(mutablePos);
                         if (!PhysXBlockCollider.isCollidableWorldState(state)) {
                             continue;
                         }
                         BlockPos immutablePos = mutablePos.toImmutable();
-                        touched.add(immutablePos);
-                        PhysXBlockCollider existing = this.worldBlockActors.get(immutablePos);
-                        if (existing != null && existing.matches(state)) continue;
-                        if (existing != null) existing.release();
-                        this.worldBlockActors.put(immutablePos, new PhysXBlockCollider(this.physics, this.scene, hostWorld, immutablePos, state));
+                        this.addCollisionObject(
+                                collisionObject -> collisionObject instanceof PhysXBlockCollider blockCollider
+                                        && blockCollider.getWorld() == hostWorld
+                                        && blockCollider.getPos().equals(immutablePos),
+                                () -> new PhysXBlockCollider(this.physics, this.scene, hostWorld, immutablePos, state)
+                        );
                     }
                 }
             }
         }
-        this.pruneUntouchedWorldActors(touched);
-    }
 
-    private void pruneUntouchedWorldActors(Set<BlockPos> touched) {
-        Iterator<Map.Entry<BlockPos, PhysXBlockCollider>> iterator = this.worldBlockActors.entrySet().iterator();
-        while (iterator.hasNext()) {
-            Map.Entry<BlockPos, PhysXBlockCollider> entry = iterator.next();
-            if (!touched.contains(entry.getKey())) {
-                entry.getValue().release();
-                iterator.remove();
-            }
-        }
-    }
-
-    //---subsection for, well, liquid interactions---
-    private void applyLiquidForces(World hostWorld, PhysicsObject ship) {
-        AxisAlignedBB shipAabb = ship.getPhysicsTransformAABB();
-        if (shipAabb == null || !this.isTouchingLiquidActor(shipAabb)) return;
-
-        ShipTransform transform = ship.getShipTransformationManager().getCurrentPhysicsTransform();
-        PhysicsCalculations calculations = ship.getPhysicsCalculations();
-        double gravityMagnitude = Math.abs(VSConfig.gravityVecY);
-        if (gravityMagnitude <= 0D) return;
-
-        int processed = 0;
-        Vector3d tempTorque = new Vector3d();
-        BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
-        for (BlockPos blockPos : ship.getBlockPositions()) {
-            if (processed++ >= MAX_BUOYANCY_BLOCKS_PER_TICK) break;
-
-            IBlockState state = this.getShipBlockState(ship, blockPos);
-            if (BlockPhysicsDetails.getMassFromState(state) <= 0D) continue;
-
-            Vector3d centerWorld = new Vector3d(blockPos.getX() + 0.5D, blockPos.getY() + 0.5D, blockPos.getZ() + 0.5D);
-            transform.transformPosition(centerWorld, TransformType.SUBSPACE_TO_GLOBAL);
-
-            double waterSurfaceY = this.getWaterSurfaceY(hostWorld, mutablePos, centerWorld);
-            if (Double.isNaN(waterSurfaceY)) continue;
-
-            double submergedFraction = Math.clamp(waterSurfaceY - (centerWorld.y - BLOCK_HALF_EXTENT), 0D, 1D);
-            if (submergedFraction <= 0D) continue;
-
-            Vector3d relativeToShipCenter = centerWorld.sub(
-                    new Vector3d(transform.getPosX(), transform.getPosY(), transform.getPosZ()),
-                    new Vector3d()
-            );
-            Vector3d velocityAtPoint = calculations.getVelocityAtPoint(relativeToShipCenter, new Vector3d());
-            double lift = WATER_DENSITY * submergedFraction * gravityMagnitude;
-            Vector3d force = new Vector3d(
-                    -velocityAtPoint.x * WATER_HORIZONTAL_DAMPING * submergedFraction,
-                    lift - velocityAtPoint.y * WATER_VERTICAL_DAMPING * submergedFraction,
-                    -velocityAtPoint.z * WATER_HORIZONTAL_DAMPING * submergedFraction
-            );
-            calculations.addForceAtPointNew(relativeToShipCenter, force, tempTorque);
-        }
-    }
-
-    private boolean isTouchingLiquidActor(AxisAlignedBB shipAabb) {
-        for (PhysXBlockCollider collider : this.worldBlockActors.values()) {
-            if (!collider.isLiquid()) continue;
-            AxisAlignedBB liquidBox = new AxisAlignedBB(collider.getPos());
-            if (shipAabb.intersects(liquidBox)) return true;
-        }
-        return false;
-    }
-
-    private double getWaterSurfaceY(World world, BlockPos.MutableBlockPos mutablePos, Vector3d centerWorld) {
-        int x = (int) Math.floor(centerWorld.x);
-        int z = (int) Math.floor(centerWorld.z);
-        int minY = Math.max(0, (int) Math.floor(centerWorld.y - BLOCK_HALF_EXTENT - 0.25D));
-        int maxY = Math.min(world.getHeight() - 1, (int) Math.floor(centerWorld.y + BLOCK_HALF_EXTENT));
-        for (int y = maxY; y >= minY; y--) {
-            mutablePos.setPos(x, y, z);
-            if (PhysXBlockCollider.isLiquid(world.getBlockState(mutablePos))) {
-                return y + 1D;
-            }
-        }
-        return Double.NaN;
-    }
-
-    private IBlockState getShipBlockState(PhysicsObject ship, BlockPos pos) {
-        Chunk chunk = ship.getChunkAt(pos.getX() >> 4, pos.getZ() >> 4);
-        if (chunk == null) return Blocks.AIR.getDefaultState();
-        return chunk.getBlockState(pos);
-    }
-
-    //-----entity managing-----
-    private void syncEntityActors(World hostWorld, Collection<PhysicsObject> shipsWithPhysics) {
-        Set<Integer> touched = new HashSet<>();
+        //sync entities
         int synced = 0;
-        for (PhysicsObject ship : shipsWithPhysics) {
+        entityScan: for (PhysicsObject ship : shipsWithPhysics) {
             AxisAlignedBB shipAabb = ship.getPhysicsTransformAABB();
             if (shipAabb == null) continue;
-            AxisAlignedBB entityScan = shipAabb.grow(ENTITY_ACTOR_SCAN_GROW);
-            List<Entity> entities = hostWorld.getEntitiesWithinAABB(Entity.class, entityScan, entity -> this.shouldCreateEntityActor(entity, hostWorld));
+            AxisAlignedBB entityScan = shipAabb.grow(PhysXEntityBody.ACTOR_SCAN_GROW);
+            List<Entity> entities = hostWorld.getEntitiesWithinAABB(
+                    Entity.class,
+                    entityScan,
+                    entity -> PhysXEntityBody.shouldCreateActor(entity, hostWorld)
+            );
             for (Entity entity : entities) {
-                if (synced++ > MAX_ENTITY_ACTORS_PER_TICK) {
-                    this.pruneUntouchedEntityActors(touched);
-                    return;
-                }
-                touched.add(entity.getEntityId());
-                PhysXEntityBody body = this.entityActors.get(entity.getEntityId());
-                if (body == null) {
-                    this.entityActors.put(entity.getEntityId(), new PhysXEntityBody(this.physics, this.scene, entity));
-                }
-                else body.sync(entity);
+                if (synced++ > MAX_ENTITY_ACTORS_PER_TICK) break entityScan;
+                this.addCollisionObject(
+                        collisionObject -> collisionObject instanceof PhysXEntityBody entityBody
+                                && entityBody.getEntity().world == entity.world
+                                && entityBody.getEntity().getEntityId() == entity.getEntityId(),
+                        () -> new PhysXEntityBody(this.physics, this.scene, entity)
+                );
             }
         }
-        this.pruneUntouchedEntityActors(touched);
     }
 
-    private void pruneUntouchedEntityActors(Set<Integer> touched) {
-        Iterator<Map.Entry<Integer, PhysXEntityBody>> iterator = this.entityActors.entrySet().iterator();
+    /**
+     * Remove collision objects marked as invalid
+     * */
+    private void removeInvalidCollisionObjects(World hostWorld, Collection<PhysicsObject> shipsWithPhysics) {
+        Iterator<AbstractPhysXCollisionObject> iterator = this.collisionObjects.iterator();
         while (iterator.hasNext()) {
-            Map.Entry<Integer, PhysXEntityBody> entry = iterator.next();
-            if (!touched.contains(entry.getKey())) {
-                entry.getValue().release();
+            AbstractPhysXCollisionObject collisionObject = iterator.next();
+            if (!collisionObject.isStillValid(hostWorld, shipsWithPhysics)) {
+                collisionObject.release();
                 iterator.remove();
             }
         }
     }
 
-    private boolean shouldCreateEntityActor(Entity entity, World hostWorld) {
-        return entity != null
-            && entity.isEntityAlive()
-            && !entity.noClip
-            && entity.world == hostWorld
-            && !(entity instanceof EntityPlayer)
-            && !(entity instanceof EntityItem)
-            && !(entity instanceof EntityFireball);
+    /**
+     * Create collision objects, takes into account whether or not they exist in this.collisionObjects
+     * */
+    private void addCollisionObject(
+            Predicate<AbstractPhysXCollisionObject> existingCollisionObject,
+            Supplier<AbstractPhysXCollisionObject> collisionObjectFactory
+    ) {
+        for (AbstractPhysXCollisionObject collisionObject : this.collisionObjects) {
+            if (existingCollisionObject.test(collisionObject)) return;
+        }
+
+        AbstractPhysXCollisionObject collisionObject = collisionObjectFactory.get();
+        this.collisionObjects.add(collisionObject);
+    }
+
+    private void updateCollisionObjectsBeforeSimulation(
+            World hostWorld,
+            Collection<PhysicsObject> shipsWithPhysics,
+            double timeStep
+    ) {
+        //prevent that exception involving simultaneous updates of stuff in a list... what was it named again?
+        for (AbstractPhysXCollisionObject collisionObject : new ArrayList<>(this.collisionObjects)) {
+            try {
+                collisionObject.updateBeforeSimulation(hostWorld, shipsWithPhysics, this.collisionObjects, timeStep);
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void updateCollisionObjectsAfterSimulation(
+            World hostWorld,
+            Collection<PhysicsObject> shipsWithPhysics,
+            double timeStep
+    ) {
+        for (AbstractPhysXCollisionObject collisionObject : new ArrayList<>(this.collisionObjects)) {
+            try {
+                collisionObject.updateAfterSimulation(hostWorld, shipsWithPhysics, this.collisionObjects, timeStep);
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     /**
@@ -317,18 +218,10 @@ public class PhysXWorldBackend {
         if (this.closed) return;
         this.closed = true;
 
-        for (PhysXEntityBody body : this.entityActors.values()) {
-            body.release();
+        for (AbstractPhysXCollisionObject collisionObject : this.collisionObjects) {
+            collisionObject.release();
         }
-        this.entityActors.clear();
-        for (PhysXBlockCollider collider : this.worldBlockActors.values()) {
-            collider.release();
-        }
-        this.worldBlockActors.clear();
-        for (PhysXShipBody body : this.shipBodies.values()) {
-            body.release();
-        }
-        this.shipBodies.clear();
+        this.collisionObjects.clear();
 
         this.scene.release();
         this.runtime.release();

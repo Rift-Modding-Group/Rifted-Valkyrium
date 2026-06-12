@@ -1,8 +1,10 @@
 package org.valkyrienskies.mod.common.physics.collision;
 
 import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.world.World;
 import org.jetbrains.annotations.NotNull;
 import org.valkyrienskies.mod.common.physics.PhysXActorUtil;
+import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import physx.common.PxQuat;
 import physx.common.PxTransform;
 import physx.common.PxVec3;
@@ -13,6 +15,8 @@ import physx.physics.PxRigidActor;
 import physx.physics.PxScene;
 import physx.physics.PxShape;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -31,8 +35,34 @@ public abstract class AbstractPhysXCollisionObject {
         this.released = false;
     }
 
+    /**
+     * Get PhysX material.
+     * */
     @NotNull
     public abstract PxMaterial getMaterial();
+
+    /**
+     * Test if the collision object is still valid. False means it gets removed.
+     * */
+    public abstract boolean isStillValid(@NotNull World hostWorld, @NotNull Collection<PhysicsObject> shipsWithPhysics);
+
+    public abstract void updateBeforeSimulation(
+            @NotNull World hostWorld,
+            @NotNull Collection<PhysicsObject> shipsWithPhysics,
+            @NotNull List<AbstractPhysXCollisionObject> collisionObjects,
+            double timeStep
+    );
+
+    public abstract void updateAfterSimulation(
+            @NotNull World hostWorld,
+            @NotNull Collection<PhysicsObject> shipsWithPhysics,
+            @NotNull List<AbstractPhysXCollisionObject> collisionObjects,
+            double timeStep
+    );
+
+    public boolean isLiquidBlockIntersecting(@NotNull AxisAlignedBB box) {
+        return false;
+    }
 
     @NotNull
     protected abstract PxRigidActor getActor();
@@ -52,9 +82,7 @@ public abstract class AbstractPhysXCollisionObject {
     }
 
     protected void detachShape(PxShape shape) {
-        if (shape != null) {
-            this.getActor().detachShape(shape, true);
-        }
+        if (shape != null) this.getActor().detachShape(shape, true);
     }
 
     protected boolean attachShape(PxShape shape) {
@@ -82,7 +110,7 @@ public abstract class AbstractPhysXCollisionObject {
         return shape;
     }
 
-    protected static PxTransform createTransform(double x, double y, double z) {
+    protected PxTransform createTransform(double x, double y, double z) {
         PxVec3 position = PhysXActorUtil.toPxVec(x, y, z);
         PxQuat rotation = new PxQuat(0, 0, 0, 1);
         PxTransform transform = new PxTransform(position, rotation);
@@ -91,8 +119,8 @@ public abstract class AbstractPhysXCollisionObject {
         return transform;
     }
 
-    protected static PxTransform createTransform(AxisAlignedBB bb) {
-        return createTransform(
+    protected PxTransform createTransform(AxisAlignedBB bb) {
+        return this.createTransform(
             (bb.minX + bb.maxX) * 0.5D,
             (bb.minY + bb.maxY) * 0.5D,
             (bb.minZ + bb.maxZ) * 0.5D

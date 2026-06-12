@@ -375,6 +375,14 @@ public class PhysicsCalculations {
         this.angularVelocity.set(angularVelocity);
     }
 
+    public Vector3d getForce() {
+        return this.force;
+    }
+
+    public Vector3d getTorque() {
+        return this.torque;
+    }
+
     public void setForceToUseGameTransform(boolean forceToUseGameTransform) {
         this.forceToUseGameTransform = forceToUseGameTransform;
     }

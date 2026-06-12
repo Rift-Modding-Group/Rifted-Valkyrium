@@ -5,6 +5,7 @@ import net.minecraft.block.state.IBlockState;
 import net.minecraft.init.Blocks;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix3dc;
@@ -12,6 +13,7 @@ import org.joml.Quaterniond;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.valkyrienskies.mod.common.config.VSConfig;
+import org.valkyrienskies.mod.common.physics.BlockPhysicsDetails;
 import org.valkyrienskies.mod.common.physics.PhysXActorUtil;
 import org.valkyrienskies.mod.common.physics.PhysXCollisionFilters;
 import org.valkyrienskies.mod.common.physics.PhysicsCalculations;
@@ -28,16 +30,28 @@ import physx.physics.PxRigidBodyFlagEnum;
 import physx.physics.PxRigidDynamic;
 import physx.physics.PxScene;
 import physx.physics.PxShape;
+import valkyrienwarfare.api.TransformType;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Information involving the ships collisions.
+ * todo: put an interface on this that will be useful for when we add option for multiple physics engines
  * */
 public class PhysXShipBody extends AbstractPhysXCollisionObject {
     private static final int MAX_SHIP_SHAPES = 8192;
+    private static final int MAX_BUOYANCY_BLOCKS_PER_TICK = 8192;
+    private static final double WATER_DENSITY = 1000D;
+    private static final double WATER_VERTICAL_DAMPING = 1800D;
+    private static final double WATER_HORIZONTAL_DAMPING = 450D;
+    private static final double BLOCK_HALF_EXTENT = 0.5D;
 
+    @NotNull
+    private PhysicsObject ship;
+    @NotNull
     private final PxRigidDynamic actor;
     private final List<PxShape> shapes;
     @NotNull
@@ -47,6 +61,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
 
     public PhysXShipBody(@NotNull PxPhysics physics, @NotNull PxScene scene, PhysicsObject ship) {
         super(physics, scene);
+        this.ship = ship;
         this.shapes = new ArrayList<>();
         this.material = physics.createMaterial(0.55f, 0.55f, 0.05f);
         this.lastBlockCount = -1;
@@ -62,16 +77,16 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
         this.scene.addActor(this.actor);
     }
 
-    public void syncBeforeSimulation(PhysicsObject ship) {
-        PhysicsCalculations calculations = ship.getPhysicsCalculations();
+    public void syncBeforeSimulation() {
+        PhysicsCalculations calculations = this.ship.getPhysicsCalculations();
         if (this.firstSync
-                || ship.getPhysicsData().consumeCollisionShapeDirty()
-                || this.lastBlockCount != ship.getBlockPositions().size()
+                || this.ship.getPhysicsData().consumeCollisionShapeDirty()
+                || this.lastBlockCount != this.ship.getBlockPositions().size()
         ) {
-            this.rebuildCollisionShapes(ship);
+            this.rebuildCollisionShapes(this.ship);
         }
 
-        boolean disableGravity = !VSConfig.doGravity || ship.isShipAligningToGrid() || calculations.actAsArchimedes;
+        boolean disableGravity = !VSConfig.doGravity || this.ship.isShipAligningToGrid() || calculations.actAsArchimedes;
         this.actor.setActorFlag(PxActorFlagEnum.eDISABLE_GRAVITY, disableGravity);
         this.actor.setMass(Math.max((float) calculations.getMass(), 0.0001f));
         this.setMassInertia(calculations.getPhysMOITensor());
@@ -81,7 +96,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
         boolean forceGameTransform = calculations.consumeForceToUseGameTransform();
         boolean centerOfMassPoseDirty = calculations.consumeCenterOfMassPoseDirty();
         if (this.firstSync || forceGameTransform) {
-            this.forcePose(ship.getShipData().getShipTransform());
+            this.forcePose(this.ship.getShipData().getShipTransform());
             calculations.getLinearVelocity().zero();
             calculations.getAngularVelocity().zero();
         }
@@ -119,8 +134,43 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
         }
     }
 
-    public void readBackTo(PhysicsObject ship) {
-        PhysicsCalculations calculations = ship.getPhysicsCalculations();
+    @NotNull
+    public PhysicsObject getShip() {
+        return this.ship;
+    }
+
+    @Override
+    public boolean isStillValid(@NotNull World hostWorld, @NotNull Collection<PhysicsObject> shipsWithPhysics) {
+        UUID shipId = this.ship.getUuid();
+        for (PhysicsObject loadedShip : shipsWithPhysics) {
+            if (shipId.equals(loadedShip.getUuid())) {
+                this.ship = loadedShip;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public void updateBeforeSimulation(
+            @NotNull World hostWorld,
+            @NotNull Collection<PhysicsObject> shipsWithPhysics,
+            @NotNull List<AbstractPhysXCollisionObject> collisionObjects,
+            double timeStep
+    ) {
+        this.ship.getPhysicsCalculations().prePhysXTick(timeStep);
+        this.applyLiquidForces(hostWorld, collisionObjects);
+        this.syncBeforeSimulation();
+    }
+
+    @Override
+    public void updateAfterSimulation(
+            @NotNull World hostWorld,
+            @NotNull Collection<PhysicsObject> shipsWithPhysics,
+            @NotNull List<AbstractPhysXCollisionObject> collisionObjects,
+            double timeStep
+    ) {
+        PhysicsCalculations calculations = this.ship.getPhysicsCalculations();
         PxTransform pose = this.actor.getGlobalPose();
         PxVec3 posePosition = pose.getP();
         physx.common.PxQuat poseRotation = pose.getQ();
@@ -237,4 +287,70 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
         if (chunk == null) return Blocks.AIR.getDefaultState();
         return chunk.getBlockState(pos);
     }
+
+    private void applyLiquidForces(World hostWorld, List<AbstractPhysXCollisionObject> collisionObjects) {
+        AxisAlignedBB shipAabb = this.ship.getPhysicsTransformAABB();
+        if (shipAabb == null || !this.isTouchingLiquidActor(shipAabb, collisionObjects)) return;
+
+        ShipTransform transform = this.ship.getShipTransformationManager().getCurrentPhysicsTransform();
+        PhysicsCalculations calculations = this.ship.getPhysicsCalculations();
+        double gravityMagnitude = Math.abs(VSConfig.gravityVecY);
+        if (gravityMagnitude <= 0D) return;
+
+        int processed = 0;
+        Vector3d tempTorque = new Vector3d();
+        BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
+        for (BlockPos blockPos : this.ship.getBlockPositions()) {
+            if (processed++ >= MAX_BUOYANCY_BLOCKS_PER_TICK) break;
+
+            IBlockState state = this.getShipBlockState(this.ship, blockPos);
+            if (BlockPhysicsDetails.getMassFromState(state) <= 0D) continue;
+
+            Vector3d centerWorld = new Vector3d(blockPos.getX() + 0.5D, blockPos.getY() + 0.5D, blockPos.getZ() + 0.5D);
+            transform.transformPosition(centerWorld, TransformType.SUBSPACE_TO_GLOBAL);
+
+            double waterSurfaceY = this.getWaterSurfaceY(hostWorld, mutablePos, centerWorld);
+            if (Double.isNaN(waterSurfaceY)) continue;
+
+            double submergedFraction = Math.clamp(waterSurfaceY - (centerWorld.y - BLOCK_HALF_EXTENT), 0D, 1D);
+            if (submergedFraction <= 0D) continue;
+
+            Vector3d relativeToShipCenter = centerWorld.sub(
+                    new Vector3d(transform.getPosX(), transform.getPosY(), transform.getPosZ()),
+                    new Vector3d()
+            );
+            Vector3d velocityAtPoint = calculations.getVelocityAtPoint(relativeToShipCenter, new Vector3d());
+            double lift = WATER_DENSITY * submergedFraction * gravityMagnitude;
+            Vector3d force = new Vector3d(
+                    -velocityAtPoint.x * WATER_HORIZONTAL_DAMPING * submergedFraction,
+                    lift - velocityAtPoint.y * WATER_VERTICAL_DAMPING * submergedFraction,
+                    -velocityAtPoint.z * WATER_HORIZONTAL_DAMPING * submergedFraction
+            );
+            calculations.addForceAtPointNew(relativeToShipCenter, force, tempTorque);
+        }
+    }
+
+    private boolean isTouchingLiquidActor(AxisAlignedBB shipAabb, List<AbstractPhysXCollisionObject> collisionObjects) {
+        for (AbstractPhysXCollisionObject collisionObject : collisionObjects) {
+            if (collisionObject.isLiquidBlockIntersecting(shipAabb)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private double getWaterSurfaceY(World world, BlockPos.MutableBlockPos mutablePos, Vector3d centerWorld) {
+        int x = (int) Math.floor(centerWorld.x);
+        int z = (int) Math.floor(centerWorld.z);
+        int minY = Math.max(0, (int) Math.floor(centerWorld.y - BLOCK_HALF_EXTENT - 0.25D));
+        int maxY = Math.min(world.getHeight() - 1, (int) Math.floor(centerWorld.y + BLOCK_HALF_EXTENT));
+        for (int y = maxY; y >= minY; y--) {
+            mutablePos.setPos(x, y, z);
+            if (PhysXBlockCollider.isLiquid(world.getBlockState(mutablePos))) {
+                return y + 1D;
+            }
+        }
+        return Double.NaN;
+    }
+
 }
