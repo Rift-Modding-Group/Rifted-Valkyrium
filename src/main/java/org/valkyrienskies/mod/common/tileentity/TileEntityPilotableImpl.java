@@ -17,6 +17,7 @@ import org.valkyrienskies.mod.common.entity.EntityMountable;
 import org.valkyrienskies.mod.common.network.MessagePlayerStoppedPiloting;
 import org.valkyrienskies.mod.common.network.MessageStartPiloting;
 import org.valkyrienskies.mod.common.network.MessageStopPiloting;
+import org.valkyrienskies.mod.common.physics.PhysicsCalculations;
 import org.valkyrienskies.mod.common.piloting.ITileEntityPilotable;
 import org.valkyrienskies.mod.common.piloting.PilotControlsMessage;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
@@ -93,6 +94,19 @@ public abstract class TileEntityPilotableImpl extends TileEntity implements ITil
 
         //stop player piloting
         this.setPilotEntity(null);
+    }
+
+    @Override
+    public void onStopTileUsage() {
+        //stop all active velocities and forces
+        PhysicsObject physicsObject = this.getParentPhysicsEntity();
+        if (physicsObject != null) {
+            PhysicsCalculations physicsCalculations = physicsObject.getPhysicsCalculations();
+            physicsCalculations.getLinearVelocity().zero();
+            physicsCalculations.getAngularVelocity().zero();
+            physicsCalculations.getForce().zero();
+            physicsCalculations.getTorque().zero();
+        }
     }
 
     // Always call this before setting the pilotPlayerEntity to equal newPilot

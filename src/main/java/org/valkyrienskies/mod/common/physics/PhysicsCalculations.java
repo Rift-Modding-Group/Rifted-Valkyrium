@@ -95,16 +95,6 @@ public class PhysicsCalculations {
         else this.calculateForcesDeconstruction(physTickTimeDelta);
     }
 
-    @Deprecated
-    public void rawPhysTickPreCol(double physTickTimeDelta) {
-        prePhysXTick(physTickTimeDelta);
-    }
-
-    @Deprecated
-    public void rawPhysTickPostCol() {
-        finishPhysXTick(new ShipTransform(physX, physY, physZ, physRotation, physCenterOfMass));
-    }
-
     public void drainImpulseTo(PhysXShipBody shipBody) {
         shipBody.addImpulse(new Vector3d(force), new Vector3d(torque));
         force.zero();

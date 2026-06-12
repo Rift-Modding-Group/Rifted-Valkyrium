@@ -31,19 +31,14 @@ public class TileEntityBoatChair extends TileEntityPilotableImpl {
     private Vector3dc targetAngularVelocity = new Vector3d();
 
     @Override
+    public final void onStartTileUsage() {}
+
+    @Override
     public void onStopTileUsage() {
         this.targetLinearVelocity = new Vector3d();
         this.targetAngularVelocity = new Vector3d();
 
-        //stop all active velocities and forces
-        PhysicsObject physicsObject = this.getParentPhysicsEntity();
-        if (physicsObject != null) {
-            PhysicsCalculations physicsCalculations = physicsObject.getPhysicsCalculations();
-            physicsCalculations.getLinearVelocity().zero();
-            physicsCalculations.getAngularVelocity().zero();
-            physicsCalculations.getForce().zero();
-            physicsCalculations.getTorque().zero();
-        }
+        super.onStopTileUsage();
     }
 
     @Override

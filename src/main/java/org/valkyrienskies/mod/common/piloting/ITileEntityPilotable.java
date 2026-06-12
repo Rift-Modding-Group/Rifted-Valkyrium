@@ -21,9 +21,9 @@ public interface ITileEntityPilotable {
 
     void onBlockBroken();
 
-    default void onStartTileUsage() {}
+    void onStartTileUsage();
 
-    default void onStopTileUsage() {}
+    void onStopTileUsage();
 
     /**
      * This is called during the post render of every frame in Minecraft. Override this to allow a

@@ -10,7 +10,6 @@ import org.joml.Matrix3d;
 import org.joml.Vector3d;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.block.BlockCaptainsChair;
-import org.valkyrienskies.mod.common.entity.EntityMountable;
 import org.valkyrienskies.mod.common.physics.PhysicsCalculations;
 import org.valkyrienskies.mod.common.piloting.PilotControls;
 import org.valkyrienskies.mod.common.piloting.PilotControlsMessage;
@@ -27,15 +26,7 @@ public class TileEntityCaptainsChair extends TileEntityPilotableImpl implements 
     public final void onStopTileUsage() {
         this.applyChairStabilization(true);
 
-        //stop all active velocities and forces
-        PhysicsObject physicsObject = this.getParentPhysicsEntity();
-        if (physicsObject != null) {
-            PhysicsCalculations physicsCalculations = physicsObject.getPhysicsCalculations();
-            physicsCalculations.getLinearVelocity().zero();
-            physicsCalculations.getAngularVelocity().zero();
-            physicsCalculations.getForce().zero();
-            physicsCalculations.getTorque().zero();
-        }
+        super.onStopTileUsage();
     }
 
     @Override
