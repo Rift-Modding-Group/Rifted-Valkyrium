@@ -1,4 +1,4 @@
-package org.valkyrienskies.mod.common.physics.physx;
+package org.valkyrienskies.mod.common.physics;
 
 import org.joml.Matrix3d;
 import org.joml.Quaterniond;

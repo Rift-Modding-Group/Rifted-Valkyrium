@@ -13,7 +13,7 @@ import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.entity.EntityMountable;
 import org.valkyrienskies.mod.common.network.MessageStartPiloting;
 import org.valkyrienskies.mod.common.network.MessageStopPiloting;
-import org.valkyrienskies.mod.common.physics.physx.PhysicsCalculations;
+import org.valkyrienskies.mod.common.physics.PhysicsCalculations;
 import org.valkyrienskies.mod.common.piloting.ITileEntityPilotable;
 import org.valkyrienskies.mod.common.piloting.PilotControlsMessage;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;

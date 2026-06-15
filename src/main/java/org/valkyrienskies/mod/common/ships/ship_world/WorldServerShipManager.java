@@ -19,7 +19,7 @@ import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.jspecify.annotations.NonNull;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.config.VSConfig;
-import org.valkyrienskies.mod.common.physics.physx.BlockPhysicsDetails;
+import org.valkyrienskies.mod.common.physics.BlockPhysicsDetails;
 import org.valkyrienskies.mod.common.ships.QueryableShipData;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.block_relocation.BlockFinder;

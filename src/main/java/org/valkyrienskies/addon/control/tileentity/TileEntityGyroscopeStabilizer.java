@@ -5,7 +5,7 @@ import net.minecraft.util.math.BlockPos;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.valkyrienskies.addon.control.config.VSControlConfig;
-import org.valkyrienskies.mod.common.physics.physx.PhysicsCalculations;
+import org.valkyrienskies.mod.common.physics.PhysicsCalculations;
 import valkyrienwarfare.api.TransformType;
 
 public class TileEntityGyroscopeStabilizer extends TileEntity {

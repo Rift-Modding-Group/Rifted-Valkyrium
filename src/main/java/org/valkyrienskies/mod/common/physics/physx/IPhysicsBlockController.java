@@ -1,6 +1,7 @@
 package org.valkyrienskies.mod.common.physics.physx;
 
 import net.minecraft.util.math.BlockPos;
+import org.valkyrienskies.mod.common.physics.PhysicsCalculations;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 
 public interface IPhysicsBlockController extends Comparable<IPhysicsBlockController> {

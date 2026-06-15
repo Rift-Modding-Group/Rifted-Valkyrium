@@ -1,4 +1,4 @@
-package org.valkyrienskies.mod.common.physics.physx;
+package org.valkyrienskies.mod.common.physics;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockLiquid;
