@@ -55,6 +55,7 @@ public class ClientProxyControl extends CommonProxyControl {
 
         registerBlockItem(ValkyrienSkiesControl.INSTANCE.vsControlBlocks.speedTelegraph);
         registerBlockItem(ValkyrienSkiesControl.INSTANCE.vsControlBlocks.compactedValkyrium);
+        registerBlockItem(ValkyrienSkiesControl.INSTANCE.vsControlBlocks.buoyancyTank);
         registerBlockItem(ValkyrienSkiesControl.INSTANCE.vsControlBlocks.networkRelay);
 
         registerBlockItem(ValkyrienSkiesControl.INSTANCE.vsControlBlocks.gyroscopeStabilizer);

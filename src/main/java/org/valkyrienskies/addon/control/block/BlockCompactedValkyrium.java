@@ -30,7 +30,6 @@ public class BlockCompactedValkyrium extends BaseBlock implements IBlockForcePro
     @Nullable
     @Override
     public Vector3dc getBlockForceInShipSpace(World world, BlockPos pos, IBlockState state, PhysicsObject physicsObject, double secondsToApply) {
-        // TODO: Shouldn't this depend on the gravity vector?
         return new Vector3d(0, VSControlConfig.compactedValkyriumLift * secondsToApply, 0);
     }
 

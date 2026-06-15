@@ -1,0 +1,1 @@
+This package will contain subpackages for handling various physics engines and common wrappers that serve as the link to them in VSWorldPhysicsLoop. NVIDIA PhysX is the only one supported by this mod atm, but once we get going more physics engines like Jolt, Rapier, or Krunch.

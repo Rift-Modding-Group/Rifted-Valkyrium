@@ -23,6 +23,7 @@ public class BlocksValkyrienSkiesControl {
     public final BlockNormalEngine ultimateEngine;
     public final BlockRedstoneEngine redstoneEngine;
     public final Block compactedValkyrium;
+    public final Block buoyancyTank;
     public final Block shipHelm;
     // The blocks only purpose is to load models to be rendered. Its a pretty bad way of rendering things, but whatever
     // we can fix it later.
@@ -58,6 +59,7 @@ public class BlocksValkyrienSkiesControl {
         redstoneEngine = registerBlock(new BlockRedstoneEngine());
 
         compactedValkyrium = registerBlock(new BlockCompactedValkyrium());
+        buoyancyTank = registerBlock(new BlockBuoyancyTank());
         shipHelm = registerBlock(new BlockShipHelm());
         dummyRenderBlock = registerBlock(new BlockShipWheel());
         speedTelegraph = registerBlock(new BlockSpeedTelegraph());

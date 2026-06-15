@@ -16,6 +16,7 @@ import org.joml.Quaterniond;
 import org.joml.Quaterniondc;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
+import org.valkyrienskies.mod.common.block.IBlockBuoyancyProvider;
 import org.valkyrienskies.mod.common.block.IBlockForceProvider;
 import org.valkyrienskies.mod.common.block.IBlockTorqueProvider;
 import org.valkyrienskies.mod.common.config.VSConfig;
@@ -508,7 +509,8 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
             if (processed++ >= MAX_BUOYANCY_BLOCKS_PER_TICK) break;
 
             IBlockState state = this.getShipBlockState(this.ship, blockPos);
-            if (BlockPhysicsDetails.getMassFromState(state) <= 0D) continue;
+            double displacedWaterVolume = this.getDisplacedWaterVolume(state, blockPos);
+            if (displacedWaterVolume <= 0D) continue;
 
             Vector3d centerWorld = new Vector3d(blockPos.getX() + 0.5D, blockPos.getY() + 0.5D, blockPos.getZ() + 0.5D);
             transform.transformPosition(centerWorld, TransformType.SUBSPACE_TO_GLOBAL);
@@ -524,7 +526,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
                     new Vector3d()
             );
             Vector3d velocityAtPoint = calculations.getVelocityAtPoint(relativeToShipCenter, new Vector3d());
-            double lift = WATER_DENSITY * submergedFraction * gravityMagnitude;
+            double lift = WATER_DENSITY * displacedWaterVolume * submergedFraction * gravityMagnitude;
             Vector3d force = new Vector3d(
                     -velocityAtPoint.x * WATER_HORIZONTAL_DAMPING * submergedFraction,
                     lift - velocityAtPoint.y * WATER_VERTICAL_DAMPING * submergedFraction,
@@ -532,6 +534,14 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
             );
             calculations.addForceAtPointNew(relativeToShipCenter, force, tempTorque);
         }
+    }
+
+    private double getDisplacedWaterVolume(IBlockState state, BlockPos blockPos) {
+        Block block = state.getBlock();
+        if (block instanceof IBlockBuoyancyProvider buoyancyProvider) {
+            return Math.max(0D, buoyancyProvider.getDisplacedWaterVolume(this.ship.getWorld(), blockPos, state, this.ship));
+        }
+        return BlockPhysicsDetails.getMassFromState(state) > 0D ? 1D : 0D;
     }
 
     private boolean isTouchingLiquidActor(AxisAlignedBB shipAabb, List<AbstractPhysXCollisionObject> collisionObjects) {

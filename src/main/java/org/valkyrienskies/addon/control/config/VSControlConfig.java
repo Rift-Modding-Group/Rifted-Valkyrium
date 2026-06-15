@@ -38,6 +38,13 @@ public class VSControlConfig extends VSConfigTemplate {
     })
     public static double compactedValkyriumLift = 200000;
 
+    @Config.Name("Buoyancy Tank Displaced Water Volume")
+    @Config.Comment({
+            "How many full water blocks each Buoyancy Tank displaces when submerged.",
+            "Default is 16 blocks of water."
+    })
+    public static double buoyancyTankDisplacedVolume = 16D;
+
     @Config.Name("Gyroscope Stabilizer Max Torque")
     @Config.Comment("Max torque in newton-meters")
     public static double stabilizerMaxTorque = 15000000;

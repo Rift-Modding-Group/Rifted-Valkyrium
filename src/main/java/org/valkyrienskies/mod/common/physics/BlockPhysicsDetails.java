@@ -135,6 +135,7 @@ public class BlockPhysicsDetails {
 
         blockToMass.put(ValkyrienSkiesControl.INSTANCE.vsControlBlocks.gyroscopeDampener, Mass.NONE);
         blockToMass.put(ValkyrienSkiesControl.INSTANCE.vsControlBlocks.gyroscopeStabilizer, Mass.NONE);
+        blockToMass.put(ValkyrienSkiesControl.INSTANCE.vsControlBlocks.buoyancyTank, Mass.VERY_LIGHT);
         blockToMass.put(ValkyrienSkiesControl.INSTANCE.vsControlBlocks.networkRelay, Mass.NONE);
     }
 

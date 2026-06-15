@@ -31,6 +31,7 @@ public class VSWorldPhysicsLoop implements Runnable {
     @NotNull
     private final World hostWorld;
     //the heart and soul of the physics used by this mod
+    //todo: replace with an abstract class that offers a common physics backend for multiple physics engines... hmmm...
     @NotNull
     private final PhysXWorldBackend physXBackend;
     private long lastPacketSendTime = 0;
