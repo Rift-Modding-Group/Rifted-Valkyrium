@@ -83,8 +83,7 @@ public class VSKeyHandler {
 
             if (dismountKey.isKeyDown() && clientPilot.isPilotingATile()) {
                 BlockPos pilotedPos = clientPilot.getPosBeingControlled();
-                MessagePlayerStoppedPiloting stopPilotingMessage = new MessagePlayerStoppedPiloting(
-                    pilotedPos);
+                MessagePlayerStoppedPiloting stopPilotingMessage = new MessagePlayerStoppedPiloting(pilotedPos);
                 ValkyrienSkiesMod.controlNetwork.sendToServer(stopPilotingMessage);
                 clientPilot.stopPilotingEverything();
             }

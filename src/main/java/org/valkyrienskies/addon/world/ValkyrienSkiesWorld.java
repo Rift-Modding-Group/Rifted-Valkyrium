@@ -112,14 +112,13 @@ public class ValkyrienSkiesWorld {
 
     @SubscribeEvent
     public static void registerBlocks(RegistryEvent.Register<Block> event) {
-        LOG.debug("Registering blocks...");
         INSTANCE.valkyriumOre = registerBlock(new BlockValkyriumOre());
         event.getRegistry().registerAll(BLOCKS.toArray(new Block[0]));
     }
 
     @SubscribeEvent
     public static void registerItems(RegistryEvent.Register<Item> event) {
-        INSTANCE.valkyriumCrystal = new ItemValkyriumCrystal();
+        INSTANCE.valkyriumCrystal = registerItem( new ItemValkyriumCrystal());
         event.getRegistry().registerAll(ITEMS.toArray(new Item[0]));
     }
 
@@ -137,5 +136,10 @@ public class ValkyrienSkiesWorld {
         BLOCKS.add(block);
         ITEMS.add(new ItemBlock(block).setRegistryName(block.getRegistryName()));
         return block;
+    }
+
+    private static <T extends Item> T registerItem(T item) {
+        ITEMS.add(item);
+        return item;
     }
 }

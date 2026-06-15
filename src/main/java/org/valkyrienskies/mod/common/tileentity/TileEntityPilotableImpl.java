@@ -3,14 +3,17 @@ package org.valkyrienskies.mod.common.tileentity;
 import java.util.Optional;
 import java.util.UUID;
 
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumFacing;
 import org.joml.Vector3d;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
+import org.valkyrienskies.mod.common.entity.EntityMountable;
 import org.valkyrienskies.mod.common.network.MessageStartPiloting;
 import org.valkyrienskies.mod.common.network.MessageStopPiloting;
+import org.valkyrienskies.mod.common.physics.PhysicsCalculations;
 import org.valkyrienskies.mod.common.piloting.ITileEntityPilotable;
 import org.valkyrienskies.mod.common.piloting.PilotControlsMessage;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
@@ -23,9 +26,7 @@ import javax.annotation.Nullable;
  * A basic implementation of the ITileEntityPilotable interface, other tile entities can extend this
  * for easy controls.
  */
-public abstract class TileEntityPilotableImpl extends TileEntity implements
-    ITileEntityPilotable {
-
+public abstract class TileEntityPilotableImpl extends TileEntity implements ITileEntityPilotable {
     // Do NOT make this a reference to pilotPlayerEntity.
     @Nullable
     private UUID pilotPlayerEntity;
@@ -50,9 +51,9 @@ public abstract class TileEntityPilotableImpl extends TileEntity implements
 
     @Override
     public final void setPilotEntity(EntityPlayer toSet) {
-        if (!getWorld().isRemote) {
+        if (!this.getWorld().isRemote) {
             EntityPlayer oldPlayer = getPilotEntity();
-            sendPilotUpdatePackets((EntityPlayerMP) toSet, (EntityPlayerMP) oldPlayer);
+            this.sendPilotUpdatePackets((EntityPlayerMP) toSet, (EntityPlayerMP) oldPlayer);
         }
         if (toSet != null) {
             this.pilotPlayerEntity = toSet.getUniqueID();
@@ -66,7 +67,7 @@ public abstract class TileEntityPilotableImpl extends TileEntity implements
 
     @Override
     public final void playerWantsToStopPiloting(EntityPlayer player) {
-        if (player == getPilotEntity()) {
+        if (player == this.getPilotEntity()) {
             this.setPilotEntity(null);
         }
     }
@@ -75,6 +76,33 @@ public abstract class TileEntityPilotableImpl extends TileEntity implements
     public final PhysicsObject getParentPhysicsEntity() {
         Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(world, pos);
         return physicsObject.orElse(null);
+    }
+
+    @Override
+    public void onBlockBroken() {
+        EntityPlayer pilot = this.getPilotEntity();
+        if (pilot == null) return;
+
+        //delete the entity associated w the chair
+        Entity mount = pilot.getRidingEntity();
+        pilot.dismountRidingEntity();
+        if (mount instanceof EntityMountable) mount.setDead();
+
+        //stop player piloting
+        this.setPilotEntity(null);
+    }
+
+    @Override
+    public void onStopTileUsage() {
+        //stop all active velocities and forces
+        PhysicsObject physicsObject = this.getParentPhysicsEntity();
+        if (physicsObject != null) {
+            PhysicsCalculations physicsCalculations = physicsObject.getPhysicsCalculations();
+            physicsCalculations.getLinearVelocity().zero();
+            physicsCalculations.getAngularVelocity().zero();
+            physicsCalculations.getForce().zero();
+            physicsCalculations.getTorque().zero();
+        }
     }
 
     // Always call this before setting the pilotPlayerEntity to equal newPilot

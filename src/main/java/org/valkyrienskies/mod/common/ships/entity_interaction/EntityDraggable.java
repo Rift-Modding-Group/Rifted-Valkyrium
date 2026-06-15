@@ -38,7 +38,8 @@ public class EntityDraggable {
                     addEntityVelocityFromShipBelow(e);
                 }
             }
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -117,7 +118,8 @@ public class EntityDraggable {
                         -MathHelper.sin(-entity.getRotationYawHead() * 0.017453292F - (float) Math.PI),
                         0,
                         -MathHelper.cos(-entity.getRotationYawHead() * 0.017453292F - (float) Math.PI));
-            } else {
+            }
+            else {
                 newLookYawVec = new Vector3d(
                         -MathHelper.sin(-entity.rotationYaw * 0.017453292F - (float) Math.PI),
                         0,
@@ -241,9 +243,7 @@ public class EntityDraggable {
             }
 
             if (x != 0.0D) {
-                entity
-                        .setEntityBoundingBox(
-                                entity.getEntityBoundingBox().offset(x, 0.0D, 0.0D));
+                entity.setEntityBoundingBox(entity.getEntityBoundingBox().offset(x, 0.0D, 0.0D));
             }
         }
 
@@ -255,9 +255,7 @@ public class EntityDraggable {
             }
 
             if (z != 0.0D) {
-                entity
-                        .setEntityBoundingBox(
-                                entity.getEntityBoundingBox().offset(0.0D, 0.0D, z));
+                entity.setEntityBoundingBox(entity.getEntityBoundingBox().offset(0.0D, 0.0D, z));
             }
         }
 
@@ -270,9 +268,10 @@ public class EntityDraggable {
             AxisAlignedBB axisalignedbb1 = entity.getEntityBoundingBox();
             entity.setEntityBoundingBox(axisalignedbb);
             y = entity.stepHeight;
-            List<AxisAlignedBB> list = entity.world
-                    .getCollisionBoxes(entity,
-                            entity.getEntityBoundingBox().offset(d2, y, d4));
+            List<AxisAlignedBB> list = entity.world.getCollisionBoxes(
+                    entity,
+                    entity.getEntityBoundingBox().offset(d2, y, d4)
+            );
             AxisAlignedBB axisalignedbb2 = entity.getEntityBoundingBox();
             AxisAlignedBB axisalignedbb3 = axisalignedbb2.offset(d2, 0.0D, d4);
             double d8 = y;

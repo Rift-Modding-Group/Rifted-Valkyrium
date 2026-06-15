@@ -15,7 +15,6 @@ import java.util.UUID;
  * permanent should be stored in ShipData.
  */
 public interface IPhysObjectWorld {
-
     /**
      * @return The world this is handling PhysicsObjects for.
      */

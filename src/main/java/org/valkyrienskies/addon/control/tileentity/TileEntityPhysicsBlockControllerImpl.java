@@ -3,7 +3,7 @@ package org.valkyrienskies.addon.control.tileentity;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.math.BlockPos;
 import org.valkyrienskies.addon.control.nodenetwork.BasicNodeTileEntity;
-import org.valkyrienskies.mod.common.physicsOld.IPhysicsBlockController;
+import org.valkyrienskies.mod.common.physics.physx.IPhysicsBlockController;
 
 public abstract class TileEntityPhysicsBlockControllerImpl extends BasicNodeTileEntity implements
         IPhysicsBlockController {

@@ -33,7 +33,6 @@ import static com.googlecode.cqengine.query.QueryFactory.nullableAttribute;
  * is available), by calling {@link IPhysObjectWorld#getPhysObjectFromUUID(UUID)}.
  */
 public class ShipData {
-
     /**
      * The {@link QueryableShipData} that manages this
      */

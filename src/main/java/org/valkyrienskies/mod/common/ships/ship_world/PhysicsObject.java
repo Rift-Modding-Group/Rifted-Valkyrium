@@ -19,9 +19,9 @@ import org.joml.Quaterniondc;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.valkyrienskies.mod.client.render.PhysObjectRenderManager;
-import org.valkyrienskies.mod.common.collisionOld.Polygon;
-import org.valkyrienskies.mod.common.physicsOld.IPhysicsBlockController;
-import org.valkyrienskies.mod.common.physicsOld.PhysicsCalculations;
+import org.valkyrienskies.mod.common.util.TransformedAABB;
+import org.valkyrienskies.mod.common.physics.physx.IPhysicsBlockController;
+import org.valkyrienskies.mod.common.physics.PhysicsCalculations;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.block_relocation.MoveBlocks;
 import org.valkyrienskies.mod.common.ships.chunk_claims.ClaimedChunkCacheController;
@@ -48,11 +48,9 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * The heart and soul of this mod, and now its broken lol.
+ * The heart and soul of this mod.
  */
-
 public class PhysicsObject implements IPhysicsEntity {
-
     // The number of ticks we wait before enabling physics. I use 20 because I'm very paranoid of ships falling through the ground.
     private static final int DISABLE_PHYSICS_FOR_X_INITIAL_TICKS = 20;
     // Before we start dragging entities with the ship, Wait this number of ticks after a ship has been teleported using "/vs tp-ship-to" commands.
@@ -422,7 +420,7 @@ public class PhysicsObject implements IPhysicsEntity {
         // Expand subspaceBB by 1 to fit the block grid.
         subspaceBB = subspaceBB.expand(1, 1, 1);
         // Now transform the subspaceBB to world coordinates
-        Polygon largerPoly = new Polygon(subspaceBB, getShipTransformationManager().getCurrentPhysicsTransform(),
+        TransformedAABB largerPoly = new TransformedAABB(subspaceBB, getShipTransformationManager().getCurrentPhysicsTransform(),
                 TransformType.SUBSPACE_TO_GLOBAL);
         // Set the ship AABB to that of the polygon.
         AxisAlignedBB worldBB = largerPoly.getEnclosedAABB();

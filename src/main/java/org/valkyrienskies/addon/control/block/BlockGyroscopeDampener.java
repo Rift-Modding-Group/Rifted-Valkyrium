@@ -13,7 +13,7 @@ import org.joml.Vector3dc;
 import org.valkyrienskies.addon.control.tileentity.TileEntityGyroscopeDampener;
 import org.valkyrienskies.mod.common.util.BaseBlock;
 import org.valkyrienskies.mod.common.block.IBlockTorqueProvider;
-import org.valkyrienskies.mod.common.physicsOld.PhysicsCalculations;
+import org.valkyrienskies.mod.common.physics.PhysicsCalculations;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 
 import javax.annotation.Nullable;

@@ -26,7 +26,6 @@ import java.util.Optional;
 
 @ParametersAreNonnullByDefault
 public class VSWorldEventListener implements IWorldEventListener {
-
     private final World worldObj;
 
     public VSWorldEventListener(World world) {
@@ -39,21 +38,16 @@ public class VSWorldEventListener implements IWorldEventListener {
     }
 
     @Override
-    public void notifyLightSet(BlockPos pos) {
-
-    }
+    public void notifyLightSet(BlockPos pos) { }
 
     @Override
-    public void markBlockRangeForRenderUpdate(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
-
-    }
+    public void markBlockRangeForRenderUpdate(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {}
 
     @Override
-    public void playSoundToAllNearExcept(@Nullable EntityPlayer player, SoundEvent soundIn,
-        SoundCategory category, double x,
-        double y, double z, float volume, float pitch) {
-
-    }
+    public void playSoundToAllNearExcept(
+            @Nullable EntityPlayer player, SoundEvent soundIn,
+            SoundCategory category, double x,double y, double z, float volume, float pitch
+    ) {}
 
     @Override
     public void playRecord(SoundEvent soundIn, BlockPos pos) {
@@ -61,11 +55,10 @@ public class VSWorldEventListener implements IWorldEventListener {
     }
 
     @Override
-    public void spawnParticle(int particleID, boolean ignoreRange, double x, double y, double z,
-        double xSpeed,
-        double ySpeed, double zSpeed, int... parameters) {
-
-    }
+    public void spawnParticle(
+            int particleID, boolean ignoreRange, double x, double y, double z,
+            double xSpeed, double ySpeed, double zSpeed, int... parameters
+    ) {}
 
     // TODO: Fix conflicts with EventsCommon.onEntityJoinWorldEvent()
     @Override
@@ -98,55 +91,47 @@ public class VSWorldEventListener implements IWorldEventListener {
     }
 
     @Override
-    public void onEntityRemoved(Entity entityIn) {
-
-    }
+    public void onEntityRemoved(Entity entityIn) {}
 
     @Override
-    public void broadcastSound(int soundID, BlockPos pos, int data) {
-
-    }
+    public void broadcastSound(int soundID, BlockPos pos, int data) {}
 
     @Override
-    public void playEvent(EntityPlayer player, int type, BlockPos blockPosIn, int data) {
-
-    }
+    public void playEvent(EntityPlayer player, int type, BlockPos blockPosIn, int data) {}
 
     @Override
     public void sendBlockBreakProgress(int breakerId, BlockPos pos, int progress) {
-        if (!worldObj.isRemote) {
-            for (EntityPlayer entityplayermp : worldObj.playerEntities) {
-                if (entityplayermp != null && entityplayermp.getEntityId() != breakerId) {
-                    Vector3d posVector = new Vector3d(pos.getX(), pos.getY(), pos.getZ());
+        if (this.worldObj.isRemote) return;
 
-                    Optional<PhysicsObject> physicsObject = ValkyrienUtils
-                        .getPhysoManagingBlock(worldObj, pos);
+        for (EntityPlayer entityplayermp : this.worldObj.playerEntities) {
+            if (entityplayermp != null && entityplayermp.getEntityId() != breakerId) {
+                Vector3d posVector = new Vector3d(pos.getX(), pos.getY(), pos.getZ());
 
-                    physicsObject.ifPresent(object -> object
+                Optional<PhysicsObject> physicsObject = ValkyrienUtils
+                        .getPhysoManagingBlock(this.worldObj, pos);
+
+                physicsObject.ifPresent(object -> object
                         .getShipTransformationManager()
                         .getCurrentTickTransform()
                         .transformPosition(posVector, TransformType.SUBSPACE_TO_GLOBAL));
 
-                    double d0 = posVector.x - entityplayermp.posX;
-                    double d1 = posVector.y - entityplayermp.posY;
-                    double d2 = posVector.z - entityplayermp.posZ;
+                double d0 = posVector.x - entityplayermp.posX;
+                double d1 = posVector.y - entityplayermp.posY;
+                double d2 = posVector.z - entityplayermp.posZ;
 
-                    if (d0 * d0 + d1 * d1 + d2 * d2 < 1024.0D) {
-                        ((EntityPlayerMP) entityplayermp).connection
-                            .sendPacket(new SPacketBlockBreakAnim(breakerId, pos, progress));
-                    }
+                if (d0 * d0 + d1 * d1 + d2 * d2 < 1024.0D) {
+                    ((EntityPlayerMP) entityplayermp).connection.sendPacket(new SPacketBlockBreakAnim(breakerId, pos, progress));
                 }
             }
         }
     }
 
     @Override
-    public void spawnParticle(int p_190570_1_, boolean p_190570_2_, boolean p_190570_3_,
-        double p_190570_4_,
-        double p_190570_6_, double p_190570_8_, double p_190570_10_, double p_190570_12_,
-        double p_190570_14_,
-        int... p_190570_16_) {
-
-    }
-
+    public void spawnParticle(
+            int p_190570_1_, boolean p_190570_2_, boolean p_190570_3_,
+            double p_190570_4_,
+            double p_190570_6_, double p_190570_8_, double p_190570_10_, double p_190570_12_,
+            double p_190570_14_,
+            int... p_190570_16_
+    ) {}
 }

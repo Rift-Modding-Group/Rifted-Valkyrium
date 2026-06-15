@@ -4,34 +4,34 @@ import net.minecraft.block.state.IBlockState;
 import net.minecraft.util.math.BlockPos;
 import org.joml.Matrix3d;
 import org.joml.Vector3d;
-import org.valkyrienskies.mod.common.physicsOld.BlockPhysicsDetails;
+import org.jspecify.annotations.NonNull;
+import org.valkyrienskies.mod.common.physics.BlockPhysicsDetails;
 
 public class BasicCenterOfMassProvider implements IPhysicsObjectCenterOfMassProvider {
-
     private static final double INERTIA_OFFSET = .4D;
 
     @Override
-    public void onSetBlockState(ShipInertiaData inertiaData, BlockPos pos, IBlockState oldState, IBlockState newState) {
+    public void onSetBlockState(@NonNull ShipInertiaData inertiaData, @NonNull BlockPos pos, @NonNull IBlockState oldState, IBlockState newState) {
         if (!newState.equals(oldState)) {
             double oldMass = BlockPhysicsDetails.getMassFromState(oldState);
             double newMass = BlockPhysicsDetails.getMassFromState(newState);
             double deltaMass = newMass - oldMass;
             // Don't change anything if the mass is the same
-            if (Math.abs(deltaMass) > .00001) {
-                double x = pos.getX() + .5;
-                double y = pos.getY() + .5;
-                double z = pos.getZ() + .5;
+            if (Math.abs(deltaMass) > 0.00001) {
+                double x = pos.getX() + 0.5;
+                double y = pos.getY() + 0.5;
+                double z = pos.getZ() + 0.5;
 
                 deltaMass /= 9;
-                addMassAt(inertiaData, x, y, z, deltaMass);
-                addMassAt(inertiaData, x + INERTIA_OFFSET, y + INERTIA_OFFSET, z + INERTIA_OFFSET, deltaMass);
-                addMassAt(inertiaData, x + INERTIA_OFFSET, y + INERTIA_OFFSET, z - INERTIA_OFFSET, deltaMass);
-                addMassAt(inertiaData, x + INERTIA_OFFSET, y - INERTIA_OFFSET, z + INERTIA_OFFSET, deltaMass);
-                addMassAt(inertiaData, x + INERTIA_OFFSET, y - INERTIA_OFFSET, z - INERTIA_OFFSET, deltaMass);
-                addMassAt(inertiaData, x - INERTIA_OFFSET, y + INERTIA_OFFSET, z + INERTIA_OFFSET, deltaMass);
-                addMassAt(inertiaData, x - INERTIA_OFFSET, y + INERTIA_OFFSET, z - INERTIA_OFFSET, deltaMass);
-                addMassAt(inertiaData, x - INERTIA_OFFSET, y - INERTIA_OFFSET, z + INERTIA_OFFSET, deltaMass);
-                addMassAt(inertiaData, x - INERTIA_OFFSET, y - INERTIA_OFFSET, z - INERTIA_OFFSET, deltaMass);
+                this.addMassAt(inertiaData, x, y, z, deltaMass);
+                this.addMassAt(inertiaData, x + INERTIA_OFFSET, y + INERTIA_OFFSET, z + INERTIA_OFFSET, deltaMass);
+                this.addMassAt(inertiaData, x + INERTIA_OFFSET, y + INERTIA_OFFSET, z - INERTIA_OFFSET, deltaMass);
+                this.addMassAt(inertiaData, x + INERTIA_OFFSET, y - INERTIA_OFFSET, z + INERTIA_OFFSET, deltaMass);
+                this.addMassAt(inertiaData, x + INERTIA_OFFSET, y - INERTIA_OFFSET, z - INERTIA_OFFSET, deltaMass);
+                this.addMassAt(inertiaData, x - INERTIA_OFFSET, y + INERTIA_OFFSET, z + INERTIA_OFFSET, deltaMass);
+                this.addMassAt(inertiaData, x - INERTIA_OFFSET, y + INERTIA_OFFSET, z - INERTIA_OFFSET, deltaMass);
+                this.addMassAt(inertiaData, x - INERTIA_OFFSET, y - INERTIA_OFFSET, z + INERTIA_OFFSET, deltaMass);
+                this.addMassAt(inertiaData, x - INERTIA_OFFSET, y - INERTIA_OFFSET, z - INERTIA_OFFSET, deltaMass);
             }
         }
     }
@@ -52,7 +52,8 @@ public class BasicCenterOfMassProvider implements IPhysicsObjectCenterOfMassProv
             newCenterOfMass.add(x * addedMass, y * addedMass, z * addedMass);
             newCenterOfMass.mul(1.0 / (gameTickMass + addedMass));
             inertiaData.setGameTickCenterOfMass(newCenterOfMass);
-        } else {
+        }
+        else {
             inertiaData.setGameTickCenterOfMass(new Vector3d(x, y, z));
             inertiaData.setGameMoITensor(new Matrix3d().zero());
         }
@@ -83,9 +84,10 @@ public class BasicCenterOfMassProvider implements IPhysicsObjectCenterOfMassProv
 
         // Do this to avoid a mass of zero, which runs the risk of dividing by zero and
         // crashing the program.
-        if (inertiaData.getGameTickMass() + addedMass < .0001) {
+        if (inertiaData.getGameTickMass() + addedMass < 0.0001) {
             inertiaData.setGameTickMass(0);
-        } else {
+        }
+        else {
             inertiaData.setGameTickMass(inertiaData.getGameTickMass() + addedMass);
         }
     }

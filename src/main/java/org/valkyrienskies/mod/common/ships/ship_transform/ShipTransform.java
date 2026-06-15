@@ -26,7 +26,6 @@ import java.util.Objects;
  */
 @Immutable
 public class ShipTransform {
-
     /**
      * A transformation matrix used to convert 'subspace' coordinates into 'global' coordinates.
      */

@@ -1,7 +1,6 @@
 package org.valkyrienskies.mod.common.util.datastructures;
 
 import net.minecraft.util.math.BlockPos;
-import org.apache.commons.lang3.NotImplementedException;
 import org.valkyrienskies.mod.common.util.VSIterationUtils;
 
 import javax.annotation.Nonnull;
@@ -42,7 +41,7 @@ public interface IBlockPosSet extends Set<BlockPos> {
      * all. But the chances of these events occurring is very small.
      */
     default void forEachUnsafe(@Nonnull VSIterationUtils.IntTernaryConsumer action) {
-        throw new NotImplementedException("Not implemented");
+        forEach(action);
     }
 
     default boolean add(@Nonnull BlockPos pos) throws IllegalArgumentException {

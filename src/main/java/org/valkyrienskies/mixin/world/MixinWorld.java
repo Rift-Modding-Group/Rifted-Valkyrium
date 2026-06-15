@@ -19,13 +19,11 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
-import org.valkyrienskies.mod.common.collisionOld.EntityPolygonCollider;
-import org.valkyrienskies.mod.common.collisionOld.Polygon;
-import org.valkyrienskies.mod.common.collisionOld.ShipPolygon;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.config.VSConfig.ExplosionMode;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
+import org.valkyrienskies.mod.common.util.TransformedAABB;
 import org.valkyrienskies.mod.common.util.VSMath;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import org.valkyrienskies.mod.fixes.MixinWorldIntrinsicMethods;
@@ -148,7 +146,7 @@ public abstract class MixinWorld {
         // players to sneak while on ships.
         List<PhysicsObject> ships = shipWorld.getManager().getPhysObjectsInAABB(aabb);
         for (PhysicsObject wrapper : ships) {
-            Polygon playerInLocal = new Polygon(
+            TransformedAABB playerInLocal = new TransformedAABB(
                     aabb, wrapper.getShipTransformationManager().getCurrentTickTransform(),
                     TransformType.GLOBAL_TO_SUBSPACE
             );
@@ -163,21 +161,16 @@ public abstract class MixinWorld {
             }
 
             List<AxisAlignedBB> collidingBBs = getCollisionBoxes(null, bb);
-            Polygon entityPoly = new Polygon(aabb.grow(-.2, 0, -.2));
+            AxisAlignedBB entityBB = aabb.grow(-.2, 0, -.2);
             for (AxisAlignedBB inLocal : collidingBBs) {
-                ShipPolygon poly = new ShipPolygon(
+                AxisAlignedBB inWorld = new TransformedAABB(
                         inLocal,
                         wrapper.getShipTransformationManager().getCurrentTickTransform(),
-                        TransformType.SUBSPACE_TO_GLOBAL,
-                        wrapper.getShipTransformationManager().normals,
-                        wrapper
-                );
+                        TransformType.SUBSPACE_TO_GLOBAL
+                ).getEnclosedAABB();
 
-                EntityPolygonCollider collider = new EntityPolygonCollider(entityPoly, poly, poly.normals, new Vector3d());
-                collider.processData();
-
-                if (!collider.arePolygonsSeparated()) {
-                    outList.add(inLocal);
+                if (entityBB.intersects(inWorld)) {
+                    outList.add(inWorld);
                     // We only want to add at most ONE aabb to the return value. Once we have at least one, the
                     // vanilla sneak code will work correctly.
                     return;
@@ -247,7 +240,7 @@ public abstract class MixinWorld {
             .getPhysoManagingBlock(World.class.cast(this), pos);
 
         if (physicsObject.isPresent()) {
-            Polygon poly = new Polygon(aabb, physicsObject.get()
+            TransformedAABB poly = new TransformedAABB(aabb, physicsObject.get()
                 .getShipTransformationManager()
                 .getCurrentTickTransform(),
                 TransformType.SUBSPACE_TO_GLOBAL);
@@ -281,7 +274,7 @@ public abstract class MixinWorld {
             .getPhysoManagingBlock(World.class.cast(this), pos);
 
         if (physicsObject.isPresent()) {
-            Polygon poly = new Polygon(boundingBox, physicsObject.get()
+            TransformedAABB poly = new TransformedAABB(boundingBox, physicsObject.get()
                 .getShipTransformationManager()
                 .getCurrentTickTransform(),
                 TransformType.SUBSPACE_TO_GLOBAL);
@@ -414,7 +407,7 @@ public abstract class MixinWorld {
         final List<PhysicsObject> physObjectsInAABB = shipWorld.getManager().getPhysObjectsInAABB(axisAlignedBB);
         for (final PhysicsObject physicsObject : physObjectsInAABB) {
             final ShipTransform shipTransform = physicsObject.getShipTransform();
-            final AxisAlignedBB aabbInShipSpace = new Polygon(axisAlignedBB, shipTransform.getGlobalToSubspace()).getEnclosedAABB();
+            final AxisAlignedBB aabbInShipSpace = new TransformedAABB(axisAlignedBB, shipTransform.getGlobalToSubspace()).getEnclosedAABB();
             final boolean collisionInShip = this.checkBlockCollision(aabbInShipSpace);
             if (collisionInShip) {
                 callbackInfoReturnable.setReturnValue(true);

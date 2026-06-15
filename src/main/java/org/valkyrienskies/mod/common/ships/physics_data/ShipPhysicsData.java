@@ -4,9 +4,10 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
+import org.valkyrienskies.mod.common.physics.PhysicsCalculations;
 
 /**
- * Stores data used by {@link org.valkyrienskies.mod.common.physicsOld.PhysicsCalculations}
+ * Stores data used by {@link PhysicsCalculations}
  */
 public class ShipPhysicsData {
     @JsonSerialize(as = Vector3d.class)
@@ -15,9 +16,9 @@ public class ShipPhysicsData {
     @JsonSerialize(as = Vector3d.class)
     @JsonDeserialize(as = Vector3d.class)
     private Vector3dc angularVelocity;
+    private transient volatile boolean collisionShapeDirty = true;
 
-    public ShipPhysicsData() {
-    }
+    public ShipPhysicsData() {}
 
     public ShipPhysicsData(Vector3dc linearVelocity, Vector3dc angularVelocity) {
         this.linearVelocity = linearVelocity;
@@ -25,7 +26,7 @@ public class ShipPhysicsData {
     }
 
     public Vector3dc getLinearVelocity() {
-        return linearVelocity;
+        return this.linearVelocity;
     }
 
     public void setLinearVelocity(Vector3dc linearVelocity) {
@@ -33,10 +34,20 @@ public class ShipPhysicsData {
     }
 
     public Vector3dc getAngularVelocity() {
-        return angularVelocity;
+        return this.angularVelocity;
     }
 
     public void setAngularVelocity(Vector3dc angularVelocity) {
         this.angularVelocity = angularVelocity;
+    }
+
+    public void markCollisionShapeDirty() {
+        this.collisionShapeDirty = true;
+    }
+
+    public boolean consumeCollisionShapeDirty() {
+        boolean result = this.collisionShapeDirty;
+        this.collisionShapeDirty = false;
+        return result;
     }
 }

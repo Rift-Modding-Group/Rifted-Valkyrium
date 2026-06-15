@@ -221,13 +221,9 @@ public class VSConfig extends VSConfigTemplate {
     @Name("Block Mass")
     @Comment({
             "Override the auto generated mass value of blocks.",
-            "Mass values must be one of four enum values: NONE, LIGHT, HEAVY, and VERY_HEAVY."
+            "Mass values must be one of four enum values: NONE, VERY_LIGHT, HEAVY, and VERY_HEAVY."
     })
-    public static String[] blockMass = {"minecraft:grass=LIGHT", "minecraft:obsidian=VERY_HEAVY"};
-
-    public static Vector3dc gravity() {
-        return new Vector3d(gravityVecX, gravityVecY, gravityVecZ);
-    }
+    public static String[] blockMass = {"minecraft:grass=VERY_LIGHT", "minecraft:obsidian=VERY_HEAVY"};
 
     /**
      * Synchronizes the data in this class and the data in the forge configuration

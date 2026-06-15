@@ -2,7 +2,7 @@ package org.valkyrienskies.mod.common.block;
 
 import net.minecraft.util.math.BlockPos;
 import org.joml.Vector3dc;
-import org.valkyrienskies.mod.common.physicsOld.PhysicsCalculations;
+import org.valkyrienskies.mod.common.physics.PhysicsCalculations;
 
 import javax.annotation.Nullable;
 

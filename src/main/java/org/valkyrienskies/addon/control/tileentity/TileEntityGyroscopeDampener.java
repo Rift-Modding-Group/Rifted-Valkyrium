@@ -5,7 +5,7 @@ import net.minecraft.util.math.BlockPos;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.valkyrienskies.addon.control.config.VSControlConfig;
-import org.valkyrienskies.mod.common.physicsOld.PhysicsCalculations;
+import org.valkyrienskies.mod.common.physics.PhysicsCalculations;
 import valkyrienwarfare.api.TransformType;
 
 public class TileEntityGyroscopeDampener extends TileEntity {
@@ -33,7 +33,6 @@ public class TileEntityGyroscopeDampener extends TileEntity {
         if (dampingTorqueRespectMagnitude > VSControlConfig.dampenerMaxTorque) {
             dampingTorqueWithRespectToInertia
                 .mul(VSControlConfig.dampenerMaxTorque / dampingTorqueRespectMagnitude);
-            // System.out.println("yee");
         }
 
         return dampingTorqueWithRespectToInertia.mul(-1);

@@ -15,30 +15,22 @@ public class PilotControls {
     public static final int RIGHT = 5;
     public static final int SPRINT = 6;
 
-    private static int lastControls;
-
     public static int getUsedControls() {
         int toReturn = 0;
 
-        toReturn |= (toInt(VSKeyHandler.airshipUp.isKeyDown()) << UP) & ~getLastControl(UP);
-        toReturn |= (toInt(VSKeyHandler.airshipDown.isKeyDown()) << DOWN) & ~getLastControl(DOWN);
-        toReturn |= (toInt(VSKeyHandler.airshipForward.isKeyDown()) << FORWARD) & ~getLastControl(FORWARD);
-        toReturn |= (toInt(VSKeyHandler.airshipBackward.isKeyDown()) << BACKWARD) & ~getLastControl(BACKWARD);
-        toReturn |= (toInt(VSKeyHandler.airshipLeft.isKeyDown()) << LEFT) & ~getLastControl(LEFT);
-        toReturn |= (toInt(VSKeyHandler.airshipRight.isKeyDown()) << RIGHT) & ~getLastControl(RIGHT);
-        toReturn |= (toInt(VSKeyHandler.airshipSpriting.isKeyDown()) << SPRINT) & ~getLastControl(SPRINT);
-
-        lastControls = toReturn;
+        toReturn |= toInt(VSKeyHandler.airshipUp.isKeyDown()) << UP;
+        toReturn |= toInt(VSKeyHandler.airshipDown.isKeyDown()) << DOWN;
+        toReturn |= toInt(VSKeyHandler.airshipForward.isKeyDown()) << FORWARD;
+        toReturn |= toInt(VSKeyHandler.airshipBackward.isKeyDown()) << BACKWARD;
+        toReturn |= toInt(VSKeyHandler.airshipLeft.isKeyDown()) << LEFT;
+        toReturn |= toInt(VSKeyHandler.airshipRight.isKeyDown()) << RIGHT;
+        toReturn |= toInt(VSKeyHandler.airshipSpriting.isKeyDown()) << SPRINT;
 
         return toReturn;
     }
 
     private static int toInt(boolean bool) {
         return bool ? 1 : 0;
-    }
-
-    private static int getLastControl(int control) {
-        return (lastControls & (1 << control)) >> control;
     }
 
     public static boolean controlIsPressed(int control) {

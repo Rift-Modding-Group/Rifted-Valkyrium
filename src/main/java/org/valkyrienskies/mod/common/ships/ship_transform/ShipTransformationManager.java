@@ -5,7 +5,7 @@ import org.joml.Quaterniond;
 import org.joml.Quaterniondc;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
-import org.valkyrienskies.mod.common.collisionOld.Polygon;
+import org.valkyrienskies.mod.common.util.TransformedAABB;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import valkyrienwarfare.api.TransformType;
 
@@ -39,7 +39,7 @@ public class ShipTransformationManager {
         // We edit a local array instead of normals to avoid data races.
         final Vector3dc[] newNormals = new Vector3dc[15];
         // Used to generate Normals for the Axis Aligned World
-        final Vector3dc[] alignedNorms = Polygon.generateAxisAlignedNorms();
+        final Vector3dc[] alignedNorms = TransformedAABB.generateAxisAlignedNorms();
         final Vector3dc[] rotatedNorms = generateRotationNormals(transform);
         for (int i = 0; i < 6; i++) {
             Vector3dc currentNorm;
@@ -72,7 +72,7 @@ public class ShipTransformationManager {
     }
 
     private static Vector3dc[] generateRotationNormals(ShipTransform shipTransform) {
-        Vector3d[] norms = Polygon.generateAxisAlignedNorms();
+        Vector3d[] norms = TransformedAABB.generateAxisAlignedNorms();
         for (int i = 0; i < 3; i++) {
             shipTransform.transformDirection(norms[i], TransformType.SUBSPACE_TO_GLOBAL);
         }
@@ -116,7 +116,7 @@ public class ShipTransformationManager {
         // Expand subspaceBB by 1 to fit the block grid.
         subspaceBB = subspaceBB.expand(1, 1, 1);
         // Now transform the subspaceBB to world coordinates
-        Polygon largerPoly = new Polygon(subspaceBB, getCurrentTickTransform(),
+        TransformedAABB largerPoly = new TransformedAABB(subspaceBB, getCurrentTickTransform(),
             TransformType.SUBSPACE_TO_GLOBAL);
         // Set the ship AABB to that of the polygon.
         AxisAlignedBB worldBB = largerPoly.getEnclosedAABB();

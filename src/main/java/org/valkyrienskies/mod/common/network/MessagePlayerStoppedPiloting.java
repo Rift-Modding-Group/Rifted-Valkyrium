@@ -75,6 +75,7 @@ public class MessagePlayerStoppedPiloting implements IMessage {
             IThreadListener mainThread = ctx.getServerHandler().player.server;
             mainThread.addScheduledTask(() -> {
                 EntityPlayerMP player = ctx.getServerHandler().player;
+                //used when position is basis of piloting
                 if (message.posToStopPiloting != null) {
                     BlockPos pos = message.posToStopPiloting;
 
@@ -84,6 +85,7 @@ public class MessagePlayerStoppedPiloting implements IMessage {
                         tileEntityPilotable.playerWantsToStopPiloting(player);
                     }
                 }
+                //used when ship is basis of piloting
                 else {
                     final UUID shipID = message.shipIDToStopPiloting;
                     final IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(player.world);

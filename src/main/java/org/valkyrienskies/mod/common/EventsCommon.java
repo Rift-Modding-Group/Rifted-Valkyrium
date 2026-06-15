@@ -78,12 +78,15 @@ public class EventsCommon {
         BlockPos posAt = new BlockPos(entity);
 
         Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(world, posAt);
-        if (!event.getWorld().isRemote && physicsObject.isPresent()
-            && !(entity instanceof EntityFallingBlock)) {
+        if (!event.getWorld().isRemote && physicsObject.isPresent() && !(entity instanceof EntityFallingBlock)) {
             if (entity instanceof EntityArmorStand
-                || entity instanceof EntityPig || entity instanceof EntityBoat) {
-                EntityMountable entityMountable = new EntityMountable(world,
-                    entity.getPositionVector(), CoordinateSpaceType.SUBSPACE_COORDINATES, posAt);
+                    || entity instanceof EntityPig
+                    || entity instanceof EntityBoat
+            ) {
+                EntityMountable entityMountable = new EntityMountable(
+                        world, entity.getPositionVector(),
+                        CoordinateSpaceType.SUBSPACE_COORDINATES, posAt
+                );
                 world.spawnEntity(entityMountable);
                 entity.startRiding(entityMountable);
             }
@@ -91,9 +94,6 @@ public class EventsCommon {
                 .getShipTransformationManager()
                 .getCurrentTickTransform().transform(entity,
                 TransformType.SUBSPACE_TO_GLOBAL, false);
-            // TODO: This should work but it doesn't because of sponge. Instead we have to rely on MixinChunk.preAddEntity() to fix this
-            // event.setCanceled(true);
-            // event.getWorld().spawnEntity(entity);
         }
     }
 
@@ -177,11 +177,8 @@ public class EventsCommon {
     public static void onPlayerInteractEvent(PlayerInteractEvent event) {
         BlockPos pos = event.getPos();
 
-        Optional<PhysicsObject> physicsObject = ValkyrienUtils
-            .getPhysoManagingBlock(event.getWorld(), pos);
-        if (physicsObject.isPresent()) {
-            event.setResult(Result.ALLOW);
-        }
+        Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(event.getWorld(), pos);
+        if (physicsObject.isPresent()) event.setResult(Result.ALLOW);
     }
 
     @SubscribeEvent

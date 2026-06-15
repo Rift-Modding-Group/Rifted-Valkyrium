@@ -7,18 +7,17 @@ import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.world.World;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
+import org.jetbrains.annotations.NotNull;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
-import org.valkyrienskies.mod.common.collisionOld.ShipCollisionTask;
-import org.valkyrienskies.mod.common.collisionOld.WaterForcesTask;
+import org.valkyrienskies.mod.common.physics.physx.PhysXWorldBackend;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.network.ShipTransformUpdateMessage;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 
 import java.util.*;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
@@ -29,8 +28,12 @@ public class VSWorldPhysicsLoop implements Runnable {
     private final static long TICK_TIME_QUEUE = 100;
     // Used to give each VS thread a unique name
     private static int worldPhysicsLoopId = 0;
+    @NotNull
     private final World hostWorld;
-    private final Queue<Long> latestPhysicsTickTimes;
+    //the heart and soul of the physics used by this mod
+    @NotNull
+    private final PhysXWorldBackend physXBackend;
+    private long lastPacketSendTime = 0;
     // The ships we will be ticking physics for every tick, and sending those
     // updates to players.
     // Used by the game thread to mark this thread for death.
@@ -42,16 +45,19 @@ public class VSWorldPhysicsLoop implements Runnable {
 
     private final String name;
 
-    public VSWorldPhysicsLoop(World host) {
-        name = "VS World Physics Task " + worldPhysicsLoopId;
+    private final Queue<Long> latestPhysicsTickTimes;
+
+    public VSWorldPhysicsLoop(@NotNull World host) {
+        this.name = "VS World Physics Task " + worldPhysicsLoopId;
         worldPhysicsLoopId++;
         this.hostWorld = host;
+        this.physXBackend = new PhysXWorldBackend();
         this.threadRunning = true;
         this.latestPhysicsTickTimes = new ConcurrentLinkedQueue<>();
         this.taskQueue = new ConcurrentLinkedQueue<>();
         this.immutableShipsList = ImmutableList.of();
         this.recurringTasks = new ConcurrentLinkedQueue<>();
-        ValkyrienSkiesMod.LOGGER.trace(name + " created.");
+        ValkyrienSkiesMod.LOGGER.trace(this.name + " created.");
     }
 
     @SideOnly(Side.CLIENT)
@@ -60,7 +66,7 @@ public class VSWorldPhysicsLoop implements Runnable {
     }
 
     public void addScheduledTask(Runnable r) {
-        taskQueue.add(r);
+        this.taskQueue.add(r);
     }
 
     private static long getNsPerTick() {
@@ -68,107 +74,110 @@ public class VSWorldPhysicsLoop implements Runnable {
     }
 
     public void addRecurringTask(IPhysTimeTask physTask) {
-        recurringTasks.add(physTask);
+        this.recurringTasks.add(physTask);
     }
-    /*
-     * (non-Javadoc)
-     *
-     * @see java.lang.Thread#run()
-     */
+
     @Override
     public void run() {
-        while (threadRunning) {
-            final MinecraftServer mcServer = hostWorld.getMinecraftServer();
-            assert mcServer != null;
-            // If server then always tick physics, if single-player then only tick when not paused.
-            final boolean tickPhysics = mcServer.isServerRunning() && (mcServer.isDedicatedServer() || !isSinglePlayerPaused());
+        try {
+            while (this.threadRunning) {
+                final MinecraftServer mcServer = this.hostWorld.getMinecraftServer();
+                assert mcServer != null;
+                // If server then always tick physics, if single-player then only tick when not paused.
+                final boolean tickPhysics = mcServer.isServerRunning() && (mcServer.isDedicatedServer() || !isSinglePlayerPaused());
 
-            if (tickPhysics) {
-                // The number of seconds the physics engine will move forward
-                final double timeToSimulate = VSConfig.getTimeSimulatedPerTick();
-                // The number of nanoseconds we want our physics engine tick to take
-                final long idealTickTime = (long) (1E9 / VSConfig.targetTps);
+                if (tickPhysics) {
+                    // The number of seconds the physics engine will move forward
+                    final double timeToSimulate = VSConfig.getTimeSimulatedPerTick();
+                    // The number of nanoseconds we want our physics engine tick to take
+                    final long idealTickTime = (long) (1E9 / VSConfig.targetTps);
 
-                final long physTickStartTime = System.nanoTime();
-                // Run the physics engine tick
-                physicsTick(timeToSimulate);
-                final long physTickEndTime = System.nanoTime();
-                final long physTickDuration = physTickEndTime - physTickStartTime;
+                    final long physTickStartTime = System.nanoTime();
+                    // Run the physics engine tick
+                    this.physicsTick(timeToSimulate);
+                    final long physTickEndTime = System.nanoTime();
+                    final long physTickDuration = physTickEndTime - physTickStartTime;
 
-                // If the physics tick ran faster than the ideal tick time, then pretend it took the ideal tick time by
-                // waiting.
-                if (physTickDuration < idealTickTime) {
-                    final long sleepMillis = (idealTickTime - physTickDuration) / 1_000_000L;
+                    // If the physics tick ran faster than the ideal tick time, then pretend it took the ideal tick time by
+                    // waiting.
+                    if (physTickDuration < idealTickTime) {
+                        final long sleepMillis = (idealTickTime - physTickDuration) / 1_000_000L;
+                        try {
+                            Thread.sleep(sleepMillis);
+                        }
+                        catch (InterruptedException e) {
+                            if (this.threadRunning) e.printStackTrace();
+                            Thread.currentThread().interrupt();
+                        }
+                    }
+
+                    // Keep track of the time it took to run the physics tick, including the time we spent sleeping.
+                    final long physTickDurationIncludingSleep = System.nanoTime() - physTickStartTime;
+                    this.latestPhysicsTickTimes.add(physTickDurationIncludingSleep);
+                    // Ensure that latestPhysicsTickTimes only has TICK_TIME_QUEUE # of elements
+                    if (this.latestPhysicsTickTimes.size() > TICK_TIME_QUEUE) {
+                        this.latestPhysicsTickTimes.remove();
+                    }
+                }
+                else {
+                    // If physics are disabled then sleep for 100 ms.
+                    // If we don't sleep then we waste a ton of CPU just being in this while(true) loop.
                     try {
-                        Thread.sleep(sleepMillis);
-                    } catch (InterruptedException e) {
+                        Thread.sleep(100L);
+                    }
+                    catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                 }
-
-                // Keep track of the time it took to run the physics tick, including the time we spent sleeping.
-                final long physTickDurationIncludingSleep = System.nanoTime() - physTickStartTime;
-                latestPhysicsTickTimes.add(physTickDurationIncludingSleep);
-                // Ensure that latestPhysicsTickTimes only has TICK_TIME_QUEUE # of elements
-                if (latestPhysicsTickTimes.size() > TICK_TIME_QUEUE) {
-                    latestPhysicsTickTimes.remove();
-                }
-            } else {
-                // If physics are disabled then sleep for 100 ms.
-                // If we don't sleep then we waste a ton of CPU just being in this while(true) loop.
-                try {
-                    Thread.sleep(100L);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
             }
         }
-        // If we get to this point of run(), then we are about to return and this thread
-        // will terminate soon.
-        ValkyrienSkiesMod.LOGGER.trace(name + " killed");
+        finally {
+            this.physXBackend.close();
+            // If we get to this point of run(), then we are about to return and this thread
+            // will terminate soon.
+            ValkyrienSkiesMod.LOGGER.trace(this.name + " killed");
+        }
     }
-
-    private long lastPacketSendTime = 0;
 
     private void physicsTick(double delta) {
         IShipWorld shipWorld = this.hostWorld.getCapability(VSCapabilityRegistry.VS_SHIP_WORLD, null);
         if (shipWorld == null) return;
 
         // Update the immutable ship list.
-        immutableShipsList = shipWorld.getManager().getAllLoadedThreadSafe();
+        this.immutableShipsList = shipWorld.getManager().getAllLoadedThreadSafe();
 
         // Run tasks queued to run on physics thread
-        recurringTasks.forEach(t -> t.runTask(delta));
-        taskQueue.forEach(Runnable::run);
-        taskQueue.clear();
+        this.recurringTasks.forEach(t -> t.runTask(delta));
+        this.taskQueue.forEach(Runnable::run);
+        this.taskQueue.clear();
 
         // Make a sublist of physics objects to process physics on.
         List<PhysicsObject> physicsEntitiesToDoPhysics = new ArrayList<>();
-        for (PhysicsObject physicsObject : immutableShipsList) {
+        for (PhysicsObject physicsObject : this.immutableShipsList) {
             if (physicsObject.isPhysicsReady() && physicsObject.isPhysicsEnabled() && physicsObject.getCachedSurroundingChunks() != null) {
                 physicsEntitiesToDoPhysics.add(physicsObject);
             }
         }
 
         // Finally, actually process the physics tick
-        tickThePhysicsAndCollision(physicsEntitiesToDoPhysics, delta);
+        this.tickThePhysicsAndCollision(physicsEntitiesToDoPhysics, delta);
 
         // Send ship position update packets around 20 times a second
         final long currentTimeMillis = System.currentTimeMillis();
-        final double secondsSinceLastPacket = (currentTimeMillis - lastPacketSendTime) / 1000.0;
+        final double secondsSinceLastPacket = (currentTimeMillis - this.lastPacketSendTime) / 1000D;
 
-        // Use .04 to guarantee we're always sending at least 20 packets per second
-        if (secondsSinceLastPacket > .04) {
+        // Use 0.04 to guarantee we're always sending at least 20 packets per second
+        if (secondsSinceLastPacket > 0.04) {
             // Update the last update time
-            lastPacketSendTime = currentTimeMillis;
+            this.lastPacketSendTime = currentTimeMillis;
 
             try {
                 // At the end, send the transform update packets
                 final ShipTransformUpdateMessage shipTransformUpdateMessage = new ShipTransformUpdateMessage();
-                final int dimensionID = hostWorld.provider.getDimension();
+                final int dimensionID = this.hostWorld.provider.getDimension();
 
                 shipTransformUpdateMessage.setDimensionID(dimensionID);
-                for (final PhysicsObject physicsObject : immutableShipsList) {
+                for (final PhysicsObject physicsObject : this.immutableShipsList) {
                     final UUID shipUUID = physicsObject.getUuid();
                     final ShipTransform shipTransform = physicsObject.getShipTransformationManager().getCurrentPhysicsTransform();
                     final AxisAlignedBB shipBB = physicsObject.getPhysicsTransformAABB();
@@ -176,67 +185,18 @@ public class VSWorldPhysicsLoop implements Runnable {
                     shipTransformUpdateMessage.addData(shipUUID, shipTransform, shipBB);
                 }
                 ValkyrienSkiesMod.physWrapperTransformUpdateNetwork.sendToDimension(shipTransformUpdateMessage, shipTransformUpdateMessage.getDimensionID());
-            } catch (Exception e) {
+            }
+            catch (Exception e) {
                 e.printStackTrace();
             }
         }
     }
 
     /**
-     * Ticks physics and collision for the List of PhysicsWrapperEntity passed in.
+     * Ticks ship physics and collision through PhysX.
      */
     private void tickThePhysicsAndCollision(List<PhysicsObject> shipsWithPhysics, double timeStep) {
-        final List<ShipCollisionTask> collisionTasks = new ArrayList<>(
-            shipsWithPhysics.size() * 2);
-        final List<WaterForcesTask> waterForcesTasks = new ArrayList<>();
-        for (PhysicsObject wrapper : shipsWithPhysics) {
-            // Update the physics simulation
-            try {
-                wrapper.getPhysicsCalculations().rawPhysTickPreCol(timeStep);
-                // Do water collision and buoyancy
-                wrapper.getPhysicsCalculations().getWorldWaterCollider().tickUpdatingTheCollisionCache();
-                // Add water forces tasks to be processed in parallel
-                waterForcesTasks.addAll(wrapper.getPhysicsCalculations().getWorldWaterCollider().generateWaterForceTasks());
-                // Update the collision task if necessary
-                wrapper.getPhysicsCalculations().getWorldCollision()
-                        .tickUpdatingTheCollisionCache();
-                // Take the big collision and split into tiny ones
-                wrapper.getPhysicsCalculations().getWorldCollision()
-                        .splitIntoCollisionTasks(collisionTasks);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-
-        final List<Callable<Void>> allTasks = new ArrayList<>();
-        allTasks.addAll(collisionTasks);
-        allTasks.addAll(waterForcesTasks);
-
-        try {
-            // Run all the block collision and water physics tasks
-            ValkyrienSkiesMod.getPhysicsThreadPool().invokeAll(allTasks);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        // Handle the results of water force tasks
-        for (final WaterForcesTask waterForcesTask : waterForcesTasks) {
-            waterForcesTask.addForcesToShip();
-        }
-
-        // Then those collision points have to be processed sequentially afterwards, all in
-        // this thread. Thankfully this step is not cpu intensive.
-        for (ShipCollisionTask task : collisionTasks) {
-            task.getToTask().processCollisionTask(task);
-        }
-
-        for (PhysicsObject wrapper : shipsWithPhysics) {
-            try {
-                wrapper.getPhysicsCalculations().rawPhysTickPostCol();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
+        this.physXBackend.update(this.hostWorld, shipsWithPhysics, timeStep);
     }
 
     /**
@@ -245,18 +205,16 @@ public class VSWorldPhysicsLoop implements Runnable {
      */
     public void kill() {
         ValkyrienSkiesMod.LOGGER.trace(name + " marked for death.");
-        threadRunning = false;
+        this.threadRunning = false;
     }
 
     /**
      * @return The average runtime of the last 100 physics ticks in nanoseconds.
      */
     public long getAveragePhysicsTickTimeNano() {
-        if (latestPhysicsTickTimes.size() >= TICK_TIME_QUEUE) {
+        if (this.latestPhysicsTickTimes.size() >= TICK_TIME_QUEUE) {
             long average = 0;
-            for (Long tickTime : latestPhysicsTickTimes) {
-                average += tickTime;
-            }
+            for (Long tickTime : this.latestPhysicsTickTimes) average += tickTime;
             return average / TICK_TIME_QUEUE;
         }
         // If we don't have enough data to get an average, just assume its the ideal
@@ -265,6 +223,6 @@ public class VSWorldPhysicsLoop implements Runnable {
     }
 
     public String getName() {
-        return name;
+        return this.name;
     }
 }

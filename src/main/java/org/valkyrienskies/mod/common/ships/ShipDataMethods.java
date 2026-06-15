@@ -3,7 +3,7 @@ package org.valkyrienskies.mod.common.ships;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.init.Blocks;
 import net.minecraft.util.math.BlockPos;
-import org.valkyrienskies.mod.common.physicsOld.BlockPhysicsDetails;
+import org.valkyrienskies.mod.common.physics.BlockPhysicsDetails;
 import org.valkyrienskies.mod.common.ships.physics_data.BasicCenterOfMassProvider;
 import org.valkyrienskies.mod.common.ships.physics_data.IPhysicsObjectCenterOfMassProvider;
 
@@ -45,5 +45,6 @@ public final class ShipDataMethods {
         }
 
         centerOfMassProvider.onSetBlockState(shipData.getInertiaData(), pos, oldState, newState);
+        shipData.getPhysicsData().markCollisionShapeDirty();
     }
 }

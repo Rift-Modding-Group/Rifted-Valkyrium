@@ -8,10 +8,6 @@ import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 
-/*
-* TODO: make this only for tileentities that will allow the player to control
-*  the entire ship
-* */
 public interface ITileEntityPilotable {
     void onPilotControlsMessage(PilotControlsMessage message, EntityPlayerMP sender);
 
@@ -23,9 +19,11 @@ public interface ITileEntityPilotable {
 
     PhysicsObject getParentPhysicsEntity();
 
-    default void onStartTileUsage() {}
+    void onBlockBroken();
 
-    default void onStopTileUsage() {}
+    void onStartTileUsage();
+
+    void onStopTileUsage();
 
     /**
      * This is called during the post render of every frame in Minecraft. Override this to allow a
