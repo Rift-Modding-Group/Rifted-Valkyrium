@@ -190,7 +190,7 @@ tile.compacted_valkyrium.name=Compacted Valkyrium
 tooltip.vs_control.compacted_valkyrium=Lift force: %.0f Newtons.
 
 tile.gyroscope_stabilizer.name=Ship Gyroscope Stabilizer
-tooltip.vs_control.gyroscope_stabilizer=This block passively provides a torque to makes the ship level.
+tooltip.vs_control.gyroscope_stabilizer=This block passively provides torque to keep the ship level.
 
 tile.gyroscope_dampener.name=Ship Gyroscope Dampener
 tooltip.vs_control.gyroscope_dampener=This block passively provides a torque to prevent the ship from rocking.

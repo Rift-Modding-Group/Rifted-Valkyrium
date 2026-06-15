@@ -33,7 +33,6 @@ public class TileEntityGyroscopeDampener extends TileEntity {
         if (dampingTorqueRespectMagnitude > VSControlConfig.dampenerMaxTorque) {
             dampingTorqueWithRespectToInertia
                 .mul(VSControlConfig.dampenerMaxTorque / dampingTorqueRespectMagnitude);
-            // System.out.println("yee");
         }
 
         return dampingTorqueWithRespectToInertia.mul(-1);
