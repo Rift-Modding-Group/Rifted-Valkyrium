@@ -1,9 +1,9 @@
-package org.valkyrienskies.mod.common.physics.collision;
+package org.valkyrienskies.mod.common.physics.physx.collision;
 
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.NotNull;
-import org.valkyrienskies.mod.common.physics.PhysXActorUtil;
+import org.valkyrienskies.mod.common.physics.physx.PhysXActorUtil;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import physx.common.PxQuat;
 import physx.common.PxTransform;

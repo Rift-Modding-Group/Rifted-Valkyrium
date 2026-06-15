@@ -1,4 +1,4 @@
-package org.valkyrienskies.mod.common.physics.collision;
+package org.valkyrienskies.mod.common.physics.physx.collision;
 
 import net.minecraft.block.BlockLiquid;
 import net.minecraft.block.material.Material;
@@ -7,7 +7,7 @@ import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.NotNull;
-import org.valkyrienskies.mod.common.physics.PhysXCollisionFilters;
+import org.valkyrienskies.mod.common.physics.physx.PhysXCollisionFilters;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import physx.common.PxTransform;
 import physx.physics.PxMaterial;

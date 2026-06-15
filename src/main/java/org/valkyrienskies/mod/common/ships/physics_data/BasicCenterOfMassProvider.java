@@ -5,7 +5,7 @@ import net.minecraft.util.math.BlockPos;
 import org.joml.Matrix3d;
 import org.joml.Vector3d;
 import org.jspecify.annotations.NonNull;
-import org.valkyrienskies.mod.common.physics.BlockPhysicsDetails;
+import org.valkyrienskies.mod.common.physics.physx.BlockPhysicsDetails;
 
 public class BasicCenterOfMassProvider implements IPhysicsObjectCenterOfMassProvider {
     private static final double INERTIA_OFFSET = .4D;

@@ -1,4 +1,4 @@
-package org.valkyrienskies.mod.common.physics;
+package org.valkyrienskies.mod.common.physics.physx;
 
 import org.valkyrienskies.mod.common.config.VSConfig;
 import physx.PxTopLevelFunctions;

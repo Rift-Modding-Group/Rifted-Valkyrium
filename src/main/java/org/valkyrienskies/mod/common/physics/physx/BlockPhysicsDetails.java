@@ -1,4 +1,4 @@
-package org.valkyrienskies.mod.common.physics;
+package org.valkyrienskies.mod.common.physics.physx;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockLiquid;
@@ -10,7 +10,6 @@ import net.minecraft.world.World;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.valkyrienskies.addon.control.ValkyrienSkiesControl;
-import org.valkyrienskies.addon.control.block.BlockPhysicsInfuser;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.block.IBlockForceProvider;
 import org.valkyrienskies.mod.common.block.IBlockTorqueProvider;

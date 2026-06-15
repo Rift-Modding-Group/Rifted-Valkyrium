@@ -1,4 +1,4 @@
-package org.valkyrienskies.mod.common.physics;
+package org.valkyrienskies.mod.common.physics.physx;
 
 import physx.physics.PxFilterData;
 import physx.physics.PxShape;

@@ -1,5 +1,6 @@
-package org.valkyrienskies.mod.common.physics.collision;
+package org.valkyrienskies.mod.common.physics.physx.collision;
 
+import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.init.Blocks;
@@ -8,17 +9,24 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
 import org.jetbrains.annotations.NotNull;
+import org.joml.AxisAngle4d;
+import org.joml.Matrix3d;
 import org.joml.Matrix3dc;
 import org.joml.Quaterniond;
+import org.joml.Quaterniondc;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
+import org.valkyrienskies.mod.common.block.IBlockForceProvider;
+import org.valkyrienskies.mod.common.block.IBlockTorqueProvider;
 import org.valkyrienskies.mod.common.config.VSConfig;
-import org.valkyrienskies.mod.common.physics.BlockPhysicsDetails;
-import org.valkyrienskies.mod.common.physics.PhysXActorUtil;
-import org.valkyrienskies.mod.common.physics.PhysXCollisionFilters;
-import org.valkyrienskies.mod.common.physics.PhysicsCalculations;
+import org.valkyrienskies.mod.common.physics.physx.BlockPhysicsDetails;
+import org.valkyrienskies.mod.common.physics.physx.IPhysicsBlockController;
+import org.valkyrienskies.mod.common.physics.physx.PhysXActorUtil;
+import org.valkyrienskies.mod.common.physics.physx.PhysXCollisionFilters;
+import org.valkyrienskies.mod.common.physics.physx.PhysicsCalculations;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
+import org.valkyrienskies.mod.common.ships.ship_world.ShipPilot;
 import physx.common.PxTransform;
 import physx.common.PxVec3;
 import physx.physics.PxActorFlagEnum;
@@ -34,12 +42,17 @@ import valkyrienwarfare.api.TransformType;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.PriorityQueue;
+import java.util.Queue;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.UUID;
 
 /**
- * Information involving the ships collisions.
- * todo: put an interface on this that will be useful for when we add option for multiple physics engines
+ * Information involving the ships collisions
+ * todo: make interface and move most of the methods used here to there for when we get multiple physics engines
  * */
 public class PhysXShipBody extends AbstractPhysXCollisionObject {
     private static final int MAX_SHIP_SHAPES = 8192;
@@ -58,6 +71,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
     private final PxMaterial material;
     private int lastBlockCount;
     private boolean firstSync;
+    private boolean centerOfMassPoseDirty;
 
     public PhysXShipBody(@NotNull PxPhysics physics, @NotNull PxScene scene, PhysicsObject ship) {
         super(physics, scene);
@@ -66,6 +80,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
         this.material = physics.createMaterial(0.55f, 0.55f, 0.05f);
         this.lastBlockCount = -1;
         this.firstSync = true;
+        this.centerOfMassPoseDirty = false;
 
         PxTransform transform = PhysXActorUtil.toPxTransform(ship.getShipTransformationManager().getCurrentPhysicsTransform());
         this.actor = this.physics.createRigidDynamic(transform);
@@ -77,7 +92,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
         this.scene.addActor(this.actor);
     }
 
-    public void syncBeforeSimulation() {
+    private void syncBeforeSimulation() {
         PhysicsCalculations calculations = this.ship.getPhysicsCalculations();
         if (this.firstSync
                 || this.ship.getPhysicsData().consumeCollisionShapeDirty()
@@ -88,21 +103,21 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
 
         boolean disableGravity = !VSConfig.doGravity || this.ship.isShipAligningToGrid() || calculations.actAsArchimedes;
         this.actor.setActorFlag(PxActorFlagEnum.eDISABLE_GRAVITY, disableGravity);
-        this.actor.setMass(Math.max((float) calculations.getMass(), 0.0001f));
+        this.actor.setMass(Math.max((float) this.getShipMass(), 0.0001f));
         this.setMassInertia(calculations.getPhysMOITensor());
         this.actor.setMaxLinearVelocity((float) VSConfig.shipMaxSpeed);
         this.actor.setMaxAngularVelocity((float) VSConfig.shipMaxAngularSpeed);
 
-        boolean forceGameTransform = calculations.consumeForceToUseGameTransform();
-        boolean centerOfMassPoseDirty = calculations.consumeCenterOfMassPoseDirty();
+        boolean forceGameTransform = calculations.setForceToUseGameTransform(false);
         if (this.firstSync || forceGameTransform) {
             this.forcePose(this.ship.getShipData().getShipTransform());
             calculations.getLinearVelocity().zero();
             calculations.getAngularVelocity().zero();
         }
-        else if (centerOfMassPoseDirty) {
-            this.forcePose(calculations.createPhysTransform());
+        else if (this.centerOfMassPoseDirty) {
+            this.forcePose(this.ship.getShipTransformationManager().getCurrentPhysicsTransform());
         }
+        this.centerOfMassPoseDirty = false;
 
         PxVec3 linearVelocity = PhysXActorUtil.toPxVec(calculations.getLinearVelocity());
         PxVec3 angularVelocity = PhysXActorUtil.toPxVec(calculations.getAngularVelocity());
@@ -111,17 +126,23 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
         linearVelocity.destroy();
         angularVelocity.destroy();
 
-        calculations.drainImpulseTo(this);
+        this.drainImpulseFrom(calculations);
         this.firstSync = false;
     }
 
-    public void forcePose(ShipTransform transform) {
+    private void forcePose(ShipTransform transform) {
         PxTransform pxTransform = PhysXActorUtil.toPxTransform(transform);
         this.actor.setGlobalPose(pxTransform, true);
         pxTransform.destroy();
     }
 
-    public void addImpulse(Vector3dc impulse, Vector3dc torqueImpulse) {
+    private void drainImpulseFrom(PhysicsCalculations calculations) {
+        this.addImpulse(new Vector3d(calculations.getForce()), new Vector3d(calculations.getTorque()));
+        calculations.getForce().zero();
+        calculations.getTorque().zero();
+    }
+
+    private void addImpulse(Vector3dc impulse, Vector3dc torqueImpulse) {
         if (impulse.lengthSquared() > 0) {
             PxVec3 force = PhysXActorUtil.toPxVec(impulse);
             this.actor.addForce(force, PxForceModeEnum.eIMPULSE, true);
@@ -158,7 +179,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
             @NotNull List<AbstractPhysXCollisionObject> collisionObjects,
             double timeStep
     ) {
-        this.ship.getPhysicsCalculations().prePhysXTick(timeStep);
+        this.prepareForSimulation(timeStep);
         this.applyLiquidForces(hostWorld, collisionObjects);
         this.syncBeforeSimulation();
     }
@@ -178,15 +199,15 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
         Quaterniond rotation = PhysXActorUtil.fromPxQuat(poseRotation);
 
         position.y = Math.clamp(position.y, VSConfig.shipLowerLimit, VSConfig.shipUpperLimit);
-        ShipTransform finalTransform = new ShipTransform(position.x, position.y, position.z, rotation, calculations.getPhysCenterOfMass());
+        ShipTransform finalTransform = new ShipTransform(position.x, position.y, position.z, rotation, new Vector3d(calculations.getPhysCenterOfMass()));
 
         PxVec3 linearVelocity = this.actor.getLinearVelocity();
         PxVec3 angularVelocity = this.actor.getAngularVelocity();
-        calculations.setLinearVelocity(PhysXActorUtil.fromPxVec(linearVelocity));
-        calculations.setAngularVelocity(PhysXActorUtil.fromPxVec(angularVelocity));
+        calculations.getLinearVelocity().set(PhysXActorUtil.fromPxVec(linearVelocity));
+        calculations.getAngularVelocity().set(PhysXActorUtil.fromPxVec(angularVelocity));
         // Getter-returned PhysX JNI value wrappers have ambiguous ownership. Do not destroy them
         // during readback; an invalid free here aborts the JVM before Minecraft can write a report.
-        calculations.finishPhysXTick(finalTransform);
+        this.finishSimulationTick(finalTransform);
     }
 
     @Override
@@ -205,6 +226,189 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
     @NotNull
     protected PxRigidActor getActor() {
         return this.actor;
+    }
+
+    private void prepareForSimulation(double timeStep) {
+        PhysicsCalculations calculations = this.ship.getPhysicsCalculations();
+        calculations.getForce().zero();
+        calculations.getTorque().zero();
+        calculations.setPhysicsTimeDeltaPerPhysTick(timeStep);
+        this.centerOfMassPoseDirty = false;
+        this.updatePhysCenterOfMass(calculations);
+        this.calculateFramedMOITensor(calculations);
+
+        if (!this.ship.isShipAligningToGrid()) {
+            this.applyAirDrag(calculations);
+            if (!calculations.actAsArchimedes) this.calculateForces(calculations);
+        }
+        else this.calculateForcesDeconstruction(calculations, timeStep);
+    }
+
+    private void finishSimulationTick(ShipTransform finalPhysTransform) {
+        PhysicsCalculations calculations = this.ship.getPhysicsCalculations();
+        calculations.getPhysCenterOfMass().set(finalPhysTransform.getCenterCoord());
+
+        //reset all velocities when physics somehow broke
+        if (this.isPhysicsBroken(calculations)) {
+            this.ship.getShipData().setPhysicsEnabled(false);
+            calculations.getLinearVelocity().zero();
+            calculations.getAngularVelocity().zero();
+        }
+
+        this.ship.getShipTransformationManager().updatePreviousPhysicsTransform();
+        this.ship.getShipTransformationManager().setCurrentPhysicsTransform(finalPhysTransform);
+        this.ship.getShipData().getPhysicsData().setAngularVelocity(new Vector3d(calculations.getAngularVelocity()));
+        this.ship.getShipData().getPhysicsData().setLinearVelocity(new Vector3d(calculations.getLinearVelocity()));
+    }
+
+    //fallback for if something bad happened with the physics
+    private boolean isPhysicsBroken(PhysicsCalculations calculations) {
+        if (calculations.getAngularVelocity().lengthSquared() > 50000
+                || calculations.getLinearVelocity().lengthSquared() > 50000
+                || !calculations.getAngularVelocity().isFinite()
+                || !calculations.getLinearVelocity().isFinite()
+        ) {
+            System.out.println("Ship tried moving too fast; freezing it and resetting velocities");
+            return true;
+        }
+        return false;
+    }
+
+    private void updatePhysCenterOfMass(PhysicsCalculations calculations) {
+        Vector3d currentCenterOfMass = calculations.getPhysCenterOfMass();
+        Vector3dc gameTickCenterOfMass = this.ship.getInertiaData().getGameTickCenterOfMass();
+        if (!currentCenterOfMass.equals(gameTickCenterOfMass)) {
+            ShipTransform currentTransform = this.ship.getShipTransformationManager().getCurrentPhysicsTransform();
+            Vector3d centerDifference = gameTickCenterOfMass.sub(currentCenterOfMass, new Vector3d());
+            currentTransform.transformDirection(centerDifference, TransformType.SUBSPACE_TO_GLOBAL);
+
+            Vector3d newCenterOfMass = new Vector3d(gameTickCenterOfMass);
+            ShipTransform adjustedTransform = new ShipTransform(
+                    currentTransform.getPosX() + centerDifference.x,
+                    currentTransform.getPosY() + centerDifference.y,
+                    currentTransform.getPosZ() + centerDifference.z,
+                    currentTransform.rotationQuaternion(TransformType.SUBSPACE_TO_GLOBAL),
+                    newCenterOfMass
+            );
+            currentCenterOfMass.set(newCenterOfMass);
+            this.ship.getShipTransformationManager().setCurrentPhysicsTransform(adjustedTransform);
+            this.centerOfMassPoseDirty = true;
+            this.ship.getShipData().getPhysicsData().markCollisionShapeDirty();
+        }
+    }
+
+    private void calculateFramedMOITensor(PhysicsCalculations calculations) {
+        Matrix3dc rotationMatrix = this.ship.getShipTransformationManager()
+                .getCurrentPhysicsTransform().createRotationMatrix(TransformType.SUBSPACE_TO_GLOBAL);
+        Matrix3dc inertiaBodyFrame = this.ship.getInertiaData().getGameMoITensor();
+        Matrix3d rotationMatrixTranspose = rotationMatrix.transpose(new Matrix3d());
+        Matrix3d finalInertia = new Matrix3d(rotationMatrix);
+        finalInertia.mul(inertiaBodyFrame);
+        finalInertia.mul(rotationMatrixTranspose);
+        calculations.getPhysMOITensor().set(finalInertia);
+        calculations.getPhysInvMOITensor().set(finalInertia).invert();
+    }
+
+    private void calculateForces(PhysicsCalculations calculations) {
+        Vector3d blockForce = new Vector3d();
+        Vector3d inBodyWO = new Vector3d();
+        Vector3d crossVector = new Vector3d();
+        World world = this.ship.getWorld();
+
+        if (VSConfig.doPhysicsBlocks) {
+            Queue<IPhysicsBlockController> nodesPriorityQueue = new PriorityQueue<>(this.ship.getPhysicsControllersInShip());
+            while (!nodesPriorityQueue.isEmpty()) {
+                IPhysicsBlockController controller = nodesPriorityQueue.poll();
+                controller.onPhysicsTick(this.ship, calculations, calculations.getPhysicsTimeDeltaPerPhysTick());
+            }
+
+            SortedMap<IBlockTorqueProvider, List<BlockPos>> torqueProviders = new TreeMap<>();
+            BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
+            if (this.ship.getShipData().activeForcePositions != null) {
+                for (BlockPos activeForcePos : this.ship.getShipData().activeForcePositions) {
+                    mutablePos.setPos(activeForcePos);
+                    IBlockState state = this.ship.getChunkAt(mutablePos.getX() >> 4, mutablePos.getZ() >> 4).getBlockState(mutablePos);
+                    Block blockAt = state.getBlock();
+
+                    if (blockAt instanceof IBlockForceProvider blockForceProvider) {
+                        try {
+                            BlockPhysicsDetails.getForceFromState(
+                                    state, mutablePos, world,
+                                    calculations.getPhysicsTimeDeltaPerPhysTick(), this.ship, blockForce
+                            );
+                            Vector3dc otherPosition = blockForceProvider.getCustomBlockForcePosition(
+                                    world, mutablePos, state,
+                                    this.ship, calculations.getPhysicsTimeDeltaPerPhysTick()
+                            );
+
+                            if (otherPosition != null) inBodyWO.set(otherPosition);
+                            else inBodyWO.set(mutablePos.getX() + 0.5, mutablePos.getY() + 0.5, mutablePos.getZ() + 0.5);
+
+                            inBodyWO.sub(calculations.getPhysCenterOfMass());
+                            this.ship.getShipTransformationManager()
+                                    .getCurrentPhysicsTransform()
+                                    .transformDirection(inBodyWO, TransformType.SUBSPACE_TO_GLOBAL);
+                            calculations.addForceAtPoint(inBodyWO, blockForce, crossVector);
+                        }
+                        catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    if (blockAt instanceof IBlockTorqueProvider torqueProviderBlock) {
+                        torqueProviders.computeIfAbsent(torqueProviderBlock, ignored -> new LinkedList<>()).add(new BlockPos(activeForcePos));
+                    }
+                }
+            }
+
+            for (IBlockTorqueProvider torqueProviderBlock : torqueProviders.keySet()) {
+                List<BlockPos> blockPositions = torqueProviders.get(torqueProviderBlock);
+                for (BlockPos pos : blockPositions) {
+                    Vector3dc torqueVector = torqueProviderBlock.getTorqueInGlobal(calculations, pos);
+                    if (torqueVector != null) calculations.getTorque().add(torqueVector);
+                }
+            }
+        }
+
+        final ShipPilot parentPilot = this.ship.getShipPilot();
+        if (parentPilot != null) {
+            final Vector3dc pilotForce = parentPilot.getBlockForceInShipSpace(this.ship, calculations.getPhysicsTimeDeltaPerPhysTick());
+            final Vector3dc pilotTorque = parentPilot.getTorqueInGlobal(calculations);
+            if (pilotForce != null) calculations.getForce().add(pilotForce);
+            if (pilotTorque != null) calculations.getTorque().add(pilotTorque);
+        }
+    }
+
+    private void calculateForcesDeconstruction(PhysicsCalculations calculations, double timeStep) {
+        this.applyAirDrag(calculations);
+        Quaterniondc inverseCurrentRotation = this.ship.getShipTransformationManager()
+                .getCurrentPhysicsTransform().rotationQuaternion(TransformType.GLOBAL_TO_SUBSPACE);
+        AxisAngle4d idealAxisAngle = new AxisAngle4d(inverseCurrentRotation);
+        if (idealAxisAngle.angle < PhysicsCalculations.EPSILON) return;
+        idealAxisAngle.normalize();
+        double angleBetweenIdealAndActual = idealAxisAngle.angle;
+        if (angleBetweenIdealAndActual > Math.PI) {
+            angleBetweenIdealAndActual = 2 * Math.PI - angleBetweenIdealAndActual;
+        }
+        double idealAngularVelocityMultiple = angleBetweenIdealAndActual;
+        Vector3d idealAngularVelocity = new Vector3d(idealAxisAngle.x, idealAxisAngle.y, idealAxisAngle.z);
+        idealAngularVelocity.mul(idealAngularVelocityMultiple);
+        Vector3d angularVelocityDifference = idealAngularVelocity.sub(calculations.getAngularVelocity(), new Vector3d());
+        angularVelocityDifference.mul(timeStep);
+        calculations.getAngularVelocity().add(angularVelocityDifference);
+    }
+
+    private void applyAirDrag(PhysicsCalculations calculations) {
+        double drag = this.getDragForPhysTick(calculations);
+        calculations.getLinearVelocity().mul(drag);
+        calculations.getAngularVelocity().mul(drag);
+    }
+
+    private double getDragForPhysTick(PhysicsCalculations calculations) {
+        return Math.pow(PhysicsCalculations.DRAG_CONSTANT, calculations.getPhysicsTimeDeltaPerPhysTick() * 20D);
+    }
+
+    private double getShipMass() {
+        return Math.max(this.ship.getInertiaData().getGameTickMass(), 0.0001D);
     }
 
     private void rebuildCollisionShapes(PhysicsObject ship) {
@@ -352,5 +556,4 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
         }
         return Double.NaN;
     }
-
 }

@@ -1,4 +1,4 @@
-package org.valkyrienskies.mod.common.physics;
+package org.valkyrienskies.mod.common.physics.physx;
 
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
@@ -7,10 +7,10 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.NotNull;
 import org.valkyrienskies.mod.common.config.VSConfig;
-import org.valkyrienskies.mod.common.physics.collision.AbstractPhysXCollisionObject;
-import org.valkyrienskies.mod.common.physics.collision.PhysXBlockCollider;
-import org.valkyrienskies.mod.common.physics.collision.PhysXEntityBody;
-import org.valkyrienskies.mod.common.physics.collision.PhysXShipBody;
+import org.valkyrienskies.mod.common.physics.physx.collision.AbstractPhysXCollisionObject;
+import org.valkyrienskies.mod.common.physics.physx.collision.PhysXBlockCollider;
+import org.valkyrienskies.mod.common.physics.physx.collision.PhysXEntityBody;
+import org.valkyrienskies.mod.common.physics.physx.collision.PhysXShipBody;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import physx.PxTopLevelFunctions;
 import physx.common.PxVec3;

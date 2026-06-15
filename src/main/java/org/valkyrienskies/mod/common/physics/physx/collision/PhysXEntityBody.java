@@ -1,4 +1,4 @@
-package org.valkyrienskies.mod.common.physics.collision;
+package org.valkyrienskies.mod.common.physics.physx.collision;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.item.EntityItem;
@@ -8,7 +8,7 @@ import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.NotNull;
 import org.valkyrienskies.mod.common.entity.EntityMountable;
-import org.valkyrienskies.mod.common.physics.PhysXCollisionFilters;
+import org.valkyrienskies.mod.common.physics.physx.PhysXCollisionFilters;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import physx.common.PxTransform;
 import physx.physics.PxMaterial;

@@ -11,7 +11,7 @@ import org.jetbrains.annotations.NotNull;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
-import org.valkyrienskies.mod.common.physics.PhysXWorldBackend;
+import org.valkyrienskies.mod.common.physics.physx.PhysXWorldBackend;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.network.ShipTransformUpdateMessage;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;

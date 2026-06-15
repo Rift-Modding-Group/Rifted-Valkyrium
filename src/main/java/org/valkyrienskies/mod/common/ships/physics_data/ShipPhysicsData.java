@@ -4,9 +4,10 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
+import org.valkyrienskies.mod.common.physics.physx.PhysicsCalculations;
 
 /**
- * Stores data used by {@link org.valkyrienskies.mod.common.physics.PhysicsCalculations}
+ * Stores data used by {@link PhysicsCalculations}
  */
 public class ShipPhysicsData {
     @JsonSerialize(as = Vector3d.class)
