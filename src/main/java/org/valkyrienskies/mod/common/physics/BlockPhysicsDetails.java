@@ -81,9 +81,7 @@ public class BlockPhysicsDetails {
 
     private static String normalizeBlockName(String blockName) {
         String normalized = blockName.trim().toLowerCase(Locale.ROOT);
-        if (!normalized.contains(":")) {
-            return "minecraft:" + normalized;
-        }
+        if (!normalized.contains(":")) normalized = "minecraft:" + normalized;
         return normalized;
     }
 
@@ -91,39 +89,39 @@ public class BlockPhysicsDetails {
         materialMass.put(Material.AIR, Mass.NONE);
         materialMass.put(Material.ANVIL, Mass.HEAVY);
         materialMass.put(Material.BARRIER, Mass.NONE);
-        materialMass.put(Material.CACTUS, Mass.LIGHT);
+        materialMass.put(Material.CACTUS, Mass.VERY_LIGHT);
         materialMass.put(Material.CAKE, Mass.NONE);
         materialMass.put(Material.CARPET, Mass.NONE);
         materialMass.put(Material.CIRCUITS, Mass.NONE);
         materialMass.put(Material.CLAY, Mass.HEAVY);
         materialMass.put(Material.CLOTH, Mass.NONE);
         materialMass.put(Material.CORAL, Mass.HEAVY);
-        materialMass.put(Material.CRAFTED_SNOW, Mass.LIGHT);
-        materialMass.put(Material.DRAGON_EGG, Mass.LIGHT);
+        materialMass.put(Material.CRAFTED_SNOW, Mass.VERY_LIGHT);
+        materialMass.put(Material.DRAGON_EGG, Mass.VERY_LIGHT);
         materialMass.put(Material.FIRE, Mass.NONE);
-        materialMass.put(Material.GLASS, Mass.LIGHT);
-        materialMass.put(Material.GOURD, Mass.LIGHT);
-        materialMass.put(Material.GRASS, Mass.LIGHT);
-        materialMass.put(Material.GROUND, Mass.LIGHT);
+        materialMass.put(Material.GLASS, Mass.VERY_LIGHT);
+        materialMass.put(Material.GOURD, Mass.VERY_LIGHT);
+        materialMass.put(Material.GRASS, Mass.VERY_LIGHT);
+        materialMass.put(Material.GROUND, Mass.VERY_LIGHT);
         materialMass.put(Material.ICE, Mass.LIGHT);
         materialMass.put(Material.IRON, Mass.HEAVY);
-        materialMass.put(Material.LAVA, Mass.LIGHT);
+        materialMass.put(Material.LAVA, Mass.VERY_LIGHT);
         materialMass.put(Material.LEAVES, Mass.NONE);
-        materialMass.put(Material.PACKED_ICE, Mass.LIGHT);
-        materialMass.put(Material.PISTON, Mass.LIGHT);
+        materialMass.put(Material.PACKED_ICE, Mass.VERY_LIGHT);
+        materialMass.put(Material.PISTON, Mass.VERY_LIGHT);
         materialMass.put(Material.PLANTS, Mass.NONE);
         materialMass.put(Material.PORTAL, Mass.NONE);
         materialMass.put(Material.REDSTONE_LIGHT, Mass.NONE);
-        materialMass.put(Material.ROCK, Mass.HEAVY);
-        materialMass.put(Material.SAND, Mass.LIGHT);
-        materialMass.put(Material.SNOW, Mass.LIGHT);
-        materialMass.put(Material.SPONGE, Mass.LIGHT);
-        materialMass.put(Material.STRUCTURE_VOID, Mass.LIGHT);
-        materialMass.put(Material.TNT, Mass.LIGHT);
-        materialMass.put(Material.VINE, Mass.LIGHT);
-        materialMass.put(Material.WATER, Mass.LIGHT);
+        materialMass.put(Material.ROCK, Mass.LIGHT);
+        materialMass.put(Material.SAND, Mass.VERY_LIGHT);
+        materialMass.put(Material.SNOW, Mass.VERY_LIGHT);
+        materialMass.put(Material.SPONGE, Mass.VERY_LIGHT);
+        materialMass.put(Material.STRUCTURE_VOID, Mass.VERY_LIGHT);
+        materialMass.put(Material.TNT, Mass.VERY_LIGHT);
+        materialMass.put(Material.VINE, Mass.VERY_LIGHT);
+        materialMass.put(Material.WATER, Mass.VERY_LIGHT);
         materialMass.put(Material.WEB, Mass.NONE);
-        materialMass.put(Material.WOOD, Mass.LIGHT);
+        materialMass.put(Material.WOOD, Mass.VERY_LIGHT);
     }
 
     private static void generateBlockMasses() {
@@ -156,7 +154,7 @@ public class BlockPhysicsDetails {
     }
 
     private static double getMassOfMaterial(Material material) {
-        return materialMass.getOrDefault(material, Mass.LIGHT).mass;
+        return materialMass.getOrDefault(material, Mass.VERY_LIGHT).mass;
     }
 
     private static double getMassOfBlock(Block block) {
@@ -201,7 +199,8 @@ public class BlockPhysicsDetails {
      * */
     public enum Mass {
         NONE(0),
-        LIGHT(500),
+        VERY_LIGHT(500),
+        LIGHT(1000),
         HEAVY(8000),
         VERY_HEAVY(20000);
 
