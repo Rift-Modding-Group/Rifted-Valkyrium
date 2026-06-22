@@ -126,14 +126,13 @@ public class PhysicsObject implements IPhysicsEntity {
         // QueryableShipData.get(world).registerUpdateListener(this::shipDataUpdateListener);
         this.world = world;
         this.shipData = initial;
-        this.referenceBlockPos = getShipData().getChunkClaim().getRegionCenter();
+        this.referenceBlockPos = this.getShipData().getChunkClaim().getRegionCenter();
         this.watchingPlayers = new ArrayList<>();
         this.physicsControllers = ConcurrentHashMap.newKeySet();
         this.physicsControllersImmutable = Collections.unmodifiableSet(this.physicsControllers);
         this.claimedChunkCache = new ClaimedChunkCacheController(this);
         this.cachedSurroundingChunks = new SurroundingChunkCacheController(this);
-        this.shipTransformationManager = new ShipTransformationManager(this,
-            getShipData().getShipTransform());
+        this.shipTransformationManager = new ShipTransformationManager(this, this.getShipData().getShipTransform());
         this.physicsCalculations = new PhysicsCalculations(this);
         this.shipAligningToGrid = false;
         this.deconstructState = DeconstructState.NOT_DECONSTRUCTING;

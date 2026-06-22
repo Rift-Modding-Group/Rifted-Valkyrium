@@ -8,6 +8,8 @@ import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 public interface IBlockBuoyancyProvider {
     /**
      * Returns the upward buoyancy force this block applies, in newtons, when fully submerged.
+     * Note that this is as just a double instead of a vector because buoyancy only directs upward,
+     * a vector would not be useful for that.
      */
     double getBuoyancyForceInNewtons(World world, BlockPos pos, IBlockState state, PhysicsObject physicsObject);
 }

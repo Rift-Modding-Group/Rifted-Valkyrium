@@ -4,6 +4,7 @@ import net.minecraft.client.renderer.entity.RenderManager;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.Vec3d;
 import org.joml.Vector3d;
+import org.lwjgl.opengl.GL11;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -19,15 +20,17 @@ public abstract class MixinRenderManager {
     private boolean hasChanged = false;
 
     @Shadow
-    public abstract void renderEntity(Entity entityIn, double x, double y, double z, float yaw,
-        float partialTicks, boolean p_188391_10_);
+    public abstract void renderEntity(
+            Entity entityIn, double x, double y, double z, float yaw,
+            float partialTicks, boolean p_188391_10_
+    );
 
-    @Inject(method = "renderEntity",
-        at = @At("HEAD"),
-        cancellable = true)
-    public void preDoRenderEntity(Entity entityIn, double x, double y, double z, float yaw,
-        float partialTicks, boolean p_188391_10_, CallbackInfo callbackInfo) {
-        if (!hasChanged) {
+    @Inject(method = "renderEntity", at = @At("HEAD"), cancellable = true)
+    public void preDoRenderEntity(
+            Entity entityIn, double x, double y, double z, float yaw,
+            float partialTicks, boolean p_188391_10_, CallbackInfo callbackInfo
+    ) {
+        if (!this.hasChanged) {
             EntityShipMountData mountData = ValkyrienUtils.getMountedShipAndPos(entityIn);
 
             if (mountData.isMounted()) {
@@ -40,6 +43,7 @@ public abstract class MixinRenderManager {
                 double oldLastPosZ = entityIn.lastTickPosZ;
 
                 Vec3d mountPos = mountData.getMountPos();
+                GL11.glPushMatrix();
 
                 mountData.getMountedShip()
                     .getShipRenderer()
@@ -60,9 +64,9 @@ public abstract class MixinRenderManager {
                     z = entityIn.posZ = entityIn.lastTickPosZ = localPosition.z;
                 }
 
-                hasChanged = true;
+                this.hasChanged = true;
                 this.renderEntity(entityIn, x, y, z, yaw, partialTicks, p_188391_10_);
-                hasChanged = false;
+                this.hasChanged = false;
 
 
                 if (mountPos != null) {
@@ -70,6 +74,7 @@ public abstract class MixinRenderManager {
                         .getShipRenderer()
                         .applyInverseTransform(partialTicks);
                 }
+                GL11.glPopMatrix();
 
                 entityIn.posX = oldPosX;
                 entityIn.posY = oldPosY;
