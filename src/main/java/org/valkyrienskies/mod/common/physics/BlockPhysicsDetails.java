@@ -155,10 +155,6 @@ public class BlockPhysicsDetails {
         return getMassOfBlock(state.getBlock());
     }
 
-    private static double getMassOfMaterial(Material material) {
-        return materialMass.getOrDefault(material, Mass.VERY_LIGHT).mass;
-    }
-
     private static double getMassOfBlock(Block block) {
         //prioritize block mass
         Mass blockMass = blockToMass.get(block);
@@ -166,7 +162,8 @@ public class BlockPhysicsDetails {
         if (block instanceof BlockLiquid) return Mass.NONE.mass;
 
         //use material otherwise
-        return getMassOfMaterial(block.getDefaultState().getMaterial());
+        Material material = block.getDefaultState().getMaterial();
+        return materialMass.getOrDefault(material, Mass.VERY_LIGHT).mass;
     }
 
     /**

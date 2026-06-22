@@ -322,8 +322,8 @@ public class WorldServerShipManager implements IPhysObjectWorld {
                     int hashedPos = blocksIterator.next();
                     SpatialDetector.setPosWithRespectTo(hashedPos, detector.firstBlock, srcLocationPos);
 
-                    int changedChunkX = pasteLocationPos.getX() >> 4;
-                    int changedChunkZ = pasteLocationPos.getZ() >> 4;
+                    int changedChunkX = srcLocationPos.getX() >> 4;
+                    int changedChunkZ = srcLocationPos.getZ() >> 4;
                     long changedChunkPos = ChunkPos.asLong(changedChunkX, changedChunkZ);
 
                     if (chunksRelit.contains(changedChunkPos)) {
