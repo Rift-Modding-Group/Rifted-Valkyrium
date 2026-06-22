@@ -502,46 +502,93 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
         double gravityMagnitude = Math.abs(VSConfig.gravityVecY);
         if (gravityMagnitude <= 0D) return;
 
-        int processed = 0;
         Vector3d tempTorque = new Vector3d();
         BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
+
+        int processed = this.applyActiveBuoyancyProviders(hostWorld, transform, calculations, mutablePos, tempTorque);
         for (BlockPos blockPos : this.ship.getBlockPositions()) {
-            if (processed++ >= MAX_BUOYANCY_BLOCKS_PER_TICK) break;
+            if (processed >= MAX_BUOYANCY_BLOCKS_PER_TICK) break;
 
             IBlockState state = this.getShipBlockState(this.ship, blockPos);
-            double displacedWaterVolume = this.getDisplacedWaterVolume(state, blockPos);
-            if (displacedWaterVolume <= 0D) continue;
+            if (state.getBlock() instanceof IBlockBuoyancyProvider) continue;
 
-            Vector3d centerWorld = new Vector3d(blockPos.getX() + 0.5D, blockPos.getY() + 0.5D, blockPos.getZ() + 0.5D);
-            transform.transformPosition(centerWorld, TransformType.SUBSPACE_TO_GLOBAL);
+            double buoyancyForce = this.getArchimedesBuoyancyForceInNewtons(state, gravityMagnitude);
+            if (buoyancyForce <= 0D) continue;
 
-            double waterSurfaceY = this.getWaterSurfaceY(hostWorld, mutablePos, centerWorld);
-            if (Double.isNaN(waterSurfaceY)) continue;
-
-            double submergedFraction = Math.clamp(waterSurfaceY - (centerWorld.y - BLOCK_HALF_EXTENT), 0D, 1D);
-            if (submergedFraction <= 0D) continue;
-
-            Vector3d relativeToShipCenter = centerWorld.sub(
-                    new Vector3d(transform.getPosX(), transform.getPosY(), transform.getPosZ()),
-                    new Vector3d()
+            this.applyBuoyancyForceAtBlock(
+                    hostWorld, transform, calculations, mutablePos,
+                    blockPos, buoyancyForce, tempTorque
             );
-            Vector3d velocityAtPoint = calculations.getVelocityAtPoint(relativeToShipCenter, new Vector3d());
-            double lift = WATER_DENSITY * displacedWaterVolume * submergedFraction * gravityMagnitude;
-            Vector3d force = new Vector3d(
-                    -velocityAtPoint.x * WATER_HORIZONTAL_DAMPING * submergedFraction,
-                    lift - velocityAtPoint.y * WATER_VERTICAL_DAMPING * submergedFraction,
-                    -velocityAtPoint.z * WATER_HORIZONTAL_DAMPING * submergedFraction
-            );
-            calculations.addForceAtPointNew(relativeToShipCenter, force, tempTorque);
+            processed++;
         }
     }
 
-    private double getDisplacedWaterVolume(IBlockState state, BlockPos blockPos) {
-        Block block = state.getBlock();
-        if (block instanceof IBlockBuoyancyProvider buoyancyProvider) {
-            return Math.max(0D, buoyancyProvider.getDisplacedWaterVolume(this.ship.getWorld(), blockPos, state, this.ship));
+    private int applyActiveBuoyancyProviders(
+            World hostWorld,
+            ShipTransform transform,
+            PhysicsCalculations calculations,
+            BlockPos.MutableBlockPos mutablePos,
+            Vector3d tempTorque
+    ) {
+        int processed = 0;
+        if (this.ship.getShipData().activeForcePositions == null) return processed;
+
+        for (BlockPos activeForcePos : this.ship.getShipData().activeForcePositions) {
+            if (processed >= MAX_BUOYANCY_BLOCKS_PER_TICK) break;
+
+            IBlockState state = this.getShipBlockState(this.ship, activeForcePos);
+            Block block = state.getBlock();
+            if (!(block instanceof IBlockBuoyancyProvider buoyancyProvider)) continue;
+
+            double buoyancyForce = Math.max(
+                    0D,
+                    buoyancyProvider.getBuoyancyForceInNewtons(this.ship.getWorld(), activeForcePos, state, this.ship)
+            );
+            if (buoyancyForce <= 0D) continue;
+
+            this.applyBuoyancyForceAtBlock(
+                    hostWorld, transform, calculations, mutablePos,
+                    activeForcePos, buoyancyForce, tempTorque
+            );
+            processed++;
         }
-        return BlockPhysicsDetails.getMassFromState(state) > 0D ? 1D : 0D;
+        return processed;
+    }
+
+    private void applyBuoyancyForceAtBlock(
+            World hostWorld,
+            ShipTransform transform,
+            PhysicsCalculations calculations,
+            BlockPos.MutableBlockPos mutablePos,
+            BlockPos blockPos,
+            double fullySubmergedBuoyancyForce,
+            Vector3d tempTorque
+    ) {
+        Vector3d centerWorld = new Vector3d(blockPos.getX() + 0.5D, blockPos.getY() + 0.5D, blockPos.getZ() + 0.5D);
+        transform.transformPosition(centerWorld, TransformType.SUBSPACE_TO_GLOBAL);
+
+        double waterSurfaceY = this.getWaterSurfaceY(hostWorld, mutablePos, centerWorld);
+        if (Double.isNaN(waterSurfaceY)) return;
+
+        double submergedFraction = Math.clamp(waterSurfaceY - (centerWorld.y - BLOCK_HALF_EXTENT), 0D, 1D);
+        if (submergedFraction <= 0D) return;
+
+        Vector3d relativeToShipCenter = centerWorld.sub(
+                new Vector3d(transform.getPosX(), transform.getPosY(), transform.getPosZ()),
+                new Vector3d()
+        );
+        Vector3d velocityAtPoint = calculations.getVelocityAtPoint(relativeToShipCenter, new Vector3d());
+        double lift = fullySubmergedBuoyancyForce * submergedFraction;
+        Vector3d force = new Vector3d(
+                -velocityAtPoint.x * WATER_HORIZONTAL_DAMPING * submergedFraction,
+                lift - velocityAtPoint.y * WATER_VERTICAL_DAMPING * submergedFraction,
+                -velocityAtPoint.z * WATER_HORIZONTAL_DAMPING * submergedFraction
+        );
+        calculations.addForceAtPointNew(relativeToShipCenter, force, tempTorque);
+    }
+
+    private double getArchimedesBuoyancyForceInNewtons(IBlockState state, double gravityMagnitude) {
+        return BlockPhysicsDetails.getMassFromState(state) > 0D ? WATER_DENSITY * gravityMagnitude : 0D;
     }
 
     private boolean isTouchingLiquidActor(AxisAlignedBB shipAabb, List<AbstractPhysXCollisionObject> collisionObjects) {

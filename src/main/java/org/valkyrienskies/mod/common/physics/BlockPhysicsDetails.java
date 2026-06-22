@@ -11,6 +11,7 @@ import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.valkyrienskies.addon.control.ValkyrienSkiesControl;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
+import org.valkyrienskies.mod.common.block.IBlockBuoyancyProvider;
 import org.valkyrienskies.mod.common.block.IBlockForceProvider;
 import org.valkyrienskies.mod.common.block.IBlockTorqueProvider;
 import org.valkyrienskies.mod.common.config.VSConfig;
@@ -192,7 +193,7 @@ public class BlockPhysicsDetails {
      */
     public static boolean isBlockProvidingForce(IBlockState state) {
         Block block = state.getBlock();
-        return block instanceof IBlockForceProvider || block instanceof IBlockTorqueProvider;
+        return block instanceof IBlockForceProvider || block instanceof IBlockTorqueProvider || block instanceof IBlockBuoyancyProvider;
     }
 
     /**

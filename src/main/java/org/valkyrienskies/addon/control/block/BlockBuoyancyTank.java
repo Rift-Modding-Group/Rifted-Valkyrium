@@ -23,8 +23,8 @@ public class BlockBuoyancyTank extends BaseBlock implements IBlockBuoyancyProvid
     }
 
     @Override
-    public double getDisplacedWaterVolume(World world, BlockPos pos, IBlockState state, PhysicsObject physicsObject) {
-        return Math.max(0D, VSControlConfig.buoyancyTankDisplacedVolume);
+    public double getBuoyancyForceInNewtons(World world, BlockPos pos, IBlockState state, PhysicsObject physicsObject) {
+        return Math.max(0D, VSControlConfig.buoyancyTankForce);
     }
 
     @Override
@@ -36,7 +36,7 @@ public class BlockBuoyancyTank extends BaseBlock implements IBlockBuoyancyProvid
     ) {
         itemInformation.add(
                 TextFormatting.GRAY + "" + TextFormatting.ITALIC + TextFormatting.BOLD
-                        + I18n.format("tooltip.vs_control.buoyancy_tank", VSControlConfig.buoyancyTankDisplacedVolume)
+                        + I18n.format("tooltip.vs_control.buoyancy_tank", VSControlConfig.buoyancyTankForce)
         );
     }
 }

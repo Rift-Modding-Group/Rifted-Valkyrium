@@ -14,7 +14,6 @@ import javax.annotation.ParametersAreNonnullByDefault;
  */
 @ParametersAreNonnullByDefault
 public final class ShipDataMethods {
-
     // Calculates the new center of mass and inertia matrices for ships after a block change.
     private static final IPhysicsObjectCenterOfMassProvider centerOfMassProvider = new BasicCenterOfMassProvider();
 
@@ -32,16 +31,20 @@ public final class ShipDataMethods {
                     + ", but this ISN'T a part of the ship " + shipData);
         }
 
+        if (shipData.getBlockPositions() == null || shipData.getActiveForcePositions() == null) return;
+
         if (newState.equals(Blocks.AIR.getDefaultState())) {
             shipData.getBlockPositions().remove(pos);
-        } else {
+        }
+        else {
             shipData.getBlockPositions().add(pos);
         }
 
         if (BlockPhysicsDetails.isBlockProvidingForce(newState)) {
-            shipData.activeForcePositions.add(pos);
-        } else {
-            shipData.activeForcePositions.remove(pos);
+            shipData.getActiveForcePositions().add(pos);
+        }
+        else {
+            shipData.getActiveForcePositions().remove(pos);
         }
 
         centerOfMassProvider.onSetBlockState(shipData.getInertiaData(), pos, oldState, newState);

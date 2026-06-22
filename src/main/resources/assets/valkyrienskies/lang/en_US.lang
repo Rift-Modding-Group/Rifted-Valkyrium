@@ -190,7 +190,7 @@ tile.compacted_valkyrium.name=Compacted Valkyrium
 tooltip.vs_control.compacted_valkyrium=Lift force: %.0f Newtons.
 
 tile.buoyancy_tank.name=Buoyancy Tank
-tooltip.vs_control.buoyancy_tank=Displaces %.1f blocks of water when submerged.
+tooltip.vs_control.buoyancy_tank=Fully submerged buoyancy: %.0f Newtons.
 
 tile.gyroscope_stabilizer.name=Ship Gyroscope Stabilizer
 tooltip.vs_control.gyroscope_stabilizer=This block passively provides torque to keep the ship level.
@@ -228,6 +228,9 @@ vs_control.general.relaywirelength.tooltip=How long a single relay wire can exte
 
 vs_control.general.compactedvalkyriumlift=Compacted Valkyrium Upwards Force
 vs_control.general.compactedvalkyriumlift.tooltip=How much upwards force each block applies. Default is 200000 Newtons.
+
+vs_control.general.buoyancytankforce=Buoyancy Tank Force
+vs_control.general.buoyancytankforce.tooltip=How much upward buoyancy force each Buoyancy Tank applies when fully submerged. Default is 160000 Newtons.
 
 vs_control.general.engine_thrust=Engine Thrust Settings
 vs_control.general.engine_thrust.tooltip=Set the thrust force of engine blocks. Engines blocks must be replaced after changes are made.
