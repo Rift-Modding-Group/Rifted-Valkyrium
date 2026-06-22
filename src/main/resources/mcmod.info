@@ -3,7 +3,7 @@
     "modid": "valkyrienskies",
     "name": "Rifted Valkyrium",
     "description": "Valkyrien Skies 1, rifted and revitalized!",
-    "version": "0.1.0",
+    "version": "2.0.0",
     "mcversion": "${mcversion}",
     "authorList": [
       "ANightDazingZoroark",
