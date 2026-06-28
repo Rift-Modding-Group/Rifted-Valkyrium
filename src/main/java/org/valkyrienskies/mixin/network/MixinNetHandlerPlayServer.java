@@ -38,8 +38,6 @@ import static org.valkyrienskies.mod.common.util.ValkyrienUtils.getEntityShipMov
 
 @Mixin(value = NetHandlerPlayServer.class)
 public abstract class MixinNetHandlerPlayServer {
-
-    private final NetHandlerPlayServer thisAsNetHandler = NetHandlerPlayServer.class.cast(this);
     private boolean redirectingSetPlayerLocation = false;
 
     @Shadow
@@ -80,8 +78,8 @@ public abstract class MixinNetHandlerPlayServer {
                     // Now call this again with the transformed position.
                     // player.sendMessage(new TextComponentString("Transformed the player tp from <"
                     // + x + ":" + y + ":" + z + "> to" + tpPos));
-                    thisAsNetHandler
-                        .setPlayerLocation(tpPos.x, tpPos.y, tpPos.z, yaw, pitch, relativeSet);
+                    NetHandlerPlayServer thisNetHandler = (NetHandlerPlayServer) ((Object) this);
+                    thisNetHandler.setPlayerLocation(tpPos.x, tpPos.y, tpPos.z, yaw, pitch, relativeSet);
 
                     if (VSConfig.showAnnoyingDebugOutput) {
                         System.out.printf(
@@ -90,7 +88,8 @@ public abstract class MixinNetHandlerPlayServer {
                         );
                     }
 
-                } else {
+                }
+                else {
                     if (VSConfig.showAnnoyingDebugOutput) {
                         System.out.printf(
                             "Player was teleported to %.1f, %.1f, %.1f, cancelling because no ship found\n",

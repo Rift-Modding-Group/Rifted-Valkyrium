@@ -11,11 +11,9 @@ import org.valkyrienskies.mod.common.network.PlayerMovementDataGenerator;
 
 @Mixin(CPacketPlayer.Position.class)
 public class MixinCPacketPlayerPosition {
-
     @Inject(method = "<init>(DDDZ)V", at = @At(value = "RETURN"))
     private void postConstructor(final double x, final double y, final double z, final boolean onGround, final CallbackInfo info) {
         final PlayerMovementData playerMovementData = PlayerMovementDataGenerator.generatePlayerMovementDataForClient();
         IHasPlayerMovementData.class.cast(this).setPlayerMovementData(playerMovementData);
     }
-
 }

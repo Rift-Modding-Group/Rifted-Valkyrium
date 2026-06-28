@@ -33,8 +33,6 @@ import static org.valkyrienskies.mod.common.util.ValkyrienUtils.getLastShipTouch
 
 @Mixin(Entity.class)
 public abstract class MixinEntity {
-
-    private final Entity thisAsEntity = Entity.class.cast(this);
     @Shadow
     public float rotationYaw;
     @Shadow
@@ -61,29 +59,23 @@ public abstract class MixinEntity {
      */
     @Overwrite
     public Vec3d getLook(float partialTicks) {
-        // BEGIN VANILLA CODE
         Vec3d original;
-        if (partialTicks == 1.0F) {
-            original = this.getVectorForRotation(this.rotationPitch, this.rotationYaw);
-        } else {
-            float f = this.prevRotationPitch
-                + (this.rotationPitch - this.prevRotationPitch) * partialTicks;
-            float f1 =
-                this.prevRotationYaw + (this.rotationYaw - this.prevRotationYaw) * partialTicks;
+        if (partialTicks == 1f) original = this.getVectorForRotation(this.rotationPitch, this.rotationYaw);
+        else {
+            float f = this.prevRotationPitch + (this.rotationPitch - this.prevRotationPitch) * partialTicks;
+            float f1 = this.prevRotationYaw + (this.rotationYaw - this.prevRotationYaw) * partialTicks;
             original = this.getVectorForRotation(f, f1);
         }
-        // END VANILLA CODE
 
-        EntityShipMountData mountData = ValkyrienUtils
-            .getMountedShipAndPos(Entity.class.cast(this));
+        Entity thisEntity = (Entity) ((Object) this);
+        EntityShipMountData mountData = ValkyrienUtils.getMountedShipAndPos(thisEntity);
         if (mountData.isMounted()) {
             return mountData.getMountedShip()
                 .getShipTransformationManager()
                 .getRenderTransform()
                 .rotate(original, TransformType.SUBSPACE_TO_GLOBAL);
-        } else {
-            return original;
         }
+        else return original;
     }
 
     /**
@@ -180,11 +172,13 @@ public abstract class MixinEntity {
 
     @Redirect(method = "createRunningParticles", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/math/MathHelper;floor(D)I", ordinal = 0))
     private int runningParticlesFirstFloor(double d) {
-        final ShipData lastTouchedShip = getLastShipTouchedByEntity(thisAsEntity);
+        Entity thisEntity = (Entity) ((Object) this);
+        final ShipData lastTouchedShip = getLastShipTouchedByEntity(thisEntity);
         if (lastTouchedShip == null) {
             searchVector = null;
             return MathHelper.floor(d);
-        } else {
+        }
+        else {
             searchVector = new Vector3d(this.posX, this.posY - 0.20000000298023224D, this.posZ);
             lastTouchedShip.getShipTransform()
                 .transformPosition(searchVector, TransformType.GLOBAL_TO_SUBSPACE);
@@ -290,7 +284,8 @@ public abstract class MixinEntity {
     @Inject(method = "isEntityInvulnerable", at = @At("HEAD"), cancellable = true)
     private void isEntityInvulnerable(DamageSource damageSource, CallbackInfoReturnable<Boolean> cir) {
         if (VSConfig.noFallDamageOnShip && damageSource == DamageSource.FALL) {
-            final ShipData lastTouchedShip = getLastShipTouchedByEntity(thisAsEntity);
+            Entity thisEntity = (Entity) ((Object) this);
+            final ShipData lastTouchedShip = getLastShipTouchedByEntity(thisEntity);
 
             if (lastTouchedShip != null) {
                 cir.setReturnValue(true);

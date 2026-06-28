@@ -2,6 +2,7 @@ package org.valkyrienskies.mod.common.physics.physx.collision;
 
 import net.minecraft.block.BlockLiquid;
 import net.minecraft.block.material.Material;
+import net.minecraft.block.material.MaterialLiquid;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
@@ -176,7 +177,7 @@ public class PhysXBlockCollider extends AbstractPhysXCollisionObject {
     //-----static helper functions for use in PhysXWorldBackEnd-----
     public static boolean isLiquid(IBlockState state) {
         Material material = state.getMaterial();
-        return state.getBlock() instanceof BlockLiquid || material == Material.WATER || material == Material.LAVA;
+        return state.getBlock() instanceof BlockLiquid || material instanceof MaterialLiquid;
     }
 
     public static boolean isCollidableWorldState(IBlockState state) {

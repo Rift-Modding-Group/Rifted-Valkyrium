@@ -15,8 +15,6 @@ import valkyrienwarfare.api.TransformType;
 
 @Mixin(EntityPlayerSP.class)
 public abstract class MixinEntityPlayerSP {
-
-    private final EntityPlayerSP player = EntityPlayerSP.class.cast(this);
     @Final
     @Shadow
     public NetHandlerPlayClient connection;
@@ -28,25 +26,23 @@ public abstract class MixinEntityPlayerSP {
     @Overwrite
     public Vec3d getLook(final float partialTicks) {
         final Vec3d playerLook;
-        if (partialTicks == 1.0F) {
-            playerLook = getVectorForRotationInMc_1_12(player.rotationPitch, player.rotationYawHead);
-        } else {
-            final float playerPitch = player.prevRotationPitch + (player.rotationPitch - player.prevRotationPitch) * partialTicks;
-            final float playerYaw = player.prevRotationYawHead + (player.rotationYawHead - player.prevRotationYawHead) * partialTicks;
+        EntityPlayerSP thisPlayer = (EntityPlayerSP) ((Object) this);
+        if (partialTicks == 1f) playerLook = getVectorForRotationInMc_1_12(thisPlayer.rotationPitch, thisPlayer.rotationYawHead);
+        else {
+            final float playerPitch = thisPlayer.prevRotationPitch + (thisPlayer.rotationPitch - thisPlayer.prevRotationPitch) * partialTicks;
+            final float playerYaw = thisPlayer.prevRotationYawHead + (thisPlayer.rotationYawHead - thisPlayer.prevRotationYawHead) * partialTicks;
             playerLook = this.getVectorForRotationInMc_1_12(playerPitch, playerYaw);
         }
 
         // If the player is mounted to a ship then we must rotate the player look vector.
-        final EntityShipMountData mountData = ValkyrienUtils
-                .getMountedShipAndPos(player);
+        final EntityShipMountData mountData = ValkyrienUtils.getMountedShipAndPos(thisPlayer);
         if (mountData.isMounted()) {
             return mountData.getMountedShip()
                     .getShipTransformationManager()
                     .getRenderTransform()
                     .rotate(playerLook, TransformType.SUBSPACE_TO_GLOBAL);
-        } else {
-            return playerLook;
         }
+        else return playerLook;
     }
 
     // This is only valid for MC 1.12, may or may not be correct in future versions.

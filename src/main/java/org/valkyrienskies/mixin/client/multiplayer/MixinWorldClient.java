@@ -35,8 +35,6 @@ public class MixinWorldClient {
     @Final
     private Minecraft mc;
 
-    private final WorldClient thisAsWorldClient = WorldClient.class.cast(this);
-
     /**
      * Adds torch particles to ships.
      * @author Tri0de
@@ -51,7 +49,8 @@ public class MixinWorldClient {
 
         final AxisAlignedBB shipDetectionBB = new AxisAlignedBB(posX - i, posY - i, posZ - i, posX + i, posY + i, posZ + i);
 
-        IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(thisAsWorldClient);
+        WorldClient thisWorldClient = (WorldClient) ((Object) this);
+        IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(thisWorldClient);
         if (physObjectWorld == null) {
             throw new IllegalStateException("Could not get ship manager from world!");
         }
@@ -93,10 +92,11 @@ public class MixinWorldClient {
     }
 
     private void vs_displayTickPos(final BlockPos pos, final boolean holdingBarrier, final Random random) {
-        final IBlockState iblockstate = thisAsWorldClient.getBlockState(pos);
-        iblockstate.getBlock().randomDisplayTick(iblockstate, thisAsWorldClient, pos, random);
+        WorldClient thisWorldClient = (WorldClient) ((Object) this);
+        final IBlockState iblockstate = thisWorldClient.getBlockState(pos);
+        iblockstate.getBlock().randomDisplayTick(iblockstate, thisWorldClient, pos, random);
         if (holdingBarrier && iblockstate.getBlock() == Blocks.BARRIER) {
-            thisAsWorldClient.spawnParticle(EnumParticleTypes.BARRIER, (float) pos.getX() + 0.5F, (float) pos.getY() + 0.5F, (float) pos.getZ() + 0.5F, 0.0D, 0.0D, 0.0D);
+            thisWorldClient.spawnParticle(EnumParticleTypes.BARRIER, (float) pos.getX() + 0.5F, (float) pos.getY() + 0.5F, (float) pos.getZ() + 0.5F, 0.0D, 0.0D, 0.0D);
         }
     }
 
@@ -104,11 +104,9 @@ public class MixinWorldClient {
         if (x > alignedBB.minX && x < alignedBB.maxX) {
             if (y > alignedBB.minY && y < alignedBB.maxY) {
                 return z > alignedBB.minZ && z < alignedBB.maxZ;
-            } else {
-                return false;
             }
-        } else {
-            return false;
+            else return false;
         }
+        else return false;
     }
 }

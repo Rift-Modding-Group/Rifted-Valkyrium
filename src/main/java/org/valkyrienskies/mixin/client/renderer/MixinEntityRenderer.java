@@ -205,8 +205,7 @@ public abstract class MixinEntityRenderer {
             float yaw = entity.prevRotationYaw + (entity.rotationYaw - entity.prevRotationYaw) * partialTicks + 180.0F;
             float pitch = entity.prevRotationPitch + (entity.rotationPitch - entity.prevRotationPitch) * partialTicks;
             float roll = 0.0F;
-            if (entity instanceof EntityAnimal) {
-                EntityAnimal entityanimal = (EntityAnimal) entity;
+            if (entity instanceof EntityAnimal entityanimal) {
                 yaw = entityanimal.prevRotationYawHead + (entityanimal.rotationYawHead - entityanimal.prevRotationYawHead) * partialTicks + 180.0F;
             }
             IBlockState state = ActiveRenderInfo.getBlockStateAtEntityViewpoint(this.mc.world, entity, partialTicks);
@@ -217,9 +216,7 @@ public abstract class MixinEntityRenderer {
             GlStateManager.rotate(event.getYaw(), 0.0F, 1.0F, 0.0F);
         }
 
-        if (mountData.isMounted() && mountData.getMountedShip()
-                .getShipRenderer().offsetPos != null) {
-
+        if (mountData.isMounted() && mountData.getMountedShip().getShipRenderer().offsetPos != null) {
             final ShipTransform renderTransform = mountData.getMountedShip().getShipTransformationManager().getRenderTransform();
 
             Quaterniond orientationQuat = renderTransform.rotationQuaternion(TransformType.SUBSPACE_TO_GLOBAL);
