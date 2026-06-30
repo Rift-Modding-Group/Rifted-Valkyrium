@@ -40,12 +40,7 @@ import physx.physics.PxScene;
 import physx.physics.PxShape;
 import valkyrienwarfare.api.TransformType;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.PriorityQueue;
-import java.util.Queue;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Information involving the ships collisions
@@ -61,6 +56,8 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
     @NotNull
     private PhysicsObject ship;
     @NotNull
+    private final Identifier identifier;
+    @NotNull
     private final PxRigidDynamic actor;
     private final List<PxShape> shapes;
     @NotNull
@@ -72,6 +69,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
     public PhysXShipBody(@NotNull PxPhysics physics, @NotNull PxScene scene, PhysicsObject ship) {
         super(physics, scene);
         this.ship = ship;
+        this.identifier = new Identifier(ship);
         this.shapes = new ArrayList<>();
         this.material = physics.createMaterial(0.55f, 0.55f, 0.05f);
         this.lastBlockCount = -1;
@@ -156,23 +154,21 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
         return this.ship;
     }
 
+    public void updateShipReference(@NotNull PhysicsObject ship) {
+        this.ship = ship;
+    }
+
     @Override
-    public boolean isStillValid(@NotNull World hostWorld, @NotNull Collection<PhysicsObject> shipsWithPhysics) {
-        UUID shipId = this.ship.getUuid();
-        for (PhysicsObject loadedShip : shipsWithPhysics) {
-            if (shipId.equals(loadedShip.getUuid())) {
-                this.ship = loadedShip;
-                return true;
-            }
-        }
-        return false;
+    @NotNull
+    public Identifier getIdentifier() {
+        return this.identifier;
     }
 
     @Override
     public void updateBeforeSimulation(
             @NotNull World hostWorld,
             @NotNull Collection<PhysicsObject> shipsWithPhysics,
-            @NotNull List<AbstractPhysXCollisionObject> collisionObjects,
+            @NotNull Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject> collisionObjects,
             double timeStep
     ) {
         this.prepareForSimulation(timeStep);
@@ -184,7 +180,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
     public void updateAfterSimulation(
             @NotNull World hostWorld,
             @NotNull Collection<PhysicsObject> shipsWithPhysics,
-            @NotNull List<AbstractPhysXCollisionObject> collisionObjects,
+            @NotNull Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject> collisionObjects,
             double timeStep
     ) {
         PhysicsCalculations calculations = this.ship.getPhysicsCalculations();
@@ -489,7 +485,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
     /**
      * This is for applying buoyancy in liquids
      * */
-    private void applyLiquidForces(World hostWorld, List<AbstractPhysXCollisionObject> collisionObjects) {
+    private void applyLiquidForces(World hostWorld, Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject> collisionObjects) {
         AxisAlignedBB shipAabb = this.ship.getPhysicsTransformAABB();
         if (shipAabb == null || !this.isTouchingLiquidActor(shipAabb, collisionObjects)) return;
 
@@ -532,11 +528,9 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
         }
     }
 
-    private boolean isTouchingLiquidActor(AxisAlignedBB shipAabb, List<AbstractPhysXCollisionObject> collisionObjects) {
-        for (AbstractPhysXCollisionObject collisionObject : collisionObjects) {
-            if (collisionObject.isLiquidBlockIntersecting(shipAabb)) {
-                return true;
-            }
+    private boolean isTouchingLiquidActor(AxisAlignedBB shipAabb, Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject> collisionObjects) {
+        for (AbstractPhysXCollisionObject collisionObject : collisionObjects.values()) {
+            if (collisionObject.isLiquidBlockIntersecting(shipAabb)) return true;
         }
         return false;
     }
@@ -553,5 +547,26 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
             }
         }
         return Double.NaN;
+    }
+
+    public static final class Identifier extends AbstractPhysXCollisionObject.Identifier {
+        @NotNull
+        private final UUID shipUuid;
+
+        public Identifier(@NotNull PhysicsObject ship) {
+            this.shipUuid = ship.getUuid();
+        }
+
+        @Override
+        public boolean equals(Object object) {
+            if (this == object) return true;
+            if (!(object instanceof Identifier that)) return false;
+            return this.shipUuid.equals(that.shipUuid);
+        }
+
+        @Override
+        public int hashCode() {
+            return this.shipUuid.hashCode();
+        }
     }
 }

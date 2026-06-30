@@ -23,23 +23,21 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Information involving the blockpos to collide with the ship is contained here.
  * */
 public class PhysXBlockCollider extends AbstractPhysXCollisionObject {
     @NotNull
-    private final World world;
-    @NotNull
     private final BlockPos pos;
     @NotNull
-    private final IBlockState state;
+    private final Identifier identifier;
     private final boolean liquid;
     @NotNull
     private final PxRigidStatic actor;
     @NotNull
     private final PxMaterial material;
-    private final int stateHash;
 
     public PhysXBlockCollider(
             @NotNull PxPhysics physics,
@@ -49,12 +47,10 @@ public class PhysXBlockCollider extends AbstractPhysXCollisionObject {
             @NotNull IBlockState state
     ) {
         super(physics, scene);
-        this.world = world;
         this.pos = pos.toImmutable();
-        this.state = state;
+        this.identifier = new Identifier(world, pos, state);
         this.liquid = isLiquid(state);
         this.material = physics.createMaterial(0.8f, 0.8f, 0.02f);
-        this.stateHash = state.hashCode();
 
         PxTransform actorTransform = createTransform(pos.getX(), pos.getY(), pos.getZ());
         this.actor = this.physics.createRigidStatic(actorTransform);
@@ -66,23 +62,10 @@ public class PhysXBlockCollider extends AbstractPhysXCollisionObject {
         this.scene.addActor(this.actor);
     }
 
-    public boolean matches(IBlockState state) {
-        return this.stateHash == state.hashCode() && this.liquid == isLiquid(state);
-    }
-
+    @Override
     @NotNull
-    public World getWorld() {
-        return this.world;
-    }
-
-    @NotNull
-    public BlockPos getPos() {
-        return this.pos;
-    }
-
-    @NotNull
-    public IBlockState getState() {
-        return this.state;
+    public Identifier getIdentifier() {
+        return this.identifier;
     }
 
     @Override
@@ -92,15 +75,10 @@ public class PhysXBlockCollider extends AbstractPhysXCollisionObject {
     }
 
     @Override
-    public boolean isStillValid(@NotNull World hostWorld, @NotNull Collection<PhysicsObject> shipsWithPhysics) {
-        return this.world == hostWorld;
-    }
-
-    @Override
     public void updateBeforeSimulation(
             @NotNull World hostWorld,
             @NotNull Collection<PhysicsObject> shipsWithPhysics,
-            @NotNull List<AbstractPhysXCollisionObject> collisionObjects,
+            @NotNull Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject> collisionObjects,
             double timeStep
     ) {}
 
@@ -108,7 +86,7 @@ public class PhysXBlockCollider extends AbstractPhysXCollisionObject {
     public void updateAfterSimulation(
             @NotNull World hostWorld,
             @NotNull Collection<PhysicsObject> shipsWithPhysics,
-            @NotNull List<AbstractPhysXCollisionObject> collisionObjects,
+            @NotNull Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject> collisionObjects,
             double timeStep
     ) {}
 
@@ -183,5 +161,40 @@ public class PhysXBlockCollider extends AbstractPhysXCollisionObject {
         }
 
         return null;
+    }
+
+    public static final class Identifier extends AbstractPhysXCollisionObject.Identifier {
+        @NotNull
+        private final World world;
+        @NotNull
+        private final BlockPos pos;
+        private final int stateHash;
+        private final boolean liquid;
+
+        public Identifier(@NotNull World world, @NotNull BlockPos pos, @NotNull IBlockState state) {
+            this.world = world;
+            this.pos = pos.toImmutable();
+            this.stateHash = state.hashCode();
+            this.liquid = isLiquid(state);
+        }
+
+        @Override
+        public boolean equals(Object object) {
+            if (this == object) return true;
+            if (!(object instanceof Identifier that)) return false;
+            return this.world == that.world
+                    && this.stateHash == that.stateHash
+                    && this.liquid == that.liquid
+                    && this.pos.equals(that.pos);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = System.identityHashCode(this.world);
+            result = 31 * result + this.pos.hashCode();
+            result = 31 * result + this.stateHash;
+            result = 31 * result + Boolean.hashCode(this.liquid);
+            return result;
+        }
     }
 }

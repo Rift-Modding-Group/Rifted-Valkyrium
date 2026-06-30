@@ -16,7 +16,7 @@ import physx.physics.PxScene;
 import physx.physics.PxShape;
 
 import java.util.Collection;
-import java.util.List;
+import java.util.Map;
 
 /**
  * Information involving the entity to collide with the ship is contained here.
@@ -28,6 +28,8 @@ public class PhysXEntityBody extends AbstractPhysXCollisionObject {
     private final PxMaterial material;
     @NotNull
     private final Entity entity;
+    @NotNull
+    private final Identifier identifier;
 
     private PxShape shape;
 
@@ -41,23 +43,20 @@ public class PhysXEntityBody extends AbstractPhysXCollisionObject {
         this.rebuildShape(entity.getEntityBoundingBox());
         this.scene.addActor(this.actor);
         this.entity = entity;
-    }
-
-    @NotNull
-    public Entity getEntity() {
-        return this.entity;
+        this.identifier = new Identifier(entity);
     }
 
     @Override
-    public boolean isStillValid(@NotNull World hostWorld, @NotNull Collection<PhysicsObject> shipsWithPhysics) {
-        return this.entity.isEntityAlive() && this.entity.world == hostWorld;
+    @NotNull
+    public Identifier getIdentifier() {
+        return this.identifier;
     }
 
     @Override
     public void updateBeforeSimulation(
             @NotNull World hostWorld,
             @NotNull Collection<PhysicsObject> shipsWithPhysics,
-            @NotNull List<AbstractPhysXCollisionObject> collisionObjects,
+            @NotNull Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject> collisionObjects,
             double timeStep
     ) {
         AxisAlignedBB bb = this.entity.getEntityBoundingBox();
@@ -71,7 +70,7 @@ public class PhysXEntityBody extends AbstractPhysXCollisionObject {
     public void updateAfterSimulation(
             @NotNull World hostWorld,
             @NotNull Collection<PhysicsObject> shipsWithPhysics,
-            @NotNull List<AbstractPhysXCollisionObject> collisionObjects,
+            @NotNull Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject> collisionObjects,
             double timeStep
     ) {}
 
@@ -105,4 +104,27 @@ public class PhysXEntityBody extends AbstractPhysXCollisionObject {
         if (!this.attachShape(this.shape)) this.shape = null;
     }
 
+    public static final class Identifier extends AbstractPhysXCollisionObject.Identifier {
+        @NotNull
+        private final World world;
+        @NotNull
+        private final Entity entity;
+
+        public Identifier(@NotNull Entity entity) {
+            this.world = entity.world;
+            this.entity = entity;
+        }
+
+        @Override
+        public boolean equals(Object object) {
+            if (this == object) return true;
+            if (!(object instanceof Identifier that)) return false;
+            return this.world == that.world && this.entity == that.entity;
+        }
+
+        @Override
+        public int hashCode() {
+            return 31 * System.identityHashCode(this.world) + System.identityHashCode(this.entity);
+        }
+    }
 }

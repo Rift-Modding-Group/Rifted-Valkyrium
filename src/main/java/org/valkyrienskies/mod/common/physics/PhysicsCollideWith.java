@@ -21,8 +21,6 @@ import java.util.List;
  * This class stores the world chunks and entities that a ship is going to collide with.
  * */
 public class PhysicsCollideWith {
-    public static final int MAX_BLOCKS = 12000;
-    public static final double BLOCK_SCAN_GROW = 3D;
     public static final int MAX_ENTITIES = 512;
     public static final double ENTITY_SCAN_GROW = 2D;
 
@@ -39,16 +37,15 @@ public class PhysicsCollideWith {
         AxisAlignedBB shipAabb = physicsObject.getPhysicsTransformAABB();
         if (shipAabb != null) {
             World world = physicsObject.getWorld();
-            AxisAlignedBB blockScan = shipAabb.grow(BLOCK_SCAN_GROW);
             nextCachedMin = new BlockPos(
-                    (int) Math.floor(blockScan.minX),
-                    Math.max(0, (int) Math.floor(blockScan.minY)),
-                    (int) Math.floor(blockScan.minZ)
+                    (int) Math.floor(shipAabb.minX),
+                    Math.max(0, (int) Math.floor(shipAabb.minY)),
+                    (int) Math.floor(shipAabb.minZ)
             );
             nextCachedMax = new BlockPos(
-                    (int) Math.ceil(blockScan.maxX),
-                    Math.min(world.getHeight() - 1, (int) Math.ceil(blockScan.maxY)),
-                    (int) Math.ceil(blockScan.maxZ)
+                    (int) Math.ceil(shipAabb.maxX),
+                    Math.min(world.getHeight() - 1, (int) Math.ceil(shipAabb.maxY)),
+                    (int) Math.ceil(shipAabb.maxZ)
             );
 
             //---chunk scanning---

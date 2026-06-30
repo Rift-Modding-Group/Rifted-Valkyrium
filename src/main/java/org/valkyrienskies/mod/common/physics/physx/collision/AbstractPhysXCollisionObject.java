@@ -17,6 +17,7 @@ import physx.physics.PxShape;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -41,22 +42,20 @@ public abstract class AbstractPhysXCollisionObject {
     @NotNull
     public abstract PxMaterial getMaterial();
 
-    /**
-     * Test if the collision object is still valid. False means it gets removed.
-     * */
-    public abstract boolean isStillValid(@NotNull World hostWorld, @NotNull Collection<PhysicsObject> shipsWithPhysics);
+    @NotNull
+    public abstract Identifier getIdentifier();
 
     public abstract void updateBeforeSimulation(
             @NotNull World hostWorld,
             @NotNull Collection<PhysicsObject> shipsWithPhysics,
-            @NotNull List<AbstractPhysXCollisionObject> collisionObjects,
+            @NotNull Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject> collisionObjects,
             double timeStep
     );
 
     public abstract void updateAfterSimulation(
             @NotNull World hostWorld,
             @NotNull Collection<PhysicsObject> shipsWithPhysics,
-            @NotNull List<AbstractPhysXCollisionObject> collisionObjects,
+            @NotNull Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject> collisionObjects,
             double timeStep
     );
 
@@ -125,5 +124,13 @@ public abstract class AbstractPhysXCollisionObject {
             (bb.minY + bb.maxY) * 0.5D,
             (bb.minZ + bb.maxZ) * 0.5D
         );
+    }
+
+    public static abstract class Identifier {
+        @Override
+        public abstract boolean equals(Object object);
+
+        @Override
+        public abstract int hashCode();
     }
 }

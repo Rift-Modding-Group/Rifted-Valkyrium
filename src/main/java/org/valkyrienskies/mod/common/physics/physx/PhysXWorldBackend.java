@@ -25,8 +25,6 @@ import physx.physics.PxSceneDesc;
 import physx.physics.PxSceneFlagEnum;
 
 import java.util.*;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
 
 /**
  * One PhysX scene for a loaded Minecraft dimension.
@@ -40,8 +38,7 @@ public class PhysXWorldBackend {
     public final PxPhysics physics;
     @NotNull
     public final PxScene scene;
-
-    private final List<AbstractPhysXCollisionObject> collisionObjects = new ArrayList<>();
+    private final Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject> collisionObjects = new HashMap<>();
     private boolean closed;
 
     public PhysXWorldBackend() {
@@ -84,17 +81,23 @@ public class PhysXWorldBackend {
      * For updating list of collision objects from the world.
      * */
     private void syncCollisionObjects(World hostWorld, Collection<PhysicsObject> shipsWithPhysics) {
-        Set<AbstractPhysXCollisionObject> syncedCollisionObjects = Collections.newSetFromMap(new IdentityHashMap<>());
-        int syncedBlocks = 0;
+        //set to serve as basis for removing unsynced objects
+        Set<AbstractPhysXCollisionObject.Identifier> syncedCollisionObjects = new HashSet<>();
 
         for (PhysicsObject ship : shipsWithPhysics) {
             //-----ship objects-----
-            syncedCollisionObjects.add(this.addCollisionObject(
-                    collisionObject -> collisionObject instanceof PhysXShipBody shipBody && shipBody.getShip() == ship,
-                    () -> new PhysXShipBody(this.physics, this.scene, ship)
-            ));
+            PhysXShipBody.Identifier shipIdentifier = new PhysXShipBody.Identifier(ship);
+            syncedCollisionObjects.add(shipIdentifier);
+            AbstractPhysXCollisionObject shipCollisionObject = this.collisionObjects.get(shipIdentifier);
+            //add if no ship body
+            if (shipCollisionObject == null) {
+                PhysXShipBody shipBody = new PhysXShipBody(this.physics, this.scene, ship);
+                this.addCollisionObject(shipBody);
+            }
+            //update ship reference if there is
+            else ((PhysXShipBody) shipCollisionObject).updateShipReference(ship);
 
-            //-----defining -----
+            //-----defining block and entity stuff-----
             PhysicsCollideWith collideWith = ship.getPhysicsCollideWith();
             ChunkCache cachedChunks;
             MutablePair<BlockPos, BlockPos> cachedChunksCorners;
@@ -111,24 +114,22 @@ public class PhysXWorldBackend {
                 BlockPos cachedMax = cachedChunksCorners.getRight();
 
                 BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
-                blockScan: for (int x = cachedMin.getX(); x <= cachedMax.getX(); x++) {
+                for (int x = cachedMin.getX(); x <= cachedMax.getX(); x++) {
                     for (int z = cachedMin.getZ(); z <= cachedMax.getZ(); z++) {
                         for (int y = cachedMin.getY(); y <= cachedMax.getY(); y++) {
-                            if (syncedBlocks >= PhysicsCollideWith.MAX_BLOCKS) break blockScan;
                             mutablePos.setPos(x, y, z);
                             IBlockState state = cachedChunks.getBlockState(mutablePos);
                             Material material = state.getMaterial();
                             boolean liquid = state.getBlock() instanceof BlockLiquid || material instanceof MaterialLiquid;
                             if (material.equals(Material.AIR) || (!liquid && !material.blocksMovement())) continue;
                             BlockPos blockPos = mutablePos.toImmutable();
-                            syncedBlocks++;
-                            syncedCollisionObjects.add(this.addCollisionObject(
-                                    collisionObject -> collisionObject instanceof PhysXBlockCollider blockCollider
-                                            && blockCollider.getWorld() == hostWorld
-                                            && blockCollider.getPos().equals(blockPos)
-                                            && blockCollider.matches(state),
-                                    () -> new PhysXBlockCollider(this.physics, this.scene, hostWorld, blockPos, state)
-                            ));
+
+                            PhysXBlockCollider.Identifier blockIdentifier = new PhysXBlockCollider.Identifier(hostWorld, blockPos, state);
+                            syncedCollisionObjects.add(blockIdentifier);
+                            if (this.collisionObjects.get(blockIdentifier) == null) {
+                                PhysXBlockCollider blockCollider = new PhysXBlockCollider(this.physics, this.scene, hostWorld, blockPos, state);
+                                this.addCollisionObject(blockCollider);
+                            }
                         }
                     }
                 }
@@ -136,46 +137,36 @@ public class PhysXWorldBackend {
 
             //-----entity objects-----
             for (Entity entity : entities) {
-                syncedCollisionObjects.add(this.addCollisionObject(
-                        collisionObject -> collisionObject instanceof PhysXEntityBody entityBody
-                                && entityBody.getEntity().world == entity.world
-                                && entityBody.getEntity().getEntityId() == entity.getEntityId(),
-                        () -> new PhysXEntityBody(this.physics, this.scene, entity)
-                ));
+                PhysXEntityBody.Identifier entityIdentifier = new PhysXEntityBody.Identifier(entity);
+                syncedCollisionObjects.add(entityIdentifier);
+                if (this.collisionObjects.get(entityIdentifier) == null) {
+                    PhysXEntityBody entityBody = new PhysXEntityBody(this.physics, this.scene, entity);
+                    this.addCollisionObject(entityBody);
+                }
             }
         }
 
         //-----remove collision objects we do not care about anymore-----
-        this.collisionObjects.removeIf(collisionObject -> {
-            if (syncedCollisionObjects.contains(collisionObject)) return false;
+        Iterator<Map.Entry<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject>> iterator = this.collisionObjects.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject> entry = iterator.next();
+            if (syncedCollisionObjects.contains(entry.getKey())) continue;
+
+            AbstractPhysXCollisionObject collisionObject = entry.getValue();
             collisionObject.release();
-            return true;
-        });
+            iterator.remove();
+        }
     }
 
-    /**
-     * Create collision objects, takes into account whether or not they exist in this.collisionObjects
-     * */
-    private AbstractPhysXCollisionObject addCollisionObject(
-            Predicate<AbstractPhysXCollisionObject> existingCollisionObject,
-            Supplier<AbstractPhysXCollisionObject> collisionObjectFactory
-    ) {
-        //-----search in collision objects list-----
-        for (AbstractPhysXCollisionObject collisionObject : this.collisionObjects) {
-            if (existingCollisionObject.test(collisionObject)) return collisionObject;
-        }
-
-        //-----add if above loop wasnt broken by return statement-----
-        AbstractPhysXCollisionObject collisionObject = collisionObjectFactory.get();
-        this.collisionObjects.add(collisionObject);
-        return collisionObject;
+    private void addCollisionObject(AbstractPhysXCollisionObject collisionObject) {
+        this.collisionObjects.put(collisionObject.getIdentifier(), collisionObject);
     }
 
     /**
      * Do I have to explain what this shit does?
      * */
     private void updateCollisionObjectsBeforeSimulation(World hostWorld, Collection<PhysicsObject> shipsWithPhysics, double timeStep) {
-        for (AbstractPhysXCollisionObject collisionObject : new ArrayList<>(this.collisionObjects)) {
+        for (AbstractPhysXCollisionObject collisionObject : new ArrayList<>(this.collisionObjects.values())) {
             try {
                 collisionObject.updateBeforeSimulation(hostWorld, shipsWithPhysics, this.collisionObjects, timeStep);
             }
@@ -189,7 +180,7 @@ public class PhysXWorldBackend {
      * e
      * */
     private void updateCollisionObjectsAfterSimulation(World hostWorld, Collection<PhysicsObject> shipsWithPhysics, double timeStep) {
-        for (AbstractPhysXCollisionObject collisionObject : new ArrayList<>(this.collisionObjects)) {
+        for (AbstractPhysXCollisionObject collisionObject : new ArrayList<>(this.collisionObjects.values())) {
             try {
                 collisionObject.updateAfterSimulation(hostWorld, shipsWithPhysics, this.collisionObjects, timeStep);
             }
@@ -207,7 +198,7 @@ public class PhysXWorldBackend {
         if (this.closed) return;
         this.closed = true;
 
-        for (AbstractPhysXCollisionObject collisionObject : this.collisionObjects) {
+        for (AbstractPhysXCollisionObject collisionObject : this.collisionObjects.values()) {
             collisionObject.release();
         }
         this.collisionObjects.clear();
