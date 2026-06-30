@@ -1,13 +1,9 @@
 package org.valkyrienskies.mod.common.physics.physx.collision;
 
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.item.EntityItem;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.entity.projectile.EntityFireball;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.NotNull;
-import org.valkyrienskies.mod.common.entity.EntityMountable;
 import org.valkyrienskies.mod.common.physics.physx.PhysXCollisionFilters;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import physx.common.PxTransform;
@@ -26,8 +22,6 @@ import java.util.List;
  * Information involving the entity to collide with the ship is contained here.
  * */
 public class PhysXEntityBody extends AbstractPhysXCollisionObject {
-    public static final double ACTOR_SCAN_GROW = 2D;
-
     @NotNull
     private final PxRigidDynamic actor;
     @NotNull
@@ -56,16 +50,7 @@ public class PhysXEntityBody extends AbstractPhysXCollisionObject {
 
     @Override
     public boolean isStillValid(@NotNull World hostWorld, @NotNull Collection<PhysicsObject> shipsWithPhysics) {
-        if (!shouldCreateActor(this.entity, hostWorld)) return false;
-
-        AxisAlignedBB entityBox = this.entity.getEntityBoundingBox();
-        for (PhysicsObject ship : shipsWithPhysics) {
-            AxisAlignedBB shipAabb = ship.getPhysicsTransformAABB();
-            if (shipAabb != null && shipAabb.grow(ACTOR_SCAN_GROW).intersects(entityBox)) {
-                return true;
-            }
-        }
-        return false;
+        return this.entity.isEntityAlive() && this.entity.world == hostWorld;
     }
 
     @Override
@@ -120,16 +105,4 @@ public class PhysXEntityBody extends AbstractPhysXCollisionObject {
         if (!this.attachShape(this.shape)) this.shape = null;
     }
 
-    //-----static helper functions-----
-    public static boolean shouldCreateActor(Entity entity, World hostWorld) {
-        return entity != null
-            && entity.isEntityAlive()
-            && !entity.noClip
-            && entity.world == hostWorld
-            && !(entity instanceof EntityPlayer)
-            && !(entity instanceof EntityItem)
-            && !(entity instanceof EntityFireball)
-            && !(entity instanceof EntityMountable)
-            && !(entity.getRidingEntity() instanceof EntityMountable);
-    }
 }

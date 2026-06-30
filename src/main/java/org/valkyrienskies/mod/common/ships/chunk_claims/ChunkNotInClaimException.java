@@ -7,7 +7,6 @@ import net.minecraft.util.math.ChunkPos;
  * from which the cache is operating on
  *
  * @see ClaimedChunkCacheController
- * @see SurroundingChunkCacheController
  */
 class ChunkNotInClaimException extends IllegalArgumentException {
 

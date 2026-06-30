@@ -28,8 +28,6 @@ import java.util.List;
  * Information involving the blockpos to collide with the ship is contained here.
  * */
 public class PhysXBlockCollider extends AbstractPhysXCollisionObject {
-    public static final double ACTOR_SCAN_GROW = 3D;
-
     @NotNull
     private final World world;
     @NotNull
@@ -95,20 +93,7 @@ public class PhysXBlockCollider extends AbstractPhysXCollisionObject {
 
     @Override
     public boolean isStillValid(@NotNull World hostWorld, @NotNull Collection<PhysicsObject> shipsWithPhysics) {
-        if (this.world != hostWorld) return false;
-
-        IBlockState currentState = this.world.getBlockState(this.pos);
-        if (!isCollidableWorldState(currentState) || !this.matches(currentState)) {
-            return false;
-        }
-
-        for (PhysicsObject ship : shipsWithPhysics) {
-            AxisAlignedBB shipAabb = ship.getPhysicsTransformAABB();
-            if (shipAabb != null && this.isWithinShipScan(hostWorld, shipAabb)) {
-                return true;
-            }
-        }
-        return false;
+        return this.world == hostWorld;
     }
 
     @Override
@@ -141,19 +126,6 @@ public class PhysXBlockCollider extends AbstractPhysXCollisionObject {
     @Override //no shapes to release down here xd
     protected void releaseShapes() {}
 
-    private boolean isWithinShipScan(World hostWorld, AxisAlignedBB shipAabb) {
-        AxisAlignedBB scan = shipAabb.grow(ACTOR_SCAN_GROW);
-        int minX = (int) Math.floor(scan.minX);
-        int minY = Math.max(0, (int) Math.floor(scan.minY));
-        int minZ = (int) Math.floor(scan.minZ);
-        int maxX = (int) Math.ceil(scan.maxX);
-        int maxY = Math.min(hostWorld.getHeight() - 1, (int) Math.ceil(scan.maxY));
-        int maxZ = (int) Math.ceil(scan.maxZ);
-        return this.pos.getX() >= minX && this.pos.getX() <= maxX
-                && this.pos.getY() >= minY && this.pos.getY() <= maxY
-                && this.pos.getZ() >= minZ && this.pos.getZ() <= maxZ;
-    }
-
     private void attachBoxShape(AxisAlignedBB worldBox, boolean trigger) {
         PxShape shape = this.createBoxShape(worldBox);
 
@@ -178,10 +150,6 @@ public class PhysXBlockCollider extends AbstractPhysXCollisionObject {
     public static boolean isLiquid(IBlockState state) {
         Material material = state.getMaterial();
         return state.getBlock() instanceof BlockLiquid || material instanceof MaterialLiquid;
-    }
-
-    public static boolean isCollidableWorldState(IBlockState state) {
-        return !state.getMaterial().equals(Material.AIR) && (isLiquid(state) || state.getMaterial().blocksMovement());
     }
 
     public static List<AxisAlignedBB> getCollisionBoxes(World world, BlockPos pos, IBlockState state, boolean forceFullBlock) {

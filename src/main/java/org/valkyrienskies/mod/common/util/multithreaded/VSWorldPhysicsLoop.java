@@ -155,7 +155,7 @@ public class VSWorldPhysicsLoop implements Runnable {
         // Make a sublist of physics objects to process physics on.
         List<PhysicsObject> physicsEntitiesToDoPhysics = new ArrayList<>();
         for (PhysicsObject physicsObject : this.immutableShipsList) {
-            if (physicsObject.isPhysicsReady() && physicsObject.isPhysicsEnabled() && physicsObject.getCachedSurroundingChunks() != null) {
+            if (physicsObject.isPhysicsReady() && physicsObject.isPhysicsEnabled()) {
                 physicsEntitiesToDoPhysics.add(physicsObject);
             }
         }

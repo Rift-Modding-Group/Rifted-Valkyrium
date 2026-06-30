@@ -19,13 +19,12 @@ import org.joml.Quaterniondc;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.valkyrienskies.mod.client.render.PhysObjectRenderManager;
-import org.valkyrienskies.mod.common.util.TransformedAABB;
-import org.valkyrienskies.mod.common.physics.physx.IPhysicsBlockController;
 import org.valkyrienskies.mod.common.physics.PhysicsCalculations;
+import org.valkyrienskies.mod.common.physics.PhysicsCollideWith;
+import org.valkyrienskies.mod.common.physics.physx.IPhysicsBlockController;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.block_relocation.MoveBlocks;
 import org.valkyrienskies.mod.common.ships.chunk_claims.ClaimedChunkCacheController;
-import org.valkyrienskies.mod.common.ships.chunk_claims.SurroundingChunkCacheController;
 import org.valkyrienskies.mod.common.ships.chunk_claims.VSChunkClaim;
 import org.valkyrienskies.mod.common.ships.interpolation.ITransformInterpolator;
 import org.valkyrienskies.mod.common.ships.interpolation.SimpleEMATransformInterpolator;
@@ -33,6 +32,7 @@ import org.valkyrienskies.mod.common.ships.physics_data.ShipInertiaData;
 import org.valkyrienskies.mod.common.ships.physics_data.ShipPhysicsData;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransformationManager;
+import org.valkyrienskies.mod.common.util.TransformedAABB;
 import org.valkyrienskies.mod.common.util.datastructures.IBlockPosSetAABB;
 import valkyrienwarfare.api.IPhysicsEntity;
 import valkyrienwarfare.api.TransformType;
@@ -69,8 +69,10 @@ public class PhysicsObject implements IPhysicsEntity {
     private final ShipTransformationManager shipTransformationManager;
     private final PhysicsCalculations physicsCalculations;
 
-    // The closest Chunks to the Ship cached in here
-    private final SurroundingChunkCacheController cachedSurroundingChunks;
+    /**
+     * A continuously updating cache of entities and chunks to perform collisions with
+     * */
+    private final PhysicsCollideWith physicsCollideWith;
 
     /**
      * Used for faster memory access to the Chunks this object 'owns'
@@ -131,20 +133,22 @@ public class PhysicsObject implements IPhysicsEntity {
         this.physicsControllers = ConcurrentHashMap.newKeySet();
         this.physicsControllersImmutable = Collections.unmodifiableSet(this.physicsControllers);
         this.claimedChunkCache = new ClaimedChunkCacheController(this);
-        this.cachedSurroundingChunks = new SurroundingChunkCacheController(this);
         this.shipTransformationManager = new ShipTransformationManager(this, this.getShipData().getShipTransform());
         this.physicsCalculations = new PhysicsCalculations(this);
+        this.physicsCollideWith = new PhysicsCollideWith();
         this.shipAligningToGrid = false;
         this.deconstructState = DeconstructState.NOT_DECONSTRUCTING;
         this.forceToUseShipDataTransform = false;
         this.ticksSinceShipTeleport = TICKS_SINCE_TELEPORT_TO_START_DRAGGING + 1; // Anything larger than TICKS_SINCE_TELEPORT_TO_START_DRAGGING works
         this.ticksExisted = 0;
         this.shipPilot = null;
+
         // Note how this is last.
         if (world.isRemote) {
             this.shipRenderer = new PhysObjectRenderManager(this, referenceBlockPos);
             this.transformInterpolator = new SimpleEMATransformInterpolator(initial.getShipTransform(), initial.getShipBB(), .5);
-        } else {
+        }
+        else {
             this.shipRenderer = null;
             this.getShipTransformationManager()
                 .updateAllTransforms(this.getShipData().getShipTransform(), true, true);
@@ -153,39 +157,39 @@ public class PhysicsObject implements IPhysicsEntity {
     }
 
     void onTick() {
-        if (!world.isRemote) {
-            cachedSurroundingChunks.updateChunkCache();
-
-            final boolean forceToUseShipDataTransformLocalCopy = forceToUseShipDataTransform;
-            forceToUseShipDataTransform = false;
+        if (!this.world.isRemote) {
+            final boolean forceToUseShipDataTransformLocalCopy = this.forceToUseShipDataTransform;
+            this.forceToUseShipDataTransform = false;
             if (forceToUseShipDataTransformLocalCopy) {
                 final ShipTransform forcedTransform = shipData.getShipTransform();
 
                 // This is BAD! Race condition! But I don't think this will cause any problems (I hope).
-                getShipTransformationManager().setPrevPhysicsTransform(forcedTransform);
-                getShipTransformationManager().setCurrentPhysicsTransform(forcedTransform);
-                getShipTransformationManager().setPrevTickTransform(forcedTransform);
-                getShipTransformationManager().setCurrentTickTransform(forcedTransform);
+                this.getShipTransformationManager().setPrevPhysicsTransform(forcedTransform);
+                this.getShipTransformationManager().setCurrentPhysicsTransform(forcedTransform);
+                this.getShipTransformationManager().setPrevTickTransform(forcedTransform);
+                this.getShipTransformationManager().setCurrentTickTransform(forcedTransform);
             }
 
-            ticksSinceShipTeleport++;
+            this.ticksSinceShipTeleport++;
 
-            ShipTransform physicsTransform = getShipTransformationManager()
-                .getCurrentPhysicsTransform();
-            getShipTransformationManager().updateAllTransforms(physicsTransform, false, true);
+            ShipTransform physicsTransform = this.getShipTransformationManager().getCurrentPhysicsTransform();
+            this.getShipTransformationManager().updateAllTransforms(physicsTransform, false, true);
             // Copy the current and prev transforms into ShipData
-            getShipData().setShipTransform(getShipTransformationManager().getCurrentTickTransform());
-            getShipData().setPrevTickShipTransform(getShipTransformationManager().getPrevTickTransform());
-        } else {
-            transformInterpolator.tickTransformInterpolator();
-            ShipTransform newTransform = transformInterpolator.getCurrentTickTransform();
-            AxisAlignedBB newAABB = transformInterpolator.getCurrentAABB();
+            this.getShipData().setShipTransform(getShipTransformationManager().getCurrentTickTransform());
+            this.getShipData().setPrevTickShipTransform(getShipTransformationManager().getPrevTickTransform());
 
-            shipData.setPrevTickShipTransform(shipData.getShipTransform());
-            shipData.setShipTransform(newTransform);
-            shipData.setShipBB(newAABB);
+            this.physicsCollideWith.onUpdate(this);
+        }
+        else {
+            this.transformInterpolator.tickTransformInterpolator();
+            ShipTransform newTransform = this.transformInterpolator.getCurrentTickTransform();
+            AxisAlignedBB newAABB = this.transformInterpolator.getCurrentAABB();
 
-            shipTransformationManager.updateAllTransforms(newTransform, false, false);
+            this.shipData.setPrevTickShipTransform(this.shipData.getShipTransform());
+            this.shipData.setShipTransform(newTransform);
+            this.shipData.setShipBB(newAABB);
+
+            this.shipTransformationManager.updateAllTransforms(newTransform, false, false);
         }
         this.ticksExisted++;
     }
@@ -196,13 +200,6 @@ public class PhysicsObject implements IPhysicsEntity {
     /*
      * Encapsulation code past here.
      */
-
-    /**
-     * @return the cachedSurroundingChunks
-     */
-    public ChunkCache getCachedSurroundingChunks() {
-        return cachedSurroundingChunks.getCachedChunks();
-    }
 
     // ===== Keep track of all Node Processors in a concurrent Set =====
     public void onSetTileEntity(BlockPos pos, TileEntity tileentity) {
@@ -466,6 +463,10 @@ public class PhysicsObject implements IPhysicsEntity {
 
     public PhysicsCalculations getPhysicsCalculations() {
         return physicsCalculations;
+    }
+
+    public PhysicsCollideWith getPhysicsCollideWith() {
+        return physicsCollideWith;
     }
 
     public ClaimedChunkCacheController getClaimedChunkCache() {
