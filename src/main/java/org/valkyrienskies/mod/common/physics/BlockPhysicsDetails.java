@@ -167,11 +167,11 @@ public class BlockPhysicsDetails {
     }
 
     /**
-     * Returns true if the given IBlockState can create force; otherwise it returns false.
+     * Returns true if the given IBlockState can create a force vector; otherwise it returns false.
      */
     public static boolean isBlockProvidingForce(IBlockState state) {
         Block block = state.getBlock();
-        return block instanceof IBlockForceProvider || block instanceof IBlockTorqueProvider || block instanceof IBlockBuoyancyProvider;
+        return block instanceof IBlockForceProvider || block instanceof IBlockTorqueProvider;
     }
 
     /**

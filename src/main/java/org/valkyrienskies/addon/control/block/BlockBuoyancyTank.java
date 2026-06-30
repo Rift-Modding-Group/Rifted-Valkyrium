@@ -23,8 +23,8 @@ public class BlockBuoyancyTank extends BaseBlock implements IBlockBuoyancyProvid
     }
 
     @Override
-    public double getBuoyancyForceInNewtons(World world, BlockPos pos, IBlockState state, PhysicsObject physicsObject) {
-        return Math.max(0D, VSControlConfig.buoyancyTankForce);
+    public double getBuoyancyForce(World world, BlockPos pos, IBlockState state, PhysicsObject physicsObject) {
+        return VSControlConfig.buoyancyTankForce;
     }
 
     @Override

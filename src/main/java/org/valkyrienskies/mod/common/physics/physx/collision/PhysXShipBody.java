@@ -20,7 +20,6 @@ import org.valkyrienskies.mod.common.block.IBlockBuoyancyProvider;
 import org.valkyrienskies.mod.common.block.IBlockForceProvider;
 import org.valkyrienskies.mod.common.block.IBlockTorqueProvider;
 import org.valkyrienskies.mod.common.config.VSConfig;
-import org.valkyrienskies.mod.common.physics.BlockPhysicsDetails;
 import org.valkyrienskies.mod.common.physics.physx.IPhysicsBlockController;
 import org.valkyrienskies.mod.common.physics.physx.PhysXActorUtil;
 import org.valkyrienskies.mod.common.physics.physx.PhysXCollisionFilters;
@@ -176,7 +175,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
             @NotNull List<AbstractPhysXCollisionObject> collisionObjects,
             double timeStep
     ) {
-        this.prepareForSimulation(hostWorld, timeStep);
+        this.prepareForSimulation(timeStep);
         this.applyLiquidForces(hostWorld, collisionObjects);
         this.syncBeforeSimulation();
     }
@@ -225,7 +224,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
         return this.actor;
     }
 
-    private void prepareForSimulation(World hostWorld, double timeStep) {
+    private void prepareForSimulation(double timeStep) {
         PhysicsCalculations calculations = this.ship.getPhysicsCalculations();
         calculations.getForce().zero();
         calculations.getTorque().zero();
@@ -236,7 +235,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
 
         if (!this.ship.isShipAligningToGrid()) {
             this.applyAirDrag(calculations);
-            if (!calculations.actAsArchimedes) this.calculateForces(calculations, hostWorld);
+            if (!calculations.actAsArchimedes) this.calculateForces(calculations);
         }
         else this.calculateForcesDeconstruction(calculations, timeStep);
     }
@@ -306,7 +305,10 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
         calculations.getPhysInvMOITensor().set(finalInertia).invert();
     }
 
-    private void calculateForces(PhysicsCalculations calculations, World hostWorld) {
+    /**
+     * Well
+     * */
+    private void calculateForces(PhysicsCalculations calculations) {
         Vector3d blockForce = new Vector3d();
         Vector3d inBodyWO = new Vector3d();
         Vector3d crossVector = new Vector3d();
@@ -359,44 +361,6 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
                     if (blockAt instanceof IBlockTorqueProvider torqueProviderBlock) {
                         Vector3dc torqueVector = torqueProviderBlock.getTorqueInGlobal(calculations, mutablePos);
                         if (torqueVector != null) calculations.getTorque().add(torqueVector);
-                    }
-                    //buoyancy blocks
-                    if (blockAt instanceof IBlockBuoyancyProvider buoyancyProvider) {
-                        double buoyancyForce = buoyancyProvider.getBuoyancyForceInNewtons(world, mutablePos, state, this.ship);
-                        ShipTransform transform = this.ship.getShipTransformationManager().getCurrentPhysicsTransform();
-                        Vector3d centerWorld = new Vector3d(
-                                activeForcePos.getX() + 0.5D,
-                                activeForcePos.getY() + 0.5D,
-                                activeForcePos.getZ() + 0.5D
-                        );
-                        transform.transformPosition(centerWorld, TransformType.SUBSPACE_TO_GLOBAL);
-
-                        double waterSurfaceY = this.getWaterSurfaceY(hostWorld, mutablePos, centerWorld);
-                        if (!Double.isNaN(waterSurfaceY)) {
-                            double submergedFraction = Math.clamp(
-                                    waterSurfaceY - (centerWorld.y - BLOCK_HALF_EXTENT),
-                                    0D,
-                                    1D
-                            );
-                            if (submergedFraction > 0D) {
-                                Vector3d relativeToShipCenter = centerWorld.sub(
-                                        new Vector3d(transform.getPosX(), transform.getPosY(), transform.getPosZ()),
-                                        new Vector3d()
-                                );
-                                Vector3d velocityAtPoint = calculations.getVelocityAtPoint(
-                                        relativeToShipCenter,
-                                        new Vector3d()
-                                );
-                                double lift = buoyancyForce * submergedFraction;
-                                blockForce.set(
-                                        -velocityAtPoint.x * WATER_HORIZONTAL_DAMPING * submergedFraction,
-                                        lift - velocityAtPoint.y * WATER_VERTICAL_DAMPING * submergedFraction,
-                                        -velocityAtPoint.z * WATER_HORIZONTAL_DAMPING * submergedFraction
-                                );
-                                calculations.addForceAtPointNew(relativeToShipCenter, blockForce, crossVector);
-                            }
-                        }
-
                     }
                 }
             }
@@ -523,7 +487,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
     }
 
     /**
-     * This is for applying buoyancy in liquids with normal blocks that are not IBlockBuoyancyProvider instances
+     * This is for applying buoyancy in liquids
      * */
     private void applyLiquidForces(World hostWorld, List<AbstractPhysXCollisionObject> collisionObjects) {
         AxisAlignedBB shipAabb = this.ship.getPhysicsTransformAABB();
@@ -531,18 +495,14 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
 
         ShipTransform transform = this.ship.getShipTransformationManager().getCurrentPhysicsTransform();
         PhysicsCalculations calculations = this.ship.getPhysicsCalculations();
-        double gravityMagnitude = Math.abs(VSConfig.gravityVecY);
-        if (gravityMagnitude <= 0D) return;
 
         Vector3d tempTorque = new Vector3d();
         BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
 
         for (BlockPos blockPos : this.ship.getBlockPositions()) {
             IBlockState state = this.getShipBlockState(this.ship, blockPos);
-            if (state.getBlock() instanceof IBlockBuoyancyProvider) continue;
-
-            double buoyancyForce = this.getArchimedesBuoyancyForceInNewtons(state, gravityMagnitude);
-            if (buoyancyForce <= 0D) continue;
+            double buoyancyForce = (state.getBlock() instanceof IBlockBuoyancyProvider buoyancyProvider) ?
+                    buoyancyProvider.getBuoyancyForce(hostWorld, mutablePos, state, this.ship) : WATER_DENSITY * Math.abs(VSConfig.gravityVecY);
 
             Vector3d centerWorld = new Vector3d(
                     blockPos.getX() + 0.5D,
@@ -570,10 +530,6 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
                 }
             }
         }
-    }
-
-    private double getArchimedesBuoyancyForceInNewtons(IBlockState state, double gravityMagnitude) {
-        return BlockPhysicsDetails.getMassFromState(state) > 0D ? WATER_DENSITY * gravityMagnitude : 0D;
     }
 
     private boolean isTouchingLiquidActor(AxisAlignedBB shipAabb, List<AbstractPhysXCollisionObject> collisionObjects) {
