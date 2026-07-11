@@ -34,6 +34,7 @@ public class TileEntityGyroscopeStabilizer extends TileEntity {
 
         Vector3d torqueImpulse = physicsCalculations.getPhysMOITensor().transform(angularVelocityChange, new Vector3d());
         torqueImpulse.mul(physicsCalculations.getPhysicsTimeDeltaPerPhysTick());
+        torqueImpulse.sub(new Vector3d(GRAVITY_UP).mul(torqueImpulse.dot(GRAVITY_UP)));
 
         //application of impulse that keeps the ship leveled happens here
         double maxTorqueImpulse = VSControlConfig.stabilizerMaxTorque * physicsCalculations.getPhysicsTimeDeltaPerPhysTick();
