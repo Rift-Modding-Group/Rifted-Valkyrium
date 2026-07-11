@@ -29,6 +29,7 @@ import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.ships.ship_world.ShipPilot;
 import physx.common.PxTransform;
 import physx.common.PxVec3;
+import physx.extensions.PxRigidBodyExt;
 import physx.physics.PxActorFlagEnum;
 import physx.physics.PxForceModeEnum;
 import physx.physics.PxMaterial;
@@ -52,6 +53,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
     private static final double WATER_VERTICAL_DAMPING = 1800D;
     private static final double WATER_HORIZONTAL_DAMPING = 450D;
     private static final double BLOCK_HALF_EXTENT = 0.5D;
+    private static final double MASS_PROPERTY_EPSILON = 1.0E-6D;
 
     @NotNull
     private PhysicsObject ship;
@@ -65,6 +67,8 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
     private int lastBlockCount;
     private boolean firstSync;
     private boolean centerOfMassPoseDirty;
+    private boolean massPropertiesDirty;
+    private double lastMass;
 
     public PhysXShipBody(@NotNull PxPhysics physics, @NotNull PxScene scene, PhysicsObject ship) {
         super(physics, scene);
@@ -75,10 +79,13 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
         this.lastBlockCount = -1;
         this.firstSync = true;
         this.centerOfMassPoseDirty = false;
+        this.massPropertiesDirty = true;
+        this.lastMass = Double.NaN;
 
-        PxTransform transform = PhysXActorUtil.toPxTransform(ship.getShipTransformationManager().getCurrentPhysicsTransform());
+        PxTransform transform = this.createActorPose(ship.getShipTransformationManager().getCurrentPhysicsTransform());
         this.actor = this.physics.createRigidDynamic(transform);
         transform.destroy();
+        this.setCenterOfMassPose(ship.getPhysicsCalculations().getPhysCenterOfMass());
         this.actor.setRigidBodyFlag(PxRigidBodyFlagEnum.eENABLE_CCD, true);
         this.actor.setSolverIterationCounts(8, 2);
         this.actor.setMaxLinearVelocity((float) VSConfig.shipMaxSpeed);
@@ -88,17 +95,16 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
 
     private void syncBeforeSimulation() {
         PhysicsCalculations calculations = this.ship.getPhysicsCalculations();
-        if (this.firstSync
-                || this.ship.getPhysicsData().consumeCollisionShapeDirty()
-                || this.lastBlockCount != this.ship.getBlockPositions().size()
-        ) {
+        boolean collisionShapeDirty = this.ship.getPhysicsData().consumeCollisionShapeDirty();
+        boolean blockCountChanged = this.lastBlockCount != this.ship.getBlockPositions().size();
+        if (this.firstSync || collisionShapeDirty || blockCountChanged) {
             this.rebuildCollisionShapes(this.ship);
+            this.massPropertiesDirty = true;
         }
 
         boolean disableGravity = !VSConfig.doGravity || this.ship.isShipAligningToGrid() || calculations.actAsArchimedes;
         this.actor.setActorFlag(PxActorFlagEnum.eDISABLE_GRAVITY, disableGravity);
-        this.actor.setMass((float) Math.max(this.ship.getInertiaData().getGameTickMass(), 0.0001f));
-        this.setMassInertia(calculations.getPhysMOITensor());
+        this.updateMassPropertiesIfNeeded(calculations);
         this.actor.setMaxLinearVelocity((float) VSConfig.shipMaxSpeed);
         this.actor.setMaxAngularVelocity((float) VSConfig.shipMaxAngularSpeed);
 
@@ -125,9 +131,25 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
     }
 
     private void forcePose(ShipTransform transform) {
-        PxTransform pxTransform = PhysXActorUtil.toPxTransform(transform);
+        PxTransform pxTransform = this.createActorPose(transform);
         this.actor.setGlobalPose(pxTransform, true);
         pxTransform.destroy();
+    }
+
+    private PxTransform createActorPose(ShipTransform transform) {
+        Vector3d referencePosition = this.getReferencePositionInShipSpace();
+        transform.transformPosition(referencePosition, TransformType.SUBSPACE_TO_GLOBAL);
+        return PhysXActorUtil.toPxTransform(
+                referencePosition.x,
+                referencePosition.y,
+                referencePosition.z,
+                transform.rotationQuaternion(TransformType.SUBSPACE_TO_GLOBAL)
+        );
+    }
+
+    private Vector3d getReferencePositionInShipSpace() {
+        BlockPos reference = this.ship.getReferenceBlockPos();
+        return new Vector3d(reference.getX(), reference.getY(), reference.getZ());
     }
 
     private void drainImpulseFrom(PhysicsCalculations calculations) {
@@ -187,16 +209,29 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
         PxTransform pose = this.actor.getGlobalPose();
         PxVec3 posePosition = pose.getP();
         physx.common.PxQuat poseRotation = pose.getQ();
-        Vector3d position = PhysXActorUtil.fromPxVec(posePosition);
+        Vector3d referencePosition = PhysXActorUtil.fromPxVec(posePosition);
         Quaterniond rotation = PhysXActorUtil.fromPxQuat(poseRotation);
 
-        position.y = Math.clamp(position.y, VSConfig.shipLowerLimit, VSConfig.shipUpperLimit);
-        ShipTransform finalTransform = new ShipTransform(position.x, position.y, position.z, rotation, new Vector3d(calculations.getPhysCenterOfMass()));
+        Vector3d centerPosition = this.getReferenceToCenterOfMass(calculations.getPhysCenterOfMass());
+        rotation.transform(centerPosition);
+        referencePosition.add(centerPosition, centerPosition);
+        centerPosition.y = Math.clamp(centerPosition.y, VSConfig.shipLowerLimit, VSConfig.shipUpperLimit);
 
         PxVec3 linearVelocity = this.actor.getLinearVelocity();
         PxVec3 angularVelocity = this.actor.getAngularVelocity();
-        calculations.getLinearVelocity().set(PhysXActorUtil.fromPxVec(linearVelocity));
-        calculations.getAngularVelocity().set(PhysXActorUtil.fromPxVec(angularVelocity));
+        Vector3d finalLinearVelocity = PhysXActorUtil.fromPxVec(linearVelocity);
+        Vector3d finalAngularVelocity = PhysXActorUtil.fromPxVec(angularVelocity);
+
+        ShipTransform finalTransform = new ShipTransform(
+                centerPosition.x,
+                centerPosition.y,
+                centerPosition.z,
+                rotation,
+                new Vector3d(calculations.getPhysCenterOfMass())
+        );
+
+        calculations.getLinearVelocity().set(finalLinearVelocity);
+        calculations.getAngularVelocity().set(finalAngularVelocity);
         // Getter-returned PhysX JNI value wrappers have ambiguous ownership. Do not destroy them
         // during readback; an invalid free here aborts the JVM before Minecraft can write a report.
         this.finishSimulationTick(finalTransform);
@@ -285,8 +320,46 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
             currentCenterOfMass.set(newCenterOfMass);
             this.ship.getShipTransformationManager().setCurrentPhysicsTransform(adjustedTransform);
             this.centerOfMassPoseDirty = true;
-            this.ship.getShipData().getPhysicsData().markCollisionShapeDirty();
+            this.massPropertiesDirty = true;
         }
+    }
+
+    private void setCenterOfMassPose(Vector3dc centerOfMass) {
+        // Keep the actor frame anchored to the ship reference; only the PhysX mass frame follows COM.
+        Vector3d localCenterOfMass = this.getReferenceToCenterOfMass(centerOfMass);
+        PxTransform centerOfMassPose = PhysXActorUtil.toPxTransform(
+                localCenterOfMass.x,
+                localCenterOfMass.y,
+                localCenterOfMass.z,
+                new Quaterniond()
+        );
+        this.actor.setCMassLocalPose(centerOfMassPose);
+        centerOfMassPose.destroy();
+    }
+
+    private Vector3d getReferenceToCenterOfMass(Vector3dc centerOfMass) {
+        return new Vector3d(centerOfMass).sub(this.getReferencePositionInShipSpace());
+    }
+
+    private void updateMassPropertiesIfNeeded(PhysicsCalculations calculations) {
+        double mass = Math.max(this.ship.getInertiaData().getGameTickMass(), 0.0001D);
+        if (!this.massPropertiesDirty && Math.abs(mass - this.lastMass) <= MASS_PROPERTY_EPSILON) return;
+
+        this.setMassProperties(calculations, (float) mass);
+        this.lastMass = mass;
+        this.massPropertiesDirty = false;
+    }
+
+    private void setMassProperties(PhysicsCalculations calculations, float mass) {
+        Vector3d localCenterOfMass = this.getReferenceToCenterOfMass(calculations.getPhysCenterOfMass());
+        PxVec3 massLocalPose = PhysXActorUtil.toPxVec(localCenterOfMass);
+        boolean updated = PxRigidBodyExt.setMassAndUpdateInertia(this.actor, mass, massLocalPose, false);
+        massLocalPose.destroy();
+        if (updated) return;
+
+        this.actor.setMass(mass);
+        this.setCenterOfMassPose(calculations.getPhysCenterOfMass());
+        this.setMassInertia(calculations.getPhysMOITensor());
     }
 
     private void calculateFramedMOITensor(PhysicsCalculations calculations) {
@@ -405,7 +478,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
         for (PxShape shape : this.shapes) this.detachShape(shape);
         this.shapes.clear();
 
-        Vector3dc centerOfMass = ship.getPhysicsCalculations().getPhysCenterOfMass();
+        Vector3dc referencePosition = this.getReferencePositionInShipSpace();
         BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
         boolean truncated = false;
 
@@ -425,7 +498,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
                     truncated = true;
                     break;
                 }
-                this.attachShipShape(box, centerOfMass);
+                this.attachShipShape(box, referencePosition);
             }
         }
 
@@ -436,13 +509,13 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
         this.lastBlockCount = ship.getBlockPositions().size();
     }
 
-    private void attachShipShape(AxisAlignedBB box, Vector3dc centerOfMass) {
+    private void attachShipShape(AxisAlignedBB box, Vector3dc referencePosition) {
         PxShape shape = this.createBoxShape(box);
         PhysXCollisionFilters.CollisionGroup.SHIP.setFilter(shape);
 
-        double localX = (box.minX + box.maxX) * 0.5D - centerOfMass.x();
-        double localY = (box.minY + box.maxY) * 0.5D - centerOfMass.y();
-        double localZ = (box.minZ + box.maxZ) * 0.5D - centerOfMass.z();
+        double localX = (box.minX + box.maxX) * 0.5D - referencePosition.x();
+        double localY = (box.minY + box.maxY) * 0.5D - referencePosition.y();
+        double localZ = (box.minZ + box.maxZ) * 0.5D - referencePosition.z();
         PxTransform localPose = PhysXActorUtil.toPxTransform(localX, localY, localZ, new Quaterniond());
         shape.setLocalPose(localPose);
         localPose.destroy();

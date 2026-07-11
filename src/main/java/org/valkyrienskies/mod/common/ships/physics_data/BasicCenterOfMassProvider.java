@@ -8,7 +8,7 @@ import org.jspecify.annotations.NonNull;
 import org.valkyrienskies.mod.common.physics.BlockPhysicsDetails;
 
 public class BasicCenterOfMassProvider implements IPhysicsObjectCenterOfMassProvider {
-    private static final double INERTIA_OFFSET = .4D;
+    private static final double INERTIA_OFFSET = 0.4D;
 
     @Override
     public void onSetBlockState(@NonNull ShipInertiaData inertiaData, @NonNull BlockPos pos, @NonNull IBlockState oldState, IBlockState newState) {
