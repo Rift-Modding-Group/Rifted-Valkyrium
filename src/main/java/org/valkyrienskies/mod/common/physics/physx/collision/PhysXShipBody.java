@@ -27,7 +27,6 @@ import org.valkyrienskies.mod.common.physics.physx.PhysXCollisionFilters;
 import org.valkyrienskies.mod.common.physics.PhysicsCalculations;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
-import org.valkyrienskies.mod.common.ships.ship_world.ShipPilot;
 import physx.common.PxTransform;
 import physx.common.PxVec3;
 import physx.extensions.PxRigidBodyExt;
@@ -435,15 +434,6 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
                 }
             }
         }
-
-        //forces from pilot
-        final ShipPilot parentPilot = this.ship.getShipPilot();
-        if (parentPilot != null) {
-            final Vector3dc pilotForce = parentPilot.getBlockForceInShipSpace(this.ship);
-            final Vector3dc pilotTorque = parentPilot.getTorqueInGlobal(calculations);
-            if (pilotForce != null) calculations.addForce(pilotForce);
-            if (pilotTorque != null) calculations.addTorque(pilotTorque);
-        }
     }
 
     private void calculateForcesDeconstruction(PhysicsCalculations calculations, double timeStep) {
@@ -466,13 +456,9 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
     }
 
     private void applyAirDrag(PhysicsCalculations calculations) {
-        double drag = this.getDragForPhysTick(calculations);
+        double drag = Math.pow(PhysicsCalculations.DRAG_CONSTANT, calculations.getPhysicsTimeDeltaPerPhysTick() * 20D);
         calculations.getLinearVelocity().mul(drag);
         calculations.getAngularVelocity().mul(drag);
-    }
-
-    private double getDragForPhysTick(PhysicsCalculations calculations) {
-        return Math.pow(PhysicsCalculations.DRAG_CONSTANT, calculations.getPhysicsTimeDeltaPerPhysTick() * 20D);
     }
 
     private void rebuildCollisionShapes(PhysicsObject ship) {

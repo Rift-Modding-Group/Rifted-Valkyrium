@@ -112,8 +112,6 @@ public class PhysicsObject implements IPhysicsEntity {
     // Counts the number of ticks this PhysicsObject (not ShipData) has existed. Used to disable physics for the first DISABLE_PHYSICS_FOR_X_INITIAL_TICKS ticks.
     private int ticksExisted;
 
-    private ShipPilot shipPilot;
-
     // endregion
 
     // region Methods
@@ -141,7 +139,6 @@ public class PhysicsObject implements IPhysicsEntity {
         this.forceToUseShipDataTransform = false;
         this.ticksSinceShipTeleport = TICKS_SINCE_TELEPORT_TO_START_DRAGGING + 1; // Anything larger than TICKS_SINCE_TELEPORT_TO_START_DRAGGING works
         this.ticksExisted = 0;
-        this.shipPilot = null;
 
         // Note how this is last.
         if (world.isRemote) {
@@ -512,14 +509,6 @@ public class PhysicsObject implements IPhysicsEntity {
 
     public void setTicksSinceShipTeleport(int ticksSinceShipTeleport) {
         this.ticksSinceShipTeleport = ticksSinceShipTeleport;
-    }
-
-    public ShipPilot getShipPilot() {
-        return shipPilot;
-    }
-
-    public void setShipPilot(ShipPilot shipPilot) {
-        this.shipPilot = shipPilot;
     }
 
     public VSChunkClaim getChunkClaim() {

@@ -74,18 +74,6 @@ public class VSStoppedUsingControlNodeMessage implements IMessage {
                         tileEntityControlNode.playerWantsToStopUsing(player);
                     }
                 }
-                else {
-                    final UUID shipID = message.shipIDToStopUsing;
-                    final IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(player.world);
-                    if (physObjectWorld == null) return;
-                    final PhysicsObject physicsObject = physObjectWorld.getPhysObjectFromUUID(shipID);
-                    if (physicsObject != null
-                            && physicsObject.getShipPilot() != null
-                            && player.getUniqueID().equals(physicsObject.getShipPilot().getPilot())
-                    ) {
-                        physicsObject.setShipPilot(null);
-                    }
-                }
             });
             return null;
         }

@@ -85,19 +85,6 @@ public class MessagePlayerStoppedPiloting implements IMessage {
                         tileEntityPilotable.playerWantsToStopPiloting(player);
                     }
                 }
-                //used when ship is basis of piloting
-                else {
-                    final UUID shipID = message.shipIDToStopPiloting;
-                    final IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(player.world);
-                    if (physObjectWorld == null) return;
-                    final PhysicsObject physicsObject = physObjectWorld.getPhysObjectFromUUID(shipID);
-                    if (physicsObject != null
-                            && physicsObject.getShipPilot() != null
-                            && player.getUniqueID().equals(physicsObject.getShipPilot().getPilot())
-                    ) {
-                        physicsObject.setShipPilot(null);
-                    }
-                }
             });
             return null;
         }
