@@ -58,15 +58,14 @@ public class BlockValkyriumCompressorPart extends BaseBlock implements ITileEnti
     }
 
     @Override
-    public boolean shouldLocalForceBeRotated(World world, BlockPos pos, IBlockState state,
-        double secondsToApply) {
+    public boolean shouldLocalForceBeRotated(World world, BlockPos pos, IBlockState state) {
         return false;
     }
 
     @Override
-    public Vector3dc getBlockForceInShipSpace(World world, BlockPos pos, IBlockState state, PhysicsObject physicsObject, double secondsToApply) {
+    public Vector3dc getBlockForceInShipSpace(World world, BlockPos pos, IBlockState state, PhysicsObject physicsObject) {
         if (!(world.getTileEntity(pos) instanceof TileEntityValkyriumCompressorPart tileCompressorPart)) return null;
-        return tileCompressorPart.getForceOutputUnoriented(secondsToApply, physicsObject);
+        return tileCompressorPart.getForceOutputUnoriented(physicsObject);
     }
 
     @Override

@@ -35,16 +35,16 @@ public class BlockGiantPropellerPart extends BaseBlock implements ITileEntityPro
 
     @Nullable
     @Override
-    public Vector3dc getBlockForceInShipSpace(World world, BlockPos pos, IBlockState state, PhysicsObject physicsObject, double secondsToApply) {
+    public Vector3dc getBlockForceInShipSpace(World world, BlockPos pos, IBlockState state, PhysicsObject physicsObject) {
         TileEntity tileEntity = world.getTileEntity(pos);
         if (tileEntity instanceof TileEntityGiantPropellerPart tileCompressorPart) {
-            return tileCompressorPart.getForceOutputUnoriented(secondsToApply, physicsObject);
+            return tileCompressorPart.getForceOutputUnoriented(physicsObject);
         }
         return null;
     }
 
     @Override
-    public boolean shouldLocalForceBeRotated(World world, BlockPos pos, IBlockState state, double secondsToApply) {
+    public boolean shouldLocalForceBeRotated(World world, BlockPos pos, IBlockState state) {
         return true;
     }
 

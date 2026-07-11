@@ -67,7 +67,7 @@ public class ShipPilot {
 
     }
 
-    public Vector3dc getBlockForceInShipSpace(PhysicsObject physicsObject, double secondsToApply) {
+    public Vector3dc getBlockForceInShipSpace(PhysicsObject physicsObject) {
         final ShipTransform shipTransform = physicsObject.getShipTransformationManager().getCurrentPhysicsTransform();
 
         final Vector3dc idealLinearVelocity = shipTransform.transformDirectionNew(new Vector3d(targetLinearVelocity), TransformType.SUBSPACE_TO_GLOBAL);

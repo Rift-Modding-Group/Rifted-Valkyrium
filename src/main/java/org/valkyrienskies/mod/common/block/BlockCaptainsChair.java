@@ -92,8 +92,7 @@ public class BlockCaptainsChair extends BlockPilotableBasic implements IBlockFor
             World world,
             BlockPos pos,
             IBlockState state,
-            PhysicsObject physicsObject,
-            double secondsToApply
+            PhysicsObject physicsObject
     ) {
         PhysicsCalculations physicsCalculations = physicsObject.getPhysicsCalculations();
         physicsCalculations.actAsArchimedes = true;
@@ -107,7 +106,7 @@ public class BlockCaptainsChair extends BlockPilotableBasic implements IBlockFor
     }
 
     @Override
-    public boolean shouldLocalForceBeRotated(World world, BlockPos pos, IBlockState state, double secondsToApply) {
+    public boolean shouldLocalForceBeRotated(World world, BlockPos pos, IBlockState state) {
         return false;
     }
 

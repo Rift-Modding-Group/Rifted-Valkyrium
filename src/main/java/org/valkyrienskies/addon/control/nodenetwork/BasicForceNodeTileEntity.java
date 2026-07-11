@@ -45,7 +45,7 @@ public abstract class BasicForceNodeTileEntity extends BasicNodeTileEntity imple
     }
 
     @Override
-    public Vector3dc getForceOutputNormal(double secondsToApply, PhysicsObject object) {
+    public Vector3dc getForceOutputNormal(PhysicsObject object) {
         return this.normalVelocityUnoriented;
     }
 

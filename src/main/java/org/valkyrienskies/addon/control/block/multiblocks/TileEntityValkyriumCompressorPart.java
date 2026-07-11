@@ -38,7 +38,7 @@ public class TileEntityValkyriumCompressorPart extends TileEntityMultiblockPartF
     }
 
     @Override
-    public Vector3dc getForceOutputNormal(double secondsToApply, PhysicsObject object) {
+    public Vector3dc getForceOutputNormal(PhysicsObject object) {
         return FORCE_NORMAL;
     }
 

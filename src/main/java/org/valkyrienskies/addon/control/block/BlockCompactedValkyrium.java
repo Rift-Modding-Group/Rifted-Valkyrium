@@ -29,7 +29,7 @@ public class BlockCompactedValkyrium extends BaseBlock implements IBlockForcePro
      */
     @Nullable
     @Override
-    public Vector3dc getBlockForceInShipSpace(World world, BlockPos pos, IBlockState state, PhysicsObject physicsObject, double secondsToApply) {
+    public Vector3dc getBlockForceInShipSpace(World world, BlockPos pos, IBlockState state, PhysicsObject physicsObject) {
         return new Vector3d(0, VSControlConfig.compactedValkyriumLift, 0);
     }
 
@@ -37,8 +37,7 @@ public class BlockCompactedValkyrium extends BaseBlock implements IBlockForcePro
      * Blocks that shouldn't have their force rotated (Like Valkyrium Compressors) must return false.
      */
     @Override
-    public boolean shouldLocalForceBeRotated(World world, BlockPos pos, IBlockState state,
-        double secondsToApply) {
+    public boolean shouldLocalForceBeRotated(World world, BlockPos pos, IBlockState state) {
         return false;
     }
 

@@ -57,7 +57,7 @@ public abstract class BlockAirshipEngine extends BaseBlock implements IBlockForc
     }
 
     @Override
-    public Vector3dc getBlockForceInShipSpace(World world, BlockPos pos, IBlockState state, PhysicsObject physicsObject, double secondsToApply) {
+    public Vector3dc getBlockForceInShipSpace(World world, BlockPos pos, IBlockState state, PhysicsObject physicsObject) {
         Vector3d acting = new Vector3d(0, 0, 0);
         if (!world.isBlockPowered(pos)) return acting;
 
@@ -66,7 +66,7 @@ public abstract class BlockAirshipEngine extends BaseBlock implements IBlockForc
             //Just set the Thrust to be the maximum
             tilePropellerEngine.updateTicksSinceLastRecievedSignal();
             tilePropellerEngine.setThrustMultiplierGoal(1D);
-            return tilePropellerEngine.getForceOutputUnoriented(secondsToApply, physicsObject);
+            return tilePropellerEngine.getForceOutputUnoriented(physicsObject);
         }
 
         return acting;

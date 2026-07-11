@@ -17,11 +17,11 @@ public interface IBlockForceProvider {
      * vector, do not override unless you have a good reason to.
      */
     @Nullable
-    default Vector3dc getBlockForceInWorldSpace(World world, BlockPos pos, IBlockState state, PhysicsObject physicsObject, double secondsToApply) {
-        Vector3dc toReturn = this.getBlockForceInShipSpace(world, pos, state, physicsObject, secondsToApply);
+    default Vector3dc getBlockForceInWorldSpace(World world, BlockPos pos, IBlockState state, PhysicsObject physicsObject) {
+        Vector3dc toReturn = this.getBlockForceInShipSpace(world, pos, state, physicsObject);
         if (toReturn == null) return null;
 
-        if (this.shouldLocalForceBeRotated(world, pos, state, secondsToApply)) {
+        if (this.shouldLocalForceBeRotated(world, pos, state)) {
             ShipTransform shipTransform = physicsObject.getShipTransformationManager().getCurrentTickTransform();
             Vector3d rotated = new Vector3d(toReturn);
             shipTransform.transformDirection(rotated, TransformType.SUBSPACE_TO_GLOBAL);
@@ -35,19 +35,19 @@ public interface IBlockForceProvider {
      * Return raw force here; PhysicsCalculations applies secondsToApply when accumulating.
      */
     @Nullable
-    Vector3dc getBlockForceInShipSpace(World world, BlockPos pos, IBlockState state, PhysicsObject physicsObject, double secondsToApply);
+    Vector3dc getBlockForceInShipSpace(World world, BlockPos pos, IBlockState state, PhysicsObject physicsObject);
 
     /**
      * Blocks that shouldn't have their force rotated (Like Valkyrium Compressors) must return false.
      */
-    boolean shouldLocalForceBeRotated(World world, BlockPos pos, IBlockState state, double secondsToApply);
+    boolean shouldLocalForceBeRotated(World world, BlockPos pos, IBlockState state);
 
     /**
      * This method returns null if no changes are needed, however some blocks like the balloon
      * Burner need to apply their force in a different position.
      */
     @Nullable
-    default Vector3dc getCustomBlockForcePosition(World world, BlockPos pos, IBlockState state, PhysicsObject physicsObject, double secondsToApply) {
+    default Vector3dc getCustomBlockForcePosition(World world, BlockPos pos, IBlockState state, PhysicsObject physicsObject) {
         return null;
     }
 }

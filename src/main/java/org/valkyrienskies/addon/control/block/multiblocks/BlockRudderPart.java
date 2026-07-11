@@ -69,7 +69,7 @@ public class BlockRudderPart extends BaseBlock implements ITileEntityProvider, I
     }
 
     @Override
-    public Vector3dc getBlockForceInShipSpace(World world, BlockPos pos, IBlockState state, PhysicsObject physicsObject, double secondsToApply) {
+    public Vector3dc getBlockForceInShipSpace(World world, BlockPos pos, IBlockState state, PhysicsObject physicsObject) {
         TileEntity tile = world.getTileEntity(pos);
         if (!(tile instanceof TileEntityRudderPart tileRudderPart)) return null;
 
@@ -81,14 +81,14 @@ public class BlockRudderPart extends BaseBlock implements ITileEntityProvider, I
     }
 
     @Override
-    public Vector3dc getCustomBlockForcePosition(World world, BlockPos pos, IBlockState state, PhysicsObject physicsObject, double secondsToApply) {
+    public Vector3dc getCustomBlockForcePosition(World world, BlockPos pos, IBlockState state, PhysicsObject physicsObject) {
         TileEntity tile = world.getTileEntity(pos);
         if (!(tile instanceof TileEntityRudderPart tileRudderPart)) return null;
         return tileRudderPart.getForcePositionInShipSpace();
     }
 
     @Override
-    public boolean shouldLocalForceBeRotated(World world, BlockPos pos, IBlockState state, double secondsToApply) {
+    public boolean shouldLocalForceBeRotated(World world, BlockPos pos, IBlockState state) {
         return true;
     }
 }

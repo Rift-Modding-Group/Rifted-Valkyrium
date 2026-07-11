@@ -16,7 +16,6 @@ import org.valkyrienskies.addon.control.block.torque.IRotationNodeProvider;
 import org.valkyrienskies.addon.control.block.torque.IRotationNodeWorld;
 import org.valkyrienskies.addon.control.block.torque.ImplRotationNode;
 import org.valkyrienskies.addon.control.util.ValkyrienSkiesControlUtil;
-import org.valkyrienskies.mod.common.network.VSNetwork;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.JOML;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
@@ -47,12 +46,12 @@ public class TileEntityGiantPropellerPart extends
     }
 
     @Override
-    public Vector3dc getForceOutputNormal(double secondsToApply, PhysicsObject physicsObject) {
+    public Vector3dc getForceOutputNormal(PhysicsObject physicsObject) {
         if (!this.isPartOfAssembledMultiblock()) return null;
 
         if (!this.isMaster()) {
             TileEntityGiantPropellerPart master = this.getMaster();
-            if (master != null) return master.getForceOutputNormal(secondsToApply, physicsObject);
+            if (master != null) return master.getForceOutputNormal(physicsObject);
             return null;
         }
         else {

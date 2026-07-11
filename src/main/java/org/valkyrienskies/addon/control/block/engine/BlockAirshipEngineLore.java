@@ -44,14 +44,14 @@ public abstract class BlockAirshipEngineLore extends BlockAirshipEngine {
     }
 
     @Override
-    public boolean shouldLocalForceBeRotated(World world, BlockPos pos, IBlockState state, double secondsToApply) {
+    public boolean shouldLocalForceBeRotated(World world, BlockPos pos, IBlockState state) {
         return true;
     }
 
     @Override
-    public Vector3dc getCustomBlockForcePosition(World world, BlockPos pos, IBlockState state, PhysicsObject physicsObject, double secondsToApply) {
+    public Vector3dc getCustomBlockForcePosition(World world, BlockPos pos, IBlockState state, PhysicsObject physicsObject) {
         if (!(physicsObject.getShipTile(pos) instanceof TileEntityPropellerEngine tilePropellerEngine)) return null;
-        Vector3dc forceOutputNormal = tilePropellerEngine.getForceOutputNormal(secondsToApply, physicsObject);
+        Vector3dc forceOutputNormal = tilePropellerEngine.getForceOutputNormal(physicsObject);
         return new Vector3d(
                 pos.getX() + 0.5D - forceOutputNormal.x() * 0.75D,
                 pos.getY() + 0.5D - forceOutputNormal.y() * 0.75D,

@@ -107,16 +107,16 @@ public class BlockBoatChair extends BlockPilotableBasic implements IBlockForcePr
 
     @Nullable
     @Override
-    public Vector3dc getBlockForceInShipSpace(World world, BlockPos pos, IBlockState state, PhysicsObject physicsObject, double secondsToApply) {
+    public Vector3dc getBlockForceInShipSpace(World world, BlockPos pos, IBlockState state, PhysicsObject physicsObject) {
         final TileEntity tileEntity = world.getTileEntity(pos);
         if (tileEntity instanceof TileEntityBoatChair) {
-            return ((TileEntityBoatChair) tileEntity).getBlockForceInShipSpace(world, pos, state, physicsObject, secondsToApply);
+            return ((TileEntityBoatChair) tileEntity).getBlockForceInShipSpace(physicsObject);
         }
         return null;
     }
 
     @Override
-    public boolean shouldLocalForceBeRotated(World world, BlockPos pos, IBlockState state, double secondsToApply) {
+    public boolean shouldLocalForceBeRotated(World world, BlockPos pos, IBlockState state) {
         return false;
     }
 
@@ -191,8 +191,7 @@ public class BlockBoatChair extends BlockPilotableBasic implements IBlockForcePr
     @Nullable
     @Override
     public Vector3dc getCustomBlockForcePosition(World world, BlockPos pos, IBlockState state,
-                                                  PhysicsObject physicsObject,
-                                                  double secondsToApply) {
+                                                  PhysicsObject physicsObject) {
         return physicsObject.getPhysicsCalculations().getPhysCenterOfMass();
     }
     // endregion

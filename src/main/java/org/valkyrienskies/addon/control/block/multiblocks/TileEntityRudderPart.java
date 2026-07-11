@@ -13,7 +13,6 @@ import org.joml.AxisAngle4d;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.valkyrienskies.addon.control.MultiblockRegistry;
-import org.valkyrienskies.mod.common.network.VSNetwork;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import valkyrienwarfare.api.TransformType;
 
@@ -122,14 +121,14 @@ public class TileEntityRudderPart extends TileEntityMultiblockPartForce<RudderAx
     }
 
     @Override
-    public Vector3dc getForceOutputUnoriented(double secondsToApply, PhysicsObject physicsObject) {
+    public Vector3dc getForceOutputUnoriented(PhysicsObject physicsObject) {
         Vector3d rudderForce = this.calculateForceFromVelocity(physicsObject);
         if (rudderForce == null || rudderForce.lengthSquared() <= 1.0D) return null;
         return rudderForce;
     }
 
     @Override
-    public Vector3dc getForceOutputNormal(double secondsToApply, PhysicsObject object) {
+    public Vector3dc getForceOutputNormal(PhysicsObject object) {
         Vector3d rudderForce = this.calculateForceFromVelocity(object);
         if (rudderForce == null || rudderForce.lengthSquared() <= 1.0D) return null;
         return rudderForce.normalize();

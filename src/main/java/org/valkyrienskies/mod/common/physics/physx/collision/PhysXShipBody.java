@@ -404,7 +404,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
                     if (blockAt instanceof IBlockForceProvider blockForceProvider) {
                         Vector3dc forceVector = blockForceProvider.getBlockForceInWorldSpace(
                                 world, mutablePos, state,
-                                this.ship, calculations.getPhysicsTimeDeltaPerPhysTick()
+                                this.ship
                         );
                         if (forceVector == null) blockForce.zero();
                         else {
@@ -415,7 +415,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
 
                         Vector3dc otherPosition = blockForceProvider.getCustomBlockForcePosition(
                                 world, mutablePos, state,
-                                this.ship, calculations.getPhysicsTimeDeltaPerPhysTick()
+                                this.ship
                         );
 
                         if (otherPosition != null) inBodyWO.set(otherPosition);
@@ -439,7 +439,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
         //forces from pilot
         final ShipPilot parentPilot = this.ship.getShipPilot();
         if (parentPilot != null) {
-            final Vector3dc pilotForce = parentPilot.getBlockForceInShipSpace(this.ship, calculations.getPhysicsTimeDeltaPerPhysTick());
+            final Vector3dc pilotForce = parentPilot.getBlockForceInShipSpace(this.ship);
             final Vector3dc pilotTorque = parentPilot.getTorqueInGlobal(calculations);
             if (pilotForce != null) calculations.addForce(pilotForce);
             if (pilotTorque != null) calculations.addTorque(pilotTorque);

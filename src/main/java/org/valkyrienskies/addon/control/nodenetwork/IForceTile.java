@@ -8,13 +8,13 @@ public interface IForceTile {
     /**
      * Used to tell what direction of force an engine will output at a given instant.
      */
-    Vector3dc getForceOutputNormal(double secondsToApply, PhysicsObject physicsObject);
+    Vector3dc getForceOutputNormal(PhysicsObject physicsObject);
 
     /**
      * Returns the current unoriented force output vector of this engine
      */
-    default Vector3dc getForceOutputUnoriented(double secondsToApply, PhysicsObject physicsObject) {
-        Vector3dc forceVectorNormal = this.getForceOutputNormal(secondsToApply, physicsObject);
+    default Vector3dc getForceOutputUnoriented(PhysicsObject physicsObject) {
+        Vector3dc forceVectorNormal = this.getForceOutputNormal(physicsObject);
         if (forceVectorNormal == null) return new Vector3d();
 
         double thrustMag = this.getThrustMagnitude(physicsObject);

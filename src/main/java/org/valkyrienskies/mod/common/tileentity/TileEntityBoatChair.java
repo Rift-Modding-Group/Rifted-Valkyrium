@@ -2,8 +2,6 @@ package org.valkyrienskies.mod.common.tileentity;
 
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.valkyrienskies.mod.common.block.BlockBoatChair;
@@ -74,7 +72,7 @@ public class TileEntityBoatChair extends TileEntityPilotableImpl {
     }
 
     @Nullable
-    public Vector3dc getBlockForceInShipSpace(World world, BlockPos pos, IBlockState state, PhysicsObject physicsObject, double secondsToApply) {
+    public Vector3dc getBlockForceInShipSpace(PhysicsObject physicsObject) {
         // Don't add force if theres no pilot
         if (this.getPilotEntity() == null) return null;
 
