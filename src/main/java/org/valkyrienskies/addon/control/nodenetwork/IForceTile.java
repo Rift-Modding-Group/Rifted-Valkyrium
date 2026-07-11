@@ -17,7 +17,7 @@ public interface IForceTile {
         Vector3dc forceVectorNormal = this.getForceOutputNormal(secondsToApply, physicsObject);
         if (forceVectorNormal == null) return new Vector3d();
 
-        double thrustMag = this.getThrustMagnitude(physicsObject) * secondsToApply;
+        double thrustMag = this.getThrustMagnitude(physicsObject);
         return forceVectorNormal.mul(thrustMag, new Vector3d());
     }
 

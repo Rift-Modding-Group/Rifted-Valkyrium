@@ -73,9 +73,9 @@ public class BlockRudderPart extends BaseBlock implements ITileEntityProvider, I
         TileEntity tile = world.getTileEntity(pos);
         if (!(tile instanceof TileEntityRudderPart tileRudderPart)) return null;
 
-        Vector3d forceBeforeTimeScale = tileRudderPart.calculateForceFromVelocity(physicsObject);
-        if (forceBeforeTimeScale != null && forceBeforeTimeScale.lengthSquared() > 1) {
-            return forceBeforeTimeScale.mul(secondsToApply);
+        Vector3d force = tileRudderPart.calculateForceFromVelocity(physicsObject);
+        if (force != null && force.lengthSquared() > 1) {
+            return force;
         }
         return null;
     }

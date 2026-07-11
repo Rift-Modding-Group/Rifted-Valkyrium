@@ -86,7 +86,6 @@ public class TileEntityBoatChair extends TileEntityPilotableImpl {
 
         final Vector3d resultingBlockForce = new Vector3d(velocityDifference);
         resultingBlockForce.mul(physicsObject.getInertiaData().getGameTickMass());
-        resultingBlockForce.mul(secondsToApply);
 
         resultingBlockForce.mul(LINEAR_EMA_FILTER_CONSTANT);
 
@@ -109,7 +108,6 @@ public class TileEntityBoatChair extends TileEntityPilotableImpl {
         final Vector3dc velocityDifference = idealAngularVelocity.sub(currentAngularVelocity, new Vector3d());
 
         final Vector3d resultingTorque = physicsCalculations.getPhysMOITensor().transform(velocityDifference, new Vector3d());
-        resultingTorque.mul(physicsCalculations.getPhysicsTimeDeltaPerPhysTick());
 
         resultingTorque.mul(ANGULAR_EMA_FILTER_CONSTANT);
 
@@ -125,7 +123,6 @@ public class TileEntityBoatChair extends TileEntityPilotableImpl {
             final Vector3dc stabilizationRotationAxisNormalized = shipUp.cross(idealUp, new Vector3d()).normalize();
 
             final Vector3d stabilizationTorque = physicsCalculations.getPhysMOITensor().transform(stabilizationRotationAxisNormalized.mul(angleBetween, new Vector3d()));
-            stabilizationTorque.mul(physicsCalculations.getPhysicsTimeDeltaPerPhysTick());
             stabilizationTorque.mul(STABILIZATION_TORQUE_CONSTANT);
 
             resultingTorque.add(stabilizationTorque);

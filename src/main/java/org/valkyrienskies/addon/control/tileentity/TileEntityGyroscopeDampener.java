@@ -17,17 +17,12 @@ public class TileEntityGyroscopeDampener extends TileEntity {
         physicsCalculations.getParent().getShipTransformationManager().getCurrentPhysicsTransform()
             .transformDirection(shipLevelNormal, TransformType.SUBSPACE_TO_GLOBAL);
 
-        double dampingComponent = shipLevelNormal.dot(new Vector3d(physicsCalculations.getAngularVelocity()));
         Vector3d angularChangeAllowed = shipLevelNormal
             .mul(shipLevelNormal.dot(new Vector3d(physicsCalculations.getAngularVelocity())), new Vector3d());
         Vector3d angularVelocityToDamp = new Vector3d(physicsCalculations.getAngularVelocity())
             .sub(angularChangeAllowed);
 
-        Vector3d dampingTorque = angularVelocityToDamp
-            .mul(physicsCalculations.getPhysicsTimeDeltaPerPhysTick());
-
-
-        Vector3d dampingTorqueWithRespectToInertia = physicsCalculations.getPhysMOITensor().transform(dampingTorque);
+        Vector3d dampingTorqueWithRespectToInertia = physicsCalculations.getPhysMOITensor().transform(angularVelocityToDamp);
 
         double dampingTorqueRespectMagnitude = dampingTorqueWithRespectToInertia.length();
         if (dampingTorqueRespectMagnitude > VSControlConfig.dampenerMaxTorque) {

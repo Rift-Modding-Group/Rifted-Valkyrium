@@ -30,10 +30,9 @@ public interface IBlockForceProvider {
         return toReturn;
     }
 
-    // Multiply your power usage values or whatever by the secondsToApply, otherwise
-    // you'll have issues (Example: <0,400,0> -(.01)-> <0,40,0>
     /**
-     * The force Vector this block gives within its local space (Not within World space).
+     * The force vector this block gives within its local space (not within world space).
+     * Return raw force here; PhysicsCalculations applies secondsToApply when accumulating.
      */
     @Nullable
     Vector3dc getBlockForceInShipSpace(World world, BlockPos pos, IBlockState state, PhysicsObject physicsObject, double secondsToApply);

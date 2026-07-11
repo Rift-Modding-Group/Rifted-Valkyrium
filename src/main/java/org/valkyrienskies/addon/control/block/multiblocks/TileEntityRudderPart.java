@@ -125,7 +125,7 @@ public class TileEntityRudderPart extends TileEntityMultiblockPartForce<RudderAx
     public Vector3dc getForceOutputUnoriented(double secondsToApply, PhysicsObject physicsObject) {
         Vector3d rudderForce = this.calculateForceFromVelocity(physicsObject);
         if (rudderForce == null || rudderForce.lengthSquared() <= 1.0D) return null;
-        return rudderForce.mul(secondsToApply);
+        return rudderForce;
     }
 
     @Override

@@ -32,17 +32,14 @@ public class TileEntityGyroscopeStabilizer extends TileEntity {
         );
         Vector3d angularVelocityChange = targetAngularVelocity.sub(currentCorrectionVelocity, new Vector3d());
 
-        Vector3d torqueImpulse = physicsCalculations.getPhysMOITensor().transform(angularVelocityChange, new Vector3d());
-        torqueImpulse.mul(physicsCalculations.getPhysicsTimeDeltaPerPhysTick());
-        torqueImpulse.sub(new Vector3d(GRAVITY_UP).mul(torqueImpulse.dot(GRAVITY_UP)));
+        Vector3d torque = physicsCalculations.getPhysMOITensor().transform(angularVelocityChange, new Vector3d());
+        torque.sub(new Vector3d(GRAVITY_UP).mul(torque.dot(GRAVITY_UP)));
 
-        //application of impulse that keeps the ship leveled happens here
-        double maxTorqueImpulse = VSControlConfig.stabilizerMaxTorque * physicsCalculations.getPhysicsTimeDeltaPerPhysTick();
-        double torqueImpulseMagnitude = torqueImpulse.length();
-        if (torqueImpulseMagnitude > maxTorqueImpulse) {
-            torqueImpulse.mul(maxTorqueImpulse / torqueImpulseMagnitude);
+        double torqueMagnitude = torque.length();
+        if (torqueMagnitude > VSControlConfig.stabilizerMaxTorque) {
+            torque.mul(VSControlConfig.stabilizerMaxTorque / torqueMagnitude);
         }
-        return torqueImpulse;
+        return torque;
     }
 
 }

@@ -1,5 +1,6 @@
 package org.valkyrienskies.mod.common.physics;
 
+import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix3d;
 import org.joml.Quaterniond;
 import org.joml.Vector3d;
@@ -16,21 +17,27 @@ public class PhysicsCalculations {
     public static final double DRAG_CONSTANT = 0.99D;
     public static final double EPSILON = 0.00000001;
 
+    @NotNull
     private final PhysicsObject parent;
 
     public boolean actAsArchimedes = false; //omaga an archimedes ships reference
+    @NotNull
     private final Vector3d physCenterOfMass;
+    @NotNull
     private final Vector3d torque;
+    @NotNull
     private final Vector3d force;
     private double physTickTimeDelta;
     private final Matrix3d physMOITensor;
     private final Matrix3d physInvMOITensor;
 
+    @NotNull
     private final Vector3d linearVelocity;
+    @NotNull
     private final Vector3d angularVelocity;
     private boolean forceToUseGameTransform;
 
-    public PhysicsCalculations(PhysicsObject parent) {
+    public PhysicsCalculations(@NotNull PhysicsObject parent) {
         this.parent = parent;
         this.physMOITensor = new Matrix3d();
         this.physInvMOITensor = new Matrix3d();
@@ -58,35 +65,19 @@ public class PhysicsCalculations {
         this.getParent().getShipTransformationManager().updatePreviousPhysicsTransform();
     }
 
-    @Deprecated
-    public void addForceAtPoint(Vector3dc inBodyWO, Vector3dc forceToApply) {
-        addForceAtPoint(inBodyWO, forceToApply, new Vector3d());
+    public void addForceAtPoint(Vector3dc posRelToShipCenter, Vector3dc forceToApply, Vector3d crossVector) {
+        posRelToShipCenter.cross(forceToApply, crossVector);
+        this.addTorque(crossVector);
+        this.addForce(forceToApply);
     }
 
-    @Deprecated
-    public void addForceAtPoint(Vector3dc inBodyWO, Vector3dc forceToApply, Vector3d crossVector) {
-        inBodyWO.cross(forceToApply, crossVector);
-        this.torque.add(crossVector);
-        this.force.add(forceToApply);
-    }
-
-    public void addForceAtPointNew(Vector3dc posRelToShipCenter, Vector3dc forceToApply, Vector3d tempStorage) {
-        final double timeStep = getPhysicsTimeDeltaPerPhysTick();
-        posRelToShipCenter.cross(forceToApply, tempStorage);
-        this.torque.add(tempStorage.x() * timeStep, tempStorage.y() * timeStep, tempStorage.z() * timeStep);
-        this.force.add(forceToApply.x() * timeStep, forceToApply.y() * timeStep, forceToApply.z() * timeStep);
-    }
-
-    @Deprecated
     public Vector3d getVelocityAtPoint(Vector3dc posRelativeToShipCenter) {
-        Vector3d speed = getAngularVelocity().cross(posRelativeToShipCenter, new Vector3d());
-        speed.add(getLinearVelocity());
-        return speed;
+        return this.getVelocityAtPoint(posRelativeToShipCenter, new Vector3d());
     }
 
     public Vector3d getVelocityAtPoint(Vector3dc posRelativeToShipCenter, Vector3d dest) {
-        Vector3d velocityAtPoint = getAngularVelocity().cross(posRelativeToShipCenter, dest);
-        velocityAtPoint.add(getLinearVelocity());
+        Vector3d velocityAtPoint = this.getAngularVelocity().cross(posRelativeToShipCenter, dest);
+        velocityAtPoint.add(this.getLinearVelocity());
         return velocityAtPoint;
     }
 
@@ -110,41 +101,45 @@ public class PhysicsCalculations {
         return this.physMOITensor;
     }
 
+    @NotNull
     public PhysicsObject getParent() {
         return this.parent;
     }
 
-    public double getInertiaAlongRotationAxis() {
-        Vector3d rotationAxis = new Vector3d(getAngularVelocity());
-        rotationAxis.normalize();
-        getPhysMOITensor().transform(rotationAxis);
-        return rotationAxis.length();
+    public void addForce(final Vector3dc addedForce) {
+        final double timeStep = this.getPhysicsTimeDeltaPerPhysTick();
+        this.force.add(addedForce.x() * timeStep, addedForce.y() * timeStep, addedForce.z() * timeStep);
     }
 
-    public void addForceAndTorque(final Vector3dc addedForce, final Vector3dc addedTorque) {
-        final double timeStep = getPhysicsTimeDeltaPerPhysTick();
-        this.force.add(addedForce.x() * timeStep, addedForce.y() * timeStep, addedForce.z() * timeStep);
+    public void addTorque(final Vector3dc addedTorque) {
+        final double timeStep = this.getPhysicsTimeDeltaPerPhysTick();
         this.torque.add(addedTorque.x() * timeStep, addedTorque.y() * timeStep, addedTorque.z() * timeStep);
     }
 
+    public void resetForceAndTorque() {
+        this.force.zero();
+        this.torque.zero();
+    }
+
+    public void drainForceAndTorque(@NotNull Vector3d forceDest, @NotNull Vector3d torqueDest) {
+        forceDest.set(this.force);
+        torqueDest.set(this.torque);
+        this.resetForceAndTorque();
+    }
+
+    @NotNull
     public Vector3d getPhysCenterOfMass() {
         return this.physCenterOfMass;
     }
 
+    @NotNull
     public Vector3d getLinearVelocity() {
         return this.linearVelocity;
     }
 
+    @NotNull
     public Vector3d getAngularVelocity() {
         return this.angularVelocity;
-    }
-
-    public Vector3d getForce() {
-        return this.force;
-    }
-
-    public Vector3d getTorque() {
-        return this.torque;
     }
 
     public boolean setForceToUseGameTransform(boolean forceToUseGameTransform) {

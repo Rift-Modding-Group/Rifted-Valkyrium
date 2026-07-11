@@ -100,8 +100,7 @@ public abstract class TileEntityPilotableImpl extends TileEntity implements ITil
             PhysicsCalculations physicsCalculations = physicsObject.getPhysicsCalculations();
             physicsCalculations.getLinearVelocity().zero();
             physicsCalculations.getAngularVelocity().zero();
-            physicsCalculations.getForce().zero();
-            physicsCalculations.getTorque().zero();
+            physicsCalculations.resetForceAndTorque();
         }
     }
 

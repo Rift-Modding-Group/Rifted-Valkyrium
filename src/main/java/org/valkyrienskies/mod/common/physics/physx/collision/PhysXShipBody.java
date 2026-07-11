@@ -16,6 +16,7 @@ import org.joml.Quaterniond;
 import org.joml.Quaterniondc;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
+import org.jspecify.annotations.NonNull;
 import org.valkyrienskies.mod.common.block.IBlockBuoyancyProvider;
 import org.valkyrienskies.mod.common.block.IBlockForceProvider;
 import org.valkyrienskies.mod.common.block.IBlockTorqueProvider;
@@ -70,7 +71,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
     private boolean massPropertiesDirty;
     private double lastMass;
 
-    public PhysXShipBody(@NotNull PxPhysics physics, @NotNull PxScene scene, PhysicsObject ship) {
+    public PhysXShipBody(@NotNull PxPhysics physics, @NotNull PxScene scene, @NonNull PhysicsObject ship) {
         super(physics, scene);
         this.ship = ship;
         this.identifier = new Identifier(ship);
@@ -153,9 +154,10 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
     }
 
     private void drainImpulseFrom(PhysicsCalculations calculations) {
-        this.addImpulse(new Vector3d(calculations.getForce()), new Vector3d(calculations.getTorque()));
-        calculations.getForce().zero();
-        calculations.getTorque().zero();
+        Vector3d force = new Vector3d();
+        Vector3d torque = new Vector3d();
+        calculations.drainForceAndTorque(force, torque);
+        this.addImpulse(force, torque);
     }
 
     private void addImpulse(Vector3dc impulse, Vector3dc torqueImpulse) {
@@ -257,8 +259,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
 
     private void prepareForSimulation(double timeStep) {
         PhysicsCalculations calculations = this.ship.getPhysicsCalculations();
-        calculations.getForce().zero();
-        calculations.getTorque().zero();
+        calculations.resetForceAndTorque();
         calculations.setPhysicsTimeDeltaPerPhysTick(timeStep);
         this.centerOfMassPoseDirty = false;
         this.updatePhysCenterOfMass(calculations);
@@ -429,7 +430,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
                     //torque blocks
                     if (blockAt instanceof IBlockTorqueProvider torqueProviderBlock) {
                         Vector3dc torqueVector = torqueProviderBlock.getTorqueInGlobal(calculations, mutablePos);
-                        if (torqueVector != null) calculations.getTorque().add(torqueVector);
+                        if (torqueVector != null) calculations.addTorque(torqueVector);
                     }
                 }
             }
@@ -440,8 +441,8 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
         if (parentPilot != null) {
             final Vector3dc pilotForce = parentPilot.getBlockForceInShipSpace(this.ship, calculations.getPhysicsTimeDeltaPerPhysTick());
             final Vector3dc pilotTorque = parentPilot.getTorqueInGlobal(calculations);
-            if (pilotForce != null) calculations.getForce().add(pilotForce);
-            if (pilotTorque != null) calculations.getTorque().add(pilotTorque);
+            if (pilotForce != null) calculations.addForce(pilotForce);
+            if (pilotTorque != null) calculations.addTorque(pilotTorque);
         }
     }
 
@@ -595,7 +596,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
                             lift - velocityAtPoint.y * WATER_VERTICAL_DAMPING * submergedFraction,
                             -velocityAtPoint.z * WATER_HORIZONTAL_DAMPING * submergedFraction
                     );
-                    calculations.addForceAtPointNew(relativeToShipCenter, force, tempTorque);
+                    calculations.addForceAtPoint(relativeToShipCenter, force, tempTorque);
                 }
             }
         }
