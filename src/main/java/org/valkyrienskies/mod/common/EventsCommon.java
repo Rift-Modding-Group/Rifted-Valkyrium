@@ -39,6 +39,7 @@ import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShi
 import org.valkyrienskies.mod.common.capability.ship_pilot.IShipPilot;
 import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
 import org.valkyrienskies.mod.common.entity.EntityMountable;
+import org.valkyrienskies.mod.common.physics.PhysicsCollideWith;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
 import org.valkyrienskies.mod.common.ships.ship_transform.CoordinateSpaceType;
 import org.valkyrienskies.mod.common.ships.ship_world.*;
@@ -170,6 +171,7 @@ public class EventsCommon {
 
         // Fixes memory leak; @DaPorkChop please don't leave static maps lying around D:
         lastPositions.clear();
+        PhysicsCollideWith.clearBlockSectionRegistrationsForWorld(world);
         shipWorld.getManager().onWorldUnload();
     }
 

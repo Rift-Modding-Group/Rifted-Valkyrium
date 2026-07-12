@@ -17,6 +17,7 @@ import net.minecraft.world.World;
 import org.joml.Vector3d;
 import org.valkyrienskies.mod.common.ships.ship_transform.CoordinateSpaceType;
 import org.valkyrienskies.mod.common.entity.EntityMountable;
+import org.valkyrienskies.mod.common.physics.PhysicsCollideWith;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import valkyrienwarfare.api.TransformType;
 
@@ -34,11 +35,12 @@ public class VSWorldEventListener implements IWorldEventListener {
 
     @Override
     public void notifyBlockUpdate(World worldIn, BlockPos pos, IBlockState oldState, IBlockState newState, int flags) {
-
+        if (worldIn.isRemote || oldState == newState || oldState.equals(newState)) return;
+        PhysicsCollideWith.invalidateBlockSectionAt(worldIn, pos);
     }
 
     @Override
-    public void notifyLightSet(BlockPos pos) { }
+    public void notifyLightSet(BlockPos pos) {}
 
     @Override
     public void markBlockRangeForRenderUpdate(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {}

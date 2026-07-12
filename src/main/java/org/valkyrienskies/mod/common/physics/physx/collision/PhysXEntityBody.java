@@ -16,12 +16,15 @@ import physx.physics.PxScene;
 import physx.physics.PxShape;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 /**
  * Information involving the entity to collide with the ship is contained here.
  * */
 public class PhysXEntityBody extends AbstractPhysXCollisionObject {
+    private static final double ENTITY_SHAPE_SIZE_EPSILON = 1.0E-6D;
+
     @NotNull
     private final PxRigidDynamic actor;
     @NotNull
@@ -32,10 +35,19 @@ public class PhysXEntityBody extends AbstractPhysXCollisionObject {
     private final Identifier identifier;
 
     private PxShape shape;
+    private double shapeSizeX;
+    private double shapeSizeY;
+    private double shapeSizeZ;
+    private boolean hasCachedShapeSize;
 
-    public PhysXEntityBody(@NotNull PxPhysics physics, @NotNull PxScene scene, @NotNull Entity entity) {
+    public PhysXEntityBody(
+            @NotNull PxPhysics physics,
+            @NotNull PxScene scene,
+            @NotNull PxMaterial material,
+            @NotNull Entity entity
+    ) {
         super(physics, scene);
-        this.material = physics.createMaterial(0.4f, 0.4f, 0.0f);
+        this.material = material;
         PxTransform transform = createTransform(entity.getEntityBoundingBox());
         this.actor = this.physics.createRigidDynamic(transform);
         transform.destroy();
@@ -57,6 +69,7 @@ public class PhysXEntityBody extends AbstractPhysXCollisionObject {
             @NotNull World hostWorld,
             @NotNull Collection<PhysicsObject> shipsWithPhysics,
             @NotNull Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject> collisionObjects,
+            List<AbstractPhysXCollisionObject> liquidCollisionObjects,
             double timeStep
     ) {
         AxisAlignedBB bb = this.entity.getEntityBoundingBox();
@@ -79,6 +92,7 @@ public class PhysXEntityBody extends AbstractPhysXCollisionObject {
         if (this.shape != null) {
             this.detachShape(this.shape);
             this.shape = null;
+            this.clearCachedShapeSize();
         }
     }
 
@@ -94,14 +108,50 @@ public class PhysXEntityBody extends AbstractPhysXCollisionObject {
         return this.actor;
     }
 
+    /**
+     * Rebuild shape based on given AABB, said AABB is the
+     * main collision box of the entity
+     * */
     private void rebuildShape(AxisAlignedBB bb) {
-        if (this.shape != null) {
-            this.detachShape(this.shape);
-            this.shape = null;
+        double sizeX = bb.maxX - bb.minX;
+        double sizeY = bb.maxY - bb.minY;
+        double sizeZ = bb.maxZ - bb.minZ;
+
+        if (this.shape == null || !this.hasCachedShapeSize || !this.hasSameShapeSize(sizeX, sizeY, sizeZ)) {
+            //remove already existing shape if it does
+            if (this.shape != null) {
+                this.detachShape(this.shape);
+                this.shape = null;
+                this.clearCachedShapeSize();
+            }
+
+            //recreate shape
+            this.shape = this.createBoxShape(bb);
+            PhysXCollisionFilters.CollisionGroup.ENTITY.setFilter(this.shape);
+            if (this.attachShape(this.shape)) {
+                this.shapeSizeX = sizeX;
+                this.shapeSizeY = sizeY;
+                this.shapeSizeZ = sizeZ;
+                this.hasCachedShapeSize = true;
+            }
+            else {
+                this.shape = null;
+                this.clearCachedShapeSize();
+            }
         }
-        this.shape = this.createBoxShape(bb);
-        PhysXCollisionFilters.CollisionGroup.ENTITY.setFilter(this.shape);
-        if (!this.attachShape(this.shape)) this.shape = null;
+    }
+
+    private boolean hasSameShapeSize(double sizeX, double sizeY, double sizeZ) {
+        return Math.abs(this.shapeSizeX - sizeX) <= ENTITY_SHAPE_SIZE_EPSILON
+                && Math.abs(this.shapeSizeY - sizeY) <= ENTITY_SHAPE_SIZE_EPSILON
+                && Math.abs(this.shapeSizeZ - sizeZ) <= ENTITY_SHAPE_SIZE_EPSILON;
+    }
+
+    private void clearCachedShapeSize() {
+        this.shapeSizeX = 0D;
+        this.shapeSizeY = 0D;
+        this.shapeSizeZ = 0D;
+        this.hasCachedShapeSize = false;
     }
 
     public static final class Identifier extends AbstractPhysXCollisionObject.Identifier {

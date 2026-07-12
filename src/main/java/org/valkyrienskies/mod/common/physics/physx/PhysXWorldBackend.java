@@ -1,24 +1,21 @@
 package org.valkyrienskies.mod.common.physics.physx;
 
-import net.minecraft.block.BlockLiquid;
-import net.minecraft.block.material.Material;
-import net.minecraft.block.material.MaterialLiquid;
-import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.ChunkCache;
 import net.minecraft.world.World;
-import org.apache.commons.lang3.tuple.MutablePair;
+import gnu.trove.map.TObjectIntMap;
+import gnu.trove.map.hash.TObjectIntHashMap;
 import org.jetbrains.annotations.NotNull;
 import org.valkyrienskies.mod.common.config.VSConfig;
+import org.valkyrienskies.mod.common.physics.BlockSection;
 import org.valkyrienskies.mod.common.physics.PhysicsCollideWith;
 import org.valkyrienskies.mod.common.physics.physx.collision.AbstractPhysXCollisionObject;
-import org.valkyrienskies.mod.common.physics.physx.collision.PhysXBlockCollider;
+import org.valkyrienskies.mod.common.physics.physx.collision.PhysXBlockSectionCollider;
 import org.valkyrienskies.mod.common.physics.physx.collision.PhysXEntityBody;
 import org.valkyrienskies.mod.common.physics.physx.collision.PhysXShipBody;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import physx.PxTopLevelFunctions;
 import physx.common.PxVec3;
+import physx.physics.PxMaterial;
 import physx.physics.PxPhysics;
 import physx.physics.PxScene;
 import physx.physics.PxSceneDesc;
@@ -29,7 +26,7 @@ import java.util.*;
 /**
  * One PhysX scene for a loaded Minecraft dimension.
  * VS ship blocks remain in their shipyard chunks. This backend creates projected
- * PhysX actors for those ships and for nearby blocks, liquid, and entities.
+ * PhysX actors for those ships and for nearby blocks, liquids, and entities.
  */
 public class PhysXWorldBackend {
     @NotNull
@@ -38,7 +35,17 @@ public class PhysXWorldBackend {
     public final PxPhysics physics;
     @NotNull
     public final PxScene scene;
+    //common physX materials for each collision object
+    @NotNull
+    private final EnumMap<PhysXMaterials, PxMaterial> materials = new EnumMap<>(PhysXMaterials.class);
+    //list of collision objects in the entire world
     private final Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject> collisionObjects = new HashMap<>();
+    //separate list of liquid collision objects to deal with ship buoyancy
+    private final List<AbstractPhysXCollisionObject> liquidCollisionObjects = new ArrayList<>();
+    //helper to track last sync generation each collision object was seen in, so stale collision objects can be released
+    private final TObjectIntMap<AbstractPhysXCollisionObject.Identifier> collisionObjectSyncGenerations = new TObjectIntHashMap<>();
+    //current sync generation
+    private int syncGeneration;
     private boolean closed;
 
     public PhysXWorldBackend() {
@@ -57,6 +64,9 @@ public class PhysXWorldBackend {
         this.scene = this.physics.createScene(sceneDesc);
         this.scene.setFlag(PxSceneFlagEnum.eENABLE_CCD, true);
         this.scene.setFlag(PxSceneFlagEnum.eENABLE_STABILIZATION, true);
+        for (PhysXMaterials material : PhysXMaterials.values()) {
+            this.materials.put(material, material.create(this.physics));
+        }
 
         //destroy temp variables
         gravityVec.destroy();
@@ -69,7 +79,7 @@ public class PhysXWorldBackend {
     public synchronized void update(World hostWorld, Collection<PhysicsObject> shipsWithPhysics, double timeStep) {
         if (this.closed) return;
 
-        this.syncCollisionObjects(hostWorld, shipsWithPhysics);
+        this.syncCollisionObjects(shipsWithPhysics);
         this.updateCollisionObjectsBeforeSimulation(hostWorld, shipsWithPhysics, timeStep);
 
         if (this.scene.simulate((float) timeStep)) this.scene.fetchResults(true);
@@ -80,67 +90,62 @@ public class PhysXWorldBackend {
     /**
      * For updating list of collision objects from the world.
      * */
-    private void syncCollisionObjects(World hostWorld, Collection<PhysicsObject> shipsWithPhysics) {
-        //set to serve as basis for removing unsynced objects
-        Set<AbstractPhysXCollisionObject.Identifier> syncedCollisionObjects = new HashSet<>();
+    private void syncCollisionObjects(Collection<PhysicsObject> shipsWithPhysics) {
+        this.advanceSyncGeneration();
 
+        //-----loop over all provided ships with physics to create collision objects-----
         for (PhysicsObject ship : shipsWithPhysics) {
-            //-----ship objects-----
+            //---ship objects---
             PhysXShipBody.Identifier shipIdentifier = new PhysXShipBody.Identifier(ship);
-            syncedCollisionObjects.add(shipIdentifier);
+            this.markCollisionObjectSynced(shipIdentifier);
             AbstractPhysXCollisionObject shipCollisionObject = this.collisionObjects.get(shipIdentifier);
             //add if no ship body
             if (shipCollisionObject == null) {
-                PhysXShipBody shipBody = new PhysXShipBody(this.physics, this.scene, ship);
+                PhysXShipBody shipBody = new PhysXShipBody(this.physics, this.scene, this.getMaterial(PhysXMaterials.SHIP), ship);
                 this.addCollisionObject(shipBody);
             }
             //update ship reference if there is
             else ((PhysXShipBody) shipCollisionObject).updateShipReference(ship);
 
-            //-----defining block and entity stuff-----
+            //---defining block and entity stuff---
             PhysicsCollideWith collideWith = ship.getPhysicsCollideWith();
-            ChunkCache cachedChunks;
-            MutablePair<BlockPos, BlockPos> cachedChunksCorners;
             List<Entity> entities;
+            List<BlockSection> blockSections;
             synchronized (collideWith) {
-                cachedChunks = collideWith.getCachedChunks();
-                cachedChunksCorners = collideWith.getCachedChunkCorners();
                 entities = new ArrayList<>(collideWith.getEntities());
+                blockSections = new ArrayList<>(collideWith.getBlockSections());
             }
 
-            //-----block objects-----
-            if (cachedChunks != null && cachedChunksCorners != null) {
-                BlockPos cachedMin = cachedChunksCorners.getLeft();
-                BlockPos cachedMax = cachedChunksCorners.getRight();
-
-                BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
-                for (int x = cachedMin.getX(); x <= cachedMax.getX(); x++) {
-                    for (int z = cachedMin.getZ(); z <= cachedMax.getZ(); z++) {
-                        for (int y = cachedMin.getY(); y <= cachedMax.getY(); y++) {
-                            mutablePos.setPos(x, y, z);
-                            IBlockState state = cachedChunks.getBlockState(mutablePos);
-                            Material material = state.getMaterial();
-                            boolean liquid = state.getBlock() instanceof BlockLiquid || material instanceof MaterialLiquid;
-                            if (material.equals(Material.AIR) || (!liquid && !material.blocksMovement())) continue;
-                            BlockPos blockPos = mutablePos.toImmutable();
-
-                            PhysXBlockCollider.Identifier blockIdentifier = new PhysXBlockCollider.Identifier(hostWorld, blockPos, state);
-                            syncedCollisionObjects.add(blockIdentifier);
-                            if (this.collisionObjects.get(blockIdentifier) == null) {
-                                PhysXBlockCollider blockCollider = new PhysXBlockCollider(this.physics, this.scene, hostWorld, blockPos, state);
-                                this.addCollisionObject(blockCollider);
-                            }
-                        }
-                    }
+            //---block section objects---
+            for (BlockSection blockSection : blockSections) {
+                PhysXBlockSectionCollider.Identifier sectionIdentifier = new PhysXBlockSectionCollider.Identifier(
+                        blockSection.world(),
+                        blockSection.sectionX(),
+                        blockSection.sectionY(),
+                        blockSection.sectionZ(),
+                        blockSection.contentsHash()
+                );
+                this.markCollisionObjectSynced(sectionIdentifier);
+                if (this.collisionObjects.get(sectionIdentifier) == null) {
+                    PhysXBlockSectionCollider sectionCollider = new PhysXBlockSectionCollider(
+                            this.physics,
+                            this.scene,
+                            blockSection.world(),
+                            sectionIdentifier,
+                            this.getMaterial(PhysXMaterials.WORLD),
+                            this.getMaterial(PhysXMaterials.LIQUID),
+                            blockSection.blocks()
+                    );
+                    this.addCollisionObject(sectionCollider);
                 }
             }
 
-            //-----entity objects-----
+            //---entity objects---
             for (Entity entity : entities) {
                 PhysXEntityBody.Identifier entityIdentifier = new PhysXEntityBody.Identifier(entity);
-                syncedCollisionObjects.add(entityIdentifier);
+                this.markCollisionObjectSynced(entityIdentifier);
                 if (this.collisionObjects.get(entityIdentifier) == null) {
-                    PhysXEntityBody entityBody = new PhysXEntityBody(this.physics, this.scene, entity);
+                    PhysXEntityBody entityBody = new PhysXEntityBody(this.physics, this.scene, this.getMaterial(PhysXMaterials.ENTITY), entity);
                     this.addCollisionObject(entityBody);
                 }
             }
@@ -150,16 +155,53 @@ public class PhysXWorldBackend {
         Iterator<Map.Entry<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject>> iterator = this.collisionObjects.entrySet().iterator();
         while (iterator.hasNext()) {
             Map.Entry<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject> entry = iterator.next();
-            if (syncedCollisionObjects.contains(entry.getKey())) continue;
+            AbstractPhysXCollisionObject.Identifier identifier = entry.getKey();
+            if (this.collisionObjectSyncGenerations.get(identifier) == this.syncGeneration) continue;
 
             AbstractPhysXCollisionObject collisionObject = entry.getValue();
             collisionObject.release();
             iterator.remove();
+            this.collisionObjectSyncGenerations.remove(identifier);
+        }
+
+        //-----rebuild list of liquid collision objects-----
+        this.liquidCollisionObjects.clear();
+        for (AbstractPhysXCollisionObject collisionObject : this.collisionObjects.values()) {
+            if (collisionObject.hasLiquidBlocks()) this.liquidCollisionObjects.add(collisionObject);
         }
     }
 
     private void addCollisionObject(AbstractPhysXCollisionObject collisionObject) {
         this.collisionObjects.put(collisionObject.getIdentifier(), collisionObject);
+        this.markCollisionObjectSynced(collisionObject.getIdentifier());
+    }
+
+    private void markCollisionObjectSynced(AbstractPhysXCollisionObject.Identifier identifier) {
+        this.collisionObjectSyncGenerations.put(identifier, this.syncGeneration);
+    }
+
+    @NotNull
+    private PxMaterial getMaterial(@NotNull PhysXMaterials material) {
+        PxMaterial pxMaterial = this.materials.get(material);
+        if (pxMaterial == null) {
+            throw new IllegalStateException("Missing PhysX material " + material);
+        }
+        return pxMaterial;
+    }
+
+    /**
+     * Starts a new collision-object sync pass. Objects touched during the pass are
+     * marked with the new generation; anything still carrying an older generation
+     * after the pass is stale and will be released from the PhysX scene.
+     * If the int counter wraps to zero, discard all old marks and restart at one,
+     * since zero is the map's default value for identifiers that were never marked.
+     */
+    private void advanceSyncGeneration() {
+        this.syncGeneration++;
+        if (this.syncGeneration != 0) return;
+
+        this.collisionObjectSyncGenerations.clear();
+        this.syncGeneration = 1;
     }
 
     /**
@@ -168,7 +210,7 @@ public class PhysXWorldBackend {
     private void updateCollisionObjectsBeforeSimulation(World hostWorld, Collection<PhysicsObject> shipsWithPhysics, double timeStep) {
         for (AbstractPhysXCollisionObject collisionObject : new ArrayList<>(this.collisionObjects.values())) {
             try {
-                collisionObject.updateBeforeSimulation(hostWorld, shipsWithPhysics, this.collisionObjects, timeStep);
+                collisionObject.updateBeforeSimulation(hostWorld, shipsWithPhysics, this.collisionObjects, this.liquidCollisionObjects, timeStep);
             }
             catch (Exception e) {
                 e.printStackTrace();
@@ -202,7 +244,11 @@ public class PhysXWorldBackend {
             collisionObject.release();
         }
         this.collisionObjects.clear();
+        this.liquidCollisionObjects.clear();
+        this.collisionObjectSyncGenerations.clear();
 
+        for (PxMaterial material : this.materials.values()) material.release();
+        this.materials.clear();
         this.scene.release();
         this.runtime.release();
     }

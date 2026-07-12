@@ -49,6 +49,7 @@ public abstract class AbstractPhysXCollisionObject {
             @NotNull World hostWorld,
             @NotNull Collection<PhysicsObject> shipsWithPhysics,
             @NotNull Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject> collisionObjects,
+            List<AbstractPhysXCollisionObject> liquidCollisionObjects,
             double timeStep
     );
 
@@ -60,6 +61,10 @@ public abstract class AbstractPhysXCollisionObject {
     );
 
     public boolean isLiquidBlockIntersecting(@NotNull AxisAlignedBB box) {
+        return false;
+    }
+
+    public boolean hasLiquidBlocks() {
         return false;
     }
 
@@ -77,7 +82,6 @@ public abstract class AbstractPhysXCollisionObject {
         this.releaseShapes();
         this.scene.removeActor(this.getActor(), true);
         this.getActor().release();
-        this.getMaterial().release();
     }
 
     protected void detachShape(PxShape shape) {
@@ -91,20 +95,25 @@ public abstract class AbstractPhysXCollisionObject {
     }
 
     protected PxShape createBoxShape(AxisAlignedBB box) {
+        return this.createBoxShape(box, this.getMaterial());
+    }
+
+    protected PxShape createBoxShape(AxisAlignedBB box, PxMaterial material) {
         return this.createBoxShape(
             (box.maxX - box.minX) * 0.5D,
             (box.maxY - box.minY) * 0.5D,
-            (box.maxZ - box.minZ) * 0.5D
+            (box.maxZ - box.minZ) * 0.5D,
+            material
         );
     }
 
-    protected PxShape createBoxShape(double halfX, double halfY, double halfZ) {
+    protected PxShape createBoxShape(double halfX, double halfY, double halfZ, PxMaterial material) {
         PxBoxGeometry geometry = new PxBoxGeometry(
             (float) Math.max(halfX, 0.0001D),
             (float) Math.max(halfY, 0.0001D),
             (float) Math.max(halfZ, 0.0001D)
         );
-        PxShape shape = this.physics.createShape(geometry, this.getMaterial(), true);
+        PxShape shape = this.physics.createShape(geometry, material, true);
         geometry.destroy();
         return shape;
     }
@@ -126,6 +135,9 @@ public abstract class AbstractPhysXCollisionObject {
         );
     }
 
+    /**
+     * A special class for collision objects that defines how it is identified
+     * */
     public static abstract class Identifier {
         @Override
         public abstract boolean equals(Object object);

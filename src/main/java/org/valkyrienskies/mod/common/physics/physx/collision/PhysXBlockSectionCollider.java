@@ -1,13 +1,14 @@
 package org.valkyrienskies.mod.common.physics.physx.collision;
 
 import net.minecraft.block.BlockLiquid;
-import net.minecraft.block.material.Material;
 import net.minecraft.block.material.MaterialLiquid;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.NotNull;
+import org.valkyrienskies.mod.common.physics.BlockSection;
+import org.valkyrienskies.mod.common.physics.GreedyBlockMerger;
 import org.valkyrienskies.mod.common.physics.physx.PhysXCollisionFilters;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import physx.common.PxTransform;
@@ -26,39 +27,64 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Information involving the blockpos to collide with the ship is contained here.
- * */
-public class PhysXBlockCollider extends AbstractPhysXCollisionObject {
-    @NotNull
-    private final BlockPos pos;
+ * For block sections, which are just a group of blocks.
+ */
+public class PhysXBlockSectionCollider extends AbstractPhysXCollisionObject {
     @NotNull
     private final Identifier identifier;
-    private final boolean liquid;
     @NotNull
     private final PxRigidStatic actor;
     @NotNull
-    private final PxMaterial material;
+    private final PxMaterial blockMaterial;
+    @NotNull
+    private final PxMaterial liquidMaterial;
+    @NotNull
+    private final List<AxisAlignedBB> liquidBoxes;
 
-    public PhysXBlockCollider(
+    public PhysXBlockSectionCollider(
             @NotNull PxPhysics physics,
             @NotNull PxScene scene,
             @NotNull World world,
-            @NotNull BlockPos pos,
-            @NotNull IBlockState state
+            @NotNull Identifier identifier,
+            @NotNull PxMaterial blockMaterial,
+            @NotNull PxMaterial liquidMaterial,
+            @NotNull List<BlockSection.BlockData> blocks
     ) {
         super(physics, scene);
-        this.pos = pos.toImmutable();
-        this.identifier = new Identifier(world, pos, state);
-        this.liquid = isLiquid(state);
-        this.material = physics.createMaterial(0.8f, 0.8f, 0.02f);
+        this.identifier = identifier;
+        this.blockMaterial = blockMaterial;
+        this.liquidMaterial = liquidMaterial;
+        this.liquidBoxes = new ArrayList<>();
 
-        PxTransform actorTransform = createTransform(pos.getX(), pos.getY(), pos.getZ());
+        //anchor the static actor at this section's block-aligned origin.
+        PxTransform actorTransform = this.createTransform(identifier.getOriginX(), identifier.getOriginY(), identifier.getOriginZ());
         this.actor = this.physics.createRigidStatic(actorTransform);
         actorTransform.destroy();
 
-        for (AxisAlignedBB box : getCollisionBoxes(world, pos, state, this.liquid)) {
-            this.attachBoxShape(box, this.liquid);
+        //split full cubes for GreedyBlockMerger so adjacent blocks become fewer PhysX shapes.
+        GreedyBlockMerger mergeableSolidBlocks = new GreedyBlockMerger();
+        List<BlockSection.BlockData> separateBlocks = new ArrayList<>();
+        for (BlockSection.BlockData block : blocks) {
+            if (block.liquid()) {
+                this.liquidBoxes.add(new AxisAlignedBB(block.pos()));
+                separateBlocks.add(block);
+            }
+            else if (mergeableSolidBlocks.isMergeableFullBlock(block.state())) {
+                mergeableSolidBlocks.add(block.pos());
+            }
+            else separateBlocks.add(block);
         }
+
+        //attach merged full-block boxes as solid collision shapes.
+        mergeableSolidBlocks.forEachMergedBlockBox((box, mergedBlocks) -> this.attachBoxShape(box, false));
+
+        //attach liquids and non-full-block shapes individually to preserve exact collision bounds.
+        for (BlockSection.BlockData block : separateBlocks) {
+            for (AxisAlignedBB box : getCollisionBoxes(world, block.pos(), block.state(), block.liquid())) {
+                this.attachBoxShape(box, block.liquid());
+            }
+        }
+
         this.scene.addActor(this.actor);
     }
 
@@ -71,7 +97,7 @@ public class PhysXBlockCollider extends AbstractPhysXCollisionObject {
     @Override
     @NotNull
     public PxMaterial getMaterial() {
-        return this.material;
+        return this.blockMaterial;
     }
 
     @Override
@@ -79,6 +105,7 @@ public class PhysXBlockCollider extends AbstractPhysXCollisionObject {
             @NotNull World hostWorld,
             @NotNull Collection<PhysicsObject> shipsWithPhysics,
             @NotNull Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject> collisionObjects,
+            List<AbstractPhysXCollisionObject> liquidCollisionObjects,
             double timeStep
     ) {}
 
@@ -92,7 +119,15 @@ public class PhysXBlockCollider extends AbstractPhysXCollisionObject {
 
     @Override
     public boolean isLiquidBlockIntersecting(@NotNull AxisAlignedBB box) {
-        return this.liquid && box.intersects(new AxisAlignedBB(this.pos));
+        for (AxisAlignedBB liquidBox : this.liquidBoxes) {
+            if (box.intersects(liquidBox)) return true;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean hasLiquidBlocks() {
+        return !this.liquidBoxes.isEmpty();
     }
 
     @Override
@@ -101,33 +136,31 @@ public class PhysXBlockCollider extends AbstractPhysXCollisionObject {
         return this.actor;
     }
 
-    @Override //no shapes to release down here xd
+    @Override
     protected void releaseShapes() {}
 
-    private void attachBoxShape(AxisAlignedBB worldBox, boolean trigger) {
-        PxShape shape = this.createBoxShape(worldBox);
+    private void attachBoxShape(AxisAlignedBB worldBox, boolean isLiquid) {
+        PxShape shape = this.createBoxShape(worldBox, isLiquid ? this.liquidMaterial : this.blockMaterial);
 
-        if (trigger) {
+        if (isLiquid) {
             shape.setFlag(PxShapeFlagEnum.eSIMULATION_SHAPE, false);
             shape.setFlag(PxShapeFlagEnum.eTRIGGER_SHAPE, true);
             PhysXCollisionFilters.CollisionGroup.LIQUID.setFilter(shape);
         }
         else PhysXCollisionFilters.CollisionGroup.WORLD.setFilter(shape);
 
-        double centerX = (worldBox.minX + worldBox.maxX) * 0.5D - this.pos.getX();
-        double centerY = (worldBox.minY + worldBox.maxY) * 0.5D - this.pos.getY();
-        double centerZ = (worldBox.minZ + worldBox.maxZ) * 0.5D - this.pos.getZ();
-        PxTransform localPose = createTransform(centerX, centerY, centerZ);
+        double centerX = (worldBox.minX + worldBox.maxX) * 0.5D - this.identifier.getOriginX();
+        double centerY = (worldBox.minY + worldBox.maxY) * 0.5D - this.identifier.getOriginY();
+        double centerZ = (worldBox.minZ + worldBox.maxZ) * 0.5D - this.identifier.getOriginZ();
+        PxTransform localPose = this.createTransform(centerX, centerY, centerZ);
         shape.setLocalPose(localPose);
         localPose.destroy();
 
         this.attachShape(shape);
     }
 
-    //-----static helper functions for use in PhysXWorldBackEnd-----
     public static boolean isLiquid(IBlockState state) {
-        Material material = state.getMaterial();
-        return state.getBlock() instanceof BlockLiquid || material instanceof MaterialLiquid;
+        return state.getBlock() instanceof BlockLiquid || state.getMaterial() instanceof MaterialLiquid;
     }
 
     public static List<AxisAlignedBB> getCollisionBoxes(World world, BlockPos pos, IBlockState state, boolean forceFullBlock) {
@@ -155,7 +188,6 @@ public class PhysXBlockCollider extends AbstractPhysXCollisionObject {
             AxisAlignedBB local = state.getCollisionBoundingBox(world, pos);
             if (local != null) return local.offset(pos);
         }
-        //fall back to a full block below
         catch (Throwable ignored) {
             if (state.getMaterial().blocksMovement()) return new AxisAlignedBB(pos);
         }
@@ -166,16 +198,29 @@ public class PhysXBlockCollider extends AbstractPhysXCollisionObject {
     public static final class Identifier extends AbstractPhysXCollisionObject.Identifier {
         @NotNull
         private final World world;
-        @NotNull
-        private final BlockPos pos;
-        private final int stateHash;
-        private final boolean liquid;
+        private final int sectionX;
+        private final int sectionY;
+        private final int sectionZ;
+        private final int contentsHash;
 
-        public Identifier(@NotNull World world, @NotNull BlockPos pos, @NotNull IBlockState state) {
+        public Identifier(@NotNull World world, int sectionX, int sectionY, int sectionZ, int contentsHash) {
             this.world = world;
-            this.pos = pos.toImmutable();
-            this.stateHash = state.hashCode();
-            this.liquid = isLiquid(state);
+            this.sectionX = sectionX;
+            this.sectionY = sectionY;
+            this.sectionZ = sectionZ;
+            this.contentsHash = contentsHash;
+        }
+
+        private int getOriginX() {
+            return this.sectionX << 4;
+        }
+
+        private int getOriginY() {
+            return this.sectionY << 4;
+        }
+
+        private int getOriginZ() {
+            return this.sectionZ << 4;
         }
 
         @Override
@@ -183,17 +228,19 @@ public class PhysXBlockCollider extends AbstractPhysXCollisionObject {
             if (this == object) return true;
             if (!(object instanceof Identifier that)) return false;
             return this.world == that.world
-                    && this.stateHash == that.stateHash
-                    && this.liquid == that.liquid
-                    && this.pos.equals(that.pos);
+                    && this.sectionX == that.sectionX
+                    && this.sectionY == that.sectionY
+                    && this.sectionZ == that.sectionZ
+                    && this.contentsHash == that.contentsHash;
         }
 
         @Override
         public int hashCode() {
             int result = System.identityHashCode(this.world);
-            result = 31 * result + this.pos.hashCode();
-            result = 31 * result + this.stateHash;
-            result = 31 * result + Boolean.hashCode(this.liquid);
+            result = 31 * result + this.sectionX;
+            result = 31 * result + this.sectionY;
+            result = 31 * result + this.sectionZ;
+            result = 31 * result + this.contentsHash;
             return result;
         }
     }

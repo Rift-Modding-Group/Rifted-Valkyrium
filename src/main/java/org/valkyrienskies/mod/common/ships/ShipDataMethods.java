@@ -16,6 +16,15 @@ import javax.annotation.ParametersAreNonnullByDefault;
 public final class ShipDataMethods {
     // Calculates the new center of mass and inertia matrices for ships after a block change.
     private static final IPhysicsObjectCenterOfMassProvider centerOfMassProvider = new BasicCenterOfMassProvider();
+    private static final int[][] COLLISION_SHAPE_DIRTY_OFFSETS = {
+            {0, 0, 0},
+            {1, 0, 0},
+            {-1, 0, 0},
+            {0, 1, 0},
+            {0, -1, 0},
+            {0, 0, 1},
+            {0, 0, -1}
+    };
 
     private ShipDataMethods() {
         throw new UnsupportedOperationException("Utility class");
@@ -48,6 +57,8 @@ public final class ShipDataMethods {
         }
 
         centerOfMassProvider.onSetBlockState(shipData.getInertiaData(), pos, oldState, newState);
-        shipData.getPhysicsData().markCollisionShapeDirty();
+        for (int[] offset : COLLISION_SHAPE_DIRTY_OFFSETS) {
+            shipData.getPhysicsData().markCollisionShapeDirty(pos.add(offset[0], offset[1], offset[2]));
+        }
     }
 }

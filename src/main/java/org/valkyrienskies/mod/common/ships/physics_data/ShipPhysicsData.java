@@ -2,9 +2,13 @@ package org.valkyrienskies.mod.common.ships.physics_data;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import net.minecraft.util.math.BlockPos;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.valkyrienskies.mod.common.physics.PhysicsCalculations;
+
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Stores data used by {@link PhysicsCalculations}
@@ -17,6 +21,7 @@ public class ShipPhysicsData {
     @JsonDeserialize(as = Vector3d.class)
     private Vector3dc angularVelocity;
     private transient volatile boolean collisionShapeDirty = true;
+    private transient Set<BlockPos> dirtyCollisionShapePositions = new HashSet<>();
 
     public ShipPhysicsData() {}
 
@@ -41,13 +46,33 @@ public class ShipPhysicsData {
         this.angularVelocity = angularVelocity;
     }
 
-    public void markCollisionShapeDirty() {
+    public synchronized void markCollisionShapeDirty() {
         this.collisionShapeDirty = true;
+        this.getDirtyCollisionShapePositions().clear();
     }
 
-    public boolean consumeCollisionShapeDirty() {
+    public synchronized void markCollisionShapeDirty(BlockPos pos) {
+        if (this.collisionShapeDirty) return;
+        this.getDirtyCollisionShapePositions().add(pos.toImmutable());
+    }
+
+    public synchronized boolean consumeCollisionShapeDirty() {
         boolean result = this.collisionShapeDirty;
         this.collisionShapeDirty = false;
+        if (result) this.getDirtyCollisionShapePositions().clear();
         return result;
+    }
+
+    public synchronized Set<BlockPos> consumeDirtyCollisionShapePositions() {
+        Set<BlockPos> result = new HashSet<>(this.getDirtyCollisionShapePositions());
+        this.getDirtyCollisionShapePositions().clear();
+        return result;
+    }
+
+    private Set<BlockPos> getDirtyCollisionShapePositions() {
+        if (this.dirtyCollisionShapePositions == null) {
+            this.dirtyCollisionShapePositions = new HashSet<>();
+        }
+        return this.dirtyCollisionShapePositions;
     }
 }

@@ -343,6 +343,7 @@ public class PhysicsObject implements IPhysicsEntity {
 
     void unload() {
         watchingPlayers.clear();
+        this.physicsCollideWith.close();
         if (!getWorld().isRemote) {
             ChunkProviderServer provider = (ChunkProviderServer) getWorld().getChunkProvider();
             for (ChunkPos chunkPos : getChunkClaim()) {
