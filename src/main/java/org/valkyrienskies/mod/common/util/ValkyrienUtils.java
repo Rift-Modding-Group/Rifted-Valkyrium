@@ -63,27 +63,13 @@ public final class ValkyrienUtils {
      */
     @SuppressWarnings("ConstantConditions")
     public static @NotNull Optional<PhysicsObject> getPhysoManagingBlock(@Nullable World world, @Nullable BlockPos pos) {
-        IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(world);
-        if (physObjectWorld == null) {
-            throw new IllegalStateException("Could not get ship manager from world!");
-        }
+        Optional<ShipData> shipData = getShipManagingBlock(world, pos);
+        if (shipData.isEmpty()) return Optional.empty();
 
-        return getShipManagingBlock(world, pos)
-            .map(shipData -> physObjectWorld.getPhysObjectFromUUID(shipData.getUuid()));
-    }
+        IPhysObjectWorld physObjectWorld = getPhysObjWorld(world);
+        if (physObjectWorld == null) throw new IllegalStateException("Could not get ship manager from world!");
 
-    public static @NotNull Optional<PhysicsObject> getPhysoManagingBlockThreadSafe(@Nullable World world, @Nullable BlockPos pos) {
-        IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(world);
-        if (physObjectWorld == null) {
-            throw new IllegalStateException("Could not get ship manager from world!");
-        }
-
-        for (PhysicsObject physicsObject : physObjectWorld.getAllLoadedThreadSafe()) {
-            if (physicsObject.getChunkClaim().containsBlock(pos)) {
-                return Optional.of(physicsObject);
-            }
-        }
-        return Optional.empty();
+        return shipData.map(data -> physObjectWorld.getPhysObjectFromUUID(data.getUuid()));
     }
 
     public static @NotNull Optional<ShipData> getShipManagingBlock(@Nullable World world, @Nullable BlockPos pos) {
