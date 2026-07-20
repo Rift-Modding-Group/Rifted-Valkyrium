@@ -3,6 +3,7 @@ package org.valkyrienskies.mod.common.physics.physx.collision;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.valkyrienskies.mod.common.physics.physx.PhysXActorUtil;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import physx.common.PxQuat;
@@ -37,11 +38,8 @@ public abstract class AbstractPhysXCollisionObject {
     }
 
     /**
-     * Get PhysX material.
+     * Get identifier that distinguishes collision object
      * */
-    @NotNull
-    public abstract PxMaterial getMaterial();
-
     @NotNull
     public abstract Identifier getIdentifier();
 
@@ -60,6 +58,11 @@ public abstract class AbstractPhysXCollisionObject {
             double timeStep
     );
 
+    @NotNull
+    protected abstract PxRigidActor getActor();
+
+    protected abstract void releaseShapes();
+
     public boolean isLiquidBlockIntersecting(@NotNull AxisAlignedBB box) {
         return false;
     }
@@ -67,11 +70,6 @@ public abstract class AbstractPhysXCollisionObject {
     public boolean hasLiquidBlocks() {
         return false;
     }
-
-    @NotNull
-    protected abstract PxRigidActor getActor();
-
-    protected abstract void releaseShapes();
 
     /**
      * For releasing this collision object from memory.
@@ -94,24 +92,15 @@ public abstract class AbstractPhysXCollisionObject {
         return attached;
     }
 
-    protected PxShape createBoxShape(AxisAlignedBB box) {
-        return this.createBoxShape(box, this.getMaterial());
-    }
-
-    protected PxShape createBoxShape(AxisAlignedBB box, PxMaterial material) {
-        return this.createBoxShape(
-            (box.maxX - box.minX) * 0.5D,
-            (box.maxY - box.minY) * 0.5D,
-            (box.maxZ - box.minZ) * 0.5D,
-            material
-        );
-    }
-
-    protected PxShape createBoxShape(double halfX, double halfY, double halfZ, PxMaterial material) {
+    /**
+     * This is for creating a box shape from the objects normal AABB and its material
+     * */
+    @Nullable
+    protected PxShape createBoxShape(@NotNull AxisAlignedBB box, @NotNull PxMaterial material) {
         PxBoxGeometry geometry = new PxBoxGeometry(
-            (float) Math.max(halfX, 0.0001D),
-            (float) Math.max(halfY, 0.0001D),
-            (float) Math.max(halfZ, 0.0001D)
+            (float) Math.max((box.maxX - box.minX) * 0.5D, 0.0001D),
+            (float) Math.max((box.maxY - box.minY) * 0.5D, 0.0001D),
+            (float) Math.max((box.maxZ - box.minZ) * 0.5D, 0.0001D)
         );
         PxShape shape = this.physics.createShape(geometry, material, true);
         geometry.destroy();

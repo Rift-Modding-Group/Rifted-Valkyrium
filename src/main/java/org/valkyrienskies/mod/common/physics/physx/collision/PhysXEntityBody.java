@@ -74,7 +74,7 @@ public class PhysXEntityBody extends AbstractPhysXCollisionObject {
     ) {
         AxisAlignedBB bb = this.entity.getEntityBoundingBox();
         this.rebuildShape(bb);
-        PxTransform target = createTransform(bb);
+        PxTransform target = this.createTransform(bb);
         this.actor.setKinematicTarget(target);
         target.destroy();
     }
@@ -94,12 +94,6 @@ public class PhysXEntityBody extends AbstractPhysXCollisionObject {
             this.shape = null;
             this.clearCachedShapeSize();
         }
-    }
-
-    @Override
-    @NotNull
-    public PxMaterial getMaterial() {
-        return this.material;
     }
 
     @Override
@@ -126,17 +120,19 @@ public class PhysXEntityBody extends AbstractPhysXCollisionObject {
             }
 
             //recreate shape
-            this.shape = this.createBoxShape(bb);
-            PhysXCollisionFilters.CollisionGroup.ENTITY.setFilter(this.shape);
-            if (this.attachShape(this.shape)) {
-                this.shapeSizeX = sizeX;
-                this.shapeSizeY = sizeY;
-                this.shapeSizeZ = sizeZ;
-                this.hasCachedShapeSize = true;
-            }
-            else {
-                this.shape = null;
-                this.clearCachedShapeSize();
+            this.shape = this.createBoxShape(bb, this.material);
+            if (this.shape != null) {
+                PhysXCollisionFilters.CollisionGroup.ENTITY.setFilter(this.shape);
+                if (this.attachShape(this.shape)) {
+                    this.shapeSizeX = sizeX;
+                    this.shapeSizeY = sizeY;
+                    this.shapeSizeZ = sizeZ;
+                    this.hasCachedShapeSize = true;
+                }
+                else {
+                    this.shape = null;
+                    this.clearCachedShapeSize();
+                }
             }
         }
     }

@@ -9,6 +9,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.joml.AxisAngle4d;
 import org.joml.Matrix3d;
 import org.joml.Matrix3dc;
@@ -356,12 +357,6 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
 
     @Override
     @NotNull
-    public PxMaterial getMaterial() {
-        return this.material;
-    }
-
-    @Override
-    @NotNull
     protected PxRigidActor getActor() {
         return this.actor;
     }
@@ -588,21 +583,20 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
     ) {
         List<AxisAlignedBB> boxes = PhysXBlockSectionCollider.getCollisionBoxes(ship.getWorld(), pos, state, false);
         for (AxisAlignedBB box : boxes) {
-            if (this.shapes.size() >= MAX_SHIP_SHAPES) {
-                return false;
-            }
+            if (this.shapes.size() >= MAX_SHIP_SHAPES) return false;
+
             PxShape shape = this.attachShipShape(box, referencePosition);
-            if (shape != null) {
-                this.rememberShipShapeBlocks(shape, List.of(pos.toImmutable()));
-            }
+            if (shape != null) this.rememberShipShapeBlocks(shape, List.of(pos.toImmutable()));
         }
         return true;
     }
 
+    @Nullable
     private PxShape attachShipShape(AxisAlignedBB box, Vector3dc referencePosition) {
-        PxShape shape = this.createBoxShape(box);
-        PhysXCollisionFilters.CollisionGroup.SHIP.setFilter(shape);
+        PxShape shape = this.createBoxShape(box, this.material);
+        if (shape == null) return null;
 
+        PhysXCollisionFilters.CollisionGroup.SHIP.setFilter(shape);
         double localX = (box.minX + box.maxX) * 0.5D - referencePosition.x();
         double localY = (box.minY + box.maxY) * 0.5D - referencePosition.y();
         double localZ = (box.minZ + box.maxZ) * 0.5D - referencePosition.z();

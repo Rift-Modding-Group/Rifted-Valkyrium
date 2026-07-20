@@ -95,12 +95,6 @@ public class PhysXBlockSectionCollider extends AbstractPhysXCollisionObject {
     }
 
     @Override
-    @NotNull
-    public PxMaterial getMaterial() {
-        return this.blockMaterial;
-    }
-
-    @Override
     public void updateBeforeSimulation(
             @NotNull World hostWorld,
             @NotNull Collection<PhysicsObject> shipsWithPhysics,
@@ -141,6 +135,7 @@ public class PhysXBlockSectionCollider extends AbstractPhysXCollisionObject {
 
     private void attachBoxShape(AxisAlignedBB worldBox, boolean isLiquid) {
         PxShape shape = this.createBoxShape(worldBox, isLiquid ? this.liquidMaterial : this.blockMaterial);
+        if (shape == null) return;
 
         if (isLiquid) {
             shape.setFlag(PxShapeFlagEnum.eSIMULATION_SHAPE, false);

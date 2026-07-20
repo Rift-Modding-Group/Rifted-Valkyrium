@@ -300,6 +300,19 @@ public class PhysicsCollideWith {
         }
     }
 
+    public static void invalidateBlockSectionsInChunk(@NotNull World world, int chunkX, int chunkZ) {
+        for (Map.Entry<BlockSection.Key, Set<PhysicsCollideWith>> entry : CACHES_BY_SECTION.entrySet()) {
+            BlockSection.Key sectionKey = entry.getKey();
+            if (sectionKey.world() != world || sectionKey.sectionX() != chunkX || sectionKey.sectionZ() != chunkZ) {
+                continue;
+            }
+
+            for (PhysicsCollideWith collideWith : new ArrayList<>(entry.getValue())) {
+                if (collideWith.registeredBlockSections.contains(sectionKey)) collideWith.dirtyBlockSections.add(sectionKey);
+            }
+        }
+    }
+
     public static void clearBlockSectionRegistrationsForWorld(@NotNull World world) {
         for (Map.Entry<BlockSection.Key, Set<PhysicsCollideWith>> entry : CACHES_BY_SECTION.entrySet()) {
             if (entry.getKey().world() != world) continue;

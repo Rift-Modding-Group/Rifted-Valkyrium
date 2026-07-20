@@ -52,11 +52,14 @@ public class PhysXWorldBackend {
         this.runtime = PhysXRuntime.acquire();
         this.physics = this.runtime.physics;
 
+        //init gravity
         PxVec3 gravityVec = new PxVec3(
             (float) VSConfig.gravityVecX,
             VSConfig.doGravity ? (float) VSConfig.gravityVecY : 0f,
             (float) VSConfig.gravityVecZ
         );
+
+        //init scene
         PxSceneDesc sceneDesc = new PxSceneDesc(this.runtime.tolerances);
         sceneDesc.setGravity(gravityVec);
         sceneDesc.setCpuDispatcher(this.runtime.cpuDispatcher);
@@ -64,6 +67,8 @@ public class PhysXWorldBackend {
         this.scene = this.physics.createScene(sceneDesc);
         this.scene.setFlag(PxSceneFlagEnum.eENABLE_CCD, true);
         this.scene.setFlag(PxSceneFlagEnum.eENABLE_STABILIZATION, true);
+
+        //init materials
         for (PhysXMaterials material : PhysXMaterials.values()) {
             this.materials.put(material, material.create(this.physics));
         }

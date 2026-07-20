@@ -21,6 +21,7 @@ import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.entity.player.PlayerSleepInBedEvent;
 import net.minecraftforge.event.world.BlockEvent;
+import net.minecraftforge.event.world.ChunkEvent;
 import net.minecraftforge.event.world.ExplosionEvent;
 import net.minecraftforge.event.world.WorldEvent;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
@@ -173,6 +174,23 @@ public class EventsCommon {
         lastPositions.clear();
         PhysicsCollideWith.clearBlockSectionRegistrationsForWorld(world);
         shipWorld.getManager().onWorldUnload();
+    }
+
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public static void onChunkLoad(ChunkEvent.Load event) {
+        invalidateBlockSectionCacheForChunk(event);
+    }
+
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public static void onChunkUnload(ChunkEvent.Unload event) {
+        invalidateBlockSectionCacheForChunk(event);
+    }
+
+    private static void invalidateBlockSectionCacheForChunk(ChunkEvent event) {
+        World world = event.getWorld();
+        if (world.isRemote) return;
+
+        PhysicsCollideWith.invalidateBlockSectionsInChunk(world, event.getChunk().x, event.getChunk().z);
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
