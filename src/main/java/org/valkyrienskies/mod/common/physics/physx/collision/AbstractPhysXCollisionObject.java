@@ -47,7 +47,7 @@ public abstract class AbstractPhysXCollisionObject {
             @NotNull World hostWorld,
             @NotNull Collection<PhysicsObject> shipsWithPhysics,
             @NotNull Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject> collisionObjects,
-            List<AbstractPhysXCollisionObject> liquidCollisionObjects,
+            @NotNull List<PhysXBlockSectionCollider> blockSectionsWithLiquids,
             double timeStep
     );
 
@@ -62,14 +62,6 @@ public abstract class AbstractPhysXCollisionObject {
     protected abstract PxRigidActor getActor();
 
     protected abstract void releaseShapes();
-
-    public boolean isLiquidBlockIntersecting(@NotNull AxisAlignedBB box) {
-        return false;
-    }
-
-    public boolean hasLiquidBlocks() {
-        return false;
-    }
 
     /**
      * For releasing this collision object from memory.

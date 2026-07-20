@@ -1,7 +1,5 @@
 package org.valkyrienskies.mod.common.physics.physx.collision;
 
-import net.minecraft.block.BlockLiquid;
-import net.minecraft.block.material.MaterialLiquid;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
@@ -99,7 +97,7 @@ public class PhysXBlockSectionCollider extends AbstractPhysXCollisionObject {
             @NotNull World hostWorld,
             @NotNull Collection<PhysicsObject> shipsWithPhysics,
             @NotNull Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject> collisionObjects,
-            List<AbstractPhysXCollisionObject> liquidCollisionObjects,
+            @NotNull List<PhysXBlockSectionCollider> blockSectionsWithLiquids,
             double timeStep
     ) {}
 
@@ -112,19 +110,6 @@ public class PhysXBlockSectionCollider extends AbstractPhysXCollisionObject {
     ) {}
 
     @Override
-    public boolean isLiquidBlockIntersecting(@NotNull AxisAlignedBB box) {
-        for (AxisAlignedBB liquidBox : this.liquidBoxes) {
-            if (box.intersects(liquidBox)) return true;
-        }
-        return false;
-    }
-
-    @Override
-    public boolean hasLiquidBlocks() {
-        return !this.liquidBoxes.isEmpty();
-    }
-
-    @Override
     @NotNull
     protected PxRigidActor getActor() {
         return this.actor;
@@ -132,6 +117,17 @@ public class PhysXBlockSectionCollider extends AbstractPhysXCollisionObject {
 
     @Override
     protected void releaseShapes() {}
+
+    public boolean isLiquidBlockIntersecting(@NotNull AxisAlignedBB box) {
+        for (AxisAlignedBB liquidBox : this.liquidBoxes) {
+            if (box.intersects(liquidBox)) return true;
+        }
+        return false;
+    }
+
+    public boolean hasLiquidBlocks() {
+        return !this.liquidBoxes.isEmpty();
+    }
 
     private void attachBoxShape(AxisAlignedBB worldBox, boolean isLiquid) {
         PxShape shape = this.createBoxShape(worldBox, isLiquid ? this.liquidMaterial : this.blockMaterial);
@@ -152,10 +148,6 @@ public class PhysXBlockSectionCollider extends AbstractPhysXCollisionObject {
         localPose.destroy();
 
         this.attachShape(shape);
-    }
-
-    public static boolean isLiquid(IBlockState state) {
-        return state.getBlock() instanceof BlockLiquid || state.getMaterial() instanceof MaterialLiquid;
     }
 
     public static List<AxisAlignedBB> getCollisionBoxes(World world, BlockPos pos, IBlockState state, boolean forceFullBlock) {

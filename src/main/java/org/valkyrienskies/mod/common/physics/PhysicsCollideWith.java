@@ -233,7 +233,7 @@ public class PhysicsCollideWith {
                     mutablePos.setPos(x, y, z);
                     IBlockState state = chunkCache.getBlockState(mutablePos);
                     Material material = state.getMaterial();
-                    boolean liquid = PhysXBlockSectionCollider.isLiquid(state);
+                    boolean liquid = PhysicsUtils.isLiquid(state);
                     if (material.equals(Material.AIR) || (!liquid && !material.blocksMovement())) continue;
                     builder.addBlock(mutablePos, state, liquid);
                 }

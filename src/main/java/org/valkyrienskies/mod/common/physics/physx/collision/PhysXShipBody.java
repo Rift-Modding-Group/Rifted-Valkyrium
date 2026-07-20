@@ -23,6 +23,7 @@ import org.valkyrienskies.mod.common.block.IBlockForceProvider;
 import org.valkyrienskies.mod.common.block.IBlockTorqueProvider;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.physics.GreedyBlockMerger;
+import org.valkyrienskies.mod.common.physics.PhysicsUtils;
 import org.valkyrienskies.mod.common.physics.physx.IPhysicsBlockController;
 import org.valkyrienskies.mod.common.physics.physx.PhysXActorUtil;
 import org.valkyrienskies.mod.common.physics.physx.PhysXCollisionFilters;
@@ -146,7 +147,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
             @NotNull World hostWorld,
             @NotNull Collection<PhysicsObject> shipsWithPhysics,
             @NotNull Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject> collisionObjects,
-            List<AbstractPhysXCollisionObject> liquidCollisionObjects,
+            @NotNull List<PhysXBlockSectionCollider> blockSectionsWithLiquids,
             double timeStep
     ) {
         PhysicsCalculations calculations = this.ship.getPhysicsCalculations();
@@ -198,13 +199,14 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
 
         //apply buoyancy and water drag only when touching liquid actors
         AxisAlignedBB shipAabb = this.ship.getPhysicsTransformAABB();
-        if (shipAabb != null && this.isTouchingLiquidActor(shipAabb, liquidCollisionObjects)) {
+        if (shipAabb != null && this.isTouchingLiquidActor(shipAabb, blockSectionsWithLiquids)) {
             //sample each ship block against nearby water and apply submerged force.
             ShipTransform transform = this.ship.getShipTransformationManager().getCurrentPhysicsTransform();
 
             Vector3d tempTorque = new Vector3d();
             BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
 
+            //iterate over each block position
             for (BlockPos blockPos : this.ship.getBlockPositions()) {
                 mutablePos.setPos(blockPos);
                 IBlockState state = this.getShipBlockState(this.ship, mutablePos);
@@ -680,7 +682,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
         if (state == null || state.getBlock() == Blocks.AIR || state.getMaterial() == Material.AIR) {
             return false;
         }
-        return !PhysXBlockSectionCollider.isLiquid(state) && state.getMaterial().blocksMovement();
+        return !PhysicsUtils.isLiquid(state) && state.getMaterial().blocksMovement();
     }
 
     private IBlockState getShipBlockState(PhysicsObject ship, BlockPos pos) {
@@ -689,9 +691,9 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
         return chunk.getBlockState(pos);
     }
 
-    private boolean isTouchingLiquidActor(AxisAlignedBB shipAabb, List<AbstractPhysXCollisionObject> liquidCollisionObjects) {
-        for (AbstractPhysXCollisionObject collisionObject : liquidCollisionObjects) {
-            if (collisionObject.isLiquidBlockIntersecting(shipAabb)) return true;
+    private boolean isTouchingLiquidActor(AxisAlignedBB shipAabb, List<PhysXBlockSectionCollider> liquidCollisionObjects) {
+        for (PhysXBlockSectionCollider blockSectionObject : liquidCollisionObjects) {
+            if (blockSectionObject.isLiquidBlockIntersecting(shipAabb)) return true;
         }
         return false;
     }
@@ -703,7 +705,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
         int maxY = Math.min(world.getHeight() - 1, (int) Math.floor(centerWorld.y + BLOCK_HALF_EXTENT));
         for (int y = maxY; y >= minY; y--) {
             mutablePos.setPos(x, y, z);
-            if (PhysXBlockSectionCollider.isLiquid(world.getBlockState(mutablePos))) {
+            if (PhysicsUtils.isLiquid(world.getBlockState(mutablePos))) {
                 return y + 1D;
             }
         }

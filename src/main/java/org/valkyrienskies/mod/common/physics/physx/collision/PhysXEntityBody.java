@@ -69,7 +69,7 @@ public class PhysXEntityBody extends AbstractPhysXCollisionObject {
             @NotNull World hostWorld,
             @NotNull Collection<PhysicsObject> shipsWithPhysics,
             @NotNull Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject> collisionObjects,
-            List<AbstractPhysXCollisionObject> liquidCollisionObjects,
+            @NotNull List<PhysXBlockSectionCollider> blockSectionsWithLiquids,
             double timeStep
     ) {
         AxisAlignedBB bb = this.entity.getEntityBoundingBox();

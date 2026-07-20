@@ -39,9 +39,11 @@ public class PhysXWorldBackend {
     @NotNull
     private final EnumMap<PhysXMaterials, PxMaterial> materials = new EnumMap<>(PhysXMaterials.class);
     //list of collision objects in the entire world
+    @NotNull
     private final Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject> collisionObjects = new HashMap<>();
-    //separate list of liquid collision objects to deal with ship buoyancy
-    private final List<AbstractPhysXCollisionObject> liquidCollisionObjects = new ArrayList<>();
+    //separate list of block section objects with liquids to deal with ship buoyancy
+    @NotNull
+    private final List<PhysXBlockSectionCollider> blockSectionsWithLiquids = new ArrayList<>();
     //helper to track last sync generation each collision object was seen in, so stale collision objects can be released
     private final TObjectIntMap<AbstractPhysXCollisionObject.Identifier> collisionObjectSyncGenerations = new TObjectIntHashMap<>();
     //current sync generation
@@ -169,10 +171,11 @@ public class PhysXWorldBackend {
             this.collisionObjectSyncGenerations.remove(identifier);
         }
 
-        //-----rebuild list of liquid collision objects-----
-        this.liquidCollisionObjects.clear();
+        //-----rebuild list of block sections with liquids-----
+        this.blockSectionsWithLiquids.clear();
         for (AbstractPhysXCollisionObject collisionObject : this.collisionObjects.values()) {
-            if (collisionObject.hasLiquidBlocks()) this.liquidCollisionObjects.add(collisionObject);
+            if (!(collisionObject instanceof PhysXBlockSectionCollider blockSectionObject)) continue;
+            if (blockSectionObject.hasLiquidBlocks()) this.blockSectionsWithLiquids.add(blockSectionObject);
         }
     }
 
@@ -215,7 +218,7 @@ public class PhysXWorldBackend {
     private void updateCollisionObjectsBeforeSimulation(World hostWorld, Collection<PhysicsObject> shipsWithPhysics, double timeStep) {
         for (AbstractPhysXCollisionObject collisionObject : new ArrayList<>(this.collisionObjects.values())) {
             try {
-                collisionObject.updateBeforeSimulation(hostWorld, shipsWithPhysics, this.collisionObjects, this.liquidCollisionObjects, timeStep);
+                collisionObject.updateBeforeSimulation(hostWorld, shipsWithPhysics, this.collisionObjects, this.blockSectionsWithLiquids, timeStep);
             }
             catch (Exception e) {
                 e.printStackTrace();
@@ -249,7 +252,7 @@ public class PhysXWorldBackend {
             collisionObject.release();
         }
         this.collisionObjects.clear();
-        this.liquidCollisionObjects.clear();
+        this.blockSectionsWithLiquids.clear();
         this.collisionObjectSyncGenerations.clear();
 
         for (PxMaterial material : this.materials.values()) material.release();
