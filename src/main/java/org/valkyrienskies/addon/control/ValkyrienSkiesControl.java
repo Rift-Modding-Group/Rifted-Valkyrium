@@ -159,8 +159,6 @@ public class ValkyrienSkiesControl {
             new ResourceLocation(MOD_ID, "tile_propeller_engine"));
         GameRegistry.registerTileEntity(TileEntityGyroscopeStabilizer.class,
             new ResourceLocation(MOD_ID, "tile_gyroscope_stabilizer"));
-        GameRegistry.registerTileEntity(TileEntityLiftValve.class,
-            new ResourceLocation(MOD_ID, "tile_lift_valve"));
         GameRegistry.registerTileEntity(TileEntityNetworkDisplay.class,
             new ResourceLocation(MOD_ID, "tile_network_display"));
         GameRegistry.registerTileEntity(TileEntityLiftLever.class,

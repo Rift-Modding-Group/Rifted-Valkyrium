@@ -32,7 +32,6 @@ public class BlocksValkyrienSkiesControl {
     public final Block dummyTelegraph;
     public final Block networkRelay;
     public final Block gyroscopeStabilizer;
-    public final Block liftValve;
     public final Block networkDisplay;
     public final Block liftLever;
     public final Block valkyriumCompressorPart;
@@ -71,7 +70,6 @@ public class BlocksValkyrienSkiesControl {
         gyroscopeStabilizer = registerBlock(new BlockGyroscopeStabilizer());
         gyroscopeDampener = registerBlock(new BlockGyroscopeDampener());
 
-        liftValve = registerBlock(new BlockLiftValve());
         liftLever = registerBlock(new BlockLiftLever());
 
         valkyriumCompressorPart = registerBlock(new BlockValkyriumCompressorPart());

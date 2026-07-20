@@ -211,11 +211,6 @@ gui.disable_physics=Disable Physics
 gui.align_ship=Align Ship
 gui.stop_align_ship=Stop Alignment
 
-
-## Not Yet Implemented
-tile.lift_valve.name=Lift Valve
-tooltip.vs_control.lift_valve=Not yet implemented.
-
 # Config (Remember to update VSControlConfig after any changes are made here)
 vs_control.general.wrenchmodeless=Disable Wrench Modes
 vs_control.general.wrenchmodeless.tooltip=Makes wrench toggle a multiblock’s constructed state, removes modes.
