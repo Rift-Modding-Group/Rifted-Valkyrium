@@ -1,16 +1,14 @@
 package org.valkyrienskies.mod.common.physics.physx;
 
-import net.minecraft.entity.Entity;
 import net.minecraft.world.World;
 import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
 import org.jetbrains.annotations.NotNull;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.physics.BlockSection;
-import org.valkyrienskies.mod.common.physics.PhysicsCollideWith;
+import org.valkyrienskies.mod.common.physics.BlockSectionList;
 import org.valkyrienskies.mod.common.physics.physx.collision.AbstractPhysXCollisionObject;
-import org.valkyrienskies.mod.common.physics.physx.collision.PhysXBlockSectionCollider;
-import org.valkyrienskies.mod.common.physics.physx.collision.PhysXEntityBody;
+import org.valkyrienskies.mod.common.physics.physx.collision.PhysXBlockSectionBody;
 import org.valkyrienskies.mod.common.physics.physx.collision.PhysXShipBody;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import physx.PxTopLevelFunctions;
@@ -43,7 +41,7 @@ public class PhysXWorldBackend {
     private final Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject> collisionObjects = new HashMap<>();
     //separate list of block section objects with liquids to deal with ship buoyancy
     @NotNull
-    private final List<PhysXBlockSectionCollider> blockSectionsWithLiquids = new ArrayList<>();
+    private final List<PhysXBlockSectionBody> blockSectionsWithLiquids = new ArrayList<>();
     //helper to track last sync generation each collision object was seen in, so stale collision objects can be released
     private final TObjectIntMap<AbstractPhysXCollisionObject.Identifier> collisionObjectSyncGenerations = new TObjectIntHashMap<>();
     //current sync generation
@@ -87,15 +85,16 @@ public class PhysXWorldBackend {
         if (this.closed) return;
 
         this.syncCollisionObjects(shipsWithPhysics);
-        this.updateCollisionObjectsBeforeSimulation(hostWorld, shipsWithPhysics, timeStep);
+        this.updateShipsBeforeSimulation(hostWorld, timeStep);
 
         if (this.scene.simulate((float) timeStep)) this.scene.fetchResults(true);
 
-        this.updateCollisionObjectsAfterSimulation(hostWorld, shipsWithPhysics, timeStep);
+        this.updateShipsAfterSimulation();
     }
 
     /**
-     * For updating list of collision objects from the world.
+     * For updating list of collision objects from the world. These objects
+     * get auto added to the scene in their constructor btw.
      * */
     private void syncCollisionObjects(Collection<PhysicsObject> shipsWithPhysics) {
         this.advanceSyncGeneration();
@@ -115,17 +114,15 @@ public class PhysXWorldBackend {
             else ((PhysXShipBody) shipCollisionObject).updateShipReference(ship);
 
             //---defining block and entity stuff---
-            PhysicsCollideWith collideWith = ship.getPhysicsCollideWith();
-            List<Entity> entities;
+            BlockSectionList collideWith = ship.getPhysicsCollideWith();
             List<BlockSection> blockSections;
             synchronized (collideWith) {
-                entities = new ArrayList<>(collideWith.getEntities());
                 blockSections = new ArrayList<>(collideWith.getBlockSections());
             }
 
             //---block section objects---
             for (BlockSection blockSection : blockSections) {
-                PhysXBlockSectionCollider.Identifier sectionIdentifier = new PhysXBlockSectionCollider.Identifier(
+                PhysXBlockSectionBody.Identifier sectionIdentifier = new PhysXBlockSectionBody.Identifier(
                         blockSection.world(),
                         blockSection.sectionX(),
                         blockSection.sectionY(),
@@ -134,7 +131,7 @@ public class PhysXWorldBackend {
                 );
                 this.markCollisionObjectSynced(sectionIdentifier);
                 if (this.collisionObjects.get(sectionIdentifier) == null) {
-                    PhysXBlockSectionCollider sectionCollider = new PhysXBlockSectionCollider(
+                    PhysXBlockSectionBody sectionCollider = new PhysXBlockSectionBody(
                             this.physics,
                             this.scene,
                             blockSection.world(),
@@ -144,16 +141,6 @@ public class PhysXWorldBackend {
                             blockSection.blocks()
                     );
                     this.addCollisionObject(sectionCollider);
-                }
-            }
-
-            //---entity objects---
-            for (Entity entity : entities) {
-                PhysXEntityBody.Identifier entityIdentifier = new PhysXEntityBody.Identifier(entity);
-                this.markCollisionObjectSynced(entityIdentifier);
-                if (this.collisionObjects.get(entityIdentifier) == null) {
-                    PhysXEntityBody entityBody = new PhysXEntityBody(this.physics, this.scene, this.getMaterial(PhysXMaterials.ENTITY), entity);
-                    this.addCollisionObject(entityBody);
                 }
             }
         }
@@ -174,7 +161,7 @@ public class PhysXWorldBackend {
         //-----rebuild list of block sections with liquids-----
         this.blockSectionsWithLiquids.clear();
         for (AbstractPhysXCollisionObject collisionObject : this.collisionObjects.values()) {
-            if (!(collisionObject instanceof PhysXBlockSectionCollider blockSectionObject)) continue;
+            if (!(collisionObject instanceof PhysXBlockSectionBody blockSectionObject)) continue;
             if (blockSectionObject.hasLiquidBlocks()) this.blockSectionsWithLiquids.add(blockSectionObject);
         }
     }
@@ -215,10 +202,11 @@ public class PhysXWorldBackend {
     /**
      * Do I have to explain what this shit does?
      * */
-    private void updateCollisionObjectsBeforeSimulation(World hostWorld, Collection<PhysicsObject> shipsWithPhysics, double timeStep) {
+    private void updateShipsBeforeSimulation(World hostWorld, double timeStep) {
         for (AbstractPhysXCollisionObject collisionObject : new ArrayList<>(this.collisionObjects.values())) {
+            if (!(collisionObject instanceof PhysXShipBody shipBody)) continue;
             try {
-                collisionObject.updateBeforeSimulation(hostWorld, shipsWithPhysics, this.collisionObjects, this.blockSectionsWithLiquids, timeStep);
+                shipBody.updateBeforeSimulation(hostWorld, this.blockSectionsWithLiquids, timeStep);
             }
             catch (Exception e) {
                 e.printStackTrace();
@@ -229,10 +217,11 @@ public class PhysXWorldBackend {
     /**
      * e
      * */
-    private void updateCollisionObjectsAfterSimulation(World hostWorld, Collection<PhysicsObject> shipsWithPhysics, double timeStep) {
+    private void updateShipsAfterSimulation() {
         for (AbstractPhysXCollisionObject collisionObject : new ArrayList<>(this.collisionObjects.values())) {
+            if (!(collisionObject instanceof PhysXShipBody shipBody)) continue;
             try {
-                collisionObject.updateAfterSimulation(hostWorld, shipsWithPhysics, this.collisionObjects, timeStep);
+                shipBody.updateAfterSimulation();
             }
             catch (Exception e) {
                 e.printStackTrace();

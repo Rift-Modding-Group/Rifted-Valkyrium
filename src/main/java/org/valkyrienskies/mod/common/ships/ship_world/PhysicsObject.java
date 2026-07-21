@@ -9,7 +9,6 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.BlockPos.MutableBlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.ChunkCache;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.gen.ChunkProviderServer;
@@ -20,7 +19,7 @@ import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.valkyrienskies.mod.client.render.PhysObjectRenderManager;
 import org.valkyrienskies.mod.common.physics.PhysicsCalculations;
-import org.valkyrienskies.mod.common.physics.PhysicsCollideWith;
+import org.valkyrienskies.mod.common.physics.BlockSectionList;
 import org.valkyrienskies.mod.common.physics.physx.IPhysicsBlockController;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.block_relocation.MoveBlocks;
@@ -72,7 +71,7 @@ public class PhysicsObject implements IPhysicsEntity {
     /**
      * A continuously updating cache of entities and chunks to perform collisions with
      * */
-    private final PhysicsCollideWith physicsCollideWith;
+    private final BlockSectionList physicsCollideWith;
 
     /**
      * Used for faster memory access to the Chunks this object 'owns'
@@ -133,7 +132,7 @@ public class PhysicsObject implements IPhysicsEntity {
         this.claimedChunkCache = new ClaimedChunkCacheController(this);
         this.shipTransformationManager = new ShipTransformationManager(this, this.getShipData().getShipTransform());
         this.physicsCalculations = new PhysicsCalculations(this);
-        this.physicsCollideWith = new PhysicsCollideWith();
+        this.physicsCollideWith = new BlockSectionList();
         this.shipAligningToGrid = false;
         this.deconstructState = DeconstructState.NOT_DECONSTRUCTING;
         this.forceToUseShipDataTransform = false;
@@ -463,7 +462,7 @@ public class PhysicsObject implements IPhysicsEntity {
         return physicsCalculations;
     }
 
-    public PhysicsCollideWith getPhysicsCollideWith() {
+    public BlockSectionList getPhysicsCollideWith() {
         return physicsCollideWith;
     }
 

@@ -5,7 +5,6 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.item.EntityArmorStand;
 import net.minecraft.entity.item.EntityBoat;
 import net.minecraft.entity.item.EntityFallingBlock;
-import net.minecraft.entity.passive.EntityPig;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.network.play.server.SPacketBlockBreakAnim;
@@ -17,7 +16,7 @@ import net.minecraft.world.World;
 import org.joml.Vector3d;
 import org.valkyrienskies.mod.common.ships.ship_transform.CoordinateSpaceType;
 import org.valkyrienskies.mod.common.entity.EntityMountable;
-import org.valkyrienskies.mod.common.physics.PhysicsCollideWith;
+import org.valkyrienskies.mod.common.physics.BlockSectionList;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import valkyrienwarfare.api.TransformType;
 
@@ -36,7 +35,7 @@ public class VSWorldEventListener implements IWorldEventListener {
     @Override
     public void notifyBlockUpdate(World worldIn, BlockPos pos, IBlockState oldState, IBlockState newState, int flags) {
         if (worldIn.isRemote || oldState == newState || oldState.equals(newState)) return;
-        PhysicsCollideWith.invalidateBlockSectionAt(worldIn, pos);
+        BlockSectionList.invalidateBlockSectionAt(worldIn, pos);
     }
 
     @Override

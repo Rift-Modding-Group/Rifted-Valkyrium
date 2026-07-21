@@ -10,8 +10,7 @@ import physx.physics.PxPhysics;
 public enum PhysXMaterials {
     SHIP(0.55f, 0.55f, 0.05f),
     WORLD(0.8f, 0.8f, 0.02f),
-    LIQUID(0.8f, 0.8f, 0.02f),
-    ENTITY(0.4f, 0.4f, 0.0f);
+    LIQUID(0.8f, 0.8f, 0.02f);
 
     private final float staticFriction;
     private final float dynamicFriction;

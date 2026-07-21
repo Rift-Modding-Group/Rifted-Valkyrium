@@ -16,9 +16,7 @@ public class PhysXCollisionFilters {
         //static solid world block actors, collide with ships and entity proxies.
         WORLD,
         //liquid trigger actors, only participate with ships.
-        LIQUID,
-        //minecraft entities, collide with ships and world blocks.
-        ENTITY;
+        LIQUID;
 
         //category bit written to PhysX filter word0.
         public int bit() {
@@ -28,10 +26,8 @@ public class PhysXCollisionFilters {
         //collision mask written to PhysX filter word1.
         public int mask() {
             return switch (this) {
-                case SHIP -> PhysXCollisionFilters.mask(SHIP, WORLD, LIQUID, ENTITY);
-                case WORLD -> PhysXCollisionFilters.mask(SHIP, ENTITY);
-                case LIQUID -> PhysXCollisionFilters.mask(SHIP);
-                case ENTITY -> PhysXCollisionFilters.mask(SHIP, WORLD);
+                case SHIP -> PhysXCollisionFilters.mask(SHIP, WORLD, LIQUID);
+                case WORLD, LIQUID -> PhysXCollisionFilters.mask(SHIP);
             };
         }
 

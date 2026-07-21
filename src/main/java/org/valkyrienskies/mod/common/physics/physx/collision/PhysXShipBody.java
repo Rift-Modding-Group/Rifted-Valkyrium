@@ -142,12 +142,9 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
         return this.identifier;
     }
 
-    @Override
     public void updateBeforeSimulation(
             @NotNull World hostWorld,
-            @NotNull Collection<PhysicsObject> shipsWithPhysics,
-            @NotNull Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject> collisionObjects,
-            @NotNull List<PhysXBlockSectionCollider> blockSectionsWithLiquids,
+            @NotNull List<PhysXBlockSectionBody> blockSectionsWithLiquids,
             double timeStep
     ) {
         PhysicsCalculations calculations = this.ship.getPhysicsCalculations();
@@ -298,13 +295,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
         this.firstSync = false;
     }
 
-    @Override
-    public void updateAfterSimulation(
-            @NotNull World hostWorld,
-            @NotNull Collection<PhysicsObject> shipsWithPhysics,
-            @NotNull Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject> collisionObjects,
-            double timeStep
-    ) {
+    public void updateAfterSimulation() {
         PhysicsCalculations calculations = this.ship.getPhysicsCalculations();
         PxTransform pose = this.actor.getGlobalPose();
         PxVec3 posePosition = pose.getP();
@@ -583,7 +574,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
             IBlockState state,
             Vector3dc referencePosition
     ) {
-        List<AxisAlignedBB> boxes = PhysXBlockSectionCollider.getCollisionBoxes(ship.getWorld(), pos, state, false);
+        List<AxisAlignedBB> boxes = PhysXBlockSectionBody.getCollisionBoxes(ship.getWorld(), pos, state, false);
         for (AxisAlignedBB box : boxes) {
             if (this.shapes.size() >= MAX_SHIP_SHAPES) return false;
 
@@ -691,8 +682,8 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
         return chunk.getBlockState(pos);
     }
 
-    private boolean isTouchingLiquidActor(AxisAlignedBB shipAabb, List<PhysXBlockSectionCollider> liquidCollisionObjects) {
-        for (PhysXBlockSectionCollider blockSectionObject : liquidCollisionObjects) {
+    private boolean isTouchingLiquidActor(AxisAlignedBB shipAabb, List<PhysXBlockSectionBody> liquidCollisionObjects) {
+        for (PhysXBlockSectionBody blockSectionObject : liquidCollisionObjects) {
             if (blockSectionObject.isLiquidBlockIntersecting(shipAabb)) return true;
         }
         return false;

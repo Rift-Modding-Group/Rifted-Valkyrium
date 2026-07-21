@@ -43,21 +43,6 @@ public abstract class AbstractPhysXCollisionObject {
     @NotNull
     public abstract Identifier getIdentifier();
 
-    public abstract void updateBeforeSimulation(
-            @NotNull World hostWorld,
-            @NotNull Collection<PhysicsObject> shipsWithPhysics,
-            @NotNull Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject> collisionObjects,
-            @NotNull List<PhysXBlockSectionCollider> blockSectionsWithLiquids,
-            double timeStep
-    );
-
-    public abstract void updateAfterSimulation(
-            @NotNull World hostWorld,
-            @NotNull Collection<PhysicsObject> shipsWithPhysics,
-            @NotNull Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject> collisionObjects,
-            double timeStep
-    );
-
     @NotNull
     protected abstract PxRigidActor getActor();
 
@@ -106,14 +91,6 @@ public abstract class AbstractPhysXCollisionObject {
         position.destroy();
         rotation.destroy();
         return transform;
-    }
-
-    protected PxTransform createTransform(AxisAlignedBB bb) {
-        return this.createTransform(
-            (bb.minX + bb.maxX) * 0.5D,
-            (bb.minY + bb.maxY) * 0.5D,
-            (bb.minZ + bb.maxZ) * 0.5D
-        );
     }
 
     /**

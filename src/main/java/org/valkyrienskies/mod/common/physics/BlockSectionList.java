@@ -2,10 +2,6 @@ package org.valkyrienskies.mod.common.physics;
 
 import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.item.EntityItem;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.entity.projectile.EntityFireball;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.ChunkCache;
@@ -13,8 +9,6 @@ import net.minecraft.world.World;
 import net.minecraft.world.gen.ChunkProviderServer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.valkyrienskies.mod.common.entity.EntityMountable;
-import org.valkyrienskies.mod.common.physics.physx.collision.PhysXBlockSectionCollider;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 
 import java.util.ArrayList;
@@ -27,17 +21,13 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * This class stores the block sections and entities that a ship is going to collide with.
+ * This class stores the block sections that a ship is going to collide with.
  * */
-public class PhysicsCollideWith {
-    public static final int MAX_ENTITIES = 512;
-    public static final double ENTITY_SCAN_GROW = 2D;
+public class BlockSectionList {
     private static final int BLOCK_SECTION_CACHE_RESCAN_INTERVAL_TICKS = 20;
     private static final int BLOCK_SECTION_CACHE_PADDING_BLOCKS = 16;
     private static final int BLOCK_SECTION_CACHE_HYSTERESIS_BLOCKS = 4;
-    private static final Map<BlockSection.Key, Set<PhysicsCollideWith>> CACHES_BY_SECTION = new ConcurrentHashMap<>();
-
-    private final List<Entity> entities = new ArrayList<>();
+    private static final Map<BlockSection.Key, Set<BlockSectionList>> CACHES_BY_SECTION = new ConcurrentHashMap<>();
 
     private World cachedBlockSectionWorld;
     private BlockSection.Range cachedBlockSectionRange;
@@ -52,7 +42,6 @@ public class PhysicsCollideWith {
         World nextBlockSectionWorld = null;
         BlockSection.Range nextBlockSectionRange = null;
         int nextBlockSectionCacheAge = 0;
-        List<Entity> nextEntities = new ArrayList<>();
         List<BlockSection> nextBlockSections = new ArrayList<>();
         Map<BlockSection.Key, BlockSection> nextCachedBlockSections = new HashMap<>();
         Set<BlockSection.Key> nextCachedEmptyBlockSections = new HashSet<>();
@@ -147,14 +136,6 @@ public class PhysicsCollideWith {
                 }
             }
 
-            //---entity scanning---
-            nextEntities.addAll(world.getEntitiesWithinAABB(
-                    Entity.class, shipAabb.grow(ENTITY_SCAN_GROW),
-                    entity -> this.isEntityCollidable(entity, world)
-            ));
-            if (nextEntities.size() > MAX_ENTITIES) {
-                nextEntities.subList(MAX_ENTITIES, nextEntities.size()).clear();
-            }
         }
 
         synchronized (this) {
@@ -168,8 +149,6 @@ public class PhysicsCollideWith {
             this.cachedEmptyBlockSections.addAll(nextCachedEmptyBlockSections);
             nextRegisteredBlockSections.forEach(this.dirtyBlockSections::remove);
             this.dirtyBlockSections.retainAll(this.registeredBlockSections);
-            this.entities.clear();
-            this.entities.addAll(nextEntities);
             this.blockSections.clear();
             this.blockSections.addAll(nextBlockSections);
         }
@@ -181,7 +160,6 @@ public class PhysicsCollideWith {
         this.cachedEmptyBlockSections.clear();
         this.dirtyBlockSections.clear();
         this.blockSections.clear();
-        this.entities.clear();
         this.cachedBlockSectionWorld = null;
         this.cachedBlockSectionRange = null;
         this.blockSectionCacheAge = 0;
@@ -203,7 +181,7 @@ public class PhysicsCollideWith {
     }
 
     private void removeBlockSectionRegistration(@NotNull BlockSection.Key sectionKey) {
-        Set<PhysicsCollideWith> sectionCaches = CACHES_BY_SECTION.get(sectionKey);
+        Set<BlockSectionList> sectionCaches = CACHES_BY_SECTION.get(sectionKey);
         if (sectionCaches == null) return;
 
         sectionCaches.remove(this);
@@ -269,54 +247,38 @@ public class PhysicsCollideWith {
         );
     }
 
-    public List<Entity> getEntities() {
-        return this.entities;
-    }
-
     public List<BlockSection> getBlockSections() {
         return this.blockSections;
-    }
-
-    private boolean isEntityCollidable(Entity entity, World hostWorld) {
-        return entity != null
-                && entity.isEntityAlive()
-                && !entity.noClip
-                && entity.world == hostWorld
-                && !(entity instanceof EntityPlayer)
-                && !(entity instanceof EntityItem)
-                && !(entity instanceof EntityFireball)
-                && !(entity instanceof EntityMountable)
-                && !(entity.getRidingEntity() instanceof EntityMountable);
     }
 
     //-----stuff for editing caches by section map-----
     public static void invalidateBlockSectionAt(@NotNull World world, @NotNull BlockPos pos) {
         BlockSection.Key sectionKey = BlockSection.Key.fromBlockPos(world, pos);
-        Set<PhysicsCollideWith> sectionCaches = CACHES_BY_SECTION.get(sectionKey);
+        Set<BlockSectionList> sectionCaches = CACHES_BY_SECTION.get(sectionKey);
         if (sectionCaches == null) return;
 
-        for (PhysicsCollideWith collideWith : new ArrayList<>(sectionCaches)) {
+        for (BlockSectionList collideWith : new ArrayList<>(sectionCaches)) {
             if (collideWith.registeredBlockSections.contains(sectionKey)) collideWith.dirtyBlockSections.add(sectionKey);
         }
     }
 
     public static void invalidateBlockSectionsInChunk(@NotNull World world, int chunkX, int chunkZ) {
-        for (Map.Entry<BlockSection.Key, Set<PhysicsCollideWith>> entry : CACHES_BY_SECTION.entrySet()) {
+        for (Map.Entry<BlockSection.Key, Set<BlockSectionList>> entry : CACHES_BY_SECTION.entrySet()) {
             BlockSection.Key sectionKey = entry.getKey();
             if (sectionKey.world() != world || sectionKey.sectionX() != chunkX || sectionKey.sectionZ() != chunkZ) {
                 continue;
             }
 
-            for (PhysicsCollideWith collideWith : new ArrayList<>(entry.getValue())) {
+            for (BlockSectionList collideWith : new ArrayList<>(entry.getValue())) {
                 if (collideWith.registeredBlockSections.contains(sectionKey)) collideWith.dirtyBlockSections.add(sectionKey);
             }
         }
     }
 
     public static void clearBlockSectionRegistrationsForWorld(@NotNull World world) {
-        for (Map.Entry<BlockSection.Key, Set<PhysicsCollideWith>> entry : CACHES_BY_SECTION.entrySet()) {
+        for (Map.Entry<BlockSection.Key, Set<BlockSectionList>> entry : CACHES_BY_SECTION.entrySet()) {
             if (entry.getKey().world() != world) continue;
-            for (PhysicsCollideWith collideWith : new ArrayList<>(entry.getValue())) {
+            for (BlockSectionList collideWith : new ArrayList<>(entry.getValue())) {
                 collideWith.close();
             }
         }

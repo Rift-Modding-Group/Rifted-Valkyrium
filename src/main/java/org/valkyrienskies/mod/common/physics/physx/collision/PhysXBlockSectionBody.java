@@ -8,7 +8,6 @@ import org.jetbrains.annotations.NotNull;
 import org.valkyrienskies.mod.common.physics.BlockSection;
 import org.valkyrienskies.mod.common.physics.GreedyBlockMerger;
 import org.valkyrienskies.mod.common.physics.physx.PhysXCollisionFilters;
-import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import physx.common.PxTransform;
 import physx.physics.PxMaterial;
 import physx.physics.PxPhysics;
@@ -20,14 +19,12 @@ import physx.physics.PxShapeFlagEnum;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 
 /**
  * For block sections, which are just a group of blocks.
  */
-public class PhysXBlockSectionCollider extends AbstractPhysXCollisionObject {
+public class PhysXBlockSectionBody extends AbstractPhysXCollisionObject {
     @NotNull
     private final Identifier identifier;
     @NotNull
@@ -39,7 +36,7 @@ public class PhysXBlockSectionCollider extends AbstractPhysXCollisionObject {
     @NotNull
     private final List<AxisAlignedBB> liquidBoxes;
 
-    public PhysXBlockSectionCollider(
+    public PhysXBlockSectionBody(
             @NotNull PxPhysics physics,
             @NotNull PxScene scene,
             @NotNull World world,
@@ -91,23 +88,6 @@ public class PhysXBlockSectionCollider extends AbstractPhysXCollisionObject {
     public Identifier getIdentifier() {
         return this.identifier;
     }
-
-    @Override
-    public void updateBeforeSimulation(
-            @NotNull World hostWorld,
-            @NotNull Collection<PhysicsObject> shipsWithPhysics,
-            @NotNull Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject> collisionObjects,
-            @NotNull List<PhysXBlockSectionCollider> blockSectionsWithLiquids,
-            double timeStep
-    ) {}
-
-    @Override
-    public void updateAfterSimulation(
-            @NotNull World hostWorld,
-            @NotNull Collection<PhysicsObject> shipsWithPhysics,
-            @NotNull Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject> collisionObjects,
-            double timeStep
-    ) {}
 
     @Override
     @NotNull

@@ -161,7 +161,7 @@ public class VSWorldPhysicsLoop implements Runnable {
         }
 
         // Finally, actually process the physics tick
-        this.tickThePhysicsAndCollision(physicsEntitiesToDoPhysics, delta);
+        this.physXBackend.update(this.hostWorld, physicsEntitiesToDoPhysics, delta);
 
         // Send ship position update packets around 20 times a second
         final long currentTimeMillis = System.currentTimeMillis();
@@ -191,13 +191,6 @@ public class VSWorldPhysicsLoop implements Runnable {
                 e.printStackTrace();
             }
         }
-    }
-
-    /**
-     * Ticks ship physics and collision through PhysX.
-     */
-    private void tickThePhysicsAndCollision(List<PhysicsObject> shipsWithPhysics, double timeStep) {
-        this.physXBackend.update(this.hostWorld, shipsWithPhysics, timeStep);
     }
 
     /**
