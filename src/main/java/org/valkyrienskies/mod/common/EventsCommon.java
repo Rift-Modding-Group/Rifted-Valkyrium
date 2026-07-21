@@ -82,7 +82,7 @@ public class EventsCommon {
         Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(world, posAt);
         if (!event.getWorld().isRemote && physicsObject.isPresent() && !(entity instanceof EntityFallingBlock)) {
             if (entity instanceof EntityArmorStand
-                    || entity instanceof EntityPig
+                    /*|| entity instanceof EntityPig*/
                     || entity instanceof EntityBoat
             ) {
                 EntityMountable entityMountable = new EntityMountable(

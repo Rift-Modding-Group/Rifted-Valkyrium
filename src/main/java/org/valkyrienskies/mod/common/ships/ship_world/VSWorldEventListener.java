@@ -74,7 +74,7 @@ public class VSWorldEventListener implements IWorldEventListener {
         if (!worldObj.isRemote && physicsObject.isPresent()
             && !(entity instanceof EntityFallingBlock)) {
             if (entity instanceof EntityArmorStand
-                || entity instanceof EntityPig || entity instanceof EntityBoat) {
+                /*|| entity instanceof EntityPig*/ || entity instanceof EntityBoat) {
                 EntityMountable entityMountable = new EntityMountable(world,
                     entity.getPositionVector(), CoordinateSpaceType.SUBSPACE_COORDINATES,
                     posAt);
