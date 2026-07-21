@@ -1,31 +1,46 @@
 package org.valkyrienskies.mod.common.ships.entity_interaction;
 
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.Tuple;
 import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
+import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4d;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
+import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
+import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMount;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.entity.EntityShipMovementData;
+import org.valkyrienskies.mod.common.network.MessageClearEntityShipRenderPosition;
+import org.valkyrienskies.mod.common.network.MessageEntityShipRenderPosition;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
+import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
+import org.valkyrienskies.mod.common.util.TransformedAABB;
 import org.valkyrienskies.mod.common.util.VSMath;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
+import valkyrienwarfare.api.TransformType;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 /**
- * This class handles the logic of moving entities with the ships they're standing on.
+ * This class handles the logic of moving entities with the ships they're interacting with.
+ * Includes entities on ships and entities pushed by ships.
  */
 public class EntityDraggable {
+    private static final Set<Entity> LAST_SHIP_LOCAL_RENDER_SYNC = new HashSet<>();
 
     /**
      * Moves entities such that they move with the ship below them.
@@ -36,6 +51,7 @@ public class EntityDraggable {
                 Entity e = world.loadedEntityList.get(i);
                 if (!e.isDead) {
                     addEntityVelocityFromShipBelow(e);
+                    syncShipLocalRenderPositionToClients(e);
                 }
             }
         }
@@ -47,7 +63,7 @@ public class EntityDraggable {
     /**
      * Adds the ship below velocity to entity.
      */
-    private static void addEntityVelocityFromShipBelow(final Entity entity) {
+    private static void addEntityVelocityFromShipBelow(@NotNull final Entity entity) {
         IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
         if (draggable == null) return;
 
@@ -183,6 +199,122 @@ public class EntityDraggable {
             entity.setRotationYawHead((float) (entity.getRotationYawHead() + addedYawVelocity));
             entity.rotationYaw += addedYawVelocity;
         }
+    }
+
+    /**
+     * Sends render-only ship-local positions for entities supported by ships and anchored chairs.
+     * Clients use this to avoid vanilla's delayed global interpolation.
+     */
+    private static void syncShipLocalRenderPositionToClients(@NotNull final Entity entity) {
+        if (entity.world.isRemote || entity instanceof EntityPlayer) return;
+
+        final IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
+        ShipData mountedShip = null;
+        Vector3d localPosition = null;
+
+        if (draggable != null) {
+            final EntityShipMovementData movementData = draggable.getEntityShipMovementData();
+            if (movementData != null) {
+                final ShipData lastTouchedShip = movementData.getLastTouchedShip();
+                final boolean shipContactIsActive = lastTouchedShip != null && movementData.getTicksSinceTouchedShip() < VSConfig.ticksToStickToShip;
+
+                if (shipContactIsActive && isEntitySupportedByShip(entity, lastTouchedShip)) {
+                    mountedShip = lastTouchedShip;
+                    localPosition = new Vector3d(entity.posX, entity.posY, entity.posZ);
+                    mountedShip.getShipTransform().transformPosition(localPosition, TransformType.GLOBAL_TO_SUBSPACE);
+                }
+            }
+        }
+
+        if (mountedShip == null) {
+            final IShipAnchoredMount anchoredMount = entity.getCapability(VSCapabilityRegistry.VS_SHIP_ANCHORED_MOUNT, null);
+            if (anchoredMount != null && (anchoredMount.isAnchoredToShip() || anchoredMount.tryAnchorMount(entity))) {
+                final Optional<PhysicsObject> mountedPhysicsObject =
+                        ValkyrienUtils.getPhysoManagingBlock(entity.world, anchoredMount.getLocalAnchorBlock());
+                if (mountedPhysicsObject.isPresent()) {
+                    mountedShip = mountedPhysicsObject.get().getShipData();
+                    localPosition = new Vector3d(
+                            anchoredMount.getLocalMountPos().x,
+                            anchoredMount.getLocalMountPos().y,
+                            anchoredMount.getLocalMountPos().z);
+                }
+            }
+        }
+
+        if (mountedShip == null && LAST_SHIP_LOCAL_RENDER_SYNC.remove(entity)) {
+            //remove render position
+            ValkyrienSkiesMod.physWrapperNetwork.sendToAllTracking(
+                    new MessageClearEntityShipRenderPosition(entity),
+                    entity
+            );
+        }
+        else if (mountedShip != null) {
+            //create render position
+            LAST_SHIP_LOCAL_RENDER_SYNC.add(entity);
+            ValkyrienSkiesMod.physWrapperNetwork.sendToAllTracking(
+                    new MessageEntityShipRenderPosition(entity, mountedShip, localPosition),
+                    entity
+            );
+        }
+    }
+
+    /**
+     * Checks whether the entity is standing on collision owned by the ship.
+     * This prevents ship-local render sync from applying to entities only pushed from the side.
+     */
+    private static boolean isEntitySupportedByShip(@NotNull final Entity entity, @NotNull final ShipData shipData) {
+        final AxisAlignedBB entityBox = entity.getEntityBoundingBox();
+        final double insetX = Math.clamp((entityBox.maxX - entityBox.minX) * 0.25D, 0.0D, 0.05D);
+        final double insetZ = Math.clamp((entityBox.maxZ - entityBox.minZ) * 0.25D, 0.0D, 0.05D);
+        final AxisAlignedBB supportProbe = new AxisAlignedBB(
+                entityBox.minX + insetX,
+                entityBox.minY - 0.15D,
+                entityBox.minZ + insetZ,
+                entityBox.maxX - insetX,
+                entityBox.minY + 0.05D,
+                entityBox.maxZ - insetZ
+        );
+        final AxisAlignedBB localProbe = new TransformedAABB(
+                supportProbe,
+                shipData.getShipTransform(),
+                TransformType.GLOBAL_TO_SUBSPACE
+        ).getEnclosedAABB();
+
+        final int minX = MathHelper.floor(localProbe.minX);
+        final int minY = MathHelper.floor(localProbe.minY);
+        final int minZ = MathHelper.floor(localProbe.minZ);
+        final int maxX = MathHelper.floor(localProbe.maxX + 1.0D);
+        final int maxY = MathHelper.floor(localProbe.maxY + 1.0D);
+        final int maxZ = MathHelper.floor(localProbe.maxZ + 1.0D);
+        final List<AxisAlignedBB> collisionBoxes = new ArrayList<>();
+
+        for (int x = minX; x < maxX; x++) {
+            for (int y = minY; y < maxY; y++) {
+                for (int z = minZ; z < maxZ; z++) {
+                    final BlockPos localBlockPos = new BlockPos(x, y, z);
+                    final Optional<ShipData> managingShip = ValkyrienUtils.getShipManagingBlock(entity.world, localBlockPos);
+                    if (managingShip.isEmpty() || !managingShip.get().getUuid().equals(shipData.getUuid())) continue;
+
+                    collisionBoxes.clear();
+                    final IBlockState blockState = entity.world.getBlockState(localBlockPos);
+                    try {
+                        blockState.addCollisionBoxToList(entity.world, localBlockPos, localProbe, collisionBoxes, null, false);
+                    }
+                    catch (Throwable ignored) {
+                        try {
+                            final AxisAlignedBB fallbackBox = blockState.getCollisionBoundingBox(entity.world, localBlockPos);
+                            if (fallbackBox != null && fallbackBox.offset(localBlockPos).intersects(localProbe)) return true;
+                        }
+                        catch (Throwable ignoredFallback) {
+                            if (blockState.getMaterial().blocksMovement() && new AxisAlignedBB(localBlockPos).intersects(localProbe)) return true;
+                        }
+                    }
+                    if (!collisionBoxes.isEmpty()) return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**

@@ -40,6 +40,8 @@ import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.command.framework.VSCommandRegistry;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.item.ItemShipTracker;
+import org.valkyrienskies.mod.common.network.MessageClearEntityShipRenderPosition;
+import org.valkyrienskies.mod.common.network.MessageEntityShipRenderPosition;
 import org.valkyrienskies.mod.common.network.MessagePlayerStoppedPiloting;
 import org.valkyrienskies.mod.common.network.MessageStartPiloting;
 import org.valkyrienskies.mod.common.network.MessageStopPiloting;
@@ -166,6 +168,16 @@ public class ValkyrienSkiesMod {
                 ShipIndexDataMessage.Handler.class,
                 ShipIndexDataMessage.class,
                 0, Side.CLIENT
+        );
+        physWrapperNetwork.registerMessage(
+                MessageEntityShipRenderPosition.Handler.class,
+                MessageEntityShipRenderPosition.class,
+                1, Side.CLIENT
+        );
+        physWrapperNetwork.registerMessage(
+                MessageClearEntityShipRenderPosition.Handler.class,
+                MessageClearEntityShipRenderPosition.class,
+                2, Side.CLIENT
         );
 
         controlNetwork = NetworkRegistry.INSTANCE.newSimpleChannel("valkyrien_piloting");

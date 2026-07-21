@@ -88,8 +88,7 @@ public final class ValkyrienUtils {
      * If the given AxisAlignedBB is in ship space, then this will return that AxisAlignedBB
      * transformed to global space. Otherwise it just returns the input AxisAlignedBB.
      */
-    public static @NotNull AxisAlignedBB getAABBInGlobal(AxisAlignedBB axisAlignedBB,
-                                                @Nullable World world, @Nullable BlockPos pos) {
+    public static @NotNull AxisAlignedBB getAABBInGlobal(AxisAlignedBB axisAlignedBB, @Nullable World world, @Nullable BlockPos pos) {
         Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(world, pos);
         if (physicsObject.isPresent()) {
             // We're in a physics object; convert the bounding box to a polygon; put its coordinates
@@ -116,11 +115,7 @@ public final class ValkyrienUtils {
             if (anchoredMount != null && anchoredMount.isAnchoredToShip()) {
                 Optional<PhysicsObject> mountedShip = getPhysoManagingBlock(ridingEntity.world, anchoredMount.getLocalAnchorBlock());
                 if (mountedShip.isPresent()) {
-                    Vec3d riderLocalMountPos = mountedShip.get().transformVector(
-                            new Vec3d(entity.posX, entity.posY, entity.posZ),
-                            TransformType.GLOBAL_TO_SUBSPACE
-                    );
-                    return new EntityShipMountData(mountedShip.get(), riderLocalMountPos);
+                    return new EntityShipMountData(mountedShip.get(), anchoredMount.getLocalMountPos());
                 }
             }
         }

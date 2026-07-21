@@ -5,6 +5,7 @@ import net.minecraft.client.audio.ISound;
 import net.minecraft.client.renderer.BufferBuilder;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.world.World;
@@ -23,6 +24,8 @@ import net.minecraftforge.fml.common.gameevent.TickEvent.RenderTickEvent;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.lwjgl.opengl.GL11;
+import org.valkyrienskies.mod.client.entity_position.EntityRenderPositionBackup;
+import org.valkyrienskies.mod.client.entity_position.ShipLocalEntityRenderData;
 import org.valkyrienskies.mod.client.render.GibsModelRegistry;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
@@ -40,14 +43,25 @@ import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import org.valkyrienskies.mod.fixes.SoundFixWrapper;
 import valkyrienwarfare.api.TransformType;
 
+import java.util.Iterator;
+import java.util.Map;
+import java.util.UUID;
 import java.util.Optional;
 import java.util.WeakHashMap;
 
 public class EventsClient {
-
     private static double oldXOff;
     private static double oldYOff;
     private static double oldZOff;
+
+    // Used to store entity position variables, that way we can restore them to their original values after
+    // the rendering code has finished.
+    private static final WeakHashMap<Entity, EntityRenderPositionBackup> renderPositionBackups = new WeakHashMap<>();
+
+    // Stores server-provided ship-local render positions for entities so client rendering can
+    // apply the ship's current render transform instead of vanilla global interpolation.
+    public static final WeakHashMap<Entity, ShipLocalEntityRenderData> shipLocalEntityRenderData = new WeakHashMap<>();
+    public static long lastShipLocalRenderDataPromotionTick = Long.MIN_VALUE;
 
     @SubscribeEvent
     public void onClientTick(ClientTickEvent event) {
@@ -169,10 +183,6 @@ public class EventsClient {
         GibsModelRegistry.onModelBakeEvent(event);
     }
 
-    // Used to store the lastTickPos variables of entities, that way we can restore them to their original values after
-    // the rendering code has finished.
-    private static final WeakHashMap<Entity, Vector3dc> lastPositionsMap = new WeakHashMap<>();
-
     @SubscribeEvent
     public void onRenderTickEvent(RenderTickEvent event) {
         final World world = Minecraft.getMinecraft().world;
@@ -183,7 +193,23 @@ public class EventsClient {
         }
 
         if (event.phase == Phase.START) {
-            lastPositionsMap.clear();
+            renderPositionBackups.clear();
+
+            //promote ship local entity render data
+            final long worldTick = world.getTotalWorldTime();
+            if (lastShipLocalRenderDataPromotionTick != worldTick) {
+                lastShipLocalRenderDataPromotionTick = worldTick;
+
+                final Iterator<Map.Entry<Entity, ShipLocalEntityRenderData>> iterator = shipLocalEntityRenderData.entrySet().iterator();
+                while (iterator.hasNext()) {
+                    final ShipLocalEntityRenderData renderData = iterator.next().getValue();
+                    renderData.promoteQueuedUpdate(worldTick);
+                    if (renderData.isExpired(world)) {
+                        iterator.remove();
+                    }
+                }
+            }
+
             for (PhysicsObject wrapper : ValkyrienUtils.getPhysosLoadedInWorld(world)) {
                 wrapper.getShipTransformationManager().updateRenderTransform(partialTicks);
             }
@@ -205,6 +231,10 @@ public class EventsClient {
             // So, to fix this we calculate the correct interpolated position of the entity, and then we modify the lastTickPos
             // variables so that Minecraft's interpolation code computes the correct value.
             for (final Entity entity : world.getLoadedEntityList()) {
+                if (applyShipLocalRenderPosition(entity, world, physObjectWorld, partialTicks)) {
+                    continue;
+                }
+
                 final EntityShipMovementData entityShipMovementData = ValkyrienUtils.getEntityShipMovementDataFor(entity);
                 if (entityShipMovementData.getLastTouchedShip() != null && entityShipMovementData.getTicksSinceTouchedShip() < VSConfig.ticksToStickToShip) {
                     final PhysicsObject shipPhysicsObject = physObjectWorld.getPhysObjectFromUUID(
@@ -235,7 +265,7 @@ public class EventsClient {
                     shipRenderTransform.transformPosition(entityShouldBeHere, TransformType.SUBSPACE_TO_GLOBAL);
 
                     // Save the entity lastTickPos in the map
-                    lastPositionsMap.put(entity, new Vector3d(entity.lastTickPosX, entity.lastTickPosY, entity.lastTickPosZ));
+                    backupEntityRenderPosition(entity);
 
                     // Then update lastTickPos such that Minecraft's interpolation code will render entity at entityShouldBeHere.
                     entity.lastTickPosX = (entityShouldBeHere.x() - (entity.posX * partialTicks)) / (1 - partialTicks);
@@ -245,16 +275,73 @@ public class EventsClient {
             }
         }
         else {
-            // Once the rendering code has finished we restore the lastTickPos variables to their old values.
+            // Once the rendering code has finished we restore the entity position variables to their old values.
             for (final Entity entity : world.getLoadedEntityList()) {
-                if (lastPositionsMap.containsKey(entity)) {
-                    final Vector3dc entityLastPosition = lastPositionsMap.get(entity);
-                    entity.lastTickPosX = entityLastPosition.x();
-                    entity.lastTickPosY = entityLastPosition.y();
-                    entity.lastTickPosZ = entityLastPosition.z();
+                if (renderPositionBackups.containsKey(entity)) {
+                    renderPositionBackups.get(entity).restore(entity);
                 }
             }
         }
+    }
+
+    /**
+     * Applies queued ship-local render data by transforming it through the ship's current render transform.
+     * Returns true when the entity was temporarily moved for this render pass.
+     * */
+    private static boolean applyShipLocalRenderPosition(
+            final Entity entity, final World world,
+            final IPhysObjectWorld physObjectWorld, final double partialTicks
+    ) {
+        //dont apply if riding on chair entity
+        if (entity.isRiding() && ValkyrienUtils.getMountedShipAndPos(entity).isMounted()) {
+            return false;
+        }
+
+        //doesnt apply if no render data
+        final ShipLocalEntityRenderData renderData = shipLocalEntityRenderData.get(entity);
+        if (renderData == null) return false;
+
+        //or if render data is expired
+        if (renderData.isExpired(world)) {
+            shipLocalEntityRenderData.remove(entity);
+            return false;
+        }
+
+        //or if ship associated w render data doesn't exist
+        final PhysicsObject shipPhysicsObject = physObjectWorld.getPhysObjectFromUUID(renderData.getShipUuid());
+        if (shipPhysicsObject == null) {
+            shipLocalEntityRenderData.remove(entity);
+            return false;
+        }
+
+        final Vector3d renderPosition = renderData.getInterpolatedLocalPosition(partialTicks);
+        shipPhysicsObject.getShipTransformationManager()
+                .getRenderTransform()
+                .transformPosition(renderPosition, TransformType.SUBSPACE_TO_GLOBAL);
+
+        backupEntityRenderPosition(entity);
+        setEntityRenderPosition(entity, renderPosition);
+        return true;
+    }
+
+    private static void backupEntityRenderPosition(final Entity entity) {
+        if (!renderPositionBackups.containsKey(entity)) {
+            renderPositionBackups.put(entity, EntityRenderPositionBackup.of(entity));
+        }
+    }
+
+    private static void setEntityRenderPosition(final Entity entity, final Vector3dc position) {
+        final double deltaX = position.x() - entity.posX;
+        final double deltaY = position.y() - entity.posY;
+        final double deltaZ = position.z() - entity.posZ;
+
+        entity.posX = position.x();
+        entity.posY = position.y();
+        entity.posZ = position.z();
+        entity.lastTickPosX = position.x();
+        entity.lastTickPosY = position.y();
+        entity.lastTickPosZ = position.z();
+        entity.setEntityBoundingBox(entity.getEntityBoundingBox().offset(deltaX, deltaY, deltaZ));
     }
 
     /**
