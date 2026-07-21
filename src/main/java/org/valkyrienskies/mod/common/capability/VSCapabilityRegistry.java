@@ -11,6 +11,8 @@ import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
+import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMount;
+import org.valkyrienskies.mod.common.capability.anchored_mount.ImplCapabilityShipAnchoredMount;
 import org.valkyrienskies.mod.common.capability.entity_backup.ICapabilityEntityBackup;
 import org.valkyrienskies.mod.common.capability.entity_backup.ImplCapabilityEntityBackup;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
@@ -43,6 +45,9 @@ public class VSCapabilityRegistry {
     @CapabilityInject(IEntityShipDraggable.class)
     public static final Capability<IEntityShipDraggable> VS_ENTITY_SHIP_DRAGGABLE = getNull();
 
+    @CapabilityInject(IShipAnchoredMount.class)
+    public static final Capability<IShipAnchoredMount> VS_SHIP_ANCHORED_MOUNT = getNull();
+
     @SubscribeEvent
     public static void attachWorldCapabilities(AttachCapabilitiesEvent<World> event) {
         event.addCapability(
@@ -66,6 +71,11 @@ public class VSCapabilityRegistry {
         event.addCapability(
                 new ResourceLocation(ValkyrienSkiesMod.MOD_ID, "entity_ship_draggable_capability"),
                 new VSDefaultCapabilityProviderTransient<>(VS_ENTITY_SHIP_DRAGGABLE)
+        );
+
+        event.addCapability(
+                new ResourceLocation(ValkyrienSkiesMod.MOD_ID, "ship_anchored_mount_capability"),
+                new VSDefaultCapabilityProviderTransient<>(VS_SHIP_ANCHORED_MOUNT)
         );
 
         if (event.getObject() instanceof EntityPlayer) {
@@ -105,6 +115,12 @@ public class VSCapabilityRegistry {
                 IEntityShipDraggable.class,
                 new VSDefaultCapabilityTransientStorage<>(),
                 ImplCapabilityEntityShipDraggable::new
+        );
+
+        CapabilityManager.INSTANCE.register(
+                IShipAnchoredMount.class,
+                new VSDefaultCapabilityTransientStorage<>(),
+                ImplCapabilityShipAnchoredMount::new
         );
     }
 

@@ -16,8 +16,10 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
+import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMount;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.ships.ShipData;
@@ -290,6 +292,45 @@ public abstract class MixinEntity {
             if (lastTouchedShip != null) {
                 cir.setReturnValue(true);
             }
+        }
+    }
+
+    /**
+     * This is to update entities associated with chairs from other mods to ensure that
+     * ship coordinates get translated to world coordinates for the passenger
+     * */
+    @Inject(method = "onUpdate", at = @At("HEAD"))
+    private void preUpdateShipAnchoredMount(CallbackInfo callbackInfo) {
+        Entity thisEntity = (Entity) ((Object) this);
+
+        IShipAnchoredMount mount = thisEntity.getCapability(VSCapabilityRegistry.VS_SHIP_ANCHORED_MOUNT, null);
+        if (mount == null) return;
+        if (!mount.isAnchoredToShip() && !mount.tryAnchorMount(thisEntity)) return;
+
+        Optional<PhysicsObject> mountedShip = ValkyrienUtils.getPhysoManagingBlock(thisEntity.world, mount.getLocalAnchorBlock());
+        if (mountedShip.isEmpty()) return;
+
+        Vec3d globalMountPos = mountedShip.get().transformVector(mount.getLocalMountPos(), TransformType.SUBSPACE_TO_GLOBAL);
+        thisEntity.setPosition(globalMountPos.x, globalMountPos.y, globalMountPos.z);
+
+        for (Entity passenger : thisEntity.getPassengers()) {
+            thisEntity.updatePassenger(passenger);
+        }
+    }
+
+    /**
+     * Make entities associated with chairs from other mods return their position in ship coordinates
+     * */
+    @Inject(method = "getPosition", at = @At("HEAD"), cancellable = true)
+    private void getShipAnchoredMountPosition(CallbackInfoReturnable<BlockPos> callbackInfo) {
+        Entity thisEntity = (Entity) ((Object) this);
+
+        IShipAnchoredMount mount = thisEntity.getCapability(VSCapabilityRegistry.VS_SHIP_ANCHORED_MOUNT, null);
+        if (mount == null) return;
+        if (!mount.isAnchoredToShip() && !mount.tryAnchorMount(thisEntity)) return;
+
+        if (mount.isAnchoredToShip()) {
+            callbackInfo.setReturnValue(mount.getLocalAnchorBlock());
         }
     }
 }

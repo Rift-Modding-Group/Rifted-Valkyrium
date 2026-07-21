@@ -18,6 +18,7 @@ import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.VSWorldDataCapability;
+import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMount;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
 import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
 import org.valkyrienskies.mod.common.util.TransformedAABB;
@@ -108,6 +109,19 @@ public final class ValkyrienUtils {
             Optional<PhysicsObject> mountedShip = mountable.getMountedShip();
             if (mountedShip.isPresent()) {
                 return new EntityShipMountData(mountedShip.get(), mountable.getMountPos());
+            }
+        }
+        if (ridingEntity != null) {
+            IShipAnchoredMount anchoredMount = ridingEntity.getCapability(VSCapabilityRegistry.VS_SHIP_ANCHORED_MOUNT, null);
+            if (anchoredMount != null && anchoredMount.isAnchoredToShip()) {
+                Optional<PhysicsObject> mountedShip = getPhysoManagingBlock(ridingEntity.world, anchoredMount.getLocalAnchorBlock());
+                if (mountedShip.isPresent()) {
+                    Vec3d riderLocalMountPos = mountedShip.get().transformVector(
+                            new Vec3d(entity.posX, entity.posY, entity.posZ),
+                            TransformType.GLOBAL_TO_SUBSPACE
+                    );
+                    return new EntityShipMountData(mountedShip.get(), riderLocalMountPos);
+                }
             }
         }
         return new EntityShipMountData();

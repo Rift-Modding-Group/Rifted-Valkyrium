@@ -225,6 +225,20 @@ public class VSConfig extends VSConfigTemplate {
     })
     public static String[] blockMass = {"minecraft:grass=VERY_LIGHT", "minecraft:obsidian=VERY_HEAVY"};
 
+    @Name("Sittable Block Entities")
+    @Comment({
+            "To allow compatibility with mods that have their own sittable blocks (such as Mr Crayfish's furniture),",
+            "this config option has been added. Make sure to put the id of an entity associated with a sittable block here."
+    })
+    public static String[] sittableBlockEntityIDs = {
+            "cfm:mountable_block",
+            "rustic:chair",
+            "sit:entity_sit"
+    };
+
+    @Ignore
+    public static Set<ResourceLocation> sittableBlockEntityIDsSet;
+
     /**
      * Synchronizes the data in this class and the data in the forge configuration
      */
@@ -236,6 +250,7 @@ public class VSConfig extends VSConfigTemplate {
 
     private static void updateCached() {
         collisionTransparentEntitiesSet = Arrays.stream(collisionTransparentEntities).map(ResourceLocation::new).collect(Collectors.toSet());
+        sittableBlockEntityIDsSet = Arrays.stream(sittableBlockEntityIDs).map(ResourceLocation::new).collect(Collectors.toSet());
     }
 
     static {
@@ -253,5 +268,4 @@ public class VSConfig extends VSConfigTemplate {
             }
         }
     }
-
 }

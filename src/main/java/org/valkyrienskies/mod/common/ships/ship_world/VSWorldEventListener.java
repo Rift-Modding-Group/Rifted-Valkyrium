@@ -14,6 +14,8 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.IWorldEventListener;
 import net.minecraft.world.World;
 import org.joml.Vector3d;
+import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
+import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMount;
 import org.valkyrienskies.mod.common.ships.ship_transform.CoordinateSpaceType;
 import org.valkyrienskies.mod.common.entity.EntityMountable;
 import org.valkyrienskies.mod.common.physics.BlockSectionList;
@@ -61,32 +63,34 @@ public class VSWorldEventListener implements IWorldEventListener {
             double xSpeed, double ySpeed, double zSpeed, int... parameters
     ) {}
 
-    // TODO: Fix conflicts with EventsCommon.onEntityJoinWorldEvent()
     @Override
     public void onEntityAdded(Entity entity) {
         // This is really only here because Sponge doesn't call the entity join event for some reason :/
         // So I basically just copied the event code here as well.
-        World world = worldObj;
+        World world = this.worldObj;
         BlockPos posAt = new BlockPos(entity);
-        Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(world, posAt);
 
-        if (!worldObj.isRemote && physicsObject.isPresent()
-            && !(entity instanceof EntityFallingBlock)) {
-            if (entity instanceof EntityArmorStand
-                /*|| entity instanceof EntityPig*/ || entity instanceof EntityBoat) {
+        IShipAnchoredMount mount = entity.getCapability(VSCapabilityRegistry.VS_SHIP_ANCHORED_MOUNT, null);
+        if (mount != null) mount.tryAnchorMount(entity);
+
+        Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(world, posAt);
+        if (!this.worldObj.isRemote && physicsObject.isPresent() && !(entity instanceof EntityFallingBlock)) {
+            if (entity instanceof EntityArmorStand || entity instanceof EntityBoat) {
                 EntityMountable entityMountable = new EntityMountable(world,
                     entity.getPositionVector(), CoordinateSpaceType.SUBSPACE_COORDINATES,
                     posAt);
                 world.spawnEntity(entityMountable);
                 entity.startRiding(entityMountable);
             }
-            world.getChunk(entity.getPosition().getX() >> 4, entity.getPosition().getZ() >> 4)
+            BlockPos rawPosBeforeTransform = new BlockPos(entity.posX, entity.posY, entity.posZ);
+            world.getChunk(rawPosBeforeTransform.getX() >> 4, rawPosBeforeTransform.getZ() >> 4)
                 .removeEntity(entity);
             physicsObject.get()
                 .getShipTransformationManager()
                 .getCurrentTickTransform().transform(entity,
                 TransformType.SUBSPACE_TO_GLOBAL, false);
-            world.getChunk(entity.getPosition().getX() >> 4, entity.getPosition().getZ() >> 4)
+            BlockPos rawPosAfterTransform = new BlockPos(entity.posX, entity.posY, entity.posZ);
+            world.getChunk(rawPosAfterTransform.getX() >> 4, rawPosAfterTransform.getZ() >> 4)
                 .addEntity(entity);
         }
     }
