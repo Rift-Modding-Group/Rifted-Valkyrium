@@ -67,10 +67,21 @@ public class EntityDraggable {
         IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
         if (draggable == null) return;
 
-        final EntityShipMountData mountData = ValkyrienUtils.getMountedShipAndPos(entity);
         final EntityShipMovementData oldEntityShipMovementData = draggable.getEntityShipMovementData();
         if (oldEntityShipMovementData == null) return;
 
+        final EntityShipMountData anchoredMountData = ValkyrienUtils.getAnchoredMountShipAndPos(entity);
+        if (anchoredMountData.isMounted()) {
+            draggable.setEntityShipMovementData(new EntityShipMovementData(
+                    anchoredMountData.getMountedShip().getShipData(),
+                    0, 0,
+                    new Vector3d(),
+                    0
+            ));
+            return;
+        }
+
+        final EntityShipMountData mountData = ValkyrienUtils.getMountedShipAndPos(entity);
         final ShipData lastShipTouchedPlayer = oldEntityShipMovementData.getLastTouchedShip();
         final int oldTicksSinceTouchedShip = oldEntityShipMovementData.getTicksSinceTouchedShip();
         final Vector3dc oldVelocityAdded = oldEntityShipMovementData.getAddedLinearVelocity();

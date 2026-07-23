@@ -3,17 +3,23 @@ package org.valkyrienskies.mod.common.network;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityList;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.network.PacketBuffer;
 import net.minecraft.util.IThreadListener;
+import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
-import org.valkyrienskies.mod.client.EventsClient;
-import org.valkyrienskies.mod.client.entity_position.ShipLocalEntityRenderData;
+import org.valkyrienskies.mod.client.entity_position.EntityRenderPositionManager;
+import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
+import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMount;
+import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.ships.ShipData;
 
 import java.util.UUID;
@@ -61,29 +67,31 @@ public class MessageEntityShipRenderPosition implements IMessage {
 
     public static class Handler implements IMessageHandler<MessageEntityShipRenderPosition, IMessage> {
         @Override
-        @SuppressWarnings("Convert2Lambda")
         public IMessage onMessage(final MessageEntityShipRenderPosition message, final MessageContext ctx) {
             final IThreadListener mainThread = Minecraft.getMinecraft();
-            mainThread.addScheduledTask(new Runnable() {
-                @Override
-                public void run() {
-                    final World world = Minecraft.getMinecraft().world;
-                    if (world == null) return;
+            mainThread.addScheduledTask(() -> {
+                final World world = Minecraft.getMinecraft().world;
+                if (world == null) return;
 
-                    final Entity entity = world.getEntityByID(message.entityId);
-                    if (entity == null || entity instanceof EntityPlayer) return;
+                final Entity entity = world.getEntityByID(message.entityId);
+                if (entity == null || entity instanceof EntityPlayer) return;
 
-                    final long updateTick = world.getTotalWorldTime();
-                    final Vector3dc localPosition = new Vector3d(message.localX, message.localY, message.localZ);
-                    ShipLocalEntityRenderData renderData = EventsClient.shipLocalEntityRenderData.get(entity);
-                    if (renderData == null) {
-                        renderData = new ShipLocalEntityRenderData(message.shipUuid, localPosition, updateTick);
-                        EventsClient.shipLocalEntityRenderData.put(entity, renderData);
-                    }
-                    else {
-                        renderData.queueUpdate(message.shipUuid, localPosition);
+                final long updateTick = world.getTotalWorldTime();
+                final Vector3dc localPosition = new Vector3d(message.localX, message.localY, message.localZ);
+                final ResourceLocation entityId = EntityList.getKey(entity);
+                if (entityId != null && VSConfig.sittableBlockEntityIDsSet != null &&
+                        VSConfig.sittableBlockEntityIDsSet.contains(entityId)) {
+                    final IShipAnchoredMount anchoredMount =
+                            entity.getCapability(VSCapabilityRegistry.VS_SHIP_ANCHORED_MOUNT, null);
+                    if (anchoredMount != null) {
+                        anchoredMount.setAnchorMountData(
+                                new Vec3d(message.localX, message.localY, message.localZ),
+                                new BlockPos(message.localX, message.localY, message.localZ)
+                        );
                     }
                 }
+
+                EntityRenderPositionManager.queueShipLocalRenderData(entity, message.shipUuid, localPosition, updateTick);
             });
 
             return null;

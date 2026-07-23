@@ -110,16 +110,28 @@ public final class ValkyrienUtils {
                 return new EntityShipMountData(mountedShip.get(), mountable.getMountPos());
             }
         }
-        if (ridingEntity != null) {
-            IShipAnchoredMount anchoredMount = ridingEntity.getCapability(VSCapabilityRegistry.VS_SHIP_ANCHORED_MOUNT, null);
-            if (anchoredMount != null && anchoredMount.isAnchoredToShip()) {
-                Optional<PhysicsObject> mountedShip = getPhysoManagingBlock(ridingEntity.world, anchoredMount.getLocalAnchorBlock());
-                if (mountedShip.isPresent()) {
-                    return new EntityShipMountData(mountedShip.get(), anchoredMount.getLocalMountPos());
-                }
-            }
+
+        return getAnchoredMountShipAndPos(entity);
+    }
+
+    public static @NotNull EntityShipMountData getAnchoredMountShipAndPos(Entity entity) {
+        final Entity ridingEntity = entity.getRidingEntity();
+        if (ridingEntity == null) return new EntityShipMountData();
+
+        final IShipAnchoredMount anchoredMount = ridingEntity.getCapability(VSCapabilityRegistry.VS_SHIP_ANCHORED_MOUNT, null);
+        if (anchoredMount == null || (!anchoredMount.isAnchoredToShip() && !anchoredMount.tryAnchorMount(ridingEntity))) {
+            return new EntityShipMountData();
         }
-        return new EntityShipMountData();
+
+        final Optional<PhysicsObject> mountedShip = getPhysoManagingBlock(ridingEntity.world, anchoredMount.getLocalAnchorBlock());
+        if (mountedShip.isEmpty()) return new EntityShipMountData();
+
+        final Vec3d localMountPos = anchoredMount.getLocalMountPos();
+        return new EntityShipMountData(mountedShip.get(), new Vec3d(
+                localMountPos.x,
+                localMountPos.y + ridingEntity.getMountedYOffset() + entity.getYOffset(),
+                localMountPos.z
+        ));
     }
 
     public static void fixEntityToShip(Entity toFix, Vector3dc posInLocal,

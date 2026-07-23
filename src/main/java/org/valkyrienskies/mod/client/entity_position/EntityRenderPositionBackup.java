@@ -5,7 +5,7 @@ import net.minecraft.util.math.AxisAlignedBB;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Stores temporary render-position state so it can be restored after entity rendering.
+ * Stores temporary render-position state for entities so it can be restored after rendering.
  */
 public record EntityRenderPositionBackup(
         double posX,
@@ -16,7 +16,6 @@ public record EntityRenderPositionBackup(
         double lastTickPosZ,
         AxisAlignedBB boundingBox
 ) {
-
     public static EntityRenderPositionBackup of(@NotNull final Entity entity) {
         return new EntityRenderPositionBackup(
                 entity.posX,

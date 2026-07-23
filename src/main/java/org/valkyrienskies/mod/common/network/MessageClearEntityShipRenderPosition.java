@@ -10,7 +10,7 @@ import net.minecraft.world.World;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
-import org.valkyrienskies.mod.client.EventsClient;
+import org.valkyrienskies.mod.client.entity_position.EntityRenderPositionManager;
 
 /**
  * Clears client-side ship-local render data for an entity that is no longer ship-bound.
@@ -36,19 +36,15 @@ public class MessageClearEntityShipRenderPosition implements IMessage {
 
     public static class Handler implements IMessageHandler<MessageClearEntityShipRenderPosition, IMessage> {
         @Override
-        @SuppressWarnings("Convert2Lambda")
         public IMessage onMessage(final MessageClearEntityShipRenderPosition message, final MessageContext ctx) {
             final IThreadListener mainThread = Minecraft.getMinecraft();
-            mainThread.addScheduledTask(new Runnable() {
-                @Override
-                public void run() {
-                    final World world = Minecraft.getMinecraft().world;
-                    if (world == null) return;
+            mainThread.addScheduledTask(() -> {
+                final World world = Minecraft.getMinecraft().world;
+                if (world == null) return;
 
-                    final Entity entity = world.getEntityByID(message.entityId);
-                    if (entity != null && !(entity instanceof EntityPlayer)) {
-                        EventsClient.shipLocalEntityRenderData.remove(entity);
-                    }
+                final Entity entity = world.getEntityByID(message.entityId);
+                if (entity != null && !(entity instanceof EntityPlayer)) {
+                    EntityRenderPositionManager.removeShipLocalRenderData(entity);
                 }
             });
 

@@ -18,5 +18,7 @@ public interface IShipAnchoredMount {
     @NotNull
     BlockPos getLocalAnchorBlock();
 
+    void setAnchorMountData(@NotNull Vec3d localMountPos, @NotNull BlockPos localAnchorBlock);
+
     boolean tryAnchorMount(@NotNull Entity entity);
 }
