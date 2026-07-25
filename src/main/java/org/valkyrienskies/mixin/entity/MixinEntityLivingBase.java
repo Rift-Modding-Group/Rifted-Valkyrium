@@ -38,6 +38,7 @@ public class MixinEntityLivingBase {
         cir.setReturnValue(true);
     }
 
+    //---everything related to modded chairs goes here---
     /**
      * Captures the ship-aware dismount position before the client clears its riding entity.
      * This lets the return injection distinguish successful dismounts from no-op dismount attempts.
@@ -71,7 +72,11 @@ public class MixinEntityLivingBase {
         }
         else {
             if (thisEntity.getRidingEntity() != this.clientShipAnchoredDismountEntity) {
-                this.applyShipAnchoredDismount(thisEntity, this.clientShipAnchoredDismountPos);
+                this.applyShipAnchoredDismount(
+                        thisEntity,
+                        this.clientShipAnchoredDismountEntity,
+                        this.clientShipAnchoredDismountPos
+                );
             }
             this.clearClientShipAnchoredDismount();
         }
@@ -87,7 +92,7 @@ public class MixinEntityLivingBase {
         if (dismountPos == null) return;
 
         EntityLivingBase thisEntity = (EntityLivingBase) (Object) this;
-        this.applyShipAnchoredDismount(thisEntity, dismountPos);
+        this.applyShipAnchoredDismount(thisEntity, mountedEntity, dismountPos);
         ci.cancel();
     }
 
@@ -96,6 +101,9 @@ public class MixinEntityLivingBase {
         this.clientShipAnchoredDismountPos = null;
     }
 
+    /**
+     * When dismounting a chair on a modded ship, it will ideally teleport them to the top of the chair
+     * */
     private Vector3d getShipAnchoredBlockAboveDismountPos(Entity mountedEntity) {
         if (mountedEntity == null) return null;
 
@@ -117,6 +125,10 @@ public class MixinEntityLivingBase {
         return dismountPos;
     }
 
+    /**
+     * This is for the ideal y position above the chair we want the dismounting
+     * player to teleport to
+     * */
     private double getBlockAboveDismountY(Entity mountedEntity, BlockPos localAnchorBlock) {
         AxisAlignedBB collisionBox = mountedEntity.world
                 .getBlockState(localAnchorBlock)
@@ -132,7 +144,9 @@ public class MixinEntityLivingBase {
         return localAnchorBlock.getY() + collisionBox.maxY + 0.001D;
     }
 
-    private void applyShipAnchoredDismount(EntityLivingBase thisEntity, Vector3d dismountPos) {
+    private void applyShipAnchoredDismount(
+            EntityLivingBase thisEntity, Entity mountedEntity, Vector3d dismountPos
+    ) {
         thisEntity.motionX = 0.0D;
         thisEntity.motionY = 0.0D;
         thisEntity.motionZ = 0.0D;
@@ -144,7 +158,20 @@ public class MixinEntityLivingBase {
 
         IEntityShipDraggable draggable = thisEntity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
         if (draggable != null) {
-            draggable.setEntityShipMovementData(new EntityShipMovementData(null, 0, 0, new Vector3d(), 0));
+            IShipAnchoredMount anchoredMount = mountedEntity.getCapability(
+                    VSCapabilityRegistry.VS_SHIP_ANCHORED_MOUNT, null
+            );
+            Optional<PhysicsObject> mountedShip = anchoredMount == null
+                    ? Optional.empty()
+                    : ValkyrienUtils.getPhysoManagingBlock(mountedEntity.world, anchoredMount.getLocalAnchorBlock());
+
+            draggable.setEntityShipMovementData(new EntityShipMovementData(
+                    mountedShip.map(PhysicsObject::getShipData).orElse(null),
+                    0,
+                    0,
+                    new Vector3d(),
+                    0
+            ));
         }
     }
 }

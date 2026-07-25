@@ -233,7 +233,8 @@ public class VSConfig extends VSConfigTemplate {
     public static String[] sittableBlockEntityIDs = {
             "cfm:mountable_block",
             "rustic:chair",
-            "sit:entity_sit"
+            "sit:entity_sit",
+            "bibliocraft:BiblioSeat"
     };
 
     @Ignore
