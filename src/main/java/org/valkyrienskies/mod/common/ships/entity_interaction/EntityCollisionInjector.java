@@ -13,6 +13,7 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Blocks;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.EnumParticleTypes;
+import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
@@ -487,6 +488,8 @@ public class EntityCollisionInjector {
                     break;
                 }
                 List<AxisAlignedBB> collidingBBs = entity.world.getCollisionBoxes(entity, bb);
+                //rustic specific fix cos idk what else to do here
+                collidingBBs = clampShipLocalRusticChairCollisions(entity.world, collidingBBs);
 
                 // TODO: Fix the performance of this!
                 if (entity.world.isRemote || entity instanceof EntityPlayer) {
@@ -548,6 +551,45 @@ public class EntityCollisionInjector {
 
         return collisions;
     }
+
+    //-----rustic specific fixes start here-----
+    /**
+     * This just fixes the shaking up and down when on top of a Rustic chair placed on a ship
+     */
+    private static List<AxisAlignedBB> clampShipLocalRusticChairCollisions(World world, List<AxisAlignedBB> collidingBBs) {
+        for (int i = 0; i < collidingBBs.size(); i++) {
+            AxisAlignedBB collisionBox = collidingBBs.get(i);
+            BlockPos blockPos = new BlockPos(
+                    MathHelper.floor(collisionBox.minX),
+                    MathHelper.floor(collisionBox.minY),
+                    MathHelper.floor(collisionBox.minZ)
+            );
+
+            if (!isRusticChair(world.getBlockState(blockPos))) continue;
+
+            double clampedMaxY = blockPos.getY() + 1.0D;
+            if (collisionBox.maxY > clampedMaxY) {
+                collidingBBs.set(i, new AxisAlignedBB(
+                        collisionBox.minX,
+                        collisionBox.minY,
+                        collisionBox.minZ,
+                        collisionBox.maxX,
+                        clampedMaxY,
+                        collisionBox.maxZ
+                ));
+            }
+        }
+
+        return collidingBBs;
+    }
+
+    private static boolean isRusticChair(IBlockState blockState) {
+        final ResourceLocation registryName = blockState.getBlock().getRegistryName();
+        return registryName != null
+                && "rustic".equals(registryName.getNamespace())
+                && registryName.getPath().startsWith("chair");
+    }
+    //-----rustic specific fixes end here-----
 
     public static void setEntityPositionAndUpdateBB(Entity entity, double x, double y, double z) {
         entity.posX = x;
