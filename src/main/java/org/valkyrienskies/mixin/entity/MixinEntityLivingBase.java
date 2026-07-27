@@ -4,6 +4,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
+import org.jetbrains.annotations.NotNull;
 import org.joml.Vector3d;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -53,7 +54,7 @@ public class MixinEntityLivingBase {
         Entity mountedEntity = thisEntity.getRidingEntity();
         if (mountedEntity == null) return;
 
-        Vector3d dismountPos = getShipAnchoredBlockAboveDismountPos(mountedEntity);
+        Vector3d dismountPos = this.getShipAnchoredBlockAboveDismountPos(mountedEntity);
         if (dismountPos == null) return;
 
         this.clientShipAnchoredDismountEntity = mountedEntity;
@@ -72,11 +73,7 @@ public class MixinEntityLivingBase {
         }
         else {
             if (thisEntity.getRidingEntity() != this.clientShipAnchoredDismountEntity) {
-                this.applyShipAnchoredDismount(
-                        thisEntity,
-                        this.clientShipAnchoredDismountEntity,
-                        this.clientShipAnchoredDismountPos
-                );
+                this.applyShipAnchoredDismount(thisEntity, this.clientShipAnchoredDismountEntity, this.clientShipAnchoredDismountPos);
             }
             this.clearClientShipAnchoredDismount();
         }
@@ -134,9 +131,7 @@ public class MixinEntityLivingBase {
                 .getBlockState(localAnchorBlock)
                 .getCollisionBoundingBox(mountedEntity.world, localAnchorBlock);
 
-        if (collisionBox == null) {
-            return localAnchorBlock.getY() + 1D;
-        }
+        if (collisionBox == null) return localAnchorBlock.getY() + 1D;
 
         double blockAboveY = localAnchorBlock.getY() + 1D;
         if (collisionBox.maxY <= 1D) return blockAboveY;
@@ -144,9 +139,7 @@ public class MixinEntityLivingBase {
         return localAnchorBlock.getY() + collisionBox.maxY + 0.001D;
     }
 
-    private void applyShipAnchoredDismount(
-            EntityLivingBase thisEntity, Entity mountedEntity, Vector3d dismountPos
-    ) {
+    private void applyShipAnchoredDismount(@NotNull EntityLivingBase thisEntity, @NotNull Entity mountedEntity, @NotNull Vector3d dismountPos) {
         thisEntity.motionX = 0.0D;
         thisEntity.motionY = 0.0D;
         thisEntity.motionZ = 0.0D;
@@ -158,12 +151,9 @@ public class MixinEntityLivingBase {
 
         IEntityShipDraggable draggable = thisEntity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
         if (draggable != null) {
-            IShipAnchoredMount anchoredMount = mountedEntity.getCapability(
-                    VSCapabilityRegistry.VS_SHIP_ANCHORED_MOUNT, null
-            );
-            Optional<PhysicsObject> mountedShip = anchoredMount == null
-                    ? Optional.empty()
-                    : ValkyrienUtils.getPhysoManagingBlock(mountedEntity.world, anchoredMount.getLocalAnchorBlock());
+            IShipAnchoredMount anchoredMount = mountedEntity.getCapability(VSCapabilityRegistry.VS_SHIP_ANCHORED_MOUNT, null);
+            Optional<PhysicsObject> mountedShip = anchoredMount == null ?
+                    Optional.empty() : ValkyrienUtils.getPhysoManagingBlock(mountedEntity.world, anchoredMount.getLocalAnchorBlock());
 
             draggable.setEntityShipMovementData(new EntityShipMovementData(
                     mountedShip.map(PhysicsObject::getShipData).orElse(null),
