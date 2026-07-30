@@ -1,4 +1,4 @@
-package org.valkyrienskies.mod.common.physics.physx.collision;
+package org.valkyrienskies.mod.common.physics.physx.bodies;
 
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.util.math.AxisAlignedBB;
@@ -7,7 +7,7 @@ import net.minecraft.world.World;
 import org.jetbrains.annotations.NotNull;
 import org.valkyrienskies.mod.common.physics.BlockSection;
 import org.valkyrienskies.mod.common.physics.GreedyBlockMerger;
-import org.valkyrienskies.mod.common.physics.physx.PhysXCollisionFilters;
+import org.valkyrienskies.mod.common.physics.physx.PhysXActor;
 import physx.common.PxTransform;
 import physx.physics.PxMaterial;
 import physx.physics.PxPhysics;
@@ -116,9 +116,9 @@ public class PhysXBlockSectionBody extends AbstractPhysXCollisionObject {
         if (isLiquid) {
             shape.setFlag(PxShapeFlagEnum.eSIMULATION_SHAPE, false);
             shape.setFlag(PxShapeFlagEnum.eTRIGGER_SHAPE, true);
-            PhysXCollisionFilters.CollisionGroup.LIQUID.setFilter(shape);
+            PhysXActor.LIQUID.setFilter(shape);
         }
-        else PhysXCollisionFilters.CollisionGroup.WORLD.setFilter(shape);
+        else PhysXActor.SOLID.setFilter(shape);
 
         double centerX = (worldBox.minX + worldBox.maxX) * 0.5D - this.identifier.getOriginX();
         double centerY = (worldBox.minY + worldBox.maxY) * 0.5D - this.identifier.getOriginY();

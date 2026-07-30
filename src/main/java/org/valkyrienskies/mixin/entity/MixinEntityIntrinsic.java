@@ -4,7 +4,6 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityList;
 import net.minecraft.entity.MoverType;
 import net.minecraft.world.World;
-import org.joml.Vector3d;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -68,8 +67,9 @@ public abstract class MixinEntityIntrinsic {
     }
 
     /**
-     * The goal of this injection is to correctly setup {@link IEntityShipDraggable#getEntityShipMovementData()} for this Entity.
-     * Specifically this code handles the last ship touched by the entity, as well as how many ticks ago that touch was.
+     * Updates the ship-contact portion of {@link IEntityShipDraggable} for this entity.
+     * This metadata is still needed by ship-aware rendering and player networking;
+     * it no longer applies ship displacement.
      */
     @Inject(method = "move", at = @At("RETURN"))
     private void onEntityPostMove(CallbackInfo callbackInfo) {
@@ -77,36 +77,41 @@ public abstract class MixinEntityIntrinsic {
         IEntityShipDraggable entityShipDraggable = thisEntity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
         if (entityShipDraggable == null) return;
 
-        final EntityShipMovementData oldEntityShipMovementData = entityShipDraggable.getEntityShipMovementData();
-        if (alteredMovement != null) {
+        final EntityShipMovementData entityShipMovementData = entityShipDraggable.getEntityShipMovementData();
+        if (entityShipMovementData == null) return;
+
+        if (this.alteredMovement != null) {
             // If alteredMovement isn't null then we're touching a ship.
-            final EntityShipMovementData newEntityShipMovementData = oldEntityShipMovementData
-                    .withLastTouchedShip(alteredMovement.shipTouched)
-                    .withTicksSinceTouchedShip(0)
-                    .withTicksPartOfGround(0);
-            entityShipDraggable.setEntityShipMovementData(newEntityShipMovementData);
+            entityShipMovementData.setLastTouchedShip(alteredMovement.shipTouched);
+            entityShipMovementData.setTicksSinceTouchedShip(0);
+            entityShipMovementData.setTicksPartOfGround(0);
+            entityShipMovementData.setStandingOnShip(alteredMovement.standingOnShip);
             EntityCollisionInjector.alterEntityMovementPost(thisEntity, alteredMovement);
         }
         else {
             if (this.collided) {
                 // If we collided and alteredMovement is null, then we're touching the ground.
-                final int newTicksPartOfGround = oldEntityShipMovementData.getTicksPartOfGround() + 1;
-                final EntityShipMovementData newEntityShipMovementData = new EntityShipMovementData(
-                        null, 0, newTicksPartOfGround, new Vector3d(), 0
+                entityShipMovementData.setLastTouchedShip(null);
+                entityShipMovementData.setTicksSinceTouchedShip(0);
+                entityShipMovementData.setTicksPartOfGround(
+                        entityShipMovementData.getTicksPartOfGround() + 1
                 );
-                entityShipDraggable.setEntityShipMovementData(newEntityShipMovementData);
-            } else {
+                entityShipMovementData.setStandingOnShip(false);
+            }
+            else {
                 // If we're not collided and alteredMovement is null, then we're in the air.
                 final int newTicksPartOfGround;
-                if (oldEntityShipMovementData.getLastTouchedShip() != null) {
+                if (entityShipMovementData.getLastTouchedShip() != null) {
                     newTicksPartOfGround = 0;
-                } else {
-                    newTicksPartOfGround = oldEntityShipMovementData.getTicksPartOfGround() + 1;
                 }
-                final EntityShipMovementData newEntityShipMovementData = oldEntityShipMovementData
-                        .withTicksSinceTouchedShip(oldEntityShipMovementData.getTicksSinceTouchedShip() + 1)
-                        .withTicksPartOfGround(newTicksPartOfGround);
-                entityShipDraggable.setEntityShipMovementData(newEntityShipMovementData);
+                else {
+                    newTicksPartOfGround = entityShipMovementData.getTicksPartOfGround() + 1;
+                }
+                entityShipMovementData.setTicksSinceTouchedShip(
+                        entityShipMovementData.getTicksSinceTouchedShip() + 1
+                );
+                entityShipMovementData.setTicksPartOfGround(newTicksPartOfGround);
+                entityShipMovementData.setStandingOnShip(false);
             }
         }
     }

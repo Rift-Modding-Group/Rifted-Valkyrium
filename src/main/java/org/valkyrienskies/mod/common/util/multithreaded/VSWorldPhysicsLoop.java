@@ -2,6 +2,7 @@ package org.valkyrienskies.mod.common.util.multithreaded;
 
 import com.google.common.collect.ImmutableList;
 import net.minecraft.client.Minecraft;
+import net.minecraft.entity.Entity;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.world.World;
@@ -11,10 +12,13 @@ import org.jetbrains.annotations.NotNull;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
+import org.valkyrienskies.mod.common.physics.AbstractPhysicsBackend;
+import org.valkyrienskies.mod.common.physics.PhysicsEntityMovementQueue;
 import org.valkyrienskies.mod.common.physics.physx.PhysXWorldBackend;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.network.ShipTransformUpdateMessage;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
+import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 
 import java.util.*;
@@ -30,10 +34,11 @@ public class VSWorldPhysicsLoop implements Runnable {
     private static int worldPhysicsLoopId = 0;
     @NotNull
     private final World hostWorld;
-    //the heart and soul of the physics used by this mod
-    //todo: replace with an abstract class that offers a common physics backend for multiple physics engines... hmmm...
+    // The selected world physics engine.
     @NotNull
-    private final PhysXWorldBackend physXBackend;
+    private final AbstractPhysicsBackend physicsBackend;
+    @NotNull
+    private final PhysicsEntityMovementQueue physicsEntityMovementQueue;
     private long lastPacketSendTime = 0;
     // The ships we will be ticking physics for every tick, and sending those
     // updates to players.
@@ -52,7 +57,8 @@ public class VSWorldPhysicsLoop implements Runnable {
         this.name = "VS World Physics Task " + worldPhysicsLoopId;
         worldPhysicsLoopId++;
         this.hostWorld = host;
-        this.physXBackend = new PhysXWorldBackend();
+        this.physicsEntityMovementQueue = new PhysicsEntityMovementQueue();
+        this.physicsBackend = new PhysXWorldBackend(this.physicsEntityMovementQueue);
         this.threadRunning = true;
         this.latestPhysicsTickTimes = new ConcurrentLinkedQueue<>();
         this.taskQueue = new ConcurrentLinkedQueue<>();
@@ -133,7 +139,7 @@ public class VSWorldPhysicsLoop implements Runnable {
             }
         }
         finally {
-            this.physXBackend.close();
+            this.physicsBackend.close();
             // If we get to this point of run(), then we are about to return and this thread
             // will terminate soon.
             ValkyrienSkiesMod.LOGGER.trace(this.name + " killed");
@@ -161,7 +167,11 @@ public class VSWorldPhysicsLoop implements Runnable {
         }
 
         // Finally, actually process the physics tick
-        this.physXBackend.update(this.hostWorld, physicsEntitiesToDoPhysics, delta);
+        this.physicsBackend.update(
+                this.hostWorld,
+                physicsEntitiesToDoPhysics,
+                delta
+        );
 
         // Send ship position update packets around 20 times a second
         final long currentTimeMillis = System.currentTimeMillis();
@@ -214,6 +224,27 @@ public class VSWorldPhysicsLoop implements Runnable {
         // If we don't have enough data to get an average, just assume its the ideal
         // tick time.
         return getNsPerTick();
+    }
+
+    public void applyPendingPhysicsEntityMovements() {
+        this.physicsEntityMovementQueue.applyPendingMovements();
+    }
+
+    public void carrySupportedPhysicsEntities(@NotNull IPhysObjectWorld physObjectWorld) {
+        this.physicsEntityMovementQueue.carrySupportedEntities(physObjectWorld);
+    }
+
+    public void clearPhysicsEntityMovements() {
+        this.physicsEntityMovementQueue.clear();
+    }
+
+    @NotNull
+    public PhysicsEntityMovementQueue.MovementMarker capturePhysicsEntityMovementMarker(@NotNull Entity entity) {
+        return this.physicsEntityMovementQueue.captureMovementMarker(entity);
+    }
+
+    public boolean isPhysicsEntitySupportedByShip(@NotNull Entity entity, @NotNull UUID shipUuid) {
+        return this.physicsEntityMovementQueue.isSupportedByShip(entity, shipUuid);
     }
 
     public String getName() {

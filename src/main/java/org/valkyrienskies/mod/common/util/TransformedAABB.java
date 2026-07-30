@@ -12,7 +12,7 @@ import javax.annotation.Nullable;
 
 /**
  * Utility representation of an AABB after an optional transform. This is not a physics collider;
- * PhysX owns ship/world/entity collision. It remains for rendering bounds and player-only vanilla
+ * The active backend owns ship/world/entity collision. This remains for rendering bounds and player-only vanilla
  * movement support.
  */
 public class TransformedAABB {

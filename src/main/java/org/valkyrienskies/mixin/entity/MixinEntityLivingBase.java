@@ -15,7 +15,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMount;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
-import org.valkyrienskies.mod.common.entity.EntityShipMovementData;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import valkyrienwarfare.api.TransformType;
@@ -73,7 +72,7 @@ public class MixinEntityLivingBase {
         }
         else {
             if (thisEntity.getRidingEntity() != this.clientShipAnchoredDismountEntity) {
-                this.applyShipAnchoredDismount(thisEntity, this.clientShipAnchoredDismountEntity, this.clientShipAnchoredDismountPos);
+                this.applyShipAnchoredDismount(thisEntity, this.clientShipAnchoredDismountPos);
             }
             this.clearClientShipAnchoredDismount();
         }
@@ -89,7 +88,7 @@ public class MixinEntityLivingBase {
         if (dismountPos == null) return;
 
         EntityLivingBase thisEntity = (EntityLivingBase) (Object) this;
-        this.applyShipAnchoredDismount(thisEntity, mountedEntity, dismountPos);
+        this.applyShipAnchoredDismount(thisEntity, dismountPos);
         ci.cancel();
     }
 
@@ -139,7 +138,7 @@ public class MixinEntityLivingBase {
         return localAnchorBlock.getY() + collisionBox.maxY + 0.001D;
     }
 
-    private void applyShipAnchoredDismount(@NotNull EntityLivingBase thisEntity, @NotNull Entity mountedEntity, @NotNull Vector3d dismountPos) {
+    private void applyShipAnchoredDismount(@NotNull EntityLivingBase thisEntity, @NotNull Vector3d dismountPos) {
         thisEntity.motionX = 0.0D;
         thisEntity.motionY = 0.0D;
         thisEntity.motionZ = 0.0D;
@@ -148,20 +147,5 @@ public class MixinEntityLivingBase {
         thisEntity.prevPosX = thisEntity.lastTickPosX = dismountPos.x;
         thisEntity.prevPosY = thisEntity.lastTickPosY = dismountPos.y;
         thisEntity.prevPosZ = thisEntity.lastTickPosZ = dismountPos.z;
-
-        IEntityShipDraggable draggable = thisEntity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
-        if (draggable != null) {
-            IShipAnchoredMount anchoredMount = mountedEntity.getCapability(VSCapabilityRegistry.VS_SHIP_ANCHORED_MOUNT, null);
-            Optional<PhysicsObject> mountedShip = anchoredMount == null ?
-                    Optional.empty() : ValkyrienUtils.getPhysoManagingBlock(mountedEntity.world, anchoredMount.getLocalAnchorBlock());
-
-            draggable.setEntityShipMovementData(new EntityShipMovementData(
-                    mountedShip.map(PhysicsObject::getShipData).orElse(null),
-                    0,
-                    0,
-                    new Vector3d(),
-                    0
-            ));
-        }
     }
 }

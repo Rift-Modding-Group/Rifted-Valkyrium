@@ -3,7 +3,6 @@ package org.valkyrienskies.mod.common.network;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.network.PacketBuffer;
 import net.minecraft.util.IThreadListener;
 import net.minecraft.world.World;
@@ -43,7 +42,7 @@ public class MessageClearEntityShipRenderPosition implements IMessage {
                 if (world == null) return;
 
                 final Entity entity = world.getEntityByID(message.entityId);
-                if (entity != null && !(entity instanceof EntityPlayer)) {
+                if (entity != null && entity != Minecraft.getMinecraft().player) {
                     EntityRenderPositionManager.removeShipLocalRenderData(entity);
                 }
             });

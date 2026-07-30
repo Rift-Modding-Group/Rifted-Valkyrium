@@ -1,6 +1,5 @@
 package org.valkyrienskies.mixin.client.entity;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.client.network.NetHandlerPlayClient;
 import net.minecraft.util.math.MathHelper;
@@ -37,7 +36,7 @@ public abstract class MixinEntityPlayerSP {
         // If the player is mounted to a ship then we must rotate the player look vector.
         final EntityShipMountData mountData = ValkyrienUtils.getMountedShipAndPos(thisPlayer);
         if (mountData.isMounted()) {
-            return mountData.getMountedShip()
+            return mountData.mountedShip()
                     .getShipTransformationManager()
                     .getRenderTransform()
                     .rotate(playerLook, TransformType.SUBSPACE_TO_GLOBAL);

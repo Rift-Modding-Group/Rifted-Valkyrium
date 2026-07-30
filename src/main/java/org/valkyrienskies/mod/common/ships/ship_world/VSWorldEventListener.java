@@ -18,7 +18,7 @@ import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMount;
 import org.valkyrienskies.mod.common.ships.ship_transform.CoordinateSpaceType;
 import org.valkyrienskies.mod.common.entity.EntityMountable;
-import org.valkyrienskies.mod.common.physics.BlockSectionList;
+import org.valkyrienskies.mod.common.physics.PhysicsCollideWith;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import valkyrienwarfare.api.TransformType;
 
@@ -37,7 +37,7 @@ public class VSWorldEventListener implements IWorldEventListener {
     @Override
     public void notifyBlockUpdate(World worldIn, BlockPos pos, IBlockState oldState, IBlockState newState, int flags) {
         if (worldIn.isRemote || oldState == newState || oldState.equals(newState)) return;
-        BlockSectionList.invalidateBlockSectionAt(worldIn, pos);
+        PhysicsCollideWith.invalidateBlockSectionAt(worldIn, pos);
     }
 
     @Override

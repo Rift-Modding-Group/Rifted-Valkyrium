@@ -12,8 +12,6 @@ import net.minecraft.world.World;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
-import org.valkyrienskies.mod.common.ships.QueryableShipData;
-import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.interpolation.ITransformInterpolator;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
@@ -95,6 +93,7 @@ public class ShipTransformUpdateMessage implements IMessage {
             }
             shipTransforms.put(shipID, new Tuple<>(shipTransform, axisAlignedBB));
         }
+
         dimensionID = packetBuffer.readInt();
     }
 
@@ -130,6 +129,7 @@ public class ShipTransformUpdateMessage implements IMessage {
                 e.printStackTrace();
             }
         }
+
         packetBuffer.writeInt(dimensionID);
     }
 
@@ -144,23 +144,26 @@ public class ShipTransformUpdateMessage implements IMessage {
                 @Override
                 public void run() {
                     World world = Minecraft.getMinecraft().world;
-                    QueryableShipData worldData = QueryableShipData.get(world);
+                    if (world == null
+                            || world.provider.getDimension() != message.dimensionID) {
+                        return;
+                    }
+                    IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(world);
+                    if (physObjectWorld == null) return;
 
                     for (Map.Entry<UUID, Tuple<ShipTransform, AxisAlignedBB>> transformUpdate : message.shipTransforms.entrySet()) {
                         final UUID shipID = transformUpdate.getKey();
                         final ShipTransform shipTransform = transformUpdate.getValue().getFirst();
                         final AxisAlignedBB shipBB = transformUpdate.getValue().getSecond();
 
-                        IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(world);
-                        if (physObjectWorld == null) return;
-
                         final PhysicsObject physicsObject = physObjectWorld.getPhysObjectFromUUID(shipID);
-                        if (physicsObject == null) return;
+                        if (physicsObject == null) continue;
 
                         // Do not update the transform in ShipData, that will be done by PhysicsObject.tick()
                         ITransformInterpolator interpolator = physicsObject.getTransformInterpolator();
                         interpolator.onNewTransformPacket(shipTransform, shipBB);
                     }
+
                 }
             });
 

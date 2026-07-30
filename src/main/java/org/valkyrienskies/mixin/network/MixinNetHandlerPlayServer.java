@@ -6,7 +6,6 @@ import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.network.NetHandlerPlayServer;
 import net.minecraft.network.play.client.CPacketPlayer;
 import net.minecraft.network.play.server.SPacketPlayerPosLook;
-import net.minecraft.util.Tuple;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.TextComponentString;
@@ -27,8 +26,6 @@ import org.valkyrienskies.mod.common.ships.QueryableShipData;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.chunk_claims.ShipChunkAllocator;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
-import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
-import org.valkyrienskies.mod.common.util.VSMath;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import valkyrienwarfare.api.TransformType;
 
@@ -166,12 +163,12 @@ public abstract class MixinNetHandlerPlayServer {
                 if (entityShipDraggable != null) {
                     EntityShipMovementData shipMovementData = entityShipDraggable.getEntityShipMovementData();
                     if (shipMovementData != null) {
-                        entityShipDraggable.setEntityShipMovementData(
-                                shipMovementData.withLastTouchedShip(null)
-                                        .withAddedLinearVelocity(new Vector3d())
-                                        .withAddedYawVelocity(0)
-                                        .withTicksPartOfGround(addedPlayerMovementData.getTicksPartOfGround())
-                                        .withTicksSinceTouchedShip(ticksSinceTouchedLastShip)
+                        shipMovementData.setLastTouchedShip(null);
+                        shipMovementData.setTicksPartOfGround(
+                                addedPlayerMovementData.getTicksPartOfGround()
+                        );
+                        shipMovementData.setTicksSinceTouchedShip(
+                                ticksSinceTouchedLastShip
                         );
                     }
                 }
@@ -180,7 +177,6 @@ public abstract class MixinNetHandlerPlayServer {
 
             final int ticksPartOfGround = addedPlayerMovementData.getTicksPartOfGround();
             final Vector3d playerPosInShip = new Vector3d(addedPlayerMovementData.getPlayerPosInShip());
-            final Vector3d playerLookInShip = new Vector3d(addedPlayerMovementData.getPlayerLookInShip());
 
             ShipData lastTouchedShip = null;
             if (lastTouchedShipId != null) {
@@ -189,18 +185,8 @@ public abstract class MixinNetHandlerPlayServer {
                 if (shipDataOptional.isPresent()) {
                     lastTouchedShip = shipDataOptional.get();
 
-                    final PhysicsObject shipObject = ValkyrienUtils.getServerShipManager(world).getPhysObjectFromUUID(lastTouchedShip.getUuid());
-
-                    if (shipObject != null) {
-                        if (shipObject.getTicksSinceShipTeleport() > PhysicsObject.TICKS_SINCE_TELEPORT_TO_START_DRAGGING) {
-                            final ShipTransform shipTransform = lastTouchedShip.getShipTransform();
-                            shipTransform.transformPosition(playerPosInShip, TransformType.SUBSPACE_TO_GLOBAL);
-                            shipTransform.transformDirection(playerLookInShip, TransformType.SUBSPACE_TO_GLOBAL);
-                        } else {
-                            // Don't move the player relative to the ship until the TicksSinceShipTeleport timer expires.
-                            playerPosInShip.set(player.posX, player.posY, player.posZ);
-                        }
-                    }
+                    final ShipTransform shipTransform = lastTouchedShip.getShipTransform();
+                    shipTransform.transformPosition(playerPosInShip, TransformType.SUBSPACE_TO_GLOBAL);
                 } else {
                     // Rare case, just ignore this
                     // info.cancel();
@@ -208,20 +194,14 @@ public abstract class MixinNetHandlerPlayServer {
                 }
             }
 
-            // Get the player pitch/yaw from the look vector
-            final Tuple<Double, Double> pitchYawTuple = VSMath.getPitchYawFromVector(playerLookInShip);
-            final double playerPitchInGlobal = pitchYawTuple.getFirst();
-            final double playerYawInGlobal = pitchYawTuple.getSecond();
-
             if (lastTouchedShip != null) {
                 packetPlayer.moving = true;
 
-                // Then update the packet values to match the ones above.
+                // Convert only position. Vanilla packet yaw and pitch remain the
+                // sole source of player orientation.
                 packetPlayer.x = playerPosInShip.x();
                 packetPlayer.y = playerPosInShip.y();
                 packetPlayer.z = playerPosInShip.z();
-                packetPlayer.yaw = (float) playerYawInGlobal;
-                packetPlayer.pitch = (float) playerPitchInGlobal;
 
                 // Set the player motion values to tell the NetHandlerPlayServer that the player is allowed to move this fast.
                 this.player.motionX = packetPlayer.x - this.firstGoodX;
@@ -229,17 +209,15 @@ public abstract class MixinNetHandlerPlayServer {
                 this.player.motionZ = packetPlayer.z - this.firstGoodZ;
             }
 
-            // Update the player draggable
+            // Update player ship-contact metadata.
             IEntityShipDraggable entityShipDraggable = this.player.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
             if (entityShipDraggable != null) {
                 EntityShipMovementData shipMovementData = entityShipDraggable.getEntityShipMovementData();
                 if (shipMovementData != null) {
-                    entityShipDraggable.setEntityShipMovementData(
-                            shipMovementData.withLastTouchedShip(lastTouchedShip)
-                                    .withAddedLinearVelocity(new Vector3d())
-                                    .withAddedYawVelocity(0)
-                                    .withTicksPartOfGround(ticksPartOfGround)
-                                    .withTicksSinceTouchedShip(ticksSinceTouchedLastShip)
+                    shipMovementData.setLastTouchedShip(lastTouchedShip);
+                    shipMovementData.setTicksPartOfGround(ticksPartOfGround);
+                    shipMovementData.setTicksSinceTouchedShip(
+                            ticksSinceTouchedLastShip
                     );
                 }
             }

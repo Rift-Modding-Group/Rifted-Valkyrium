@@ -6,6 +6,7 @@ import net.minecraft.network.play.INetHandlerPlayServer;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.entity_backup.ICapabilityEntityBackup;
+import org.valkyrienskies.mod.common.entity.EntityMountable;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import valkyrienwarfare.api.TransformType;
 
@@ -55,7 +56,13 @@ public interface ITransformablePacket {
             EntityPlayerMP player = serverHandler.player;
             // If we made a backup in doPreProcessing(), then restore from that backup.
             ICapabilityEntityBackup entityBackup = player.getCapability(VSCapabilityRegistry.VS_ENTITY_BACKUP, null);
-            if (entityBackup.hasBackupPosition()) entityBackup.restoreEntityToBackup(player);
+            if (entityBackup != null && entityBackup.hasBackupPosition()) entityBackup.restoreEntityToBackup(player);
+            if (player.getRidingEntity() instanceof EntityMountable mountable) {
+                // Chair activation runs while the packet temporarily has the player in
+                // ship coordinates. Restore directly to the newly created global mount
+                // instead of waiting for the mount's first entity tick.
+                mountable.updateMountPositionAndPassengers();
+            }
         }
     }
 

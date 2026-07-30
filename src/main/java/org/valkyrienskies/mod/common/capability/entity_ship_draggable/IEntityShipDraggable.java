@@ -9,8 +9,6 @@ public interface IEntityShipDraggable {
     @Nullable
     EntityShipMovementData getEntityShipMovementData();
 
-    void setEntityShipMovementData(@Nullable EntityShipMovementData entityShipMovementData);
-
     boolean getInAirPocket();
 
     void setTicksAirPocket(int ticksInAirPocket);

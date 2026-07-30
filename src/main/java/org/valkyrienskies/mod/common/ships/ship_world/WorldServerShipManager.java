@@ -3,6 +3,7 @@ package org.valkyrienskies.mod.common.ships.ship_world;
 import com.google.common.collect.ImmutableList;
 import gnu.trove.iterator.TIntIterator;
 import net.minecraft.block.state.IBlockState;
+import net.minecraft.entity.Entity;
 import net.minecraft.init.Blocks;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntity;
@@ -16,20 +17,29 @@ import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 import net.minecraft.world.gen.ChunkProviderServer;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
+import org.joml.Vector3d;
 import org.jspecify.annotations.NonNull;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
+import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
+import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMount;
 import org.valkyrienskies.mod.common.config.VSConfig;
+import org.valkyrienskies.mod.common.entity.EntityMountable;
+import org.valkyrienskies.mod.common.network.MessageClearEntityShipRenderPosition;
+import org.valkyrienskies.mod.common.network.MessageEntityShipRenderPosition;
 import org.valkyrienskies.mod.common.physics.BlockPhysicsDetails;
 import org.valkyrienskies.mod.common.ships.QueryableShipData;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.block_relocation.BlockFinder;
 import org.valkyrienskies.mod.common.ships.block_relocation.IRelocationAwareTile;
 import org.valkyrienskies.mod.common.ships.block_relocation.SpatialDetector;
+import org.valkyrienskies.mod.common.ships.entity_interaction.EntityShipSupport;
 import org.valkyrienskies.mod.common.ships.physics_data.BasicCenterOfMassProvider;
 import org.valkyrienskies.mod.common.ships.physics_data.IPhysicsObjectCenterOfMassProvider;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
+import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import org.valkyrienskies.mod.common.util.multithreaded.CalledFromWrongThreadException;
 import org.valkyrienskies.mod.common.util.multithreaded.VSWorldPhysicsLoop;
+import valkyrienwarfare.api.TransformType;
 
 import javax.annotation.Nonnull;
 import java.util.*;
@@ -45,6 +55,7 @@ public class WorldServerShipManager implements IPhysObjectWorld {
     private final LinkedHashSet<UUID> loadQueue, unloadQueue, backgroundLoadQueue;
     private final Set<UUID> loadingInBackground;
     private ImmutableList<PhysicsObject> threadSafeLoadedShips;
+    private final Set<Entity> lastShipLocalRenderSync = new HashSet<>();
 
     public WorldServerShipManager(World world) {
         this.world = (WorldServer) world;
@@ -79,6 +90,7 @@ public class WorldServerShipManager implements IPhysObjectWorld {
         catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
+        this.physicsLoop.clearPhysicsEntityMovements();
     }
 
     @Override
@@ -101,7 +113,10 @@ public class WorldServerShipManager implements IPhysObjectWorld {
     }
 
     public void tick() {
-        // First destroy any ships that want to be destroyed (copy blocks from ship to world, and then unload)
+        // Drain collision response accumulated while entities ticked.
+        this.physicsLoop.applyPendingPhysicsEntityMovements();
+
+        // Destroy any ships that want to be destroyed (copy blocks from ship to world, and then unload)
         Iterator<Map.Entry<UUID, PhysicsObject>> iterator = loadedShips.entrySet().iterator();
         while (iterator.hasNext()) {
             PhysicsObject physicsObject = iterator.next().getValue();
@@ -114,25 +129,29 @@ public class WorldServerShipManager implements IPhysObjectWorld {
             }
         }
 
-        // Then execute queued ship spawn operations
-        spawnNewShips();
+        // Execute queued ship spawn operations
+        this.spawnNewShips();
 
-        // Then determine which ships to load and unload
-        loadingController.determineLoadAndUnload();
+        // Determine which ships to load and unload
+        this.loadingController.determineLoadAndUnload();
 
-        // Then execute queued ship load and unload operations
-        loadAndUnloadShips();
+        // Execute queued ship load and unload operations
+        this.loadAndUnloadShips();
 
-        // Then tick all the loaded ships
-        for (PhysicsObject ship : getAllLoadedPhysObj()) {
-            ship.onTick();
-        }
+        // Tick all the loaded ships
+        for (PhysicsObject ship : getAllLoadedPhysObj()) ship.onTick();
 
         // Finally, send the players updates about the ships.
-        loadingController.sendUpdatesToPlayers();
+        this.loadingController.sendUpdatesToPlayers();
 
         // And then update the thread safe ship list.
         this.threadSafeLoadedShips = ImmutableList.copyOf(loadedShips.values());
+
+        // And at last... carry supported entities
+        this.physicsLoop.carrySupportedPhysicsEntities(this);
+
+        // Next deal with chair entities
+        this.fixChairEntities();
     }
 
     private void spawnNewShips() {
@@ -507,7 +526,7 @@ public class WorldServerShipManager implements IPhysObjectWorld {
      */
     public void queueShipLoadBackground(@Nonnull UUID shipID) {
         this.enforceGameThread();
-        backgroundLoadQueue.add(shipID);
+        this.backgroundLoadQueue.add(shipID);
     }
 
     /**
@@ -525,6 +544,61 @@ public class WorldServerShipManager implements IPhysObjectWorld {
             backgroundChunks.addAll(shipDataOptional.get().getChunkClaim().getClaimedChunks());
         }
         return backgroundChunks;
+    }
+
+    /**
+     * Used to force entities meant to be fixed to ships, such as chair entities from
+     * other mods, to be fixed to the ship
+     * */
+    private void fixChairEntities() {
+        for (int i = 0; i < this.world.loadedEntityList.size(); i++) {
+            Entity entity = this.world.loadedEntityList.get(i);
+
+            //---exclusively for passenger chairs---
+            if (entity instanceof EntityMountable mountable) {
+                mountable.updateMountPositionAndPassengers();
+                continue;
+            }
+
+            //---for modded chairs---
+            ShipData mountedShip = null;
+            Vector3d localPosition = null;
+            IShipAnchoredMount anchoredMount = entity.getCapability(VSCapabilityRegistry.VS_SHIP_ANCHORED_MOUNT, null);
+            if (anchoredMount != null && (anchoredMount.isAnchoredToShip() || anchoredMount.tryAnchorMount(entity))) {
+                Optional<PhysicsObject> mountedPhysicsObject = ValkyrienUtils.getPhysoManagingBlock(entity.world, anchoredMount.getLocalAnchorBlock());
+                if (mountedPhysicsObject.isPresent()) {
+                    mountedShip = mountedPhysicsObject.get().getShipData();
+                    localPosition = new Vector3d(
+                            anchoredMount.getLocalMountPos().x,
+                            anchoredMount.getLocalMountPos().y,
+                            anchoredMount.getLocalMountPos().z
+                    );
+                }
+            }
+
+            if (mountedShip == null) {
+                for (PhysicsObject physicsObject : ValkyrienUtils.getPhysosLoadedInWorld(entity.world)) {
+                    if (!EntityShipSupport.isActivelySupportedByShip(entity, physicsObject.getShipData())) continue;
+
+                    mountedShip = physicsObject.getShipData();
+                    localPosition = new Vector3d(entity.posX, entity.posY, entity.posZ);
+                    physicsObject.getShipTransformationManager()
+                            .getCurrentTickTransform()
+                            .transformPosition(localPosition, TransformType.GLOBAL_TO_SUBSPACE);
+                    break;
+                }
+            }
+
+            if (mountedShip == null && this.lastShipLocalRenderSync.remove(entity)) {
+                MessageClearEntityShipRenderPosition message = new MessageClearEntityShipRenderPosition(entity);
+                ValkyrienSkiesMod.physWrapperNetwork.sendToAllTracking(message, entity);
+            }
+            else if (mountedShip != null) {
+                this.lastShipLocalRenderSync.add(entity);
+                MessageEntityShipRenderPosition message = new MessageEntityShipRenderPosition(entity, mountedShip, localPosition);
+                ValkyrienSkiesMod.physWrapperNetwork.sendToAllTracking(message, entity);
+            }
+        }
     }
 
     @Override

@@ -17,18 +17,14 @@ public class PlayerMovementData {
     private final int ticksPartOfGround;
     @Nonnull
     private final Vector3dc playerPosInShip;
-    @Nonnull
-    private final Vector3dc playerLookInShip;
     private final boolean onGround;
 
     public PlayerMovementData(@Nullable UUID lastTouchedShipId, int ticksSinceTouchedLastShip,
-        int ticksPartOfGround, @Nonnull Vector3dc playerPosInShip,
-        @Nonnull Vector3dc playerLookInShip, boolean onGround) {
+        int ticksPartOfGround, @Nonnull Vector3dc playerPosInShip, boolean onGround) {
         this.lastTouchedShipId = lastTouchedShipId;
         this.ticksSinceTouchedLastShip = ticksSinceTouchedLastShip;
         this.ticksPartOfGround = ticksPartOfGround;
         this.playerPosInShip = Objects.requireNonNull(playerPosInShip, "playerPosInShip");
-        this.playerLookInShip = Objects.requireNonNull(playerLookInShip, "playerLookInShip");
         this.onGround = onGround;
     }
 
@@ -41,14 +37,12 @@ public class PlayerMovementData {
         final int ticksSinceTouchedLastShip = packetBuffer.readInt();
         final int ticksPartOfGround = packetBuffer.readInt();
         final Vector3dc playerPosInShip = JOML.readFromByteBuf(packetBuffer);
-        final Vector3dc playerLookInShip = JOML.readFromByteBuf(packetBuffer);
         final boolean onGround = packetBuffer.readBoolean();
         return new PlayerMovementData(
                 lastTouchedShipId,
                 ticksSinceTouchedLastShip,
                 ticksPartOfGround,
                 playerPosInShip,
-                playerLookInShip,
                 onGround
         );
     }
@@ -64,7 +58,6 @@ public class PlayerMovementData {
         packetBuffer.writeInt(ticksSinceTouchedLastShip);
         packetBuffer.writeInt(ticksPartOfGround);
         JOML.writeToByteBuf(playerPosInShip, packetBuffer);
-        JOML.writeToByteBuf(playerLookInShip, packetBuffer);
         packetBuffer.writeBoolean(onGround);
     }
 
@@ -84,11 +77,6 @@ public class PlayerMovementData {
     @Nonnull
     public Vector3dc getPlayerPosInShip() {
         return playerPosInShip;
-    }
-
-    @Nonnull
-    public Vector3dc getPlayerLookInShip() {
-        return playerLookInShip;
     }
 
     public boolean isOnGround() {

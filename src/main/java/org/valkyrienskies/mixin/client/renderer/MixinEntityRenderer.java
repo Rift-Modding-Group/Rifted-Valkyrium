@@ -55,7 +55,7 @@ public abstract class MixinEntityRenderer {
     @Inject(method = "orientCamera", at = @At("HEAD"), cancellable = true)
     private void orientCamera(float partialTicks, CallbackInfo ci) {
         EntityShipMountData mountData = ValkyrienUtils.getMountedShipAndPos(mc.getRenderViewEntity());
-        if (mountData.getMountedShip() == null) {
+        if (mountData.mountedShip() == null) {
             // Do nothing. We don't want to mess with camera code unless we have to.
             return;
         } else {
@@ -75,13 +75,13 @@ public abstract class MixinEntityRenderer {
         double d2 = entity.prevPosZ + (entity.posZ - entity.prevPosZ) * partialTicks;
 
         // Probably overkill, but this should 100% fix the crash in issue #78
-        if (mountData.isMounted() && mountData.getMountedShip()
+        if (mountData.isMounted() && mountData.mountedShip()
                 .getShipRenderer().offsetPos != null) {
-            final ShipTransform renderTransform = mountData.getMountedShip().getShipTransformationManager().getRenderTransform();
+            final ShipTransform renderTransform = mountData.mountedShip().getShipTransformationManager().getRenderTransform();
 
             renderTransform.transformDirection(eyeVector, TransformType.SUBSPACE_TO_GLOBAL);
 
-            Vector3d playerPosition = JOML.convert(mountData.getMountPos());
+            Vector3d playerPosition = JOML.convert(mountData.mountPos());
 
             renderTransform.transformPosition(playerPosition, TransformType.SUBSPACE_TO_GLOBAL);
 
@@ -101,7 +101,7 @@ public abstract class MixinEntityRenderer {
             if (!this.mc.gameSettings.debugCamEnable) {
                 //VS code starts here
                 if (mountData.isMounted()) {
-                    Vector3d playerPosInLocal = JOML.convert(mountData.getMountPos());
+                    Vector3d playerPosInLocal = JOML.convert(mountData.mountPos());
 
                     playerPosInLocal.sub(.5D, .6875, .5);
                     playerPosInLocal.round();
@@ -216,8 +216,8 @@ public abstract class MixinEntityRenderer {
             GlStateManager.rotate(event.getYaw(), 0.0F, 1.0F, 0.0F);
         }
 
-        if (mountData.isMounted() && mountData.getMountedShip().getShipRenderer().offsetPos != null) {
-            final ShipTransform renderTransform = mountData.getMountedShip().getShipTransformationManager().getRenderTransform();
+        if (mountData.isMounted() && mountData.mountedShip().getShipRenderer().offsetPos != null) {
+            final ShipTransform renderTransform = mountData.mountedShip().getShipTransformationManager().getRenderTransform();
 
             Quaterniond orientationQuat = renderTransform.rotationQuaternion(TransformType.SUBSPACE_TO_GLOBAL);
 

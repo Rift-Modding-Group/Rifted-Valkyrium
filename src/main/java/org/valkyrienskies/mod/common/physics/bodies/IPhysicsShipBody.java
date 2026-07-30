@@ -1,8 +1,8 @@
-package org.valkyrienskies.mod.common.physics;
+package org.valkyrienskies.mod.common.physics.bodies;
 
 /**
  * Implement this on anything that handles physics for ships.
- * Will be developed more once we got more physics engines.
+ * idk what to put here xd
  * */
 public interface IPhysicsShipBody {
 }

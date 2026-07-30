@@ -74,9 +74,6 @@ public class MoveBlocks {
 
             try {
                 world.setTileEntity(newPos, newInstance);
-                if (physicsObject != null) {
-                    physicsObject.onSetTileEntity(newPos, newInstance);
-                }
                 newInstance.markDirty();
             } catch (Exception e) {
                 e.printStackTrace();

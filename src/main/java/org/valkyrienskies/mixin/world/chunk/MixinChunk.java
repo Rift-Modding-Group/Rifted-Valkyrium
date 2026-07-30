@@ -42,21 +42,6 @@ public abstract class MixinChunk {
     @Shadow
     public abstract IBlockState getBlockState(BlockPos pos);
 
-    @Inject(method = "addTileEntity(Lnet/minecraft/util/math/BlockPos;Lnet/minecraft/tileentity/TileEntity;)V", at = @At("TAIL"))
-    private void post_addTileEntity(BlockPos pos, TileEntity tileEntityIn,
-        CallbackInfo callbackInfo) {
-        if (ValkyrienUtils.notInFakeWorldBlacklist(world)) {
-            ValkyrienUtils.getPhysoManagingBlock(world, pos).ifPresent(physo -> physo.onSetTileEntity(pos, tileEntityIn));
-        }
-    }
-
-    @Inject(method = "removeTileEntity(Lnet/minecraft/util/math/BlockPos;)V", at = @At("TAIL"))
-    private void post_removeTileEntity(BlockPos pos, CallbackInfo callbackInfo) {
-        if (ValkyrienUtils.notInFakeWorldBlacklist(world)) {
-            ValkyrienUtils.getPhysoManagingBlock(world, pos).ifPresent(physo -> physo.onRemoveTileEntity(pos));
-        }
-    }
-
     /**
      * If this chunk is part of a ship, then tell that ship about the IBlockState update.
      *

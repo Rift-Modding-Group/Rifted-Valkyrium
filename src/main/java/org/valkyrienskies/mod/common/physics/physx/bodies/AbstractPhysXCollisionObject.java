@@ -1,11 +1,9 @@
-package org.valkyrienskies.mod.common.physics.physx.collision;
+package org.valkyrienskies.mod.common.physics.physx.bodies;
 
 import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.world.World;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.valkyrienskies.mod.common.physics.physx.PhysXActorUtil;
-import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import physx.common.PxQuat;
 import physx.common.PxTransform;
 import physx.common.PxVec3;
@@ -16,9 +14,6 @@ import physx.physics.PxRigidActor;
 import physx.physics.PxScene;
 import physx.physics.PxShape;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -29,7 +24,7 @@ public abstract class AbstractPhysXCollisionObject {
     protected final PxPhysics physics;
     @NotNull
     protected final PxScene scene;
-    private boolean released;
+    protected boolean released;
 
     protected AbstractPhysXCollisionObject(@NotNull PxPhysics physics, @NotNull PxScene scene) {
         this.physics = Objects.requireNonNull(physics, "physics");

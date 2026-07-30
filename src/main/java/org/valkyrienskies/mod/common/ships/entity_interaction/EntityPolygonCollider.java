@@ -1,77 +1,83 @@
 package org.valkyrienskies.mod.common.ships.entity_interaction;
 
+import org.jetbrains.annotations.NotNull;
 import org.joml.Vector3dc;
 import org.valkyrienskies.mod.common.util.TransformedAABB;
 
 /**
  * Player-only swept AABB separator used by vanilla movement injection. Ship/world/entity physics
- * collision is handled by PhysX; this exists only because players are intentionally not dynamic
- * PhysX actors.
+ * collision is handled by the active physics backend; this exists only because
+ * players are intentionally not dynamic physics actors.
  */
-class EntityPolygonCollider {
-
+public class EntityPolygonCollider {
+    @NotNull
     private final Vector3dc[] collisionAxes;
+    @NotNull
     private final EntityCollisionObject[] collisions;
+    @NotNull
     private final TransformedAABB entity;
+    @NotNull
     private final TransformedAABB block;
+    @NotNull
     private final Vector3dc entityVelocity;
     private boolean separated = false;
     private int minDistanceIndex;
     private boolean originallySeparated;
 
-    EntityPolygonCollider(TransformedAABB movable, TransformedAABB stationary, Vector3dc[] axes, Vector3dc entityVel) {
-        collisionAxes = axes;
-        entity = movable;
-        block = stationary;
-        entityVelocity = entityVel;
-        collisions = new EntityCollisionObject[collisionAxes.length];
+    public EntityPolygonCollider(@NotNull TransformedAABB movable, @NotNull TransformedAABB stationary, @NotNull Vector3dc[] axes, @NotNull Vector3dc entityVel) {
+        this.collisionAxes = axes;
+        this.entity = movable;
+        this.block = stationary;
+        this.entityVelocity = entityVel;
+        this.collisions = new EntityCollisionObject[this.collisionAxes.length];
         processData();
     }
 
-    void processData() {
-        separated = false;
+    public void processData() {
+        this.separated = false;
         for (int i = 0; i < collisions.length; i++) {
-            if (!separated) {
+            if (!this.separated) {
                 collisions[i] = new EntityCollisionObject(entity, block, collisionAxes[i], entityVelocity);
                 if (collisions[i].arePolygonsSeperated()) {
-                    separated = true;
+                    this.separated = true;
                     break;
                 }
-                if (!collisions[i].werePolygonsInitiallyColliding()) {
-                    originallySeparated = true;
+                if (!this.collisions[i].werePolygonsInitiallyColliding()) {
+                    this.originallySeparated = true;
                 }
             }
         }
-        if (!separated) {
+        if (!this.separated) {
             double minDistance = 420;
-            for (int i = 0; i < collisions.length; i++) {
-                if (originallySeparated) {
+            for (int i = 0; i < this.collisions.length; i++) {
+                if (this.originallySeparated) {
                     double normalizedDistance = Math.abs((collisions[i].getCollisionPenetrationDistance() - collisions[i].getVelDot()) / collisions[i].getVelDot());
                     if (normalizedDistance < minDistance && !collisions[i].werePolygonsInitiallyColliding()) {
-                        minDistanceIndex = i;
+                        this.minDistanceIndex = i;
                         minDistance = normalizedDistance;
                     }
-                } else if (Math.abs(collisions[i].getCollisionPenetrationDistance()) < minDistance) {
-                    minDistanceIndex = i;
+                }
+                else if (Math.abs(collisions[i].getCollisionPenetrationDistance()) < minDistance) {
+                    this.minDistanceIndex = i;
                     minDistance = Math.abs(collisions[i].getCollisionPenetrationDistance());
                 }
             }
         }
     }
 
-    boolean arePolygonsSeparated() {
-        return separated;
+    public boolean arePolygonsSeparated() {
+        return this.separated;
     }
 
-    Vector3dc[] getCollisionAxes() {
-        return collisionAxes;
+    public Vector3dc[] getCollisionAxes() {
+        return this.collisionAxes;
     }
 
-    EntityCollisionObject[] getCollisions() {
-        return collisions;
+    public EntityCollisionObject[] getCollisions() {
+        return this.collisions;
     }
 
-    int getMinDistanceIndex() {
-        return minDistanceIndex;
+    public int getMinDistanceIndex() {
+        return this.minDistanceIndex;
     }
 }
