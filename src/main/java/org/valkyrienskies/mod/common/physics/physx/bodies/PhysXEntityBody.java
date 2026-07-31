@@ -18,19 +18,12 @@ import org.valkyrienskies.mod.common.physics.physx.PhysXActorUtil;
 import physx.common.PxTransform;
 import physx.common.PxVec3;
 import physx.extensions.PxRigidBodyExt;
-import physx.physics.PxMaterial;
-import physx.physics.PxPhysics;
-import physx.physics.PxRigidActor;
-import physx.physics.PxRigidBodyFlagEnum;
-import physx.physics.PxRigidDynamic;
-import physx.physics.PxRigidDynamicLockFlagEnum;
-import physx.physics.PxScene;
-import physx.physics.PxShape;
+import physx.physics.*;
 
 /**
  * for entities
  */
-public class PhysXEntityBody extends AbstractPhysXCollisionObject implements IPhysicsEntityBody {
+public class PhysXEntityBody extends AbstractPhysXCollisionObject<PhysXEntityBody.Identifier> implements IPhysicsEntityBody {
     private static final double ENTITY_SHAPE_SIZE_EPSILON = 1.0E-6D;
     private static final double POSITION_EPSILON_SQUARED = 1.0E-10D;
     private static final double MAX_COLLISION_STEP = 4D;
@@ -39,15 +32,11 @@ public class PhysXEntityBody extends AbstractPhysXCollisionObject implements IPh
     private static final float ENTITY_MASS = 80f;
 
     @NotNull
-    private final PxRigidDynamic actor;
-    @NotNull
     private final PxMaterial material;
     @NotNull
     private final Entity entity;
     @NotNull
     private final PhysicsEntityMovementQueue physicsEntityMovementQueue;
-    @NotNull
-    private final Identifier identifier;
     @NotNull
     private final Object movementLock = new Object();
     @NotNull
@@ -68,7 +57,6 @@ public class PhysXEntityBody extends AbstractPhysXCollisionObject implements IPh
     private final Vector3d lastExternalCenter = new Vector3d();
     private final long movementEpoch;
 
-    private PxShape shape;
     private double shapeSizeX;
     private double shapeSizeY;
     private double shapeSizeZ;
@@ -85,42 +73,39 @@ public class PhysXEntityBody extends AbstractPhysXCollisionObject implements IPh
     private double timeStep;
 
     public PhysXEntityBody(
-            @NotNull PxPhysics physics,
-            @NotNull PxScene scene,
-            @NotNull PxMaterial material,
-            @NotNull PhysicsEntityMovementQueue physicsEntityMovementQueue,
+            @NotNull PhysXEntityBody.Identifier identifier, @NotNull PxPhysics physics, @NotNull PxScene scene,
+            @NotNull PxMaterial material, @NotNull PhysicsEntityMovementQueue physicsEntityMovementQueue,
             @NotNull PhysicsEntitySnapshot entitySnapshot
     ) {
-        super(physics, scene);
+        super(identifier, physics, scene, () -> {
+            AxisAlignedBB entityAABB = entitySnapshot.boundingBox();
+            PxTransform transform = PhysXActorUtil.createTransform(
+                    (entityAABB.minX + entityAABB.maxX) * 0.5D,
+                    (entityAABB.minY + entityAABB.maxY) * 0.5D,
+                    (entityAABB.minZ + entityAABB.maxZ) * 0.5D
+            );
+            PxRigidDynamic toReturn = physics.createRigidDynamic(transform);
+            transform.destroy();
+
+            toReturn.setRigidBodyFlag(PxRigidBodyFlagEnum.eKINEMATIC, false);
+            toReturn.setRigidBodyFlag(PxRigidBodyFlagEnum.eENABLE_CCD, true);
+            toReturn.setRigidBodyFlag(PxRigidBodyFlagEnum.eENABLE_CCD_FRICTION, true);
+            toReturn.setRigidDynamicLockFlag(PxRigidDynamicLockFlagEnum.eLOCK_ANGULAR_X, true);
+            toReturn.setRigidDynamicLockFlag(PxRigidDynamicLockFlagEnum.eLOCK_ANGULAR_Y, true);
+            toReturn.setRigidDynamicLockFlag(PxRigidDynamicLockFlagEnum.eLOCK_ANGULAR_Z, true);
+            toReturn.setSolverIterationCounts(8, 2);
+
+            return toReturn;
+        });
         this.material = material;
         this.physicsEntityMovementQueue = physicsEntityMovementQueue;
         this.entity = entitySnapshot.entity();
         this.entitySnapshot = entitySnapshot;
-        this.identifier = new Identifier(this.entity);
-
-        AxisAlignedBB entityBox = entitySnapshot.boundingBox();
-        PxTransform transform = this.createTransformForBox(entityBox);
-        this.actor = this.physics.createRigidDynamic(transform);
-        transform.destroy();
-
-        this.actor.setRigidBodyFlag(PxRigidBodyFlagEnum.eKINEMATIC, false);
-        this.actor.setRigidBodyFlag(PxRigidBodyFlagEnum.eENABLE_CCD, true);
-        this.actor.setRigidBodyFlag(PxRigidBodyFlagEnum.eENABLE_CCD_FRICTION, true);
-        this.actor.setRigidDynamicLockFlag(PxRigidDynamicLockFlagEnum.eLOCK_ANGULAR_X, true);
-        this.actor.setRigidDynamicLockFlag(PxRigidDynamicLockFlagEnum.eLOCK_ANGULAR_Y, true);
-        this.actor.setRigidDynamicLockFlag(PxRigidDynamicLockFlagEnum.eLOCK_ANGULAR_Z, true);
-        this.actor.setSolverIterationCounts(8, 2);
-        this.rebuildShape(entityBox);
-        this.scene.addActor(this.actor);
+        this.rebuildShape(entitySnapshot.boundingBox());
         this.movementEpoch = this.physicsEntityMovementQueue.register(this, this.entity);
     }
 
-    @Override
-    @NotNull
-    public Identifier getIdentifier() {
-        return this.identifier;
-    }
-
+    //---snapshot related stuff starts here---
     public void updateEntitySnapshot(@NotNull PhysicsEntitySnapshot entitySnapshot) {
         if (entitySnapshot.entity() == this.entity) this.entitySnapshot = entitySnapshot;
     }
@@ -156,6 +141,7 @@ public class PhysXEntityBody extends AbstractPhysXCollisionObject implements IPh
             this.setSupportingShipBody(null);
         }
     }
+    //---snapshot related stuff ends here---
 
     public void updateBeforeSimulation(double timeStep) {
         this.timeStep = timeStep;
@@ -164,11 +150,12 @@ public class PhysXEntityBody extends AbstractPhysXCollisionObject implements IPh
         this.reconcileExternalMovement(snapshot);
 
         PxTransform pose = this.actor.getGlobalPose();
+        PxRigidDynamic entityActor = (PxRigidDynamic) this.actor;
+
         this.preSimulationCenter.set(PhysXActorUtil.fromPxVec(pose.getP()));
         this.preSimulationSupportPoint.set(
                 this.preSimulationCenter.x,
-                this.preSimulationCenter.y
-                        - (snapshot.boundingBox().maxY - snapshot.boundingBox().minY) * 0.5D,
+                this.preSimulationCenter.y - (snapshot.boundingBox().maxY - snapshot.boundingBox().minY) * 0.5D,
                 this.preSimulationCenter.z
         );
 
@@ -179,18 +166,19 @@ public class PhysXEntityBody extends AbstractPhysXCollisionObject implements IPh
                     this.preSimulationShipRotation
             );
         }
-        this.preSimulationVelocity.set(PhysXActorUtil.fromPxVec(this.actor.getLinearVelocity()));
+        this.preSimulationVelocity.set(PhysXActorUtil.fromPxVec(entityActor.getLinearVelocity()));
 
-        PxVec3 zeroVelocity = new PxVec3(0.0F, 0.0F, 0.0F);
-        this.actor.setAngularVelocity(zeroVelocity, true);
+        PxVec3 zeroVelocity = new PxVec3(0f, 0f, 0f);
+        entityActor.setAngularVelocity(zeroVelocity, true);
         zeroVelocity.destroy();
     }
 
     public void updateAfterSimulation() {
+        PxRigidDynamic entityActor = (PxRigidDynamic) this.actor;
         PxTransform pose = this.actor.getGlobalPose();
         Vector3d simulatedCenter = PhysXActorUtil.fromPxVec(pose.getP());
         Vector3d collisionStep = simulatedCenter.sub(this.preSimulationCenter, new Vector3d());
-        PxVec3 finalVelocity = this.actor.getLinearVelocity();
+        PxVec3 finalVelocity = entityActor.getLinearVelocity();
 
         if (this.simulationSupportingShipBody != null) {
             this.simulationSupportingShipBody.copyActorPose(this.postSimulationShipPosition, this.postSimulationShipRotation);
@@ -209,7 +197,7 @@ public class PhysXEntityBody extends AbstractPhysXCollisionObject implements IPh
                 this.forcePose(correctedCenter);
                 Vector3d supportVelocity = this.timeStep > 0D ? collisionStep.div(this.timeStep, new Vector3d()) : new Vector3d();
                 PxVec3 supportPhysXVelocity = PhysXActorUtil.toPxVec(supportVelocity);
-                this.actor.setLinearVelocity(supportPhysXVelocity, true);
+                entityActor.setLinearVelocity(supportPhysXVelocity, true);
                 supportPhysXVelocity.destroy();
             }
         }
@@ -217,7 +205,7 @@ public class PhysXEntityBody extends AbstractPhysXCollisionObject implements IPh
             if (!collisionStep.isFinite() || (collisionStep.lengthSquared() > MAX_COLLISION_STEP * MAX_COLLISION_STEP)) {
                 collisionStep.zero();
                 this.clearLinearVelocity();
-                finalVelocity = this.actor.getLinearVelocity();
+                finalVelocity = entityActor.getLinearVelocity();
             }
 
             // Keep velocity acquired from ship contacts across substeps. This is what lets
@@ -238,7 +226,7 @@ public class PhysXEntityBody extends AbstractPhysXCollisionObject implements IPh
                 this.forcePose(correctedCenter);
             }
             PxVec3 retainedPhysXVelocity = PhysXActorUtil.toPxVec(retainedVelocity);
-            this.actor.setLinearVelocity(retainedPhysXVelocity, true);
+            entityActor.setLinearVelocity(retainedPhysXVelocity, true);
             retainedPhysXVelocity.destroy();
 
             if (collisionStep.lengthSquared() > POSITION_EPSILON_SQUARED) {
@@ -277,23 +265,9 @@ public class PhysXEntityBody extends AbstractPhysXCollisionObject implements IPh
 
     @Override
     public void release() {
+        if (this.released) return;
         this.physicsEntityMovementQueue.remove(this, this.entity);
         super.release();
-    }
-
-    @Override
-    protected void releaseShapes() {
-        if (this.shape == null) return;
-
-        this.detachShape(this.shape);
-        this.shape = null;
-        this.clearCachedShapeSize();
-    }
-
-    @Override
-    @NotNull
-    protected PxRigidActor getActor() {
-        return this.actor;
     }
 
     /**
@@ -303,31 +277,28 @@ public class PhysXEntityBody extends AbstractPhysXCollisionObject implements IPh
         double sizeX = entityBox.maxX - entityBox.minX;
         double sizeY = entityBox.maxY - entityBox.minY;
         double sizeZ = entityBox.maxZ - entityBox.minZ;
-        if (this.shape != null && this.hasCachedShapeSize && this.hasSameShapeSize(sizeX, sizeY, sizeZ)) {
+        if (this.hasShapes() && this.hasCachedShapeSize && this.hasSameShapeSize(sizeX, sizeY, sizeZ)) {
             return;
         }
 
-        if (this.shape != null) {
-            this.detachShape(this.shape);
-            this.shape = null;
+        if (this.hasShapes()) {
+            this.clearShapes();
             this.clearCachedShapeSize();
         }
 
-        this.shape = this.createBoxShape(entityBox, this.material);
-        if (this.shape == null) return;
+        PxShape shape = this.createBoxShape(entityBox, this.material);
+        if (shape == null) return;
 
-        PhysXActor.ENTITY.setFilter(this.shape);
-        if (!this.attachShape(this.shape)) {
-            this.shape = null;
-            return;
-        }
+        PhysXActor.ENTITY.setFilter(shape);
+        if (!this.addShape(shape)) return;
 
         this.shapeSizeX = sizeX;
         this.shapeSizeY = sizeY;
         this.shapeSizeZ = sizeZ;
         this.hasCachedShapeSize = true;
-        if (!PxRigidBodyExt.updateMassAndInertia(this.actor, ENTITY_MASS)) {
-            this.actor.setMass(ENTITY_MASS);
+        PxRigidDynamic entityActor = (PxRigidDynamic) this.actor;
+        if (!PxRigidBodyExt.updateMassAndInertia(entityActor, ENTITY_MASS)) {
+            entityActor.setMass(ENTITY_MASS);
         }
     }
 
@@ -417,20 +388,10 @@ public class PhysXEntityBody extends AbstractPhysXCollisionObject implements IPh
         return !onGround && verticalVelocity > INTENTIONAL_SEPARATION_VELOCITY;
     }
 
-    /**
-     * Computes the translation of an upright entity's support point between two
-     * poses of the PhysX ship actor.
-     */
-    private void calculateRigidPoseDisplacement(@NotNull Vector3d destination) {
-        destination.set(this.preSimulationSupportPoint).sub(this.preSimulationShipPosition);
-        new Quaterniond(this.preSimulationShipRotation).conjugate().transform(destination);
-        this.postSimulationShipRotation.transform(destination);
-        destination.add(this.postSimulationShipPosition).sub(this.preSimulationSupportPoint);
-    }
-
     private void clearLinearVelocity() {
         PxVec3 zeroVelocity = new PxVec3(0f, 0f, 0f);
-        this.actor.setLinearVelocity(zeroVelocity, true);
+        PxRigidDynamic entityActor = (PxRigidDynamic) this.actor;
+        entityActor.setLinearVelocity(zeroVelocity, true);
         zeroVelocity.destroy();
     }
 
@@ -446,19 +407,12 @@ public class PhysXEntityBody extends AbstractPhysXCollisionObject implements IPh
     }
 
     private void forcePose(@NotNull Vector3dc center) {
-        PxTransform transform = this.createTransform(center.x(), center.y(), center.z());
+        PxTransform transform = PhysXActorUtil.createTransform(center.x(), center.y(), center.z());
         this.actor.setGlobalPose(transform, true);
         transform.destroy();
     }
 
-    private PxTransform createTransformForBox(@NotNull AxisAlignedBB box) {
-        return this.createTransform(
-                (box.minX + box.maxX) * 0.5D,
-                (box.minY + box.maxY) * 0.5D,
-                (box.minZ + box.maxZ) * 0.5D
-        );
-    }
-
+    //---other classes---
     //helper to store angular motion
     private record AxisMotion(double displacement, double velocity) {}
 

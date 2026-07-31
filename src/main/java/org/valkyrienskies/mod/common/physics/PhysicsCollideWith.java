@@ -21,8 +21,10 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * This class stores the block sections and entities that a ship is going to collide with.
@@ -34,18 +36,19 @@ public class PhysicsCollideWith {
     private static final int BLOCK_SECTION_CACHE_PADDING_BLOCKS = 16;
     private static final int BLOCK_SECTION_CACHE_HYSTERESIS_BLOCKS = 4;
     private static final Map<BlockSection.Key, Set<PhysicsCollideWith>> CACHES_BY_SECTION = new ConcurrentHashMap<>();
+    private static final Snapshot EMPTY_SNAPSHOT = new Snapshot(List.of(), List.of());
 
-    private final List<PhysicsEntitySnapshot> entities = new ArrayList<>();
     private World cachedBlockSectionWorld;
     private BlockSection.Range cachedBlockSectionRange;
     private int blockSectionCacheAge;
     private final Map<BlockSection.Key, BlockSection> cachedBlockSections = new HashMap<>();
     private final Set<BlockSection.Key> cachedEmptyBlockSections = new HashSet<>();
-    private final Set<BlockSection.Key> dirtyBlockSections = new HashSet<>();
     private final Set<BlockSection.Key> registeredBlockSections = new HashSet<>();
-    private final List<BlockSection> blockSections = new ArrayList<>();
+    private final Queue<BlockSection.Key> dirtyBlockSections = new ConcurrentLinkedQueue<>();
+    @NotNull
+    private volatile Snapshot publishedSnapshot = EMPTY_SNAPSHOT; //is like this coz this will be given to physics backend on a separate thread
 
-    public void onUpdate(PhysicsObject physicsObject) {
+    public void onUpdate(@NotNull PhysicsObject physicsObject) {
         World nextBlockSectionWorld = null;
         BlockSection.Range nextBlockSectionRange = null;
         int nextBlockSectionCacheAge = 0;
@@ -88,22 +91,19 @@ public class PhysicsCollideWith {
                 Set<BlockSection.Key> previousEmptyBlockSections;
                 Set<BlockSection.Key> dirtyBlockSections;
                 boolean forceSectionRescan;
-                synchronized (this) {
-                    boolean sameWorld = this.cachedBlockSectionWorld == world;
-                    boolean useCachedRange = sameWorld
-                            && this.cachedBlockSectionRange != null
-                            && this.cachedBlockSectionRange.contains(hysteresisRange);
-                    nextBlockSectionRange = useCachedRange ? this.cachedBlockSectionRange : paddedRange;
-                    if (!this.areChunksLoaded(world, nextBlockSectionRange)) nextBlockSectionRange = exactBlockSectionRange;
-                    nextRegisteredBlockSections = nextBlockSectionRange.keys(world);
-                    boolean sameRange = sameWorld && nextBlockSectionRange.equals(this.cachedBlockSectionRange);
-                    forceSectionRescan = !sameWorld
-                            || (sameRange && this.blockSectionCacheAge >= BLOCK_SECTION_CACHE_RESCAN_INTERVAL_TICKS);
-                    nextBlockSectionCacheAge = sameRange && !forceSectionRescan ? this.blockSectionCacheAge + 1 : 0;
-                    previousBlockSections = new HashMap<>(this.cachedBlockSections);
-                    previousEmptyBlockSections = new HashSet<>(this.cachedEmptyBlockSections);
-                    dirtyBlockSections = new HashSet<>(this.dirtyBlockSections);
-                }
+                boolean sameWorld = this.cachedBlockSectionWorld == world;
+                boolean useCachedRange = sameWorld
+                        && this.cachedBlockSectionRange != null
+                        && this.cachedBlockSectionRange.contains(hysteresisRange);
+                nextBlockSectionRange = useCachedRange ? this.cachedBlockSectionRange : paddedRange;
+                if (!this.areChunksLoaded(world, nextBlockSectionRange)) nextBlockSectionRange = exactBlockSectionRange;
+                nextRegisteredBlockSections = nextBlockSectionRange.keys(world);
+                boolean sameRange = sameWorld && nextBlockSectionRange.equals(this.cachedBlockSectionRange);
+                forceSectionRescan = !sameWorld || (sameRange && this.blockSectionCacheAge >= BLOCK_SECTION_CACHE_RESCAN_INTERVAL_TICKS);
+                nextBlockSectionCacheAge = sameRange && !forceSectionRescan ? this.blockSectionCacheAge + 1 : 0;
+                previousBlockSections = new HashMap<>(this.cachedBlockSections);
+                previousEmptyBlockSections = new HashSet<>(this.cachedEmptyBlockSections);
+                dirtyBlockSections = this.drainDirtyBlockSections();
 
                 ChunkCache chunkCache = null;
                 BlockPos cacheMin = new BlockPos(
@@ -129,21 +129,22 @@ public class PhysicsCollideWith {
                             nextBlockSections.add(cachedSection);
                         }
                         else nextCachedEmptyBlockSections.add(sectionKey);
-                        continue;
-                    }
-
-                    if (chunkCache == null) chunkCache = new ChunkCache(world, cacheMin, cacheMax, 0);
-                    BlockSection blockSection = this.createBlockSection(world, chunkCache, sectionKey);
-                    if (blockSection == null) {
-                        nextCachedEmptyBlockSections.add(sectionKey);
                     }
                     else {
-                        nextCachedBlockSections.put(sectionKey, blockSection);
-                        nextBlockSections.add(blockSection);
+                        if (chunkCache == null) chunkCache = new ChunkCache(world, cacheMin, cacheMax, 0);
+                        BlockSection blockSection = this.createBlockSection(world, chunkCache, sectionKey);
+                        if (blockSection == null) {
+                            nextCachedEmptyBlockSections.add(sectionKey);
+                        }
+                        else {
+                            nextCachedBlockSections.put(sectionKey, blockSection);
+                            nextBlockSections.add(blockSection);
+                        }
                     }
                 }
             }
 
+            //---entity scanning---
             List<Entity> nearbyEntities = world.getEntitiesWithinAABB(
                     Entity.class,
                     shipAabb.grow(ENTITY_SCAN_GROW),
@@ -157,37 +158,39 @@ public class PhysicsCollideWith {
                     .forEach(nextEntities::add);
         }
 
-        synchronized (this) {
-            this.updateRegisteredBlockSections(nextRegisteredBlockSections);
-            this.cachedBlockSectionWorld = nextBlockSectionWorld;
-            this.cachedBlockSectionRange = nextBlockSectionRange;
-            this.blockSectionCacheAge = nextBlockSectionCacheAge;
-            this.cachedBlockSections.clear();
-            this.cachedBlockSections.putAll(nextCachedBlockSections);
-            this.cachedEmptyBlockSections.clear();
-            this.cachedEmptyBlockSections.addAll(nextCachedEmptyBlockSections);
-            nextRegisteredBlockSections.forEach(this.dirtyBlockSections::remove);
-            this.dirtyBlockSections.retainAll(this.registeredBlockSections);
-            this.entities.clear();
-            this.entities.addAll(nextEntities);
-            this.blockSections.clear();
-            this.blockSections.addAll(nextBlockSections);
-        }
+        this.updateRegisteredBlockSections(nextRegisteredBlockSections);
+        this.cachedBlockSectionWorld = nextBlockSectionWorld;
+        this.cachedBlockSectionRange = nextBlockSectionRange;
+        this.blockSectionCacheAge = nextBlockSectionCacheAge;
+        this.cachedBlockSections.clear();
+        this.cachedBlockSections.putAll(nextCachedBlockSections);
+        this.cachedEmptyBlockSections.clear();
+        this.cachedEmptyBlockSections.addAll(nextCachedEmptyBlockSections);
+        this.publishedSnapshot = new Snapshot(nextBlockSections, nextEntities);
     }
 
-    public synchronized void close() {
-        this.updateRegisteredBlockSections(Collections.emptyList());
+    public void close() {
+        this.updateRegisteredBlockSections(List.of());
         this.cachedBlockSections.clear();
         this.cachedEmptyBlockSections.clear();
         this.dirtyBlockSections.clear();
-        this.entities.clear();
-        this.blockSections.clear();
         this.cachedBlockSectionWorld = null;
         this.cachedBlockSectionRange = null;
         this.blockSectionCacheAge = 0;
+        this.publishedSnapshot = EMPTY_SNAPSHOT;
     }
 
     //-----block section manipulation-----
+    @NotNull
+    private Set<BlockSection.Key> drainDirtyBlockSections() {
+        Set<BlockSection.Key> dirtySections = new HashSet<>();
+        BlockSection.Key dirtySection;
+        while ((dirtySection = this.dirtyBlockSections.poll()) != null) {
+            dirtySections.add(dirtySection);
+        }
+        return dirtySections;
+    }
+
     private void updateRegisteredBlockSections(@NotNull List<BlockSection.Key> nextBlockSections) {
         Set<BlockSection.Key> nextBlockSectionSet = new HashSet<>(nextBlockSections);
         for (BlockSection.Key sectionKey : new ArrayList<>(this.registeredBlockSections)) {
@@ -269,12 +272,9 @@ public class PhysicsCollideWith {
         );
     }
 
-    public List<BlockSection> getBlockSections() {
-        return this.blockSections;
-    }
-
-    public List<PhysicsEntitySnapshot> getEntities() {
-        return this.entities;
+    @NotNull
+    public Snapshot createSnapshot() {
+        return this.publishedSnapshot;
     }
 
     private boolean isEntityCollidable(Entity entity, World hostWorld) {
@@ -295,7 +295,7 @@ public class PhysicsCollideWith {
         if (sectionCaches == null) return;
 
         for (PhysicsCollideWith collideWith : new ArrayList<>(sectionCaches)) {
-            if (collideWith.registeredBlockSections.contains(sectionKey)) collideWith.dirtyBlockSections.add(sectionKey);
+            collideWith.dirtyBlockSections.add(sectionKey);
         }
     }
 
@@ -307,7 +307,7 @@ public class PhysicsCollideWith {
             }
 
             for (PhysicsCollideWith collideWith : new ArrayList<>(entry.getValue())) {
-                if (collideWith.registeredBlockSections.contains(sectionKey)) collideWith.dirtyBlockSections.add(sectionKey);
+                collideWith.dirtyBlockSections.add(sectionKey);
             }
         }
     }
@@ -318,6 +318,17 @@ public class PhysicsCollideWith {
             for (PhysicsCollideWith collideWith : new ArrayList<>(entry.getValue())) {
                 collideWith.close();
             }
+        }
+    }
+
+    //---snapshot record, much safer when doing multithreading---
+    public record Snapshot(
+            @NotNull List<BlockSection> blockSections,
+            @NotNull List<PhysicsEntitySnapshot> entities
+    ) {
+        public Snapshot {
+            blockSections = List.copyOf(blockSections);
+            entities = List.copyOf(entities);
         }
     }
 }
