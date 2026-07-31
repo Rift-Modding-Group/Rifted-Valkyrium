@@ -45,7 +45,7 @@ public class PhysXWorldBackend extends AbstractPhysicsBackend {
     private final EnumMap<PhysXActor, PxMaterial> materials = new EnumMap<>(PhysXActor.class);
     //list of collision objects in the entire world
     @NotNull
-    private final Map<CollisionBodyType, Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject<?>>> collisionObjects = CollisionBodyType.createRegistry();
+    private final Map<CollisionBodyType, Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject<?, ?>>> collisionObjects = CollisionBodyType.createRegistry();
     //separate list of block section objects with liquids to deal with ship buoyancy
     @NotNull
     private final List<PhysXBlockSectionBody> blockSectionsWithLiquids = new ArrayList<>();
@@ -115,17 +115,12 @@ public class PhysXWorldBackend extends AbstractPhysicsBackend {
             //---ship objects---
             PhysXShipBody.Identifier shipIdentifier = new PhysXShipBody.Identifier(ship);
             this.markCollisionObjectSynced(shipIdentifier);
-            AbstractPhysXCollisionObject<?> shipCollisionObject = CollisionBodyType.SHIP.get(this.collisionObjects, shipIdentifier);
+            CollisionBodyType.SHIP.synchronize(
+                    this.collisionObjects, shipIdentifier, ship,
+                    () -> new PhysXShipBody(shipIdentifier, this.physics, this.scene, this.getMaterial(PhysXActor.SHIP), ship)
+            );
 
-            //add if no ship body
-            if (shipCollisionObject == null) {
-                PhysXShipBody shipBody = new PhysXShipBody(shipIdentifier, this.physics, this.scene, this.getMaterial(PhysXActor.SHIP), ship);
-                this.addCollisionObject(CollisionBodyType.SHIP, shipBody);
-            }
-            //update ship reference if there is
-            else ((PhysXShipBody) shipCollisionObject).updateShipReference(ship);
-
-            //---defining block section bodies and entity snapshots---
+            //---get snapshot of block section bodies and entity snapshots---
             PhysicsCollideWith.Snapshot collideWithSnapshot = ship.getPhysicsCollideWith().createSnapshot();
             List<PhysicsEntitySnapshot> entities = collideWithSnapshot.entities();
             List<BlockSection> blockSections = collideWithSnapshot.blockSections();
@@ -140,18 +135,15 @@ public class PhysXWorldBackend extends AbstractPhysicsBackend {
                         blockSection.contentsHash()
                 );
                 this.markCollisionObjectSynced(sectionIdentifier);
-                if (CollisionBodyType.BLOCK_SECTION.get(this.collisionObjects, sectionIdentifier) == null) {
-                    PhysXBlockSectionBody sectionCollider = new PhysXBlockSectionBody(
-                            sectionIdentifier,
-                            this.physics,
-                            this.scene,
-                            blockSection.world(),
-                            this.getMaterial(PhysXActor.SOLID),
-                            this.getMaterial(PhysXActor.LIQUID),
-                            blockSection.blocks()
-                    );
-                    this.addCollisionObject(CollisionBodyType.BLOCK_SECTION, sectionCollider);
-                }
+                CollisionBodyType.BLOCK_SECTION.synchronize(
+                        this.collisionObjects, sectionIdentifier, blockSection,
+                        () -> new PhysXBlockSectionBody(
+                                sectionIdentifier, this.physics, this.scene, blockSection.world(),
+                                this.getMaterial(PhysXActor.SOLID),
+                                this.getMaterial(PhysXActor.LIQUID),
+                                blockSection.blocks()
+                        )
+                );
             }
 
             //---collect entity snapshots on ship---
@@ -168,39 +160,33 @@ public class PhysXWorldBackend extends AbstractPhysicsBackend {
             Entity entity = entitySnapshot.entity();
             PhysXEntityBody.Identifier entityIdentifier = new PhysXEntityBody.Identifier(entity);
             this.markCollisionObjectSynced(entityIdentifier);
-            AbstractPhysXCollisionObject<?> entityCollisionObject = CollisionBodyType.ENTITY.get(this.collisionObjects, entityIdentifier);
-            PhysXEntityBody entityBody;
-            if (entityCollisionObject == null) {
-                entityBody = new PhysXEntityBody(
-                        entityIdentifier,
-                        this.physics,
-                        this.scene,
-                        this.getMaterial(PhysXActor.ENTITY),
-                        this.physicsEntityMovementQueue,
-                        entitySnapshot
-                );
-                this.addCollisionObject(CollisionBodyType.ENTITY, entityBody);
-            }
-            else {
-                entityBody = (PhysXEntityBody) entityCollisionObject;
-                entityBody.updateEntitySnapshot(entitySnapshot);
-            }
+            PhysXEntityBody entityBody = CollisionBodyType.ENTITY.synchronize(
+                    this.collisionObjects, entityIdentifier, entitySnapshot,
+                    () -> new PhysXEntityBody(
+                            entityIdentifier, this.physics, this.scene,
+                            this.getMaterial(PhysXActor.ENTITY),
+                            this.physicsEntityMovementQueue, entitySnapshot
+                    )
+            );
 
             PhysXShipBody supportingShipBody = null;
             if (entitySnapshot.supportingShip() != null) {
-                AbstractPhysXCollisionObject<?> supportCollisionObject = CollisionBodyType.SHIP.get(this.collisionObjects, new PhysXShipBody.Identifier(entitySnapshot.supportingShip()));
-                if (supportCollisionObject instanceof PhysXShipBody body) {
-                    supportingShipBody = body;
+                AbstractPhysXCollisionObject<?, ?> supportCollisionObject = CollisionBodyType.SHIP.get(
+                        this.collisionObjects,
+                        new PhysXShipBody.Identifier(entitySnapshot.supportingShip())
+                );
+                if (supportCollisionObject instanceof PhysXShipBody shipBody) {
+                    supportingShipBody = shipBody;
                 }
             }
             entityBody.updateSupportState(entitySnapshot, supportingShipBody);
         }
 
         //-----remove collision objects we do not care about anymore-----
-        for (Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject<?>> bodies : this.collisionObjects.values()) {
-            Iterator<Map.Entry<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject<?>>> iterator = bodies.entrySet().iterator();
+        for (Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject<?, ?>> bodies : this.collisionObjects.values()) {
+            Iterator<Map.Entry<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject<?, ?>>> iterator = bodies.entrySet().iterator();
             while (iterator.hasNext()) {
-                Map.Entry<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject<?>> entry = iterator.next();
+                Map.Entry<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject<?, ?>> entry = iterator.next();
                 AbstractPhysXCollisionObject.Identifier identifier = entry.getKey();
                 if (this.collisionObjectSyncGenerations.get(identifier) == this.syncGeneration) {
                     continue;
@@ -214,15 +200,10 @@ public class PhysXWorldBackend extends AbstractPhysicsBackend {
 
         //-----rebuild list of block sections with liquids-----
         this.blockSectionsWithLiquids.clear();
-        for (AbstractPhysXCollisionObject<?> collisionObject : CollisionBodyType.BLOCK_SECTION.getBodies(this.collisionObjects).values()) {
+        for (AbstractPhysXCollisionObject<?, ?> collisionObject : CollisionBodyType.BLOCK_SECTION.getBodies(this.collisionObjects).values()) {
             PhysXBlockSectionBody blockSectionObject = (PhysXBlockSectionBody) collisionObject;
             if (blockSectionObject.hasLiquidBlocks()) this.blockSectionsWithLiquids.add(blockSectionObject);
         }
-    }
-
-    private void addCollisionObject(@NotNull CollisionBodyType bodyType, @NotNull AbstractPhysXCollisionObject<?> collisionObject) {
-        bodyType.add(this.collisionObjects, collisionObject);
-        this.markCollisionObjectSynced(collisionObject.getIdentifier());
     }
 
     private void markCollisionObjectSynced(AbstractPhysXCollisionObject.Identifier identifier) {
@@ -257,13 +238,11 @@ public class PhysXWorldBackend extends AbstractPhysicsBackend {
      * Do I have to explain what this shit does?
      * */
     private void updateCollisionObjectsBeforeSimulation(@NotNull World hostWorld, double timeStep) {
-        // Ship actors must receive their current game pose before an entity records
-        // the supporting actor's pre-simulation pose.
-        for (AbstractPhysXCollisionObject<?> collisionObject : CollisionBodyType.SHIP.getBodies(this.collisionObjects).values()) {
-            ((PhysXShipBody) collisionObject).updateBeforeSimulation(hostWorld, this.blockSectionsWithLiquids, timeStep);
-        }
-        for (AbstractPhysXCollisionObject<?> collisionObject : CollisionBodyType.ENTITY.getBodies(this.collisionObjects).values()) {
-            ((PhysXEntityBody) collisionObject).updateBeforeSimulation(timeStep);
+        //enum order matters. ships first, entities last
+        for (CollisionBodyType bodyType : CollisionBodyType.values()) {
+            for (AbstractPhysXCollisionObject<?, ?> collisionObject : bodyType.getBodies(this.collisionObjects).values()) {
+                collisionObject.updateBeforeSimulation(hostWorld, this.blockSectionsWithLiquids, timeStep);
+            }
         }
     }
 
@@ -271,12 +250,11 @@ public class PhysXWorldBackend extends AbstractPhysicsBackend {
      * e
      * */
     private void updateCollisionObjectsAfterSimulation() {
-        // Publish every ship's final transform before resolving supported entities.
-        for (AbstractPhysXCollisionObject<?> collisionObject : CollisionBodyType.SHIP.getBodies(this.collisionObjects).values()) {
-            ((PhysXShipBody) collisionObject).updateAfterSimulation();
-        }
-        for (AbstractPhysXCollisionObject<?> collisionObject : CollisionBodyType.ENTITY.getBodies(this.collisionObjects).values()) {
-            ((PhysXEntityBody) collisionObject).updateAfterSimulation();
+        //enum order matters. ships first, entities last
+        for (CollisionBodyType bodyType : CollisionBodyType.values()) {
+            for (AbstractPhysXCollisionObject<?, ?> collisionObject : bodyType.getBodies(this.collisionObjects).values()) {
+                collisionObject.updateAfterSimulation();
+            }
         }
     }
 
@@ -289,8 +267,8 @@ public class PhysXWorldBackend extends AbstractPhysicsBackend {
         if (this.closed) return;
         this.closed = true;
 
-        for (Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject<?>> bodies : this.collisionObjects.values()) {
-            for (AbstractPhysXCollisionObject<?> collisionObject : bodies.values()) {
+        for (Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject<?, ?>> bodies : this.collisionObjects.values()) {
+            for (AbstractPhysXCollisionObject<?, ?> collisionObject : bodies.values()) {
                 collisionObject.release();
             }
             bodies.clear();

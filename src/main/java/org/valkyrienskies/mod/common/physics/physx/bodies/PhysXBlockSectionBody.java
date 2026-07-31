@@ -24,7 +24,7 @@ import java.util.List;
 /**
  * For block sections, which are just a group of blocks.
  */
-public class PhysXBlockSectionBody extends AbstractPhysXCollisionObject<PhysXBlockSectionBody.Identifier> {
+public class PhysXBlockSectionBody extends AbstractPhysXCollisionObject<PhysXBlockSectionBody.Identifier, BlockSection> {
     @NotNull
     private final PxMaterial blockMaterial;
     @NotNull
@@ -71,6 +71,21 @@ public class PhysXBlockSectionBody extends AbstractPhysXCollisionObject<PhysXBlo
             }
         }
     }
+
+    /**
+     * nothing to synchronize here, xd
+     * */
+    @Override
+    public void synchronize(@NotNull BlockSection blockSection) {}
+
+    /**
+     * nothing to update either xd
+     * */
+    @Override
+    public void updateBeforeSimulation(@NotNull World hostWorld, @NotNull List<PhysXBlockSectionBody> blockSectionsWithLiquids, double timeStep) {}
+
+    @Override
+    public void updateAfterSimulation() {}
 
     public boolean isLiquidBlockIntersecting(@NotNull AxisAlignedBB box) {
         for (AxisAlignedBB liquidBox : this.liquidBoxes) {

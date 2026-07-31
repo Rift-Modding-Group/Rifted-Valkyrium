@@ -38,7 +38,9 @@ public class PhysicsCollideWith {
     private static final Map<BlockSection.Key, Set<PhysicsCollideWith>> CACHES_BY_SECTION = new ConcurrentHashMap<>();
     private static final Snapshot EMPTY_SNAPSHOT = new Snapshot(List.of(), List.of());
 
+    @Nullable
     private World cachedBlockSectionWorld;
+    @Nullable
     private BlockSection.Range cachedBlockSectionRange;
     private int blockSectionCacheAge;
     private final Map<BlockSection.Key, BlockSection> cachedBlockSections = new HashMap<>();
@@ -49,135 +51,163 @@ public class PhysicsCollideWith {
     private volatile Snapshot publishedSnapshot = EMPTY_SNAPSHOT; //is like this coz this will be given to physics backend on a separate thread
 
     public void onUpdate(@NotNull PhysicsObject physicsObject) {
-        World nextBlockSectionWorld = null;
-        BlockSection.Range nextBlockSectionRange = null;
-        int nextBlockSectionCacheAge = 0;
-        List<PhysicsEntitySnapshot> nextEntities = new ArrayList<>();
-        List<BlockSection> nextBlockSections = new ArrayList<>();
-        Map<BlockSection.Key, BlockSection> nextCachedBlockSections = new HashMap<>();
-        Set<BlockSection.Key> nextCachedEmptyBlockSections = new HashSet<>();
-        List<BlockSection.Key> nextRegisteredBlockSections = Collections.emptyList();
-
         AxisAlignedBB shipAabb = physicsObject.getPhysicsTransformAABB();
         if (shipAabb != null) {
             World world = physicsObject.getWorld();
-            BlockPos shipMin = new BlockPos(
-                    (int) Math.floor(shipAabb.minX),
-                    Math.max(0, (int) Math.floor(shipAabb.minY)),
-                    (int) Math.floor(shipAabb.minZ)
-            );
-            BlockPos shipMax = new BlockPos(
-                    (int) Math.ceil(shipAabb.maxX),
-                    Math.min(world.getHeight() - 1, (int) Math.ceil(shipAabb.maxY)),
-                    (int) Math.ceil(shipAabb.maxZ)
-            );
-
-            //---chunk scanning---
-            BlockSection.Range exactBlockSectionRange = BlockSection.Range.fromBlockCorners(shipMin, shipMax);
-            boolean areSurroundingChunksLoaded = this.areChunksLoaded(world, exactBlockSectionRange);
-
-            //---block section scanning---
-            if (areSurroundingChunksLoaded) {
-                nextBlockSectionWorld = world;
-                BlockSection.Range hysteresisRange = BlockSection.Range.fromBlockCorners(
-                        this.growMin(shipMin, BLOCK_SECTION_CACHE_HYSTERESIS_BLOCKS),
-                        this.growMax(shipMax, world, BLOCK_SECTION_CACHE_HYSTERESIS_BLOCKS)
-                );
-                BlockSection.Range paddedRange = BlockSection.Range.fromBlockCorners(
-                        this.growMin(shipMin, BLOCK_SECTION_CACHE_PADDING_BLOCKS),
-                        this.growMax(shipMax, world, BLOCK_SECTION_CACHE_PADDING_BLOCKS)
-                );
-                Map<BlockSection.Key, BlockSection> previousBlockSections;
-                Set<BlockSection.Key> previousEmptyBlockSections;
-                Set<BlockSection.Key> dirtyBlockSections;
-                boolean forceSectionRescan;
-                boolean sameWorld = this.cachedBlockSectionWorld == world;
-                boolean useCachedRange = sameWorld
-                        && this.cachedBlockSectionRange != null
-                        && this.cachedBlockSectionRange.contains(hysteresisRange);
-                nextBlockSectionRange = useCachedRange ? this.cachedBlockSectionRange : paddedRange;
-                if (!this.areChunksLoaded(world, nextBlockSectionRange)) nextBlockSectionRange = exactBlockSectionRange;
-                nextRegisteredBlockSections = nextBlockSectionRange.keys(world);
-                boolean sameRange = sameWorld && nextBlockSectionRange.equals(this.cachedBlockSectionRange);
-                forceSectionRescan = !sameWorld || (sameRange && this.blockSectionCacheAge >= BLOCK_SECTION_CACHE_RESCAN_INTERVAL_TICKS);
-                nextBlockSectionCacheAge = sameRange && !forceSectionRescan ? this.blockSectionCacheAge + 1 : 0;
-                previousBlockSections = new HashMap<>(this.cachedBlockSections);
-                previousEmptyBlockSections = new HashSet<>(this.cachedEmptyBlockSections);
-                dirtyBlockSections = this.drainDirtyBlockSections();
-
-                ChunkCache chunkCache = null;
-                BlockPos cacheMin = new BlockPos(
-                        nextBlockSectionRange.minX() << 4,
-                        Math.max(0, nextBlockSectionRange.minY() << 4),
-                        nextBlockSectionRange.minZ() << 4
-                );
-                BlockPos cacheMax = new BlockPos(
-                        (nextBlockSectionRange.maxX() << 4) + 15,
-                        Math.min(world.getHeight() - 1, (nextBlockSectionRange.maxY() << 4) + 15),
-                        (nextBlockSectionRange.maxZ() << 4) + 15
-                );
-                for (BlockSection.Key sectionKey : nextRegisteredBlockSections) {
-                    BlockSection cachedSection = previousBlockSections.get(sectionKey);
-                    boolean knownEmptySection = previousEmptyBlockSections.contains(sectionKey);
-                    boolean shouldRescanSection = forceSectionRescan
-                            || dirtyBlockSections.contains(sectionKey)
-                            || (cachedSection == null && !knownEmptySection);
-
-                    if (!shouldRescanSection) {
-                        if (cachedSection != null) {
-                            nextCachedBlockSections.put(sectionKey, cachedSection);
-                            nextBlockSections.add(cachedSection);
-                        }
-                        else nextCachedEmptyBlockSections.add(sectionKey);
-                    }
-                    else {
-                        if (chunkCache == null) chunkCache = new ChunkCache(world, cacheMin, cacheMax, 0);
-                        BlockSection blockSection = this.createBlockSection(world, chunkCache, sectionKey);
-                        if (blockSection == null) {
-                            nextCachedEmptyBlockSections.add(sectionKey);
-                        }
-                        else {
-                            nextCachedBlockSections.put(sectionKey, blockSection);
-                            nextBlockSections.add(blockSection);
-                        }
-                    }
-                }
-            }
-
-            //---entity scanning---
-            List<Entity> nearbyEntities = world.getEntitiesWithinAABB(
-                    Entity.class,
-                    shipAabb.grow(ENTITY_SCAN_GROW),
-                    entity -> this.isEntityCollidable(entity, world)
-            );
-            if (nearbyEntities.size() > MAX_ENTITIES) {
-                nearbyEntities.subList(MAX_ENTITIES, nearbyEntities.size()).clear();
-            }
-            nearbyEntities.stream()
-                    .map(entity -> PhysicsEntitySnapshot.capture(entity, physicsObject))
-                    .forEach(nextEntities::add);
+            List<BlockSection> blockSections = this.updateBlockSectionCache(world, shipAabb);
+            List<PhysicsEntitySnapshot> entities = this.captureEntitySnapshots(physicsObject, world, shipAabb);
+            this.publishedSnapshot = new Snapshot(blockSections, entities);
         }
-
-        this.updateRegisteredBlockSections(nextRegisteredBlockSections);
-        this.cachedBlockSectionWorld = nextBlockSectionWorld;
-        this.cachedBlockSectionRange = nextBlockSectionRange;
-        this.blockSectionCacheAge = nextBlockSectionCacheAge;
-        this.cachedBlockSections.clear();
-        this.cachedBlockSections.putAll(nextCachedBlockSections);
-        this.cachedEmptyBlockSections.clear();
-        this.cachedEmptyBlockSections.addAll(nextCachedEmptyBlockSections);
-        this.publishedSnapshot = new Snapshot(nextBlockSections, nextEntities);
+        else  {
+            this.clearBlockSectionCache();
+            this.publishedSnapshot = EMPTY_SNAPSHOT;
+        }
     }
 
     public void close() {
+        this.clearBlockSectionCache();
+        this.dirtyBlockSections.clear();
+        this.publishedSnapshot = EMPTY_SNAPSHOT;
+    }
+
+    /**
+     * Figures out which block sections the ship needs and keeps the cache up to date.
+     * If the chunks are not loaded, it just clears the old cache.
+     */
+    @NotNull
+    private List<BlockSection> updateBlockSectionCache(@NotNull World world, @NotNull AxisAlignedBB shipAabb) {
+        BlockPos shipMin = new BlockPos(
+                (int) Math.floor(shipAabb.minX),
+                Math.max(0, (int) Math.floor(shipAabb.minY)),
+                (int) Math.floor(shipAabb.minZ)
+        );
+        BlockPos shipMax = new BlockPos(
+                (int) Math.ceil(shipAabb.maxX),
+                Math.min(world.getHeight() - 1, (int) Math.ceil(shipAabb.maxY)),
+                (int) Math.ceil(shipAabb.maxZ)
+        );
+
+        BlockSection.Range exactRange = BlockSection.Range.fromBlockCorners(shipMin, shipMax);
+        if (!this.areChunksLoaded(world, exactRange)) {
+            this.clearBlockSectionCache();
+            return List.of();
+        }
+
+        BlockSection.Range hysteresisRange = this.createExpandedRange(world, shipMin, shipMax, BLOCK_SECTION_CACHE_HYSTERESIS_BLOCKS);
+        BlockSection.Range paddedRange = this.createExpandedRange(world, shipMin, shipMax, BLOCK_SECTION_CACHE_PADDING_BLOCKS);
+
+        boolean sameWorld = this.cachedBlockSectionWorld == world;
+        boolean useCachedRange = sameWorld && this.cachedBlockSectionRange != null && this.cachedBlockSectionRange.contains(hysteresisRange);
+        BlockSection.Range nextRange = useCachedRange ? this.cachedBlockSectionRange : paddedRange;
+        if (!this.areChunksLoaded(world, nextRange)) nextRange = exactRange;
+
+        List<BlockSection.Key> nextRegisteredSections = nextRange.keys(world);
+        boolean sameRange = sameWorld && nextRange.equals(this.cachedBlockSectionRange);
+        boolean forceRescan = !sameWorld || (sameRange && this.blockSectionCacheAge >= BLOCK_SECTION_CACHE_RESCAN_INTERVAL_TICKS);
+        int nextCacheAge = sameRange && !forceRescan ? this.blockSectionCacheAge + 1 : 0;
+
+        Map<BlockSection.Key, BlockSection> previousSections = new HashMap<>(this.cachedBlockSections);
+        Set<BlockSection.Key> previousEmptySections = new HashSet<>(this.cachedEmptyBlockSections);
+        Set<BlockSection.Key> dirtySections = this.drainDirtyBlockSections();
+        Map<BlockSection.Key, BlockSection> nextCachedSections = new HashMap<>();
+        Set<BlockSection.Key> nextCachedEmptySections = new HashSet<>();
+        List<BlockSection> nextBlockSections = new ArrayList<>();
+
+        ChunkCache chunkCache = null;
+        BlockPos cacheMin = new BlockPos(
+                nextRange.minX() << 4,
+                Math.max(0, nextRange.minY() << 4),
+                nextRange.minZ() << 4
+        );
+        BlockPos cacheMax = new BlockPos(
+                (nextRange.maxX() << 4) + 15,
+                Math.min(world.getHeight() - 1, (nextRange.maxY() << 4) + 15),
+                (nextRange.maxZ() << 4) + 15
+        );
+
+        for (BlockSection.Key sectionKey : nextRegisteredSections) {
+            BlockSection cachedSection = previousSections.get(sectionKey);
+            boolean knownEmpty = previousEmptySections.contains(sectionKey);
+            boolean shouldRescan = forceRescan || dirtySections.contains(sectionKey) || (cachedSection == null && !knownEmpty);
+
+            if (shouldRescan) {
+                if (chunkCache == null) chunkCache = new ChunkCache(world, cacheMin, cacheMax, 0);
+                BlockSection blockSection = this.createBlockSection(world, chunkCache, sectionKey);
+                if (blockSection == null) {
+                    nextCachedEmptySections.add(sectionKey);
+                }
+                else {
+                    nextCachedSections.put(sectionKey, blockSection);
+                    nextBlockSections.add(blockSection);
+                }
+            }
+            else {
+                if (cachedSection != null) {
+                    nextCachedSections.put(sectionKey, cachedSection);
+                    nextBlockSections.add(cachedSection);
+                }
+                else nextCachedEmptySections.add(sectionKey);
+            }
+        }
+
+        this.updateRegisteredBlockSections(nextRegisteredSections);
+        this.cachedBlockSectionWorld = world;
+        this.cachedBlockSectionRange = nextRange;
+        this.blockSectionCacheAge = nextCacheAge;
+        this.cachedBlockSections.clear();
+        this.cachedBlockSections.putAll(nextCachedSections);
+        this.cachedEmptyBlockSections.clear();
+        this.cachedEmptyBlockSections.addAll(nextCachedEmptySections);
+        return nextBlockSections;
+    }
+
+    /**
+     * Grabs nearby entities and turns them into snapshots for physics.
+     * It only keeps the first MAX_ENTITIES so things do not get out of hand.
+     */
+    @NotNull
+    private List<PhysicsEntitySnapshot> captureEntitySnapshots(@NotNull PhysicsObject physicsObject, @NotNull World world, @NotNull AxisAlignedBB shipAabb) {
+        List<Entity> nearbyEntities = world.getEntitiesWithinAABB(
+                Entity.class, shipAabb.grow(ENTITY_SCAN_GROW),
+                entity -> this.isEntityCollidable(entity, world)
+        );
+        int entityCount = Math.min(nearbyEntities.size(), MAX_ENTITIES);
+        List<PhysicsEntitySnapshot> entitySnapshots = new ArrayList<>(entityCount);
+        for (int index = 0; index < entityCount; index++) {
+            entitySnapshots.add(PhysicsEntitySnapshot.capture(nearbyEntities.get(index), physicsObject));
+        }
+        return entitySnapshots;
+    }
+
+    /**
+     * Clears the block section cache and stops watching its old sections.
+     * Dirty section updates stay queued unless the whole cache is being closed.
+     */
+    private void clearBlockSectionCache() {
         this.updateRegisteredBlockSections(List.of());
         this.cachedBlockSections.clear();
         this.cachedEmptyBlockSections.clear();
-        this.dirtyBlockSections.clear();
         this.cachedBlockSectionWorld = null;
         this.cachedBlockSectionRange = null;
         this.blockSectionCacheAge = 0;
-        this.publishedSnapshot = EMPTY_SNAPSHOT;
+    }
+
+    /**
+     * Grows a block range while keeping its Y values inside the world.
+     */
+    @NotNull
+    private BlockSection.Range createExpandedRange(@NotNull World world, @NotNull BlockPos min, @NotNull BlockPos max, int grow) {
+        BlockPos expandedMin = new BlockPos(
+                min.getX() - grow,
+                Math.max(0, min.getY() - grow),
+                min.getZ() - grow
+        );
+        BlockPos expandedMax = new BlockPos(
+                max.getX() + grow,
+                Math.min(world.getHeight() - 1, max.getY() + grow),
+                max.getZ() + grow
+        );
+        return BlockSection.Range.fromBlockCorners(expandedMin, expandedMax);
     }
 
     //-----block section manipulation-----
@@ -246,6 +276,7 @@ public class PhysicsCollideWith {
         return builder.isEmpty() ? null : builder.build();
     }
 
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     private boolean areChunksLoaded(World world, BlockSection.Range sectionRange) {
         ChunkProviderServer serverChunkProvider = (ChunkProviderServer) world.getChunkProvider();
         for (int chunkX = sectionRange.minX(); chunkX <= sectionRange.maxX(); chunkX++) {
@@ -256,30 +287,13 @@ public class PhysicsCollideWith {
         return true;
     }
 
-    private BlockPos growMin(BlockPos pos, int grow) {
-        return new BlockPos(
-                pos.getX() - grow,
-                Math.max(0, pos.getY() - grow),
-                pos.getZ() - grow
-        );
-    }
-
-    private BlockPos growMax(BlockPos pos, World world, int grow) {
-        return new BlockPos(
-                pos.getX() + grow,
-                Math.min(world.getHeight() - 1, pos.getY() + grow),
-                pos.getZ() + grow
-        );
-    }
-
     @NotNull
     public Snapshot createSnapshot() {
         return this.publishedSnapshot;
     }
 
-    private boolean isEntityCollidable(Entity entity, World hostWorld) {
-        return entity != null
-                && entity.isEntityAlive()
+    private boolean isEntityCollidable(@NotNull Entity entity, @NotNull World hostWorld) {
+        return entity.isEntityAlive()
                 && !entity.noClip
                 && entity.world == hostWorld
                 && !(entity instanceof EntityItem)

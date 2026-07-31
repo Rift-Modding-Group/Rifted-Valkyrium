@@ -5,7 +5,6 @@ import org.valkyrienskies.mod.common.ships.ShipData;
 import javax.annotation.Nullable;
 
 public class ImplCapabilityEntityShipDraggable implements IEntityShipDraggable {
-
     @Nullable
     private ShipData lastTouchedShip;
     private int ticksSinceTouchedShip;

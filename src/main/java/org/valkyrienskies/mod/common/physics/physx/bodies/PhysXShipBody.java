@@ -42,7 +42,7 @@ import java.util.*;
  * Information involving the ships collisions
  * todo: make interface and move most of the methods used here to there for when we get multiple physics engines
  * */
-public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Identifier> {
+public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Identifier, PhysicsObject> {
     private static final int MAX_SHIP_SHAPES = 8192;
     private static final double WATER_DENSITY = 1000D;
     private static final double WATER_VERTICAL_DAMPING = 1800D;
@@ -100,7 +100,8 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
         return this.ship;
     }
 
-    public void updateShipReference(@NotNull PhysicsObject ship) {
+    @Override
+    public void synchronize(@NotNull PhysicsObject ship) {
         this.ship = ship;
     }
 
@@ -114,38 +115,74 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
         rotationDestination.set(PhysXActorUtil.fromPxQuat(pose.getQ()));
     }
 
-    public void updateBeforeSimulation(@NotNull World hostWorld, @NotNull List<PhysXBlockSectionBody> blockSectionsWithLiquids, double timeStep) {
-        PhysicsCalculations calculations = this.ship.getPhysicsCalculations();
-        PxRigidDynamic shipActor = (PxRigidDynamic) this.actor;
+    @Override
+    public void updateBeforeSimulation(
+            @NotNull World hostWorld,
+            @NotNull List<PhysXBlockSectionBody> blockSectionsWithLiquids,
+            double timeStep
+    ) {
+        this.prepareForSimulation(timeStep);
+        this.applyLiquidForces(hostWorld, blockSectionsWithLiquids);
+        this.syncBeforeSimulation();
+    }
 
-        //reset force state and record this simulation step length.
+    @Override
+    public void updateAfterSimulation() {
+        PhysicsCalculations calculations = this.ship.getPhysicsCalculations();
+        ShipTransform finalTransform = this.readActorTransform(calculations);
+        this.readActorVelocities(calculations);
+        this.finishSimulationTick(finalTransform);
+    }
+
+    /**
+     * gets le ship ready for the next PhysX step. clears old forces and works out the new ones
+     */
+    private void prepareForSimulation(double timeStep) {
+        PhysicsCalculations calculations = this.ship.getPhysicsCalculations();
         calculations.resetForceAndTorque();
         calculations.setPhysicsTimeDeltaPerPhysTick(timeStep);
         this.centerOfMassPoseDirty = false;
 
-        //move the physics transform when the game-tick center of mass changes.
+        this.updatePhysCenterOfMass(calculations);
+        this.calculateFramedMOITensor(calculations);
+
+        if (!this.ship.isShipAligningToGrid()) {
+            this.applyAirDrag(calculations);
+            if (!calculations.actAsArchimedes) this.calculateForces(calculations);
+        }
+        else this.calculateForcesDeconstruction(calculations, timeStep);
+    }
+
+    /**
+     * keeps the physics center of mass lined up with the game. also flags anything that needs refreshing
+     */
+    private void updatePhysCenterOfMass(PhysicsCalculations calculations) {
         Vector3d currentCenterOfMass = calculations.getPhysCenterOfMass();
         Vector3dc gameTickCenterOfMass = this.ship.getInertiaData().getGameTickCenterOfMass();
-        if (!currentCenterOfMass.equals(gameTickCenterOfMass)) {
-            ShipTransform currentTransform = this.ship.getShipTransformationManager().getCurrentPhysicsTransform();
-            Vector3d centerDifference = gameTickCenterOfMass.sub(currentCenterOfMass, new Vector3d());
-            currentTransform.transformDirection(centerDifference, TransformType.SUBSPACE_TO_GLOBAL);
+        if (currentCenterOfMass.equals(gameTickCenterOfMass)) return;
 
-            Vector3d newCenterOfMass = new Vector3d(gameTickCenterOfMass);
-            ShipTransform adjustedTransform = new ShipTransform(
-                    currentTransform.getPosX() + centerDifference.x,
-                    currentTransform.getPosY() + centerDifference.y,
-                    currentTransform.getPosZ() + centerDifference.z,
-                    currentTransform.rotationQuaternion(TransformType.SUBSPACE_TO_GLOBAL),
-                    newCenterOfMass
-            );
-            currentCenterOfMass.set(newCenterOfMass);
-            this.ship.getShipTransformationManager().setCurrentPhysicsTransform(adjustedTransform);
-            this.centerOfMassPoseDirty = true;
-            this.massPropertiesDirty = true;
-        }
+        ShipTransform currentTransform = this.ship.getShipTransformationManager().getCurrentPhysicsTransform();
+        Vector3d centerDifference = gameTickCenterOfMass.sub(currentCenterOfMass, new Vector3d());
+        currentTransform.transformDirection(centerDifference, TransformType.SUBSPACE_TO_GLOBAL);
 
-        //rotate the ship inertia tensor into world space for this physics step.
+        Vector3d newCenterOfMass = new Vector3d(gameTickCenterOfMass);
+        ShipTransform adjustedTransform = new ShipTransform(
+                currentTransform.getPosX() + centerDifference.x,
+                currentTransform.getPosY() + centerDifference.y,
+                currentTransform.getPosZ() + centerDifference.z,
+                currentTransform.rotationQuaternion(TransformType.SUBSPACE_TO_GLOBAL),
+                newCenterOfMass
+        );
+        currentCenterOfMass.set(newCenterOfMass);
+        this.ship.getShipTransformationManager().setCurrentPhysicsTransform(adjustedTransform);
+        this.centerOfMassPoseDirty = true;
+        this.massPropertiesDirty = true;
+    }
+
+    /**
+     * rotates le ship's inertia into world space for this step
+     */
+    private void calculateFramedMOITensor(PhysicsCalculations calculations) {
         Matrix3dc rotationMatrix = this.ship.getShipTransformationManager()
                 .getCurrentPhysicsTransform().createRotationMatrix(TransformType.SUBSPACE_TO_GLOBAL);
         Matrix3dc inertiaBodyFrame = this.ship.getInertiaData().getGameMoITensor();
@@ -155,76 +192,86 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
         finalInertia.mul(rotationMatrixTranspose);
         calculations.getPhysMOITensor().set(finalInertia);
         calculations.getPhysInvMOITensor().set(finalInertia).invert();
+    }
 
-        //apply normal block forces or grid-alignment forces.
-        if (!this.ship.isShipAligningToGrid()) {
-            this.applyAirDrag(calculations);
-            if (!calculations.actAsArchimedes) this.calculateForces(calculations);
-        }
-        else this.calculateForcesDeconstruction(calculations, timeStep);
-
-        //apply buoyancy and water drag only when touching liquid actors
+    /**
+     * adds buoyancy and water drag when the ship is touching liquid
+     */
+    private void applyLiquidForces(
+            World hostWorld,
+            List<PhysXBlockSectionBody> blockSectionsWithLiquids
+    ) {
         AxisAlignedBB shipAabb = this.ship.getPhysicsTransformAABB();
-        if (shipAabb != null && this.isTouchingLiquidActor(shipAabb, blockSectionsWithLiquids)) {
-            //sample each ship block against nearby water and apply submerged force.
-            ShipTransform transform = this.ship.getShipTransformationManager().getCurrentPhysicsTransform();
+        if (shipAabb == null || !this.isTouchingLiquidActor(shipAabb, blockSectionsWithLiquids)) return;
 
-            Vector3d tempTorque = new Vector3d();
-            BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
+        ShipTransform transform = this.ship.getShipTransformationManager().getCurrentPhysicsTransform();
+        PhysicsCalculations calculations = this.ship.getPhysicsCalculations();
+        Vector3d tempTorque = new Vector3d();
+        BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
 
-            //iterate over each block position
-            for (BlockPos blockPos : this.ship.getBlockPositions()) {
-                mutablePos.setPos(blockPos);
-                IBlockState state = this.getShipBlockState(this.ship, mutablePos);
-                double buoyancyForce = (state.getBlock() instanceof IBlockBuoyancyProvider buoyancyProvider) ?
-                        buoyancyProvider.getBuoyancyForce(hostWorld, mutablePos, state, this.ship) : WATER_DENSITY * Math.abs(VSConfig.gravityVecY);
-
-                Vector3d centerWorld = new Vector3d(
-                        blockPos.getX() + 0.5D,
-                        blockPos.getY() + 0.5D,
-                        blockPos.getZ() + 0.5D
+        for (BlockPos blockPos : this.ship.getBlockPositions()) {
+            mutablePos.setPos(blockPos);
+            IBlockState state = this.getShipBlockState(this.ship, mutablePos);
+            double buoyancyForce;
+            if (state.getBlock() instanceof IBlockBuoyancyProvider buoyancyProvider) {
+                buoyancyForce = buoyancyProvider.getBuoyancyForce(
+                        hostWorld, mutablePos, state, this.ship
                 );
-                transform.transformPosition(centerWorld, TransformType.SUBSPACE_TO_GLOBAL);
-
-                double submergedFraction = this.getSubmergedFraction(hostWorld, mutablePos, centerWorld);
-                if (submergedFraction > 0D) {
-                    Vector3d relativeToShipCenter = centerWorld.sub(
-                            new Vector3d(transform.getPosX(), transform.getPosY(), transform.getPosZ()),
-                            new Vector3d()
-                    );
-                    Vector3d velocityAtPoint = calculations.getVelocityAtPoint(relativeToShipCenter, new Vector3d());
-                    double lift = buoyancyForce * submergedFraction;
-                    Vector3d force = new Vector3d(
-                            -velocityAtPoint.x * WATER_HORIZONTAL_DAMPING * submergedFraction,
-                            lift - velocityAtPoint.y * WATER_VERTICAL_DAMPING * submergedFraction,
-                            -velocityAtPoint.z * WATER_HORIZONTAL_DAMPING * submergedFraction
-                    );
-                    calculations.addForceAtPoint(relativeToShipCenter, force, tempTorque);
-                }
             }
-        }
+            else buoyancyForce = WATER_DENSITY * Math.abs(VSConfig.gravityVecY);
 
-        //rebuild or patch collision shapes when ship block collision data changed.
+            Vector3d centerWorld = new Vector3d(
+                    blockPos.getX() + 0.5D,
+                    blockPos.getY() + 0.5D,
+                    blockPos.getZ() + 0.5D
+            );
+            transform.transformPosition(centerWorld, TransformType.SUBSPACE_TO_GLOBAL);
+
+            double submergedFraction = this.getSubmergedFraction(hostWorld, mutablePos, centerWorld);
+            if (submergedFraction <= 0D) continue;
+
+            Vector3d relativeToShipCenter = centerWorld.sub(
+                    new Vector3d(transform.getPosX(), transform.getPosY(), transform.getPosZ()),
+                    new Vector3d()
+            );
+            Vector3d velocityAtPoint = calculations.getVelocityAtPoint(
+                    relativeToShipCenter, new Vector3d()
+            );
+            double lift = buoyancyForce * submergedFraction;
+            Vector3d force = new Vector3d(
+                    -velocityAtPoint.x * WATER_HORIZONTAL_DAMPING * submergedFraction,
+                    lift - velocityAtPoint.y * WATER_VERTICAL_DAMPING * submergedFraction,
+                    -velocityAtPoint.z * WATER_HORIZONTAL_DAMPING * submergedFraction
+            );
+            calculations.addForceAtPoint(relativeToShipCenter, force, tempTorque);
+        }
+    }
+
+    /**
+     * Pushes the prepared ship state into PhysX right before simulation starts.
+     */
+    private void syncBeforeSimulation() {
+        PhysicsCalculations calculations = this.ship.getPhysicsCalculations();
+        PxRigidDynamic shipActor = (PxRigidDynamic) this.actor;
+
         boolean collisionShapeDirty = this.ship.getPhysicsData().consumeCollisionShapeDirty();
-        Set<BlockPos> dirtyCollisionShapePositions = this.ship.getPhysicsData().consumeDirtyCollisionShapePositions();
+        Set<BlockPos> dirtyPositions = this.ship.getPhysicsData().consumeDirtyCollisionShapePositions();
         boolean blockCountChanged = this.lastBlockCount != this.ship.getBlockPositions().size();
-        if (this.firstSync || collisionShapeDirty || (blockCountChanged && dirtyCollisionShapePositions.isEmpty())) {
+        if (this.firstSync || collisionShapeDirty || (blockCountChanged && dirtyPositions.isEmpty())) {
             this.rebuildCollisionShapes();
             this.massPropertiesDirty = true;
         }
-        else if (!dirtyCollisionShapePositions.isEmpty()) {
-            this.updateCollisionShapes(dirtyCollisionShapePositions);
+        else if (!dirtyPositions.isEmpty()) {
+            this.updateCollisionShapes(dirtyPositions);
             this.massPropertiesDirty = true;
         }
 
-        //push gravity, mass, and velocity-limit settings into the PhysX actor.
         boolean disableGravity = !VSConfig.doGravity || this.ship.isShipAligningToGrid() || calculations.actAsArchimedes;
         this.actor.setActorFlag(PxActorFlagEnum.eDISABLE_GRAVITY, disableGravity);
         this.updateMassPropertiesIfNeeded(calculations);
         shipActor.setMaxLinearVelocity((float) VSConfig.shipMaxSpeed);
         shipActor.setMaxAngularVelocity((float) VSConfig.shipMaxAngularSpeed);
 
-        //force actor pose when requested or when COM movement shifted the actor frame.
         boolean forceGameTransform = calculations.setForceToUseGameTransform(false);
         if (this.firstSync || forceGameTransform) {
             this.forcePose(this.ship.getShipData().getShipTransform());
@@ -236,7 +283,6 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
         }
         this.centerOfMassPoseDirty = false;
 
-        //copy game-side linear and angular velocity into PhysX.
         PxVec3 linearVelocity = PhysXActorUtil.toPxVec(calculations.getLinearVelocity());
         PxVec3 angularVelocity = PhysXActorUtil.toPxVec(calculations.getAngularVelocity());
         shipActor.setLinearVelocity(linearVelocity, true);
@@ -244,10 +290,18 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
         linearVelocity.destroy();
         angularVelocity.destroy();
 
-        //apply deferred impulses to physx body and finish first-sync bookkeeping.
+        this.drainImpulseFrom(calculations, shipActor);
+        this.firstSync = false;
+    }
+
+    /**
+     * Drains any queued force and torque into the PhysX actor as impulses.
+     */
+    private void drainImpulseFrom(PhysicsCalculations calculations, PxRigidDynamic shipActor) {
         Vector3d shipForce = new Vector3d();
         Vector3d shipTorque = new Vector3d();
         calculations.drainForceAndTorque(shipForce, shipTorque);
+
         if (shipForce.lengthSquared() > 0) {
             PxVec3 physXForce = PhysXActorUtil.toPxVec(shipForce);
             shipActor.addForce(physXForce, PxForceModeEnum.eIMPULSE, true);
@@ -258,12 +312,12 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
             shipActor.addTorque(physXTorque, PxForceModeEnum.eIMPULSE, true);
             physXTorque.destroy();
         }
-        this.firstSync = false;
     }
 
-    public void updateAfterSimulation() {
-        PhysicsCalculations calculations = this.ship.getPhysicsCalculations();
-        PxRigidDynamic shipActor = (PxRigidDynamic) this.actor;
+    /**
+     * Turns the latest PhysX pose back into the ship transform used by the game.
+     */
+    private ShipTransform readActorTransform(PhysicsCalculations calculations) {
         PxTransform pose = this.actor.getGlobalPose();
         PxVec3 posePosition = pose.getP();
         PxQuat poseRotation = pose.getQ();
@@ -275,26 +329,33 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
         referencePosition.add(centerPosition, centerPosition);
         centerPosition.y = Math.clamp(centerPosition.y, VSConfig.shipLowerLimit, VSConfig.shipUpperLimit);
 
-        PxVec3 linearVelocity = shipActor.getLinearVelocity();
-        PxVec3 angularVelocity = shipActor.getAngularVelocity();
-        Vector3d finalLinearVelocity = PhysXActorUtil.fromPxVec(linearVelocity);
-        Vector3d finalAngularVelocity = PhysXActorUtil.fromPxVec(angularVelocity);
-
-        ShipTransform finalTransform = new ShipTransform(
+        return new ShipTransform(
                 centerPosition.x,
                 centerPosition.y,
                 centerPosition.z,
                 rotation,
                 new Vector3d(calculations.getPhysCenterOfMass())
         );
+    }
 
-        calculations.getLinearVelocity().set(finalLinearVelocity);
-        calculations.getAngularVelocity().set(finalAngularVelocity);
+    /**
+     * Copies the latest PhysX velocities back into the ship calculations.
+     */
+    private void readActorVelocities(PhysicsCalculations calculations) {
+        PxRigidDynamic shipActor = (PxRigidDynamic) this.actor;
+        PxVec3 linearVelocity = shipActor.getLinearVelocity();
+        PxVec3 angularVelocity = shipActor.getAngularVelocity();
+        calculations.getLinearVelocity().set(PhysXActorUtil.fromPxVec(linearVelocity));
+        calculations.getAngularVelocity().set(PhysXActorUtil.fromPxVec(angularVelocity));
+    }
 
-        //---finish simulation tick---
+    /**
+     * Finishes the step by saving the new transform and checking that the ship stayed sane.
+     */
+    private void finishSimulationTick(ShipTransform finalTransform) {
+        PhysicsCalculations calculations = this.ship.getPhysicsCalculations();
         calculations.getPhysCenterOfMass().set(finalTransform.getCenterCoord());
 
-        //reset all velocities when physics somehow broke
         if (this.isPhysicsBroken(calculations)) {
             this.ship.getShipData().setPhysicsEnabled(false);
             calculations.getLinearVelocity().zero();
@@ -537,6 +598,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
         this.blocksByShape.put(shape, immutablePositions);
     }
 
+    @NotNull
     private List<BlockPos> detachShipShapes(BlockPos pos, Set<PxShape> detachedShapes) {
         List<PxShape> blockShapes = this.shapesByBlock.get(pos);
         if (blockShapes == null) return List.of();
@@ -548,6 +610,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
         return affectedPositions;
     }
 
+    @NotNull
     private List<BlockPos> detachShipShape(PxShape shape) {
         List<BlockPos> blockPositions = this.blocksByShape.remove(shape);
         if (blockPositions == null) blockPositions = List.of();
@@ -564,6 +627,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
         return blockPositions;
     }
 
+    @NotNull
     private Set<BlockPos> expandDirtyCollisionPositions(Set<BlockPos> dirtyPositions) {
         Set<BlockPos> expanded = new HashSet<>();
         for (BlockPos dirtyPosition : dirtyPositions) {
