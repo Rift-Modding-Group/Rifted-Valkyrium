@@ -3,7 +3,8 @@ package org.valkyrienskies.mod.common.network;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.EntityPlayerSP;
 import org.joml.Vector3d;
-import org.valkyrienskies.mod.common.entity.EntityShipMovementData;
+import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
+import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityShipMountData;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
@@ -35,9 +36,17 @@ public class PlayerMovementDataGenerator {
 
         //---send non-mounted players using their last-touched ship-local position---
         else {
-            final EntityShipMovementData entityShipMovementData = ValkyrienUtils.getEntityShipMovementDataFor(entityPlayer);
+            final IEntityShipDraggable entityShipDraggable = entityPlayer.getCapability(
+                    VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE,
+                    null
+            );
+            if (entityShipDraggable == null) {
+                throw new IllegalStateException(
+                        "IEntityShipDraggable capability is not expected to be null!"
+                );
+            }
 
-            final ShipData lastTouchedShip = entityShipMovementData.getLastTouchedShip();
+            final ShipData lastTouchedShip = entityShipDraggable.getLastTouchedShip();
             final UUID lastTouchedShipId = lastTouchedShip != null ? lastTouchedShip.getUuid() : null;
             final Vector3d playerPosInLocal = new Vector3d(entityPlayer.posX, entityPlayer.posY, entityPlayer.posZ);
             final boolean onGround = entityPlayer.onGround;
@@ -49,8 +58,8 @@ public class PlayerMovementDataGenerator {
 
             return new PlayerMovementData(
                     lastTouchedShipId,
-                    entityShipMovementData.getTicksSinceTouchedShip(),
-                    entityShipMovementData.getTicksPartOfGround(),
+                    entityShipDraggable.getTicksSinceTouchedShip(),
+                    entityShipDraggable.getTicksPartOfGround(),
                     playerPosInLocal,
                     onGround
             );

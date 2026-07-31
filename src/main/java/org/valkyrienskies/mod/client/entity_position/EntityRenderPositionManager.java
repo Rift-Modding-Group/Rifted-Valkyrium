@@ -13,7 +13,6 @@ import org.joml.Vector3dc;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
 import org.valkyrienskies.mod.common.config.VSConfig;
-import org.valkyrienskies.mod.common.entity.EntityShipMovementData;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityShipMountData;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
@@ -134,16 +133,14 @@ public class EntityRenderPositionManager {
                 VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE,
                 null
         );
-        EntityShipMovementData movementData =
-                draggable == null ? null : draggable.getEntityShipMovementData();
         ShipData contactedShip =
-                movementData == null ? null : movementData.getLastTouchedShip();
+                draggable == null ? null : draggable.getLastTouchedShip();
         boolean recentContact = contactedShip != null
-                && movementData.getTicksSinceTouchedShip()
+                && draggable.getTicksSinceTouchedShip()
                 < VSConfig.ticksToStickToShip;
 
         SupportLease supportLease;
-        if (recentContact && movementData.isStandingOnShip()) {
+        if (recentContact && draggable.isStandingOnShip()) {
             supportLease = new SupportLease(contactedShip.getUuid(), 0);
         }
         else {

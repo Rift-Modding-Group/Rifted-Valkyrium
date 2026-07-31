@@ -30,8 +30,6 @@ import valkyrienwarfare.api.TransformType;
 
 import java.util.Optional;
 
-import static org.valkyrienskies.mod.common.util.ValkyrienUtils.getLastShipTouchedByEntity;
-
 @Mixin(Entity.class)
 public abstract class MixinEntity {
     @Shadow
@@ -174,7 +172,13 @@ public abstract class MixinEntity {
     @Redirect(method = "createRunningParticles", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/math/MathHelper;floor(D)I", ordinal = 0))
     private int runningParticlesFirstFloor(double d) {
         Entity thisEntity = (Entity) ((Object) this);
-        final ShipData lastTouchedShip = getLastShipTouchedByEntity(thisEntity);
+        IEntityShipDraggable entityShipDraggable = thisEntity.getCapability(
+                VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE,
+                null
+        );
+        final ShipData lastTouchedShip = entityShipDraggable == null
+                ? null
+                : entityShipDraggable.getLastTouchedShip();
         if (lastTouchedShip == null) {
             searchVector = null;
             return MathHelper.floor(d);
@@ -286,7 +290,13 @@ public abstract class MixinEntity {
     private void isEntityInvulnerable(DamageSource damageSource, CallbackInfoReturnable<Boolean> cir) {
         if (VSConfig.noFallDamageOnShip && damageSource == DamageSource.FALL) {
             Entity thisEntity = (Entity) ((Object) this);
-            final ShipData lastTouchedShip = getLastShipTouchedByEntity(thisEntity);
+            IEntityShipDraggable entityShipDraggable = thisEntity.getCapability(
+                    VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE,
+                    null
+            );
+            final ShipData lastTouchedShip = entityShipDraggable == null
+                    ? null
+                    : entityShipDraggable.getLastTouchedShip();
 
             if (lastTouchedShip != null) {
                 cir.setReturnValue(true);

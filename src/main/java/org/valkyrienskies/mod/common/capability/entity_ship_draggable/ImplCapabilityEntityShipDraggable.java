@@ -1,17 +1,61 @@
 package org.valkyrienskies.mod.common.capability.entity_ship_draggable;
 
-import org.jetbrains.annotations.NotNull;
-import org.valkyrienskies.mod.common.entity.EntityShipMovementData;
+import org.valkyrienskies.mod.common.ships.ShipData;
+
+import javax.annotation.Nullable;
 
 public class ImplCapabilityEntityShipDraggable implements IEntityShipDraggable {
-    @NotNull
-    private final EntityShipMovementData entityShipMovementData = new EntityShipMovementData(null, 0, 0);
+
+    @Nullable
+    private ShipData lastTouchedShip;
+    private int ticksSinceTouchedShip;
+    private int ticksPartOfGround;
+    private boolean standingOnShip;
     private int ticksInAirPocket = 0;
 
     @Override
-    @NotNull
-    public EntityShipMovementData getEntityShipMovementData() {
-        return this.entityShipMovementData;
+    @Nullable
+    public ShipData getLastTouchedShip() {
+        return this.lastTouchedShip;
+    }
+
+    @Override
+    public int getTicksSinceTouchedShip() {
+        return this.ticksSinceTouchedShip;
+    }
+
+    @Override
+    public int getTicksPartOfGround() {
+        return this.ticksPartOfGround;
+    }
+
+    @Override
+    public boolean isStandingOnShip() {
+        return this.standingOnShip;
+    }
+
+    @Override
+    public void setLastTouchedShip(@Nullable ShipData lastTouchedShip) {
+        boolean sameShip = lastTouchedShip != null
+                && this.lastTouchedShip != null
+                && lastTouchedShip.getUuid().equals(this.lastTouchedShip.getUuid());
+        this.lastTouchedShip = lastTouchedShip;
+        this.standingOnShip = sameShip && this.standingOnShip;
+    }
+
+    @Override
+    public void setTicksSinceTouchedShip(int ticksSinceTouchedShip) {
+        this.ticksSinceTouchedShip = ticksSinceTouchedShip;
+    }
+
+    @Override
+    public void setTicksPartOfGround(int ticksPartOfGround) {
+        this.ticksPartOfGround = ticksPartOfGround;
+    }
+
+    @Override
+    public void setStandingOnShip(boolean standingOnShip) {
+        this.standingOnShip = standingOnShip && this.lastTouchedShip != null;
     }
 
     @Override

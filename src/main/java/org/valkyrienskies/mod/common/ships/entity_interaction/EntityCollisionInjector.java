@@ -25,6 +25,7 @@ import org.apache.commons.lang3.tuple.Triple;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
+import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
 import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
 import org.valkyrienskies.mod.common.entity.EntityMountable;
 import org.valkyrienskies.mod.common.ships.ShipData;
@@ -47,8 +48,7 @@ public class EntityCollisionInjector {
 
     // Returns false if game should use default collision
     @Nullable
-    public static IntermediateMovementVariableStorage alterEntityMovement(Entity entity,
-        MoverType type, double dx, double dy, double dz) {
+    public static IntermediateMovementVariableStorage alterEntityMovement(Entity entity, MoverType type, double dx, double dy, double dz) {
         final double origDx = dx;
         final double origDy = dy;
         final double origDz = dz;
@@ -325,8 +325,7 @@ public class EntityCollisionInjector {
         );
     }
 
-    public static void alterEntityMovementPost(Entity entity,
-        IntermediateMovementVariableStorage storage) {
+    public static void alterEntityMovementPost(Entity entity, IntermediateMovementVariableStorage storage) {
         double dx = storage.dxyz.x();
         double dy = storage.dxyz.y();
         double dz = storage.dxyz.z();
@@ -335,28 +334,22 @@ public class EntityCollisionInjector {
         double origDy = storage.origDxyz.y();
         double origDz = storage.origDxyz.z();
 
-        double origPosX = storage.origPosXyz.x();
-        double origPosY = storage.origPosXyz.y();
-        double origPosZ = storage.origPosXyz.z();
-
         boolean alreadyOnGround = storage.alreadyOnGround;
         double motionYBefore = storage.motionYBefore;
         float oldFallDistance = storage.oldFallDistance;
 
-        ShipData worldBelow = ValkyrienUtils.getLastShipTouchedByEntity(entity);
+        IEntityShipDraggable entityShipDraggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
+        ShipData worldBelow = entityShipDraggable == null ? null : entityShipDraggable.getLastTouchedShip();
+        if (worldBelow == null) return;
 
-        entity.collidedHorizontally =
-            (motionInterfering(dx, origDx)) || (motionInterfering(dz, origDz));
+        entity.collidedHorizontally = (motionInterfering(dx, origDx)) || (motionInterfering(dz, origDz));
         entity.collidedVertically = isDifSignificant(dy, origDy);
-        entity.onGround =
-            entity.collidedVertically && origDy < 0 || alreadyOnGround || entity.onGround;
+        entity.onGround = entity.collidedVertically && origDy < 0 || alreadyOnGround || entity.onGround;
         entity.collided = entity.collidedHorizontally || entity.collidedVertically;
 
-        Vector3d entityPosInShip = new Vector3d(entity.posX, entity.posY - 0.20000000298023224D,
-            entity.posZ);
+        Vector3d entityPosInShip = new Vector3d(entity.posX, entity.posY - 0.20000000298023224D, entity.posZ);
 
-        worldBelow.getShipTransform()
-            .transformPosition(entityPosInShip, TransformType.GLOBAL_TO_SUBSPACE);
+        worldBelow.getShipTransform().transformPosition(entityPosInShip, TransformType.GLOBAL_TO_SUBSPACE);
 
         int j4 = MathHelper.floor(entityPosInShip.x);
         int l4 = MathHelper.floor(entityPosInShip.y);
