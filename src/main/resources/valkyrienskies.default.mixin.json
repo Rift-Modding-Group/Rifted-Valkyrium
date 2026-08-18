@@ -5,7 +5,6 @@
   "target": "@env(DEFAULT)",
   "client": [
     "client.MixinMinecraft",
-    "client.entity.MixinEntityLivingBaseClient",
     "client.entity.MixinEntityPlayerSP",
     "client.particle.MixinParticleManager",
     "client.renderer.MixinEntityRenderer",

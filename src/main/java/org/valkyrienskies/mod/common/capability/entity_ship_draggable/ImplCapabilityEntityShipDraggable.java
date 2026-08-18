@@ -1,17 +1,23 @@
 package org.valkyrienskies.mod.common.capability.entity_ship_draggable;
 
-import org.jetbrains.annotations.NotNull;
+import org.joml.Vector3d;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import org.valkyrienskies.mod.common.entity.EntityShipMovementData;
 
 public class ImplCapabilityEntityShipDraggable implements IEntityShipDraggable {
-    @NotNull
-    private final EntityShipMovementData entityShipMovementData = new EntityShipMovementData(null, 0, 0);
+    @Nullable
+    private EntityShipMovementData entityShipMovementData = new EntityShipMovementData(null, 0, 0, new Vector3d(), 0);
     private int ticksInAirPocket = 0;
 
     @Override
-    @NotNull
-    public EntityShipMovementData getEntityShipMovementData() {
+    public @Nullable EntityShipMovementData getEntityShipMovementData() {
         return this.entityShipMovementData;
+    }
+
+    @Override
+    public void setEntityShipMovementData(@Nullable EntityShipMovementData entityShipMovementData) {
+        this.entityShipMovementData = entityShipMovementData;
     }
 
     @Override

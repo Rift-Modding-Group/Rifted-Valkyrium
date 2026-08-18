@@ -314,6 +314,7 @@ public class MainCommand implements Runnable {
                 physicsCalculations.setForceToUseGameTransform(true);
                 // Also update the transform in the ShipTransformationManager
                 shipObject.setForceToUseShipDataTransform(true);
+                shipObject.setTicksSinceShipTeleport(0);
             }
 
             // Update the ship transform of the ship data.

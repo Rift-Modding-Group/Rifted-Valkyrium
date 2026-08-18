@@ -61,7 +61,6 @@ public class EntityCollisionInjector {
         List<ShipCollisionBox> colPolys = getCollidingPolygonsAndDoBlockCols(entity, velocity);
 
         PhysicsObject worldBelow = null;
-        PhysicsObject standingOnShip = null;
 
         Vector3d total = new Vector3d();
 
@@ -174,7 +173,6 @@ public class EntityCollisionInjector {
                         if (response.y >= 0
                             && VSMath.canStandOnNormal(
                             fast.getCollisionAxes()[fast.getMinDistanceIndex()])) {
-                            standingOnShip = shipPoly.shipFrom;
                             Vector3d slowButStopped = new Vector3d(0,
                                 -fast.getCollisions()[fast.getMinDistanceIndex()]
                                     .getCollisionPenetrationDistance() / fast
@@ -192,7 +190,6 @@ public class EntityCollisionInjector {
                                         && VSMath.canStandOnNormal(
                                         fast.getCollisions()[i].getCollisionNormal())
                                         && tempResponse.lengthSquared() < stepSquared) {
-                                        standingOnShip = shipPoly.shipFrom;
                                         if (tempResponse.lengthSquared() < .1) {
                                             // Too small to be a real step, let it through
                                             response = tempResponse;
@@ -312,17 +309,8 @@ public class EntityCollisionInjector {
         Vector3d origDxyz = new Vector3d(origDx, origDy, origDz);
         Vector3d origPosXyz = new Vector3d(origPosX, origPosY, origPosZ);
 
-        boolean hasStandingContact = standingOnShip != null && standingOnShip.getUuid().equals(worldBelow.getUuid());
-        return new IntermediateMovementVariableStorage(
-                dxyz,
-                origDxyz,
-                origPosXyz,
-                alreadyOnGround,
-                motionYBefore,
-                oldFallDistance,
-                worldBelow.getShipData(),
-                hasStandingContact
-        );
+        return new IntermediateMovementVariableStorage(dxyz, origDxyz, origPosXyz, alreadyOnGround, motionYBefore,
+            oldFallDistance, worldBelow.getShipData());
     }
 
     public static void alterEntityMovementPost(Entity entity,
@@ -633,12 +621,11 @@ public class EntityCollisionInjector {
         public float oldFallDistance;
         @Nonnull
         public ShipData shipTouched;
-        public boolean standingOnShip;
 
         public IntermediateMovementVariableStorage(@Nonnull Vector3dc dxyz,
             @Nonnull Vector3dc origDxyz, @Nonnull Vector3dc origPosXyz,
             boolean alreadyOnGround, double motionYBefore, float oldFallDistance,
-            @Nonnull ShipData shipTouched, boolean standingOnShip) {
+            @Nonnull ShipData shipTouched) {
             this.dxyz = dxyz;
             this.origDxyz = origDxyz;
             this.origPosXyz = origPosXyz;
@@ -646,7 +633,6 @@ public class EntityCollisionInjector {
             this.motionYBefore = motionYBefore;
             this.oldFallDistance = oldFallDistance;
             this.shipTouched = shipTouched;
-            this.standingOnShip = standingOnShip;
         }
 
     }

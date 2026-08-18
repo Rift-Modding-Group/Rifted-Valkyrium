@@ -1,65 +1,79 @@
 package org.valkyrienskies.mod.common.entity;
 
+import org.joml.Vector3dc;
 import org.valkyrienskies.mod.common.ships.ShipData;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Objects;
 
 /**
- * Stores contact information used by ship-aware movement, rendering, and networking.
+ * This class stores data about the last ship an entity touched, as well as the velocity that ship added to the entity.
  */
 public class EntityShipMovementData {
     // If null, then the last touched "Ship" was the world. Otherwise, the last touched ship was a real ship.
     @Nullable
-    private ShipData lastTouchedShip;
-    private int ticksSinceTouchedShip;
+    ShipData lastTouchedShip;
+    int ticksSinceTouchedShip;
     // The number of consecutive ticks that lastTouchedShip has equaled null.
-    private int ticksPartOfGround;
-    // True only when ship collision resolution found a surface normal the entity can stand on.
-    private boolean standingOnShip;
+    int ticksPartOfGround;
+    @Nonnull
+    private final Vector3dc addedLinearVelocity;
+    private final double addedYawVelocity;
 
-    public EntityShipMovementData(@Nullable ShipData lastTouchedShip, int ticksSinceTouchedShip, int ticksPartOfGround) {
-        this(lastTouchedShip, ticksSinceTouchedShip, ticksPartOfGround, false);
-    }
-
-    public EntityShipMovementData(@Nullable ShipData lastTouchedShip, int ticksSinceTouchedShip, int ticksPartOfGround, boolean standingOnShip) {
+    public EntityShipMovementData(@Nullable ShipData lastTouchedShip, int ticksSinceTouchedShip,
+        int ticksPartOfGround, @Nonnull Vector3dc addedLinearVelocity, double addedYawVelocity) {
         this.lastTouchedShip = lastTouchedShip;
         this.ticksSinceTouchedShip = ticksSinceTouchedShip;
         this.ticksPartOfGround = ticksPartOfGround;
-        this.standingOnShip = standingOnShip && lastTouchedShip != null;
+        this.addedLinearVelocity = Objects.requireNonNull(addedLinearVelocity, "addedLinearVelocity");
+        this.addedYawVelocity = addedYawVelocity;
     }
 
     @Nullable
     public ShipData getLastTouchedShip() {
-        return this.lastTouchedShip;
+        return lastTouchedShip;
     }
 
     public int getTicksSinceTouchedShip() {
-        return this.ticksSinceTouchedShip;
+        return ticksSinceTouchedShip;
     }
 
     public int getTicksPartOfGround() {
-        return this.ticksPartOfGround;
+        return ticksPartOfGround;
     }
 
-    public boolean isStandingOnShip() {
-        return this.standingOnShip;
+    @Nonnull
+    public Vector3dc getAddedLinearVelocity() {
+        return addedLinearVelocity;
     }
 
-    public void setLastTouchedShip(@Nullable ShipData value) {
-        boolean sameShip = value != null && this.lastTouchedShip != null && value.getUuid().equals(this.lastTouchedShip.getUuid());
-        this.lastTouchedShip = value;
-        this.standingOnShip = sameShip && this.standingOnShip;
+    public double getAddedYawVelocity() {
+        return addedYawVelocity;
     }
 
-    public void setTicksSinceTouchedShip(int value) {
-        this.ticksSinceTouchedShip = value;
+    public EntityShipMovementData withLastTouchedShip(@Nullable ShipData value) {
+        return new EntityShipMovementData(value, ticksSinceTouchedShip, ticksPartOfGround,
+            addedLinearVelocity, addedYawVelocity);
     }
 
-    public void setTicksPartOfGround(int value) {
-        this.ticksPartOfGround = value;
+    public EntityShipMovementData withTicksSinceTouchedShip(int value) {
+        return new EntityShipMovementData(lastTouchedShip, value, ticksPartOfGround,
+            addedLinearVelocity, addedYawVelocity);
     }
 
-    public void setStandingOnShip(boolean value) {
-        this.standingOnShip = value && this.lastTouchedShip != null;
+    public EntityShipMovementData withTicksPartOfGround(int value) {
+        return new EntityShipMovementData(lastTouchedShip, ticksSinceTouchedShip, value,
+            addedLinearVelocity, addedYawVelocity);
+    }
+
+    public EntityShipMovementData withAddedLinearVelocity(@Nonnull Vector3dc value) {
+        return new EntityShipMovementData(lastTouchedShip, ticksSinceTouchedShip, ticksPartOfGround,
+            value, addedYawVelocity);
+    }
+
+    public EntityShipMovementData withAddedYawVelocity(double value) {
+        return new EntityShipMovementData(lastTouchedShip, ticksSinceTouchedShip, ticksPartOfGround,
+            addedLinearVelocity, value);
     }
 }

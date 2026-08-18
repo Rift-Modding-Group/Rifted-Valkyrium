@@ -1,4 +1,4 @@
-package org.valkyrienskies.mod.common.physics.physx.bodies;
+package org.valkyrienskies.mod.common.physics.physx.collision;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
@@ -24,8 +24,9 @@ import org.valkyrienskies.mod.common.block.IBlockTorqueProvider;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.physics.GreedyBlockMerger;
 import org.valkyrienskies.mod.common.physics.PhysicsUtils;
+import org.valkyrienskies.mod.common.physics.physx.IPhysicsBlockController;
 import org.valkyrienskies.mod.common.physics.physx.PhysXActorUtil;
-import org.valkyrienskies.mod.common.physics.physx.PhysXActor;
+import org.valkyrienskies.mod.common.physics.physx.PhysXCollisionFilters;
 import org.valkyrienskies.mod.common.physics.PhysicsCalculations;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
@@ -133,16 +134,6 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
 
     public void updateShipReference(@NotNull PhysicsObject ship) {
         this.ship = ship;
-    }
-
-    /**
-     * Copies the current PhysX actor pose. This must only be called by the physics
-     * thread, before or after scene simulation.
-     */
-    public void copyActorPose(@NotNull Vector3d positionDestination, @NotNull Quaterniond rotationDestination) {
-        PxTransform pose = this.actor.getGlobalPose();
-        positionDestination.set(PhysXActorUtil.fromPxVec(pose.getP()));
-        rotationDestination.set(PhysXActorUtil.fromPxQuat(pose.getQ()));
     }
 
     @Override
@@ -423,6 +414,12 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
 
         //forces from physics blocks
         if (VSConfig.doPhysicsBlocks) {
+            Queue<IPhysicsBlockController> nodesPriorityQueue = new PriorityQueue<>(this.ship.getPhysicsControllersInShip());
+            while (!nodesPriorityQueue.isEmpty()) {
+                IPhysicsBlockController controller = nodesPriorityQueue.poll();
+                controller.onPhysicsTick(this.ship, calculations, calculations.getPhysicsTimeDeltaPerPhysTick());
+            }
+
             BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
             if (this.ship.getShipData().activeForcePositions != null) {
                 //iterate over active force positions
@@ -592,7 +589,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject {
         PxShape shape = this.createBoxShape(box, this.material);
         if (shape == null) return null;
 
-        PhysXActor.SHIP.setFilter(shape);
+        PhysXCollisionFilters.CollisionGroup.SHIP.setFilter(shape);
         double localX = (box.minX + box.maxX) * 0.5D - referencePosition.x();
         double localY = (box.minY + box.maxY) * 0.5D - referencePosition.y();
         double localZ = (box.minZ + box.maxZ) * 0.5D - referencePosition.z();

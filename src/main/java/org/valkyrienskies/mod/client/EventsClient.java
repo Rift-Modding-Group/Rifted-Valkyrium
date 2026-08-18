@@ -29,8 +29,12 @@ import org.valkyrienskies.mod.client.render.GibsModelRegistry;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
 import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
+import org.valkyrienskies.mod.common.config.VSConfig;
+import org.valkyrienskies.mod.common.entity.EntityShipMovementData;
 import org.valkyrienskies.mod.common.ships.QueryableShipData;
 import org.valkyrienskies.mod.common.ships.ShipData;
+import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
+import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.VSRenderUtils;
@@ -73,17 +77,9 @@ public class EventsClient {
         }
         else if (event.phase == Phase.END) {
             if (!Minecraft.getMinecraft().isGamePaused()) {
-                final Entity localPlayer = Minecraft.getMinecraft().player;
-                if (localPlayer != null) {
-                    EntityRenderPositionManager
-                            .captureClientPlayerBeforeShipTick(
-                                    localPlayer,
-                                    world
-                            );
-                }
                 // Tick the IShipManager on the world client.
                 shipWorld.getManager().tick();
-                EntityRenderPositionManager.applyClientEntityShipTick(world);
+                EntityDraggable.tickAddedVelocityForWorld(world);
             }
         }
     }
@@ -177,18 +173,70 @@ public class EventsClient {
 
         if (event.phase == Phase.START) {
             EntityRenderPositionManager.clearRenderPositionBackups();
+            EntityRenderPositionManager.promoteShipLocalRenderData(world);
 
             for (PhysicsObject wrapper : ValkyrienUtils.getPhysosLoadedInWorld(world)) {
                 wrapper.getShipTransformationManager().updateRenderTransform(partialTicks);
             }
 
-            final Entity renderViewEntity = Minecraft.getMinecraft().getRenderViewEntity();
-            if (renderViewEntity != null && renderViewEntity == Minecraft.getMinecraft().player) {
-                EntityRenderPositionManager.applyClientPlayerRenderPosition(
-                        renderViewEntity,
-                        world,
-                        partialTicks
-                );
+            IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(world);
+            if (physObjectWorld == null) {
+                throw new IllegalStateException("Could not get ship manager from world!");
+            }
+
+            // region Fix rendering movement of entities on ships
+
+            // All of Minecraft's code assumes that entities follow a straight line path from their previous position to
+            // their current position.
+            //
+            // This assumption is violated by rotating ships, since the path of a point on a rotating body is a curve,
+            // not a straight line. At small distances from the center of a ship this doesn't matter, but for large ships
+            // the incorrect interpolation results in a bad player experience (jittery rendering resulting from the incorrect interpolation).
+            //
+            // So, to fix this we calculate the correct interpolated position of the entity, and then we modify the lastTickPos
+            // variables so that Minecraft's interpolation code computes the correct value.
+            for (final Entity entity : world.getLoadedEntityList()) {
+                if (EntityRenderPositionManager.applyShipLocalRenderPosition(entity, world, physObjectWorld, partialTicks)) {
+                    continue;
+                }
+
+                final EntityShipMovementData entityShipMovementData = ValkyrienUtils.getEntityShipMovementDataFor(entity);
+                if (entityShipMovementData.getLastTouchedShip() != null && entityShipMovementData.getTicksSinceTouchedShip() < VSConfig.ticksToStickToShip) {
+                    final PhysicsObject shipPhysicsObject = physObjectWorld.getPhysObjectFromUUID(
+                            entityShipMovementData.getLastTouchedShip().getUuid()
+                    );
+                    if (shipPhysicsObject == null) {
+                        //get draggable information
+                        IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
+                        if (draggable == null) continue;
+
+                        //remove ship movement data once the ship is gone
+                        draggable.setEntityShipMovementData(entityShipMovementData.withLastTouchedShip(null));
+                        continue;
+                    }
+                    final ShipTransform prevTickTransform = shipPhysicsObject.getPrevTickShipTransform();
+                    final ShipTransform shipRenderTransform = shipPhysicsObject.getShipTransformationManager().getRenderTransform();
+                    final Vector3dc entityAddedVelocity = entityShipMovementData.getAddedLinearVelocity();
+
+                    // The velocity the entity was moving without the added velocity from the ship
+                    final double entityMovementX = entity.posX - entityAddedVelocity.x() - entity.lastTickPosX;
+                    final double entityMovementY = entity.posY - entityAddedVelocity.y() - entity.lastTickPosY;
+                    final double entityMovementZ = entity.posZ - entityAddedVelocity.z() - entity.lastTickPosZ;
+
+                    // Compute the position the entity should be rendered at this frame
+                    final Vector3d entityShouldBeHere = new Vector3d(entity.lastTickPosX, entity.lastTickPosY, entity.lastTickPosZ);
+                    entityShouldBeHere.add(entityMovementX * partialTicks, entityMovementY * partialTicks, entityMovementZ * partialTicks);
+                    prevTickTransform.transformPosition(entityShouldBeHere, TransformType.GLOBAL_TO_SUBSPACE);
+                    shipRenderTransform.transformPosition(entityShouldBeHere, TransformType.SUBSPACE_TO_GLOBAL);
+
+                    // Save the entity lastTickPos in the map
+                    EntityRenderPositionManager.backupEntityRenderPosition(entity);
+
+                    // Then update lastTickPos such that Minecraft's interpolation code will render entity at entityShouldBeHere.
+                    entity.lastTickPosX = (entityShouldBeHere.x() - (entity.posX * partialTicks)) / (1 - partialTicks);
+                    entity.lastTickPosY = (entityShouldBeHere.y() - (entity.posY * partialTicks)) / (1 - partialTicks);
+                    entity.lastTickPosZ = (entityShouldBeHere.z() - (entity.posZ * partialTicks)) / (1 - partialTicks);
+                }
             }
         }
         else {

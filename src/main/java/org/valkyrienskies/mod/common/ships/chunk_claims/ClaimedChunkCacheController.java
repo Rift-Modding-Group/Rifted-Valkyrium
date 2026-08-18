@@ -123,6 +123,8 @@ public class ClaimedChunkCacheController implements Iterable<Chunk> {
                     entry.players = parent.getWatchingPlayers();
                 }
 
+                chunk.getTileEntityMap().forEach(parent::onSetTileEntity);
+
                 setChunkAt(x, z, chunk);
             } catch (Exception e) {
                 e.printStackTrace();

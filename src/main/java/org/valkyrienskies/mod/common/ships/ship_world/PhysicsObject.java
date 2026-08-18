@@ -19,7 +19,8 @@ import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.valkyrienskies.mod.client.render.PhysObjectRenderManager;
 import org.valkyrienskies.mod.common.physics.PhysicsCalculations;
-import org.valkyrienskies.mod.common.physics.PhysicsCollideWith;
+import org.valkyrienskies.mod.common.physics.BlockSectionList;
+import org.valkyrienskies.mod.common.physics.physx.IPhysicsBlockController;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.block_relocation.MoveBlocks;
 import org.valkyrienskies.mod.common.ships.chunk_claims.ClaimedChunkCacheController;
@@ -38,10 +39,12 @@ import valkyrienwarfare.api.TransformType;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The heart and soul of this mod.
@@ -49,9 +52,13 @@ import java.util.UUID;
 public class PhysicsObject implements IPhysicsEntity {
     // The number of ticks we wait before enabling physics. I use 20 because I'm very paranoid of ships falling through the ground.
     private static final int DISABLE_PHYSICS_FOR_X_INITIAL_TICKS = 20;
+    // Before we start dragging entities with the ship, Wait this number of ticks after a ship has been teleported using "/vs tp-ship-to" commands.
+    public static int TICKS_SINCE_TELEPORT_TO_START_DRAGGING = 50;
 
     // region Fields
     private final List<EntityPlayerMP> watchingPlayers;
+    private final Set<IPhysicsBlockController> physicsControllers;
+    private final Set<IPhysicsBlockController> physicsControllersImmutable;
     private final PhysObjectRenderManager shipRenderer;
     /**
      * Just a random block position in the ship. Used to correct floating point errors and keep
@@ -64,7 +71,7 @@ public class PhysicsObject implements IPhysicsEntity {
     /**
      * A continuously updating cache of entities and chunks to perform collisions with
      * */
-    private final PhysicsCollideWith physicsCollideWith;
+    private final BlockSectionList physicsCollideWith;
 
     /**
      * Used for faster memory access to the Chunks this object 'owns'
@@ -98,6 +105,9 @@ public class PhysicsObject implements IPhysicsEntity {
     // If (forceToUseShipDataTransform == true) then reset the physics transform to the ShipData transform.
     private boolean forceToUseShipDataTransform;
 
+    // Used to prevent players from thinking they're on a ship if this ship just got teleported.
+    private int ticksSinceShipTeleport;
+
     // Counts the number of ticks this PhysicsObject (not ShipData) has existed. Used to disable physics for the first DISABLE_PHYSICS_FOR_X_INITIAL_TICKS ticks.
     private int ticksExisted;
 
@@ -117,13 +127,16 @@ public class PhysicsObject implements IPhysicsEntity {
         this.shipData = initial;
         this.referenceBlockPos = this.getShipData().getChunkClaim().getRegionCenter();
         this.watchingPlayers = new ArrayList<>();
+        this.physicsControllers = ConcurrentHashMap.newKeySet();
+        this.physicsControllersImmutable = Collections.unmodifiableSet(this.physicsControllers);
         this.claimedChunkCache = new ClaimedChunkCacheController(this);
         this.shipTransformationManager = new ShipTransformationManager(this, this.getShipData().getShipTransform());
         this.physicsCalculations = new PhysicsCalculations(this);
-        this.physicsCollideWith = new PhysicsCollideWith();
+        this.physicsCollideWith = new BlockSectionList();
         this.shipAligningToGrid = false;
         this.deconstructState = DeconstructState.NOT_DECONSTRUCTING;
         this.forceToUseShipDataTransform = false;
+        this.ticksSinceShipTeleport = TICKS_SINCE_TELEPORT_TO_START_DRAGGING + 1; // Anything larger than TICKS_SINCE_TELEPORT_TO_START_DRAGGING works
         this.ticksExisted = 0;
 
         // Note how this is last.
@@ -152,6 +165,8 @@ public class PhysicsObject implements IPhysicsEntity {
                 this.getShipTransformationManager().setPrevTickTransform(forcedTransform);
                 this.getShipTransformationManager().setCurrentTickTransform(forcedTransform);
             }
+
+            this.ticksSinceShipTeleport++;
 
             ShipTransform physicsTransform = this.getShipTransformationManager().getCurrentPhysicsTransform();
             this.getShipTransformationManager().updateAllTransforms(physicsTransform, false, true);
@@ -183,6 +198,21 @@ public class PhysicsObject implements IPhysicsEntity {
      */
 
     // ===== Keep track of all Node Processors in a concurrent Set =====
+    public void onSetTileEntity(BlockPos pos, TileEntity tileentity) {
+        if (tileentity instanceof IPhysicsBlockController) {
+            physicsControllers.add((IPhysicsBlockController) tileentity);
+        }
+    }
+
+    public void onRemoveTileEntity(BlockPos pos) {
+        physicsControllers.removeIf(next -> next.getNodePos().equals(pos));
+    }
+
+    // Do not allow anything external to modify the physics controllers Set.
+    public Set<IPhysicsBlockController> getPhysicsControllersInShip() {
+        return physicsControllersImmutable;
+    }
+
     /**
      * Returns true if this ship is aligned close enough to the grid that it is allowed to
      * deconstruct back to the world.
@@ -432,7 +462,7 @@ public class PhysicsObject implements IPhysicsEntity {
         return physicsCalculations;
     }
 
-    public PhysicsCollideWith getPhysicsCollideWith() {
+    public BlockSectionList getPhysicsCollideWith() {
         return physicsCollideWith;
     }
 
@@ -471,6 +501,14 @@ public class PhysicsObject implements IPhysicsEntity {
 
     public void setForceToUseShipDataTransform(boolean forceToUseShipDataTransform) {
         this.forceToUseShipDataTransform = forceToUseShipDataTransform;
+    }
+
+    public int getTicksSinceShipTeleport() {
+        return ticksSinceShipTeleport;
+    }
+
+    public void setTicksSinceShipTeleport(int ticksSinceShipTeleport) {
+        this.ticksSinceShipTeleport = ticksSinceShipTeleport;
     }
 
     public VSChunkClaim getChunkClaim() {

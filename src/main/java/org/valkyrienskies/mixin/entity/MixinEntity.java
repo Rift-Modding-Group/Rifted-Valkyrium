@@ -3,6 +3,7 @@ package org.valkyrienskies.mixin.entity;
 import net.minecraft.block.material.Material;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.MoverType;
+import net.minecraft.entity.item.EntityBoat;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
@@ -71,7 +72,7 @@ public abstract class MixinEntity {
         Entity thisEntity = (Entity) ((Object) this);
         EntityShipMountData mountData = ValkyrienUtils.getMountedShipAndPos(thisEntity);
         if (mountData.isMounted()) {
-            return mountData.mountedShip()
+            return mountData.getMountedShip()
                 .getShipTransformationManager()
                 .getRenderTransform()
                 .rotate(original, TransformType.SUBSPACE_TO_GLOBAL);
@@ -97,7 +98,7 @@ public abstract class MixinEntity {
         EntityShipMountData mountData = ValkyrienUtils
             .getMountedShipAndPos(Entity.class.cast(this));
         if (mountData.isMounted()) {
-            return mountData.mountedShip()
+            return mountData.getMountedShip()
                 .getShipTransformationManager()
                 .getRenderTransform()
                 .rotate(vanilla, TransformType.SUBSPACE_TO_GLOBAL);
@@ -223,8 +224,8 @@ public abstract class MixinEntity {
             .getMountedShipAndPos(Entity.class.cast(this));
 
         if (mountData.isMounted()) {
-            Vector3d playerPosition = JOML.convert(mountData.mountPos());
-            mountData.mountedShip()
+            Vector3d playerPosition = JOML.convert(mountData.getMountPos());
+            mountData.getMountedShip()
                 .getShipTransformationManager()
                 .getRenderTransform()
                 .transformPosition(playerPosition, TransformType.SUBSPACE_TO_GLOBAL);
@@ -233,9 +234,9 @@ public abstract class MixinEntity {
             // Remove the original position added for the player's eyes
             // RotationMatrices.doRotationOnly(wrapper.wrapping.coordTransform.lToWTransform,
             // playerEyes);
-            mountData.mountedShip()
+            mountData.getMountedShip()
                 .getShipTransformationManager()
-                .getRenderTransform()
+                .getCurrentTickTransform()
                 .transformDirection(playerEyes, TransformType.SUBSPACE_TO_GLOBAL);
             // Add the new rotate player eyes to the position
             playerPosition.add(playerEyes);

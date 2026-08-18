@@ -40,7 +40,8 @@ import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShi
 import org.valkyrienskies.mod.common.capability.ship_pilot.IShipPilot;
 import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
 import org.valkyrienskies.mod.common.entity.EntityMountable;
-import org.valkyrienskies.mod.common.physics.PhysicsCollideWith;
+import org.valkyrienskies.mod.common.physics.BlockSectionList;
+import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
 import org.valkyrienskies.mod.common.ships.ship_transform.CoordinateSpaceType;
 import org.valkyrienskies.mod.common.ships.ship_world.*;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
@@ -124,6 +125,7 @@ public class EventsCommon {
                 break;
             case END:
                 physObjectWorld.tick();
+                EntityDraggable.tickAddedVelocityForWorld(world);
                 break;
         }
     }
@@ -173,7 +175,7 @@ public class EventsCommon {
 
         // Fixes memory leak; @DaPorkChop please don't leave static maps lying around D:
         lastPositions.clear();
-        PhysicsCollideWith.clearBlockSectionRegistrationsForWorld(world);
+        BlockSectionList.clearBlockSectionRegistrationsForWorld(world);
         shipWorld.getManager().onWorldUnload();
     }
 
@@ -191,7 +193,7 @@ public class EventsCommon {
         World world = event.getWorld();
         if (world.isRemote) return;
 
-        PhysicsCollideWith.invalidateBlockSectionsInChunk(world, event.getChunk().x, event.getChunk().z);
+        BlockSectionList.invalidateBlockSectionsInChunk(world, event.getChunk().x, event.getChunk().z);
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)

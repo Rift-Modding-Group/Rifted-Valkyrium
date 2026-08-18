@@ -4,6 +4,7 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityList;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.network.PacketBuffer;
 import net.minecraft.util.IThreadListener;
 import net.minecraft.util.ResourceLocation;
@@ -36,7 +37,7 @@ public class MessageEntityShipRenderPosition implements IMessage {
 
     public MessageEntityShipRenderPosition() {}
 
-    public MessageEntityShipRenderPosition(Entity entity, ShipData shipData, Vector3dc localPosition) {
+    public MessageEntityShipRenderPosition(final Entity entity, final ShipData shipData, final Vector3dc localPosition) {
         this.entityId = entity.getEntityId();
         this.shipUuid = shipData.getUuid();
         this.localX = localPosition.x();
@@ -69,17 +70,19 @@ public class MessageEntityShipRenderPosition implements IMessage {
         public IMessage onMessage(final MessageEntityShipRenderPosition message, final MessageContext ctx) {
             final IThreadListener mainThread = Minecraft.getMinecraft();
             mainThread.addScheduledTask(() -> {
-                World world = Minecraft.getMinecraft().world;
+                final World world = Minecraft.getMinecraft().world;
                 if (world == null) return;
 
-                Entity entity = world.getEntityByID(message.entityId);
-                if (entity == null || entity == Minecraft.getMinecraft().player) return;
+                final Entity entity = world.getEntityByID(message.entityId);
+                if (entity == null || entity instanceof EntityPlayer) return;
 
-                long updateTick = world.getTotalWorldTime();
-                Vector3dc localPosition = new Vector3d(message.localX, message.localY, message.localZ);
-                ResourceLocation entityId = EntityList.getKey(entity);
-                if (entityId != null && VSConfig.sittableBlockEntityIDsSet != null && VSConfig.sittableBlockEntityIDsSet.contains(entityId)) {
-                    IShipAnchoredMount anchoredMount = entity.getCapability(VSCapabilityRegistry.VS_SHIP_ANCHORED_MOUNT, null);
+                final long updateTick = world.getTotalWorldTime();
+                final Vector3dc localPosition = new Vector3d(message.localX, message.localY, message.localZ);
+                final ResourceLocation entityId = EntityList.getKey(entity);
+                if (entityId != null && VSConfig.sittableBlockEntityIDsSet != null &&
+                        VSConfig.sittableBlockEntityIDsSet.contains(entityId)) {
+                    final IShipAnchoredMount anchoredMount =
+                            entity.getCapability(VSCapabilityRegistry.VS_SHIP_ANCHORED_MOUNT, null);
                     if (anchoredMount != null) {
                         anchoredMount.setAnchorMountData(
                                 new Vec3d(message.localX, message.localY, message.localZ),
@@ -88,12 +91,7 @@ public class MessageEntityShipRenderPosition implements IMessage {
                     }
                 }
 
-                EntityRenderPositionManager.queueShipLocalRenderData(
-                        entity,
-                        message.shipUuid,
-                        localPosition,
-                        updateTick
-                );
+                EntityRenderPositionManager.queueShipLocalRenderData(entity, message.shipUuid, localPosition, updateTick);
             });
 
             return null;

@@ -60,7 +60,6 @@ public class EntityMountable extends Entity implements IEntityAdditionalSpawnDat
         BlockPos shipReferencePos) {
         this(worldIn, chairPos, coordinateSpaceType);
         this.referencePos = shipReferencePos;
-        this.updateMountPositionAndPassengers();
     }
 
     public void setMountValues(Vec3d mountPos, CoordinateSpaceType mountPosSpace,
@@ -68,8 +67,7 @@ public class EntityMountable extends Entity implements IEntityAdditionalSpawnDat
         this.mountPos = mountPos;
         this.mountPosSpace = mountPosSpace;
         this.referencePos = referencePos;
-        this.updateSharedNBT();
-        this.updateMountPositionAndPassengers();
+        updateSharedNBT();
     }
 
     private void updateSharedNBT() {
@@ -91,7 +89,9 @@ public class EntityMountable extends Entity implements IEntityAdditionalSpawnDat
 
     @Override
     public void onUpdate() {
-        if (this.firstUpdate) this.updateSharedNBT();
+        if (this.firstUpdate) {
+            updateSharedNBT();
+        }
         super.onUpdate();
         // Check that this entity isn't broken.
         if (mountPos == null) {
@@ -103,40 +103,33 @@ public class EntityMountable extends Entity implements IEntityAdditionalSpawnDat
         if (!getEntityWorld().isRemote && !this.isBeingRidden()) {
             this.setDead();
         }
-        this.updateMountPositionAndPassengers();
-    }
-
-    /**
-     * Places this mount and all of its passengers from the ship's latest tick transform.
-     * Called once during normal entity ticking and again after the server publishes a
-     * newer ship transform so chairs do not remain one ship tick behind.
-     */
-    public void updateMountPositionAndPassengers() {
-        if (this.mountPos == null || this.mountPosSpace == null) return;
-
-        Vec3d entityPos = this.mountPos;
-        if (this.mountPosSpace == CoordinateSpaceType.SUBSPACE_COORDINATES) {
-            if (this.referencePos == null) throw new IllegalStateException("Mounting reference position for ship not present!");
-
+        // Now update the position of this mounting entity.
+        Vec3d entityPos = mountPos;
+        if (mountPosSpace == CoordinateSpaceType.SUBSPACE_COORDINATES) {
+            if (referencePos == null) {
+                throw new IllegalStateException(
+                    "Mounting reference position for ship not present!");
+            }
             Optional<PhysicsObject> mountedOnto = getMountedShip();
             if (mountedOnto.isPresent()) {
                 entityPos = mountedOnto.get()
                     .transformVector(entityPos, TransformType.SUBSPACE_TO_GLOBAL);
-            }
-            else {
-                new IllegalStateException("Couldn't access ship with reference coordinates " + this.referencePos).printStackTrace();
+            } else {
+                new IllegalStateException(
+                    "Couldn't access ship with reference coordinates " + referencePos)
+                    .printStackTrace();
                 return;
             }
+
         }
 
         setPosition(entityPos.x, entityPos.y, entityPos.z);
-        for (Entity passenger : this.getPassengers()) {
-            this.updatePassenger(passenger);
-        }
     }
 
     @Override
-    protected void entityInit() {}
+    protected void entityInit() {
+
+    }
 
     @Override
     protected void readEntityFromNBT(NBTTagCompound compound) {

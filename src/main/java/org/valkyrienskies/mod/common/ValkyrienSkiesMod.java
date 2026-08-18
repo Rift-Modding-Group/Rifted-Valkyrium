@@ -179,6 +179,7 @@ public class ValkyrienSkiesMod {
                 MessageClearEntityShipRenderPosition.class,
                 2, Side.CLIENT
         );
+
         controlNetwork = NetworkRegistry.INSTANCE.newSimpleChannel("valkyrien_piloting");
         controlNetwork.registerMessage(
                 PilotControlsMessage.Handler.class,
