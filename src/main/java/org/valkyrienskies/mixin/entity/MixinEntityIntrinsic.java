@@ -12,6 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
 import org.valkyrienskies.mod.common.config.VSConfig;
+import org.valkyrienskies.mod.common.entity.EntityShipMovementData;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityCollisionInjector;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityCollisionInjector.IntermediateMovementVariableStorage;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityMoveInjectionMethods;
@@ -76,38 +77,41 @@ public abstract class MixinEntityIntrinsic {
         IEntityShipDraggable entityShipDraggable = thisEntity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
         if (entityShipDraggable == null) return;
 
+        final EntityShipMovementData entityShipMovementData = entityShipDraggable.getEntityShipMovementData();
+        if (entityShipMovementData == null) return;
+
         if (this.alteredMovement != null) {
             // If alteredMovement isn't null then we're touching a ship.
-            entityShipDraggable.setLastTouchedShip(alteredMovement.shipTouched);
-            entityShipDraggable.setTicksSinceTouchedShip(0);
-            entityShipDraggable.setTicksPartOfGround(0);
-            entityShipDraggable.setStandingOnShip(alteredMovement.standingOnShip);
+            entityShipMovementData.setLastTouchedShip(alteredMovement.shipTouched);
+            entityShipMovementData.setTicksSinceTouchedShip(0);
+            entityShipMovementData.setTicksPartOfGround(0);
+            entityShipMovementData.setStandingOnShip(alteredMovement.standingOnShip);
             EntityCollisionInjector.alterEntityMovementPost(thisEntity, alteredMovement);
         }
         else {
             if (this.collided) {
                 // If we collided and alteredMovement is null, then we're touching the ground.
-                entityShipDraggable.setLastTouchedShip(null);
-                entityShipDraggable.setTicksSinceTouchedShip(0);
-                entityShipDraggable.setTicksPartOfGround(
-                        entityShipDraggable.getTicksPartOfGround() + 1
+                entityShipMovementData.setLastTouchedShip(null);
+                entityShipMovementData.setTicksSinceTouchedShip(0);
+                entityShipMovementData.setTicksPartOfGround(
+                        entityShipMovementData.getTicksPartOfGround() + 1
                 );
-                entityShipDraggable.setStandingOnShip(false);
+                entityShipMovementData.setStandingOnShip(false);
             }
             else {
                 // If we're not collided and alteredMovement is null, then we're in the air.
                 final int newTicksPartOfGround;
-                if (entityShipDraggable.getLastTouchedShip() != null) {
+                if (entityShipMovementData.getLastTouchedShip() != null) {
                     newTicksPartOfGround = 0;
                 }
                 else {
-                    newTicksPartOfGround = entityShipDraggable.getTicksPartOfGround() + 1;
+                    newTicksPartOfGround = entityShipMovementData.getTicksPartOfGround() + 1;
                 }
-                entityShipDraggable.setTicksSinceTouchedShip(
-                        entityShipDraggable.getTicksSinceTouchedShip() + 1
+                entityShipMovementData.setTicksSinceTouchedShip(
+                        entityShipMovementData.getTicksSinceTouchedShip() + 1
                 );
-                entityShipDraggable.setTicksPartOfGround(newTicksPartOfGround);
-                entityShipDraggable.setStandingOnShip(false);
+                entityShipMovementData.setTicksPartOfGround(newTicksPartOfGround);
+                entityShipMovementData.setStandingOnShip(false);
             }
         }
     }

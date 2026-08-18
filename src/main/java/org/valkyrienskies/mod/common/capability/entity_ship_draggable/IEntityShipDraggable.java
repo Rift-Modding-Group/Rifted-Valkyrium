@@ -1,27 +1,13 @@
 package org.valkyrienskies.mod.common.capability.entity_ship_draggable;
 
-import org.valkyrienskies.mod.common.ships.ShipData;
+import org.valkyrienskies.mod.common.entity.EntityShipMovementData;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public interface IEntityShipDraggable {
-
     @Nullable
-    ShipData getLastTouchedShip();
-
-    int getTicksSinceTouchedShip();
-
-    int getTicksPartOfGround();
-
-    boolean isStandingOnShip();
-
-    void setLastTouchedShip(@Nullable ShipData lastTouchedShip);
-
-    void setTicksSinceTouchedShip(int ticksSinceTouchedShip);
-
-    void setTicksPartOfGround(int ticksPartOfGround);
-
-    void setStandingOnShip(boolean standingOnShip);
+    EntityShipMovementData getEntityShipMovementData();
 
     boolean getInAirPocket();
 

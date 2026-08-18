@@ -6,6 +6,7 @@ import org.jetbrains.annotations.Nullable;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
 import org.valkyrienskies.mod.common.config.VSConfig;
+import org.valkyrienskies.mod.common.entity.EntityShipMovementData;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.ship_world.WorldServerShipManager;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
@@ -21,13 +22,13 @@ public final class EntityShipSupport {
     public static boolean isActivelySupportedByShip(@NotNull Entity entity, @NotNull ShipData shipData) {
         if (entity.world.isRemote) return false;
 
-        IEntityShipDraggable draggable = getRecentShipContact(entity, shipData);
-        if (draggable == null) return false;
+        EntityShipMovementData movementData = getRecentShipContact(entity, shipData);
+        if (movementData == null) return false;
 
         WorldServerShipManager serverShipManager = (WorldServerShipManager) ValkyrienUtils.getPhysObjWorld(entity.world);
         if (serverShipManager == null) return false;
 
-        return draggable.isStandingOnShip() || serverShipManager.getPhysicsLoop().isPhysicsEntitySupportedByShip(entity, shipData.getUuid());
+        return movementData.isStandingOnShip() || serverShipManager.getPhysicsLoop().isPhysicsEntitySupportedByShip(entity, shipData.getUuid());
     }
 
     /**
@@ -35,8 +36,8 @@ public final class EntityShipSupport {
      * reprojecting block collision boxes after the collision has been resolved.
      */
     public static boolean hasStandingContact(@NotNull Entity entity, @NotNull ShipData shipData) {
-        IEntityShipDraggable draggable = getRecentShipContact(entity, shipData);
-        return draggable != null && draggable.isStandingOnShip();
+        EntityShipMovementData movementData = getRecentShipContact(entity, shipData);
+        return movementData != null && movementData.isStandingOnShip();
     }
 
     public static boolean hasRecentShipContact(@NotNull Entity entity, @NotNull ShipData shipData) {
@@ -44,15 +45,16 @@ public final class EntityShipSupport {
     }
 
     @Nullable
-    private static IEntityShipDraggable getRecentShipContact(@NotNull Entity entity, @NotNull ShipData shipData) {
+    private static EntityShipMovementData getRecentShipContact(@NotNull Entity entity, @NotNull ShipData shipData) {
         IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
         if (draggable == null) return null;
 
-        ShipData lastTouchedShip = draggable.getLastTouchedShip();
-        if (lastTouchedShip != null
-                && draggable.getTicksSinceTouchedShip() < VSConfig.ticksToStickToShip
-                && lastTouchedShip.getUuid().equals(shipData.getUuid())) {
-            return draggable;
+        EntityShipMovementData movementData = draggable.getEntityShipMovementData();
+        if (movementData != null
+                && movementData.getLastTouchedShip() != null
+                && movementData.getTicksSinceTouchedShip() < VSConfig.ticksToStickToShip
+                && movementData.getLastTouchedShip().getUuid().equals(shipData.getUuid())) {
+            return movementData;
         }
         return null;
     }

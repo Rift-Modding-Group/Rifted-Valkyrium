@@ -19,9 +19,11 @@ import org.joml.Vector3dc;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.VSWorldDataCapability;
 import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMount;
+import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
 import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
 import org.valkyrienskies.mod.common.util.TransformedAABB;
 import org.valkyrienskies.mod.common.entity.EntityMountable;
+import org.valkyrienskies.mod.common.entity.EntityShipMovementData;
 import org.valkyrienskies.mod.common.ships.QueryableShipData;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.block_relocation.BlockFinder;
@@ -324,6 +326,21 @@ public final class ValkyrienUtils {
     @Nullable
     public static TileEntity getTileEntitySafe(World world, BlockPos pos) {
         return world.getChunk(pos).getTileEntity(pos, Chunk.EnumCreateEntityType.CHECK);
+    }
+
+    @Nullable
+    public static ShipData getLastShipTouchedByEntity(final Entity entity) {
+        IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
+        if (draggable == null || draggable.getEntityShipMovementData() == null) return null;
+        return draggable.getEntityShipMovementData().getLastTouchedShip();
+    }
+
+    public static @NotNull EntityShipMovementData getEntityShipMovementDataFor(final Entity entity) {
+        IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
+        if (draggable == null || draggable.getEntityShipMovementData() == null) {
+            throw new RuntimeException("IEntityShipDraggable.getEntityShipMovementData() is not expected to be null!");
+        }
+        return draggable.getEntityShipMovementData();
     }
 
 }
