@@ -17,15 +17,15 @@ public enum CollisionBodyType {
     ENTITY(PhysXEntityBody.class);
 
     @NotNull
-    private final Class<? extends AbstractPhysXCollisionObject<?>> bodyClass;
+    private final Class<? extends AbstractPhysXCollisionObject> bodyClass;
 
-    CollisionBodyType(@NotNull Class<? extends AbstractPhysXCollisionObject<?>> bodyClass) {
+    CollisionBodyType(@NotNull Class<? extends AbstractPhysXCollisionObject> bodyClass) {
         this.bodyClass = bodyClass;
     }
 
     @NotNull
-    public static Map<CollisionBodyType, Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject<?>>> createRegistry() {
-        HashMap<CollisionBodyType, Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject<?>>> registry = new LinkedHashMap<>();
+    public static Map<CollisionBodyType, Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject>> createRegistry() {
+        HashMap<CollisionBodyType, Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject>> registry = new LinkedHashMap<>();
         for (CollisionBodyType bodyType : values()) {
             registry.put(bodyType, new HashMap<>());
         }
@@ -33,8 +33,8 @@ public enum CollisionBodyType {
     }
 
     public void add(
-            @NotNull Map<CollisionBodyType, Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject<?>>> registry,
-            @NotNull AbstractPhysXCollisionObject<?> body
+            @NotNull Map<CollisionBodyType, Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject>> registry,
+            @NotNull AbstractPhysXCollisionObject body
     ) {
         if (!this.bodyClass.isInstance(body)) {
             throw new IllegalArgumentException(body.getClass().getSimpleName() + " is not a " + this.name() + " collision body");
@@ -43,18 +43,18 @@ public enum CollisionBodyType {
     }
 
     @Nullable
-    public AbstractPhysXCollisionObject<?> get(
-            @NotNull Map<CollisionBodyType, Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject<?>>> registry,
+    public AbstractPhysXCollisionObject get(
+            @NotNull Map<CollisionBodyType, Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject>> registry,
             @NotNull AbstractPhysXCollisionObject.Identifier identifier
     ) {
         return this.getBodies(registry).get(identifier);
     }
 
     @NotNull
-    public Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject<?>> getBodies(
-            @NotNull Map<CollisionBodyType, Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject<?>>> registry
+    public Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject> getBodies(
+            @NotNull Map<CollisionBodyType, Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject>> registry
     ) {
-        Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject<?>> bodies = registry.get(this);
+        Map<AbstractPhysXCollisionObject.Identifier, AbstractPhysXCollisionObject> bodies = registry.get(this);
         if (bodies == null) {
             throw new IllegalStateException("Missing collision body registry for " + this);
         }
