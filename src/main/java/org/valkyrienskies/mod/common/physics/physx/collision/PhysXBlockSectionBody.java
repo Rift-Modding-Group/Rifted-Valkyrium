@@ -7,6 +7,8 @@ import net.minecraft.world.World;
 import org.jetbrains.annotations.NotNull;
 import org.valkyrienskies.mod.common.physics.BlockSection;
 import org.valkyrienskies.mod.common.physics.GreedyBlockMerger;
+import org.valkyrienskies.mod.common.physics.physx.PhysXActor;
+import org.valkyrienskies.mod.common.physics.physx.PhysXActorUtil;
 import org.valkyrienskies.mod.common.physics.physx.PhysXCollisionFilters;
 import physx.common.PxTransform;
 import physx.physics.PxMaterial;
@@ -24,37 +26,28 @@ import java.util.List;
 /**
  * For block sections, which are just a group of blocks.
  */
-public class PhysXBlockSectionBody extends AbstractPhysXCollisionObject {
-    @NotNull
-    private final Identifier identifier;
-    @NotNull
-    private final PxRigidStatic actor;
+public class PhysXBlockSectionBody extends AbstractPhysXCollisionObject<PhysXBlockSectionBody.Identifier> {
     @NotNull
     private final PxMaterial blockMaterial;
     @NotNull
     private final PxMaterial liquidMaterial;
     @NotNull
-    private final List<AxisAlignedBB> liquidBoxes;
+    private final List<AxisAlignedBB> liquidBoxes = new ArrayList<>();;
 
     public PhysXBlockSectionBody(
-            @NotNull PxPhysics physics,
-            @NotNull PxScene scene,
-            @NotNull World world,
-            @NotNull Identifier identifier,
-            @NotNull PxMaterial blockMaterial,
-            @NotNull PxMaterial liquidMaterial,
+            @NotNull PhysXBlockSectionBody.Identifier identifier, @NotNull PxPhysics physics, @NotNull PxScene scene,
+            @NotNull World world, @NotNull PxMaterial blockMaterial, @NotNull PxMaterial liquidMaterial,
             @NotNull List<BlockSection.BlockData> blocks
     ) {
-        super(physics, scene);
-        this.identifier = identifier;
+        super(identifier, physics, scene, () -> {
+            //anchor the static actor at this section's block-aligned origin.
+            PxTransform actorTransform = PhysXActorUtil.createTransform(identifier.getOriginX(), identifier.getOriginY(), identifier.getOriginZ());
+            PxRigidStatic toReturn = physics.createRigidStatic(actorTransform);
+            actorTransform.destroy();
+            return toReturn;
+        });
         this.blockMaterial = blockMaterial;
         this.liquidMaterial = liquidMaterial;
-        this.liquidBoxes = new ArrayList<>();
-
-        //anchor the static actor at this section's block-aligned origin.
-        PxTransform actorTransform = this.createTransform(identifier.getOriginX(), identifier.getOriginY(), identifier.getOriginZ());
-        this.actor = this.physics.createRigidStatic(actorTransform);
-        actorTransform.destroy();
 
         //split full cubes for GreedyBlockMerger so adjacent blocks become fewer PhysX shapes.
         GreedyBlockMerger mergeableSolidBlocks = new GreedyBlockMerger();
@@ -79,24 +72,7 @@ public class PhysXBlockSectionBody extends AbstractPhysXCollisionObject {
                 this.attachBoxShape(box, block.liquid());
             }
         }
-
-        this.scene.addActor(this.actor);
     }
-
-    @Override
-    @NotNull
-    public Identifier getIdentifier() {
-        return this.identifier;
-    }
-
-    @Override
-    @NotNull
-    protected PxRigidActor getActor() {
-        return this.actor;
-    }
-
-    @Override
-    protected void releaseShapes() {}
 
     public boolean isLiquidBlockIntersecting(@NotNull AxisAlignedBB box) {
         for (AxisAlignedBB liquidBox : this.liquidBoxes) {
@@ -116,20 +92,21 @@ public class PhysXBlockSectionBody extends AbstractPhysXCollisionObject {
         if (isLiquid) {
             shape.setFlag(PxShapeFlagEnum.eSIMULATION_SHAPE, false);
             shape.setFlag(PxShapeFlagEnum.eTRIGGER_SHAPE, true);
-            PhysXCollisionFilters.CollisionGroup.LIQUID.setFilter(shape);
+            PhysXActor.LIQUID.setFilter(shape);
         }
-        else PhysXCollisionFilters.CollisionGroup.WORLD.setFilter(shape);
+        else PhysXActor.SOLID.setFilter(shape);
 
         double centerX = (worldBox.minX + worldBox.maxX) * 0.5D - this.identifier.getOriginX();
         double centerY = (worldBox.minY + worldBox.maxY) * 0.5D - this.identifier.getOriginY();
         double centerZ = (worldBox.minZ + worldBox.maxZ) * 0.5D - this.identifier.getOriginZ();
-        PxTransform localPose = this.createTransform(centerX, centerY, centerZ);
+        PxTransform localPose = PhysXActorUtil.createTransform(centerX, centerY, centerZ);
         shape.setLocalPose(localPose);
         localPose.destroy();
 
-        this.attachShape(shape);
+        this.addShape(shape);
     }
 
+    //---static helpers---
     public static List<AxisAlignedBB> getCollisionBoxes(World world, BlockPos pos, IBlockState state, boolean forceFullBlock) {
         List<AxisAlignedBB> boxes = new ArrayList<>();
         if (!forceFullBlock) {
@@ -162,6 +139,7 @@ public class PhysXBlockSectionBody extends AbstractPhysXCollisionObject {
         return null;
     }
 
+    //---other classes---
     public static final class Identifier extends AbstractPhysXCollisionObject.Identifier {
         @NotNull
         private final World world;
