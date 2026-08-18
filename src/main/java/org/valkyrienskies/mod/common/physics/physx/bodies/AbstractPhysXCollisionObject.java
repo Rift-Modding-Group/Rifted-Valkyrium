@@ -1,7 +1,6 @@
 package org.valkyrienskies.mod.common.physics.physx.bodies;
 
 import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.world.World;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import physx.geometry.PxBoxGeometry;
@@ -19,7 +18,7 @@ import java.util.function.Supplier;
 /**
  * Abstract class for handling collision of all physics participants in PhysX.
  */
-public abstract class AbstractPhysXCollisionObject<I extends AbstractPhysXCollisionObject.Identifier, S> {
+public abstract class AbstractPhysXCollisionObject<I extends AbstractPhysXCollisionObject.Identifier> {
     //identifier that distinguishes physics object
     @NotNull
     protected final I identifier;
@@ -57,25 +56,9 @@ public abstract class AbstractPhysXCollisionObject<I extends AbstractPhysXCollis
         this.released = false;
     }
 
-    //---abstract functions---
-    /**
-     * Synchronizes this collision object with its latest game-side source
-     */
-    public abstract void synchronize(@NotNull S source);
-
-    /**
-     * Hook invoked immediately before simulation; static collision objects use the default no-op
-     */
-    public abstract void updateBeforeSimulation(@NotNull World hostWorld, @NotNull List<PhysXBlockSectionBody> blockSectionsWithLiquids, double timeStep);
-
-    /**
-     * Hook invoked immediately after simulation; static collision objects use the default no-op
-     */
-    public abstract void updateAfterSimulation();
-
     //---shape related functions---
     /**
-     * Attach a newly-created shape and transfer its ownership to this collision object
+     * Attach a newly-created shape and transfer its ownership to this collision object.
      */
     protected boolean addShape(@NotNull PxShape shape) {
         boolean attached = this.actor.attachShape(shape);
@@ -85,7 +68,7 @@ public abstract class AbstractPhysXCollisionObject<I extends AbstractPhysXCollis
     }
 
     /**
-     * Detach and release a shape owned by this collision object
+     * Detach and release a shape owned by this collision object.
      */
     protected void releaseShape(@Nullable PxShape shape) {
         if (shape == null || !this.shapes.remove(shape)) return;
@@ -93,7 +76,7 @@ public abstract class AbstractPhysXCollisionObject<I extends AbstractPhysXCollis
     }
 
     /**
-     * Detach and release every shape owned by this collision object
+     * Detach and release every shape owned by this collision object.
      */
     protected void clearShapes() {
         for (PxShape shape : this.shapes) this.actor.detachShape(shape, true);

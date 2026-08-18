@@ -20,12 +20,10 @@ import physx.common.PxVec3;
 import physx.extensions.PxRigidBodyExt;
 import physx.physics.*;
 
-import java.util.List;
-
 /**
  * for entities
  */
-public class PhysXEntityBody extends AbstractPhysXCollisionObject<PhysXEntityBody.Identifier, PhysicsEntitySnapshot> implements IPhysicsEntityBody {
+public class PhysXEntityBody extends AbstractPhysXCollisionObject<PhysXEntityBody.Identifier> implements IPhysicsEntityBody {
     private static final double ENTITY_SHAPE_SIZE_EPSILON = 1.0E-6D;
     private static final double POSITION_EPSILON_SQUARED = 1.0E-10D;
     private static final double MAX_COLLISION_STEP = 4D;
@@ -107,8 +105,8 @@ public class PhysXEntityBody extends AbstractPhysXCollisionObject<PhysXEntityBod
         this.movementEpoch = this.physicsEntityMovementQueue.register(this, this.entity);
     }
 
-    @Override
-    public void synchronize(@NotNull PhysicsEntitySnapshot entitySnapshot) {
+    //---snapshot related stuff starts here---
+    public void updateEntitySnapshot(@NotNull PhysicsEntitySnapshot entitySnapshot) {
         if (entitySnapshot.entity() == this.entity) this.entitySnapshot = entitySnapshot;
     }
 
@@ -143,13 +141,9 @@ public class PhysXEntityBody extends AbstractPhysXCollisionObject<PhysXEntityBod
             this.setSupportingShipBody(null);
         }
     }
+    //---snapshot related stuff ends here---
 
-    @Override
-    public void updateBeforeSimulation(
-            @NotNull World hostWorld,
-            @NotNull List<PhysXBlockSectionBody> blockSectionsWithLiquids,
-            double timeStep
-    ) {
+    public void updateBeforeSimulation(double timeStep) {
         this.timeStep = timeStep;
         PhysicsEntitySnapshot snapshot = this.entitySnapshot;
         this.rebuildShape(snapshot.boundingBox());
@@ -179,7 +173,6 @@ public class PhysXEntityBody extends AbstractPhysXCollisionObject<PhysXEntityBod
         zeroVelocity.destroy();
     }
 
-    @Override
     public void updateAfterSimulation() {
         PxRigidDynamic entityActor = (PxRigidDynamic) this.actor;
         PxTransform pose = this.actor.getGlobalPose();

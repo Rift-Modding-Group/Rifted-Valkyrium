@@ -1,9 +1,10 @@
 package org.valkyrienskies.mod.common.physics;
 
+import net.minecraft.block.BlockLiquid;
+import net.minecraft.block.material.MaterialLiquid;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -23,7 +24,9 @@ public class GreedyBlockMerger {
     private final Set<BlockPos> positions = new HashSet<>();
 
     public boolean isMergeableFullBlock(IBlockState state) {
-        return state != null && !PhysicsUtils.isLiquid(state)
+        return state != null
+                && !(state.getBlock() instanceof BlockLiquid)
+                && !(state.getMaterial() instanceof MaterialLiquid)
                 && state.getMaterial().blocksMovement()
                 && state.isFullCube();
     }
@@ -32,7 +35,7 @@ public class GreedyBlockMerger {
         this.positions.add(pos.toImmutable());
     }
 
-    public void addAll(@NotNull Collection<BlockPos> blockPositions) {
+    public void addAll(Collection<BlockPos> blockPositions) {
         for (BlockPos pos : blockPositions) {
             this.add(pos);
         }
@@ -46,11 +49,12 @@ public class GreedyBlockMerger {
         return this.positions.isEmpty();
     }
 
-    public void forEachMergedBlockBox(@NotNull BiConsumer<AxisAlignedBB, List<BlockPos>> consumer) {
+    public void forEachMergedBlockBox(BiConsumer<AxisAlignedBB, List<BlockPos>> consumer) {
         Set<BlockPos> remaining = new HashSet<>(this.positions);
 
         List<BlockPos> ordered = new ArrayList<>(remaining);
-        ordered.sort(Comparator.comparingInt(BlockPos::getX)
+        ordered.sort(Comparator
+                .comparingInt(BlockPos::getX)
                 .thenComparingInt(BlockPos::getZ)
                 .thenComparingInt(BlockPos::getY)
         );
@@ -77,7 +81,14 @@ public class GreedyBlockMerger {
         }
     }
 
-    private boolean containsXLayer(@NotNull Set<BlockPos> positions, int x, int minY, int maxY, int minZ, int maxZ) {
+    private boolean containsXLayer(
+            Set<BlockPos> positions,
+            int x,
+            int minY,
+            int maxY,
+            int minZ,
+            int maxZ
+    ) {
         for (int z = minZ; z <= maxZ; z++) {
             for (int y = minY; y <= maxY; y++) {
                 if (!positions.contains(new BlockPos(x, y, z))) return false;
@@ -86,7 +97,14 @@ public class GreedyBlockMerger {
         return true;
     }
 
-    private boolean containsZLayer(@NotNull Set<BlockPos> positions, int z, int minX, int maxX, int minY, int maxY) {
+    private boolean containsZLayer(
+            Set<BlockPos> positions,
+            int z,
+            int minX,
+            int maxX,
+            int minY,
+            int maxY
+    ) {
         for (int x = minX; x <= maxX; x++) {
             for (int y = minY; y <= maxY; y++) {
                 if (!positions.contains(new BlockPos(x, y, z))) return false;
@@ -95,7 +113,14 @@ public class GreedyBlockMerger {
         return true;
     }
 
-    private boolean containsYLayer(@NotNull Set<BlockPos> positions, int y, int minX, int maxX, int minZ, int maxZ) {
+    private boolean containsYLayer(
+            Set<BlockPos> positions,
+            int y,
+            int minX,
+            int maxX,
+            int minZ,
+            int maxZ
+    ) {
         for (int x = minX; x <= maxX; x++) {
             for (int z = minZ; z <= maxZ; z++) {
                 if (!positions.contains(new BlockPos(x, y, z))) return false;
@@ -104,8 +129,15 @@ public class GreedyBlockMerger {
         return true;
     }
 
-    @NotNull
-    private List<BlockPos> removeBox(@NotNull Set<BlockPos> positions, int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
+    private List<BlockPos> removeBox(
+            Set<BlockPos> positions,
+            int minX,
+            int minY,
+            int minZ,
+            int maxX,
+            int maxY,
+            int maxZ
+    ) {
         List<BlockPos> removed = new ArrayList<>();
         for (int x = minX; x <= maxX; x++) {
             for (int z = minZ; z <= maxZ; z++) {
