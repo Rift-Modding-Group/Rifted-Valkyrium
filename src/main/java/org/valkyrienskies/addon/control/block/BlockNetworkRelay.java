@@ -1,5 +1,7 @@
 package org.valkyrienskies.addon.control.block;
 
+import net.minecraft.block.Block;
+import net.minecraft.block.BlockButton;
 import net.minecraft.block.material.Material;
 import net.minecraft.block.properties.PropertyDirection;
 import net.minecraft.block.state.BlockFaceShape;
@@ -166,5 +168,23 @@ public class BlockNetworkRelay extends BlockNodeComponentBasic {
     public void breakBlock(World worldIn, BlockPos pos, IBlockState state) {
         this.handleWireRemoval(worldIn, pos);
         super.breakBlock(worldIn, pos, state);
+    }
+
+    //believe it or not all the code below is copied from BlockLever
+    @Override
+    public void neighborChanged(IBlockState state, World worldIn, BlockPos pos, Block blockIn, BlockPos fromPos) {
+        if (this.checkCanSurvive(worldIn, pos, state) && !BlockButton.canPlaceBlock(worldIn, pos, state.getValue(FACING))) {
+            this.dropBlockAsItem(worldIn, pos, state, 0);
+            worldIn.setBlockToAir(pos);
+        }
+    }
+
+    private boolean checkCanSurvive(World worldIn, BlockPos pos, IBlockState state) {
+        if (this.canPlaceBlockAt(worldIn, pos)) return true;
+        else {
+            this.dropBlockAsItem(worldIn, pos, state, 0);
+            worldIn.setBlockToAir(pos);
+            return false;
+        }
     }
 }

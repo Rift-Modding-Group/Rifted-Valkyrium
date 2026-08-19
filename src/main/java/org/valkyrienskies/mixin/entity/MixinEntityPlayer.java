@@ -21,15 +21,13 @@ public class MixinEntityPlayer {
     private void trySleep(EntityPlayer player, double x, double y, double z, BlockPos bedLocation) {
         Optional<PhysicsObject> ship = ValkyrienUtils.getPhysoManagingBlock(player.world, bedLocation);
 
-        if (ship.isEmpty()) {
-            player.setPosition(x, y, z);
-            return;
+        if (ship.isEmpty()) player.setPosition(x, y, z);
+        else {
+            Vector3d globalPos = new Vector3d(x, y, z);
+            ship.get().getShipTransformationManager()
+                    .getCurrentTickTransform()
+                    .transformPosition(globalPos, TransformType.SUBSPACE_TO_GLOBAL);
+            player.setPosition(globalPos.x, globalPos.y, globalPos.z);
         }
-
-        Vector3d globalPos = new Vector3d(x, y, z);
-        ship.get().getShipTransformationManager()
-                .getCurrentTickTransform()
-                .transformPosition(globalPos, TransformType.SUBSPACE_TO_GLOBAL);
-        player.setPosition(globalPos.x, globalPos.y, globalPos.z);
     }
 }
