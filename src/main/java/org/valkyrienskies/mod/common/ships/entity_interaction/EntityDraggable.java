@@ -18,7 +18,6 @@ import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMount;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
 import org.valkyrienskies.mod.common.config.VSConfig;
-import org.valkyrienskies.mod.common.entity.EntityShipMovementData;
 import org.valkyrienskies.mod.common.network.MessageClearEntityShipRenderPosition;
 import org.valkyrienskies.mod.common.network.MessageEntityShipRenderPosition;
 import org.valkyrienskies.mod.common.ships.ShipData;
@@ -67,48 +66,44 @@ public class EntityDraggable {
         IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
         if (draggable == null) return;
 
-        final EntityShipMovementData oldEntityShipMovementData = draggable.getEntityShipMovementData();
-        if (oldEntityShipMovementData == null) return;
-
         final EntityShipMountData anchoredMountData = ValkyrienUtils.getAnchoredMountShipAndPos(entity);
         if (anchoredMountData.isMounted()) {
-            draggable.setEntityShipMovementData(new EntityShipMovementData(
-                    anchoredMountData.getMountedShip().getShipData(),
-                    0, 0,
-                    new Vector3d(),
-                    0
-            ));
+            draggable.setLastTouchedShip(anchoredMountData.getMountedShip().getShipData());
+            draggable.setTicksSinceTouchedShip(0);
+            draggable.setTicksPartOfGround(0);
+            draggable.setAddedLinearVelocity(new Vector3d());
+            draggable.setAddedYawVelocity(0);
             return;
         }
 
         final EntityShipMountData mountData = ValkyrienUtils.getMountedShipAndPos(entity);
-        final ShipData lastShipTouchedPlayer = oldEntityShipMovementData.getLastTouchedShip();
-        final int oldTicksSinceTouchedShip = oldEntityShipMovementData.getTicksSinceTouchedShip();
-        final Vector3dc oldVelocityAdded = oldEntityShipMovementData.getAddedLinearVelocity();
-        final double oldYawVelocityAdded = oldEntityShipMovementData.getAddedYawVelocity();
+        final ShipData lastShipTouchedPlayer = draggable.getLastTouchedShip();
+        final int oldTicksSinceTouchedShip = draggable.getTicksSinceTouchedShip();
+        final Vector3dc oldVelocityAdded = draggable.getAddedLinearVelocity();
+        final double oldYawVelocityAdded = draggable.getAddedYawVelocity();
 
         if (lastShipTouchedPlayer == null || oldTicksSinceTouchedShip >= VSConfig.ticksToStickToShip) {
             if (entity.onGround) {
                 // Player is on ground and not on a ship, therefore set their added velocity to 0.
-                draggable.setEntityShipMovementData(
-                        oldEntityShipMovementData
-                                .withAddedLinearVelocity(new Vector3d())
-                                .withAddedYawVelocity(0));
+                draggable.setAddedLinearVelocity(new Vector3d());
+                draggable.setAddedYawVelocity(0);
             }
             else if (entity instanceof EntityPlayer player) {
                 if (player.isCreative() && player.capabilities.isFlying) {
                     // If the player is flying, then slow down their added velocity significantly every tick
-                    final Vector3dc newVelocityAdded = oldVelocityAdded.mul(.95, new Vector3d());
-                    final double newYawVelocityAdded = oldYawVelocityAdded * .95 * .95;
-                    final EntityShipMovementData newMovementData = oldEntityShipMovementData.withAddedLinearVelocity(newVelocityAdded).withAddedYawVelocity(newYawVelocityAdded);
-                    draggable.setEntityShipMovementData(newMovementData);
+                    final Vector3dc newVelocityAdded = oldVelocityAdded.mul(0.95D, new Vector3d());
+                    final double newYawVelocityAdded = oldYawVelocityAdded * 0.95D * 0.95D;
+
+                    draggable.setAddedLinearVelocity(newVelocityAdded);
+                    draggable.setAddedYawVelocity(newYawVelocityAdded);
                 }
                 else {
                     // Otherwise only slow down their added velocity slightly every tick
-                    final Vector3dc newVelocityAdded = oldVelocityAdded.mul(.99, new Vector3d());
-                    final double newYawVelocityAdded = oldYawVelocityAdded * .95;
-                    final EntityShipMovementData newMovementData = oldEntityShipMovementData.withAddedLinearVelocity(newVelocityAdded).withAddedYawVelocity(newYawVelocityAdded);
-                    draggable.setEntityShipMovementData(newMovementData);
+                    final Vector3dc newVelocityAdded = oldVelocityAdded.mul(0.99D, new Vector3d());
+                    final double newYawVelocityAdded = oldYawVelocityAdded * 0.95D;
+
+                    draggable.setAddedLinearVelocity(newVelocityAdded);
+                    draggable.setAddedYawVelocity(newYawVelocityAdded);
                 }
             }
         }
@@ -168,47 +163,44 @@ public class EntityDraggable {
             // [Changed because EntityPlayerSP is a 'client' class]
             if (entity instanceof EntityLivingBase && !(entity instanceof EntityPlayer)) {
                 wrappedRotYaw = MathHelper.wrapDegrees(entity.getRotationYawHead());
-            } else {
+            }
+            else {
                 wrappedRotYaw = MathHelper.wrapDegrees(entity.rotationYaw);
             }
             double yawDif = wrappedYaw - wrappedRotYaw;
             if (Math.abs(yawDif) > 180D) {
-                if (yawDif < 0) {
-                    yawDif += 360D;
-                } else {
-                    yawDif -= 360D;
-                }
+                if (yawDif < 0) yawDif += 360D;
+                else yawDif -= 360D;
             }
             yawDif %= 360D;
             final double threshold = .1D;
             if (Math.abs(yawDif) < threshold) {
                 yawDif = 0D;
             }
-            draggable.setEntityShipMovementData(oldEntityShipMovementData.withAddedLinearVelocity(addedVel.mul(1, new Vector3d())).withAddedYawVelocity(yawDif));
+            draggable.setAddedLinearVelocity(addedVel.mul(1, new Vector3d()));
+            draggable.setAddedYawVelocity(yawDif);
         }
-
-        final EntityShipMovementData newEntityShipMovementData = draggable.getEntityShipMovementData();
 
         // Only run this code if we are adding extra velocity. This code is relatively expensive, so we don't want to run
         // it unless we have to.
-        if (newEntityShipMovementData.getAddedLinearVelocity().lengthSquared() > 0) {
+        if (draggable.getAddedLinearVelocity().lengthSquared() > 0) {
             // Now that we've determined the added velocity, move the entity forward by that amount
             final boolean originallySneaking = entity.isSneaking();
             entity.setSneaking(false);
 
             // The added velocity vector of the player, except we have made sure that it won't push the player inside of a
             // solid block.
-            final Vector3dc addedVelocityNoNoClip = applyAddedVelocity(newEntityShipMovementData.getAddedLinearVelocity(), entity);
-            draggable.setEntityShipMovementData(oldEntityShipMovementData.withAddedLinearVelocity(addedVelocityNoNoClip));
+            final Vector3dc addedVelocityNoNoClip = applyAddedVelocity(draggable.getAddedLinearVelocity(), entity);
+            draggable.setAddedLinearVelocity(addedVelocityNoNoClip);
 
             entity.setSneaking(originallySneaking);
         }
 
         // Add the yaw velocity to the player as well, because its possible for addedVelocity=0 and yawVel != 0
-        final double addedYawVelocity = newEntityShipMovementData.getAddedYawVelocity();
+        final double addedYawVelocity = draggable.getAddedYawVelocity();
         if (!mountData.isMounted() && addedYawVelocity != 0) {
             entity.setRotationYawHead((float) (entity.getRotationYawHead() + addedYawVelocity));
-            entity.rotationYaw += addedYawVelocity;
+            entity.rotationYaw += (float) addedYawVelocity;
         }
     }
 
@@ -224,16 +216,13 @@ public class EntityDraggable {
         Vector3d localPosition = null;
 
         if (draggable != null) {
-            final EntityShipMovementData movementData = draggable.getEntityShipMovementData();
-            if (movementData != null) {
-                final ShipData lastTouchedShip = movementData.getLastTouchedShip();
-                final boolean shipContactIsActive = lastTouchedShip != null && movementData.getTicksSinceTouchedShip() < VSConfig.ticksToStickToShip;
+            final ShipData lastTouchedShip = draggable.getLastTouchedShip();
+            final boolean shipContactIsActive = lastTouchedShip != null && draggable.getTicksSinceTouchedShip() < VSConfig.ticksToStickToShip;
 
-                if (shipContactIsActive && isEntitySupportedByShip(entity, lastTouchedShip)) {
-                    mountedShip = lastTouchedShip;
-                    localPosition = new Vector3d(entity.posX, entity.posY, entity.posZ);
-                    mountedShip.getShipTransform().transformPosition(localPosition, TransformType.GLOBAL_TO_SUBSPACE);
-                }
+            if (shipContactIsActive && isEntitySupportedByShip(entity, lastTouchedShip)) {
+                mountedShip = lastTouchedShip;
+                localPosition = new Vector3d(entity.posX, entity.posY, entity.posZ);
+                mountedShip.getShipTransform().transformPosition(localPosition, TransformType.GLOBAL_TO_SUBSPACE);
             }
         }
 

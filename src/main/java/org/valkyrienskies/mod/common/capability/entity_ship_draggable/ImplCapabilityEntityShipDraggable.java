@@ -1,25 +1,75 @@
 package org.valkyrienskies.mod.common.capability.entity_ship_draggable;
 
+import org.jetbrains.annotations.NotNull;
 import org.joml.Vector3d;
-import org.jspecify.annotations.NonNull;
+import org.joml.Vector3dc;
 import org.jspecify.annotations.Nullable;
-import org.valkyrienskies.mod.common.entity.EntityShipMovementData;
+import org.valkyrienskies.mod.common.ships.ShipData;
 
 public class ImplCapabilityEntityShipDraggable implements IEntityShipDraggable {
     @Nullable
-    private EntityShipMovementData entityShipMovementData = new EntityShipMovementData(null, 0, 0, new Vector3d(), 0);
-    private int ticksInAirPocket = 0;
+    private ShipData lastTouchedShip;
+    private int ticksSinceTouchedShip;
+    private int ticksPartOfGround;
+    @NotNull
+    private Vector3dc addedLinearVelocity = new Vector3d();
+    private double addedYawVelocity;
+    private int ticksInAirPocket;
 
+    //---ship contact info---
     @Override
-    public @Nullable EntityShipMovementData getEntityShipMovementData() {
-        return this.entityShipMovementData;
+    @Nullable
+    public ShipData getLastTouchedShip() {
+        return this.lastTouchedShip;
     }
 
     @Override
-    public void setEntityShipMovementData(@Nullable EntityShipMovementData entityShipMovementData) {
-        this.entityShipMovementData = entityShipMovementData;
+    public void setLastTouchedShip(@Nullable ShipData lastTouchedShip) {
+        this.lastTouchedShip = lastTouchedShip;
     }
 
+    @Override
+    public int getTicksSinceTouchedShip() {
+        return this.ticksSinceTouchedShip;
+    }
+
+    @Override
+    public void setTicksSinceTouchedShip(int value) {
+        this.ticksSinceTouchedShip = value;
+    }
+
+    @Override
+    public int getTicksPartOfGround() {
+        return this.ticksPartOfGround;
+    }
+
+    @Override
+    public void setTicksPartOfGround(int value) {
+        this.ticksPartOfGround = value;
+    }
+
+    @Override
+    @NotNull
+    public Vector3dc getAddedLinearVelocity() {
+        return this.addedLinearVelocity;
+    }
+
+    @Override
+    public void setAddedLinearVelocity(@NotNull Vector3dc vector) {
+        this.addedLinearVelocity = vector;
+    }
+
+    @Override
+    public double getAddedYawVelocity() {
+        return this.addedYawVelocity;
+    }
+
+    @Override
+    public void setAddedYawVelocity(double value) {
+        this.addedYawVelocity = value;
+    }
+
+    //---other stuff---
     @Override
     public boolean getInAirPocket() {
         return this.ticksInAirPocket > 0;

@@ -20,7 +20,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
 import org.valkyrienskies.mod.common.config.VSConfig;
-import org.valkyrienskies.mod.common.entity.EntityShipMovementData;
 import org.valkyrienskies.mod.common.network.IHasPlayerMovementData;
 import org.valkyrienskies.mod.common.network.PlayerMovementData;
 import org.valkyrienskies.mod.common.ships.QueryableShipData;
@@ -33,8 +32,6 @@ import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import valkyrienwarfare.api.TransformType;
 
 import java.util.*;
-
-import static org.valkyrienskies.mod.common.util.ValkyrienUtils.getEntityShipMovementDataFor;
 
 @Mixin(value = NetHandlerPlayServer.class)
 public abstract class MixinNetHandlerPlayServer {
@@ -114,12 +111,11 @@ public abstract class MixinNetHandlerPlayServer {
                     target = "Lnet/minecraft/world/WorldServer;getCollisionBoxes(Lnet/minecraft/entity/Entity;Lnet/minecraft/util/math/AxisAlignedBB;)Ljava/util/List;"
             ))
     private List<AxisAlignedBB> removeStuckInBlockMovementCheck(WorldServer worldServer, Entity entityIn, AxisAlignedBB aabb) {
-        EntityShipMovementData entityShipMovementData = getEntityShipMovementDataFor(player);
-        if (entityShipMovementData.getLastTouchedShip() != null) {
-            return ImmutableList.of();
-        } else {
-            return player.getServerWorld().getCollisionBoxes(player, player.getEntityBoundingBox().shrink(0.0625F));
-        }
+        IEntityShipDraggable draggable = player.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
+        if (draggable == null) throw new RuntimeException("IEntityShipDraggable is not expected to be null!");
+
+        if (draggable.getLastTouchedShip() != null) return ImmutableList.of();
+        else return player.getServerWorld().getCollisionBoxes(player, player.getEntityBoundingBox().shrink(0.0625F));
     }
 
     /**
@@ -132,12 +128,11 @@ public abstract class MixinNetHandlerPlayServer {
                     ordinal = 1
             ))
     private double allowMovementToBeVeryWrong(double originalConstant) {
-        EntityShipMovementData entityShipMovementData = getEntityShipMovementDataFor(player);
-        if (entityShipMovementData.getLastTouchedShip() != null) {
-            return 10;
-        } else {
-            return 0.0625;
-        }
+        IEntityShipDraggable draggable = player.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
+        if (draggable == null) throw new RuntimeException("IEntityShipDraggable is not expected to be null!");
+
+        if (draggable.getLastTouchedShip() != null) return 10;
+        else return 0.0625;
     }
 
     /**
@@ -164,16 +159,11 @@ public abstract class MixinNetHandlerPlayServer {
                 // If the player hasn't touched the ship in over 40 ticks, then ignore its coordinates relative to that ship.
                 IEntityShipDraggable entityShipDraggable = this.player.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
                 if (entityShipDraggable != null) {
-                    EntityShipMovementData shipMovementData = entityShipDraggable.getEntityShipMovementData();
-                    if (shipMovementData != null) {
-                        entityShipDraggable.setEntityShipMovementData(
-                                shipMovementData.withLastTouchedShip(null)
-                                        .withAddedLinearVelocity(new Vector3d())
-                                        .withAddedYawVelocity(0)
-                                        .withTicksPartOfGround(addedPlayerMovementData.getTicksPartOfGround())
-                                        .withTicksSinceTouchedShip(ticksSinceTouchedLastShip)
-                        );
-                    }
+                    entityShipDraggable.setLastTouchedShip(null);
+                    entityShipDraggable.setAddedLinearVelocity(new Vector3d());
+                    entityShipDraggable.setAddedYawVelocity(0);
+                    entityShipDraggable.setTicksPartOfGround(addedPlayerMovementData.getTicksPartOfGround());
+                    entityShipDraggable.setTicksSinceTouchedShip(ticksSinceTouchedLastShip);
                 }
                 return;
             }
@@ -232,16 +222,11 @@ public abstract class MixinNetHandlerPlayServer {
             // Update the player draggable
             IEntityShipDraggable entityShipDraggable = this.player.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
             if (entityShipDraggable != null) {
-                EntityShipMovementData shipMovementData = entityShipDraggable.getEntityShipMovementData();
-                if (shipMovementData != null) {
-                    entityShipDraggable.setEntityShipMovementData(
-                            shipMovementData.withLastTouchedShip(lastTouchedShip)
-                                    .withAddedLinearVelocity(new Vector3d())
-                                    .withAddedYawVelocity(0)
-                                    .withTicksPartOfGround(ticksPartOfGround)
-                                    .withTicksSinceTouchedShip(ticksSinceTouchedLastShip)
-                    );
-                }
+                entityShipDraggable.setLastTouchedShip(lastTouchedShip);
+                entityShipDraggable.setAddedLinearVelocity(new Vector3d());
+                entityShipDraggable.setAddedYawVelocity(0);
+                entityShipDraggable.setTicksPartOfGround(ticksPartOfGround);
+                entityShipDraggable.setTicksSinceTouchedShip(ticksSinceTouchedLastShip);
             }
         }
     }

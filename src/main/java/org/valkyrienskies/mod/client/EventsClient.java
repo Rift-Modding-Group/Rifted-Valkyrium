@@ -5,7 +5,6 @@ import net.minecraft.client.audio.ISound;
 import net.minecraft.client.renderer.BufferBuilder;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.world.World;
@@ -30,7 +29,6 @@ import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
 import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
 import org.valkyrienskies.mod.common.config.VSConfig;
-import org.valkyrienskies.mod.common.entity.EntityShipMovementData;
 import org.valkyrienskies.mod.common.ships.QueryableShipData;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
@@ -200,23 +198,22 @@ public class EventsClient {
                     continue;
                 }
 
-                final EntityShipMovementData entityShipMovementData = ValkyrienUtils.getEntityShipMovementDataFor(entity);
-                if (entityShipMovementData.getLastTouchedShip() != null && entityShipMovementData.getTicksSinceTouchedShip() < VSConfig.ticksToStickToShip) {
+                //get draggable information
+                IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
+                if (draggable == null) continue;
+
+                if (draggable.getLastTouchedShip() != null && draggable.getTicksSinceTouchedShip() < VSConfig.ticksToStickToShip) {
                     final PhysicsObject shipPhysicsObject = physObjectWorld.getPhysObjectFromUUID(
-                            entityShipMovementData.getLastTouchedShip().getUuid()
+                            draggable.getLastTouchedShip().getUuid()
                     );
                     if (shipPhysicsObject == null) {
-                        //get draggable information
-                        IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
-                        if (draggable == null) continue;
-
                         //remove ship movement data once the ship is gone
-                        draggable.setEntityShipMovementData(entityShipMovementData.withLastTouchedShip(null));
+                        draggable.setLastTouchedShip(null);
                         continue;
                     }
                     final ShipTransform prevTickTransform = shipPhysicsObject.getPrevTickShipTransform();
                     final ShipTransform shipRenderTransform = shipPhysicsObject.getShipTransformationManager().getRenderTransform();
-                    final Vector3dc entityAddedVelocity = entityShipMovementData.getAddedLinearVelocity();
+                    final Vector3dc entityAddedVelocity = draggable.getAddedLinearVelocity();
 
                     // The velocity the entity was moving without the added velocity from the ship
                     final double entityMovementX = entity.posX - entityAddedVelocity.x() - entity.lastTickPosX;

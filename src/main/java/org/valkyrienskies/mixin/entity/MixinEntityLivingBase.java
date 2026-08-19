@@ -7,7 +7,6 @@ import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Vector3d;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -15,7 +14,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMount;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
-import org.valkyrienskies.mod.common.entity.EntityShipMovementData;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import valkyrienwarfare.api.TransformType;
@@ -155,13 +153,11 @@ public class MixinEntityLivingBase {
             Optional<PhysicsObject> mountedShip = anchoredMount == null ?
                     Optional.empty() : ValkyrienUtils.getPhysoManagingBlock(mountedEntity.world, anchoredMount.getLocalAnchorBlock());
 
-            draggable.setEntityShipMovementData(new EntityShipMovementData(
-                    mountedShip.map(PhysicsObject::getShipData).orElse(null),
-                    0,
-                    0,
-                    new Vector3d(),
-                    0
-            ));
+            draggable.setLastTouchedShip(mountedShip.map(PhysicsObject::getShipData).orElse(null));
+            draggable.setTicksSinceTouchedShip(0);
+            draggable.setTicksPartOfGround(0);
+            draggable.setAddedLinearVelocity(new Vector3d());
+            draggable.setAddedYawVelocity(0);
         }
     }
 }
