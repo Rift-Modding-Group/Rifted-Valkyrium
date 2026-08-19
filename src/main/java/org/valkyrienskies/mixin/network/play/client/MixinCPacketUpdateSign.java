@@ -5,6 +5,7 @@ import net.minecraft.network.NetHandlerPlayServer;
 import net.minecraft.network.play.INetHandlerPlayServer;
 import net.minecraft.network.play.client.CPacketUpdateSign;
 import net.minecraft.world.World;
+import org.jspecify.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -27,6 +28,7 @@ public class MixinCPacketUpdateSign implements ITransformablePacket {
     }
 
     @Override
+    @Nullable
     public ShipData getPacketParent(NetHandlerPlayServer server) {
         World world = server.player.getEntityWorld();
         CPacketUpdateSign thisPacketSign = (CPacketUpdateSign) ((Object) this);

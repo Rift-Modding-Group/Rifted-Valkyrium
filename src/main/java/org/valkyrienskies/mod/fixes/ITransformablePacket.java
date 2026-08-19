@@ -3,6 +3,7 @@ package org.valkyrienskies.mod.fixes;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.network.NetHandlerPlayServer;
 import net.minecraft.network.play.INetHandlerPlayServer;
+import org.jspecify.annotations.Nullable;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.entity_backup.ICapabilityEntityBackup;
@@ -17,15 +18,11 @@ import valkyrienwarfare.api.TransformType;
  * @author thebest108
  */
 public interface ITransformablePacket {
-
     default boolean isPacketOnMainThread(INetHandlerPlayServer server, boolean callingFromSponge) {
-        if (!ValkyrienSkiesMod.isSpongePresent() || callingFromSponge) {
-            NetHandlerPlayServer serverHandler = (NetHandlerPlayServer) server;
-            EntityPlayerMP player = serverHandler.player;
-            return player.getServerWorld().isCallingFromMinecraftThread();
-        } else {
-            return false;
-        }
+        if (ValkyrienSkiesMod.isSpongePresent() && !callingFromSponge) return false;
+        NetHandlerPlayServer serverHandler = (NetHandlerPlayServer) server;
+        EntityPlayerMP player = serverHandler.player;
+        return player.getServerWorld().isCallingFromMinecraftThread();
     }
 
     /**
@@ -39,7 +36,7 @@ public interface ITransformablePacket {
             if (physicsObject != null) {
                 // First make a backup of the player position
                 ICapabilityEntityBackup entityBackup = player.getCapability(VSCapabilityRegistry.VS_ENTITY_BACKUP, null);
-                entityBackup.backupEntityPosition(player);
+                if (entityBackup != null) entityBackup.backupEntityPosition(player);
                 // Then put the player into ship coordinates.
                 physicsObject.getShipTransform().transform(player, TransformType.GLOBAL_TO_SUBSPACE, true);
             }
@@ -55,9 +52,10 @@ public interface ITransformablePacket {
             EntityPlayerMP player = serverHandler.player;
             // If we made a backup in doPreProcessing(), then restore from that backup.
             ICapabilityEntityBackup entityBackup = player.getCapability(VSCapabilityRegistry.VS_ENTITY_BACKUP, null);
-            if (entityBackup.hasBackupPosition()) entityBackup.restoreEntityToBackup(player);
+            if (entityBackup != null && entityBackup.hasBackupPosition()) entityBackup.restoreEntityToBackup(player);
         }
     }
 
+    @Nullable
     ShipData getPacketParent(NetHandlerPlayServer server);
 }

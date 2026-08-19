@@ -5,6 +5,7 @@ import net.minecraft.network.NetHandlerPlayServer;
 import net.minecraft.network.play.INetHandlerPlayServer;
 import net.minecraft.network.play.client.CPacketPlayerTryUseItemOnBlock;
 import net.minecraft.world.World;
+import org.jspecify.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -16,10 +17,6 @@ import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 
 @Mixin(value = CPacketPlayerTryUseItemOnBlock.class)
 public class MixinCPacketPlayerTryUseItemOnBlock implements ITransformablePacket {
-
-    private final CPacketPlayerTryUseItemOnBlock thisPacketTryUse = CPacketPlayerTryUseItemOnBlock.class
-        .cast(this);
-
     @Inject(method = "processPacket", at = @At(value = "HEAD"))
     private void preHandleUseItemPacket(INetHandlerPlayServer server, CallbackInfo info) {
         this.doPreProcessing(server, false);
@@ -31,14 +28,11 @@ public class MixinCPacketPlayerTryUseItemOnBlock implements ITransformablePacket
     }
 
     @Override
+    @Nullable
     public ShipData getPacketParent(NetHandlerPlayServer server) {
         World world = server.player.getEntityWorld();
-        Optional<PhysicsObject> physicsObject = ValkyrienUtils
-            .getPhysoManagingBlock(world, thisPacketTryUse.getPos());
-        if (physicsObject.isPresent()) {
-            return physicsObject.get().getShipData();
-        } else {
-            return null;
-        }
+        CPacketPlayerTryUseItemOnBlock thisPacket = (CPacketPlayerTryUseItemOnBlock) ((Object) this);
+        Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(world, thisPacket.getPos());
+        return physicsObject.map(PhysicsObject::getShipData).orElse(null);
     }
 }

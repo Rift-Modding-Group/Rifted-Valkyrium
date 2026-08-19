@@ -5,6 +5,7 @@ import net.minecraft.network.NetHandlerPlayServer;
 import net.minecraft.network.play.INetHandlerPlayServer;
 import net.minecraft.network.play.client.CPacketPlayerDigging;
 import net.minecraft.world.World;
+import org.jspecify.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -16,9 +17,6 @@ import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 
 @Mixin(CPacketPlayerDigging.class)
 public class MixinCPacketPlayerDigging implements ITransformablePacket {
-
-    private final CPacketPlayerDigging thisPacketTryUse = CPacketPlayerDigging.class.cast(this);
-
     @Inject(method = "processPacket", at = @At(value = "HEAD"))
     private void preDiggingProcessPacket(INetHandlerPlayServer server, CallbackInfo info) {
         this.doPreProcessing(server, false);
@@ -30,15 +28,11 @@ public class MixinCPacketPlayerDigging implements ITransformablePacket {
     }
 
     @Override
+    @Nullable
     public ShipData getPacketParent(NetHandlerPlayServer server) {
         World world = server.player.getEntityWorld();
-        Optional<PhysicsObject> physicsObject = ValkyrienUtils
-            .getPhysoManagingBlock(world, thisPacketTryUse.getPosition());
-        if (physicsObject.isPresent()) {
-            return physicsObject.get().getShipData();
-        } else {
-            return null;
-        }
+        CPacketPlayerDigging thisPacket = (CPacketPlayerDigging) ((Object) this);
+        Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(world, thisPacket.getPosition());
+        return physicsObject.map(PhysicsObject::getShipData).orElse(null);
     }
-
 }
