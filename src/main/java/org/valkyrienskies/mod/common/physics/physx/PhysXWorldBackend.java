@@ -115,10 +115,7 @@ public class PhysXWorldBackend {
 
             //---defining block and entity stuff---
             BlockSectionList collideWith = ship.getPhysicsCollideWith();
-            List<BlockSection> blockSections;
-            synchronized (collideWith) {
-                blockSections = new ArrayList<>(collideWith.getBlockSections());
-            }
+            List<BlockSection> blockSections = collideWith.getBlockSections();
 
             //---block section objects---
             for (BlockSection blockSection : blockSections) {
