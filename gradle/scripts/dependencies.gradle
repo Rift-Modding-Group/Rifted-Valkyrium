@@ -12,6 +12,9 @@ repositories {
         url = 'https://curse.cleanroommc.com'
     }
     maven {
+        url 'https://maven.cleanroommc.com'
+    }
+    maven {
         name = 'Modrinth'
         url = 'https://api.modrinth.com/maven'
     }
@@ -40,6 +43,11 @@ dependencies {
     if (propertyBool('enable_lwjglx')) {
         compileOnly "com.cleanroommc:lwjglx:1.0.0"
     }
+
+    //hei stuff
+    modImplementation 'curse.maven:hei-557549:6187146' // Use for mod Mixin example
+    //dependencies { implementation 'mezz:jei:4.29.11' }
+
     //sponge api
     implementation ('org.spongepowered:spongeapi:7.4.0') {
         exclude group: 'com.google.guava'
