@@ -42,21 +42,21 @@ public abstract class MixinRenderManager {
                 double oldLastPosY = entityIn.lastTickPosY;
                 double oldLastPosZ = entityIn.lastTickPosZ;
 
-                Vec3d mountPos = mountData.getMountPos();
+                Vec3d mountPos = mountData.mountPos();
                 GL11.glPushMatrix();
 
-                mountData.getMountedShip()
+                mountData.mountedShip()
                     .getShipRenderer()
                     .applyRenderTransform(partialTicks);
 
                 if (mountPos != null) {
                     Vector3d localPosition = JOML.convert(mountPos);
 
-                    localPosition.x -= mountData.getMountedShip()
+                    localPosition.x -= mountData.mountedShip()
                         .getShipRenderer().offsetPos.getX();
-                    localPosition.y -= mountData.getMountedShip()
+                    localPosition.y -= mountData.mountedShip()
                         .getShipRenderer().offsetPos.getY();
-                    localPosition.z -= mountData.getMountedShip()
+                    localPosition.z -= mountData.mountedShip()
                         .getShipRenderer().offsetPos.getZ();
 
                     x = entityIn.posX = entityIn.lastTickPosX = localPosition.x;
@@ -70,7 +70,7 @@ public abstract class MixinRenderManager {
 
 
                 if (mountPos != null) {
-                    mountData.getMountedShip()
+                    mountData.mountedShip()
                         .getShipRenderer()
                         .applyInverseTransform(partialTicks);
                 }

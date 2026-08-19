@@ -57,21 +57,6 @@ public class EventsCommon {
     @Deprecated //im not sure why this is marked as deprecated... maybe remove the tag?
     private static final Map<EntityPlayer, double[]> lastPositions = new HashMap<>();
 
-    @SubscribeEvent
-    public static void onPlayerSleepInBedEvent(PlayerSleepInBedEvent event) {
-        EntityPlayer player = event.getEntityPlayer();
-        BlockPos pos = event.getPos();
-        Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(player.getEntityWorld(), pos);
-
-        if (physicsObject.isPresent()) {
-            if (player instanceof EntityPlayerMP) {
-                player.sendMessage(new TextComponentString("Spawn Point Set!"));
-                player.setSpawnPoint(pos, false);
-                event.setResult(SleepResult.NOT_POSSIBLE_HERE);
-            }
-        }
-    }
-
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onEntityJoinWorldEvent(EntityJoinWorldEvent event) {
         Entity entity = event.getEntity();
@@ -84,10 +69,7 @@ public class EventsCommon {
 
         Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(world, posAt);
         if (!event.getWorld().isRemote && physicsObject.isPresent() && !(entity instanceof EntityFallingBlock)) {
-            if (entity instanceof EntityArmorStand
-                    /*|| entity instanceof EntityPig*/
-                    || entity instanceof EntityBoat
-            ) {
+            if (entity instanceof EntityArmorStand || entity instanceof EntityBoat) {
                 EntityMountable entityMountable = new EntityMountable(
                         world, entity.getPositionVector(),
                         CoordinateSpaceType.SUBSPACE_COORDINATES, posAt
@@ -266,17 +248,11 @@ public class EventsCommon {
 
             double waterRange = .6D;
 
-            for (int x = (int) Math.floor(inLocal.x - waterRange);
-                 x <= Math.ceil(inLocal.x + waterRange); x++) {
-                for (int y = (int) Math.floor(inLocal.y - waterRange);
-                     y <= Math.ceil(inLocal.y + waterRange); y++) {
-                    for (int z = (int) Math.floor(inLocal.z - waterRange);
-                         z <= Math.ceil(inLocal.z + waterRange); z++) {
-                        IBlockState state = event.getWorld()
-                                .getBlockState(new BlockPos(x, y, z));
-                        if (state.getBlock() instanceof BlockLiquid) {
-                            return;
-                        }
+            for (int x = (int) Math.floor(inLocal.x - waterRange); x <= Math.ceil(inLocal.x + waterRange); x++) {
+                for (int y = (int) Math.floor(inLocal.y - waterRange); y <= Math.ceil(inLocal.y + waterRange); y++) {
+                    for (int z = (int) Math.floor(inLocal.z - waterRange); z <= Math.ceil(inLocal.z + waterRange); z++) {
+                        IBlockState state = event.getWorld().getBlockState(new BlockPos(x, y, z));
+                        if (state.getBlock() instanceof BlockLiquid) return;
                     }
                 }
             }

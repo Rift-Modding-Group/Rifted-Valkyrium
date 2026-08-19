@@ -68,7 +68,7 @@ public class EntityDraggable {
 
         final EntityShipMountData anchoredMountData = ValkyrienUtils.getAnchoredMountShipAndPos(entity);
         if (anchoredMountData.isMounted()) {
-            draggable.setLastTouchedShip(anchoredMountData.getMountedShip().getShipData());
+            draggable.setLastTouchedShip(anchoredMountData.mountedShip().getShipData());
             draggable.setTicksSinceTouchedShip(0);
             draggable.setTicksPartOfGround(0);
             draggable.setAddedLinearVelocity(new Vector3d());

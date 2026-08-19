@@ -13,6 +13,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.math.Vec3d;
+import net.minecraftforge.client.ForgeHooksClient;
 import net.minecraftforge.client.event.EntityViewRenderEvent;
 import org.joml.Quaterniond;
 import org.joml.Vector3d;
@@ -56,7 +57,7 @@ public abstract class MixinEntityRenderer {
     @Inject(method = "orientCamera", at = @At("HEAD"), cancellable = true)
     private void orientCamera(float partialTicks, CallbackInfo ci) {
         EntityShipMountData mountData = ValkyrienUtils.getMountedShipAndPos(mc.getRenderViewEntity());
-        if (mountData.getMountedShip() == null) {
+        if (mountData.mountedShip() == null) {
             // Do nothing. We don't want to mess with camera code unless we have to.
             return;
         } else {
@@ -76,13 +77,12 @@ public abstract class MixinEntityRenderer {
         double d2 = entity.prevPosZ + (entity.posZ - entity.prevPosZ) * partialTicks;
 
         // Probably overkill, but this should 100% fix the crash in issue #78
-        if (mountData.isMounted() && mountData.getMountedShip()
-                .getShipRenderer().offsetPos != null) {
-            final ShipTransform renderTransform = mountData.getMountedShip().getShipTransformationManager().getRenderTransform();
+        if (mountData.isMounted()) {
+            final ShipTransform renderTransform = mountData.mountedShip().getShipTransformationManager().getRenderTransform();
 
             renderTransform.transformDirection(eyeVector, TransformType.SUBSPACE_TO_GLOBAL);
 
-            Vector3d playerPosition = JOML.convert(mountData.getMountPos());
+            Vector3d playerPosition = JOML.convert(mountData.mountPos());
 
             renderTransform.transformPosition(playerPosition, TransformType.SUBSPACE_TO_GLOBAL);
 
@@ -95,14 +95,14 @@ public abstract class MixinEntityRenderer {
         d1 += eyeVector.y;
         d2 += eyeVector.z;
 
-        if (entity instanceof EntityLivingBase && ((EntityLivingBase) entity).isPlayerSleeping()) {
+        if (entity instanceof EntityLivingBase entityLivingBase && entityLivingBase.isPlayerSleeping()) {
             //            f = (float)((double)f + 1.0D);
             //            GlStateManager.translate(0.0F, 0.3F, 0.0F);
 
             if (!this.mc.gameSettings.debugCamEnable) {
                 //VS code starts here
                 if (mountData.isMounted()) {
-                    Vector3d playerPosInLocal = JOML.convert(mountData.getMountPos());
+                    Vector3d playerPosInLocal = JOML.convert(mountData.mountPos());
 
                     playerPosInLocal.sub(.5D, .6875, .5);
                     playerPosInLocal.round();
@@ -115,8 +115,7 @@ public abstract class MixinEntityRenderer {
                     float angleYaw = 0;
 
                     if (block != null && block.isBed(state, entity.world, bedPos, entity)) {
-                        angleYaw = block.getBedDirection(state, entity.world, bedPos)
-                                .getHorizontalIndex() * 90;
+                        angleYaw = block.getBedDirection(state, entity.world, bedPos).getHorizontalIndex() * 90;
                         angleYaw += 180;
                     }
 
@@ -124,11 +123,12 @@ public abstract class MixinEntityRenderer {
 
                     entity.rotationPitch = entity.prevRotationPitch = 0;
 
-                } else {
+                }
+                else {
                     BlockPos blockpos = new BlockPos(entity);
                     IBlockState iblockstate = this.mc.world.getBlockState(blockpos);
 
-                    net.minecraftforge.client.ForgeHooksClient.orientBedCamera(this.mc.world, blockpos, iblockstate, entity);
+                    ForgeHooksClient.orientBedCamera(this.mc.world, blockpos, iblockstate, entity);
                     GlStateManager.rotate(entity.prevRotationYaw + (entity.rotationYaw - entity.prevRotationYaw) * partialTicks + 180.0F, 0.0F, -1.0F, 0.0F);
                     GlStateManager.rotate(entity.prevRotationPitch + (entity.rotationPitch - entity.prevRotationPitch) * partialTicks, -1.0F, 0.0F, 0.0F);
                 }
@@ -219,7 +219,7 @@ public abstract class MixinEntityRenderer {
         }
 
         if (mountData.isMounted()) {
-            final ShipTransform renderTransform = mountData.getMountedShip().getShipTransformationManager().getRenderTransform();
+            final ShipTransform renderTransform = mountData.mountedShip().getShipTransformationManager().getRenderTransform();
 
             Quaterniond orientationQuat = renderTransform.rotationQuaternion(TransformType.SUBSPACE_TO_GLOBAL);
 

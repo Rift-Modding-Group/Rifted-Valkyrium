@@ -24,14 +24,14 @@ public class PlayerMovementDataGenerator {
 
         //---send chair-mounted players using the anchored ship-local seat position---
         if (anchoredMountData.isMounted()) {
-            final ShipData mountedShip = anchoredMountData.getMountedShip().getShipData();
+            final ShipData mountedShip = anchoredMountData.mountedShip().getShipData();
             final Vector3d playerLookInLocal = JOML.convert(entityPlayer.getLook(1));
             mountedShip.getShipTransform().transformDirection(playerLookInLocal, TransformType.GLOBAL_TO_SUBSPACE);
 
             return new PlayerMovementData(
                     mountedShip.getUuid(),
                     0, 0,
-                    JOML.convert(anchoredMountData.getMountPos()),
+                    JOML.convert(anchoredMountData.mountPos()),
                     playerLookInLocal,
                     entityPlayer.onGround
             );

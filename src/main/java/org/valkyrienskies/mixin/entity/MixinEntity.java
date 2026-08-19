@@ -3,7 +3,7 @@ package org.valkyrienskies.mixin.entity;
 import net.minecraft.block.material.Material;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.MoverType;
-import net.minecraft.entity.item.EntityBoat;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
@@ -72,7 +72,7 @@ public abstract class MixinEntity {
         Entity thisEntity = (Entity) ((Object) this);
         EntityShipMountData mountData = ValkyrienUtils.getMountedShipAndPos(thisEntity);
         if (mountData.isMounted()) {
-            return mountData.getMountedShip()
+            return mountData.mountedShip()
                 .getShipTransformationManager()
                 .getRenderTransform()
                 .rotate(original, TransformType.SUBSPACE_TO_GLOBAL);
@@ -98,7 +98,7 @@ public abstract class MixinEntity {
         Entity thisEntity = (Entity) ((Object) this);
         EntityShipMountData mountData = ValkyrienUtils.getMountedShipAndPos(thisEntity);
         if (mountData.isMounted()) {
-            return mountData.getMountedShip()
+            return mountData.mountedShip()
                 .getShipTransformationManager()
                 .getRenderTransform()
                 .rotate(vanilla, TransformType.SUBSPACE_TO_GLOBAL);
@@ -106,8 +106,10 @@ public abstract class MixinEntity {
         else return vanilla;
     }
 
+    /*
     @Shadow
     public abstract void move(MoverType type, double x, double y, double z);
+     */
 
     /**
      * This is easier to have as an overwrite because there's less laggy hackery to be done then :P
@@ -222,8 +224,8 @@ public abstract class MixinEntity {
         EntityShipMountData mountData = ValkyrienUtils.getMountedShipAndPos(thisEntity);
 
         if (mountData.isMounted()) {
-            Vector3d playerPosition = JOML.convert(mountData.getMountPos());
-            mountData.getMountedShip()
+            Vector3d playerPosition = JOML.convert(mountData.mountPos());
+            mountData.mountedShip()
                 .getShipTransformationManager()
                 .getRenderTransform()
                 .transformPosition(playerPosition, TransformType.SUBSPACE_TO_GLOBAL);
@@ -232,7 +234,7 @@ public abstract class MixinEntity {
             // Remove the original position added for the player's eyes
             // RotationMatrices.doRotationOnly(wrapper.wrapping.coordTransform.lToWTransform,
             // playerEyes);
-            mountData.getMountedShip()
+            mountData.mountedShip()
                 .getShipTransformationManager()
                 .getCurrentTickTransform()
                 .transformDirection(playerEyes, TransformType.SUBSPACE_TO_GLOBAL);

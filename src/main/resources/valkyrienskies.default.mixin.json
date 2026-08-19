@@ -25,6 +25,7 @@
     "entity.MixinEntity",
     "entity.MixinEntityIntrinsic",
     "entity.MixinEntityMinecart",
+    "entity.MixinEntityPlayer",
     "network.MixinNetHandlerPlayServer",
     "network.play.client.MixinCPacketPlayer",
     "network.play.client.MixinCPacketPlayerDigging",
