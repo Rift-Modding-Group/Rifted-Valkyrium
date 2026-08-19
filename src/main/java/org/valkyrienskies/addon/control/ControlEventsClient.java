@@ -12,20 +12,30 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumHand;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
+import net.minecraftforge.client.event.InputUpdateEvent;
 import net.minecraftforge.client.event.ModelBakeEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.client.event.TextureStitchEvent;
 import net.minecraftforge.client.model.IModel;
 import net.minecraftforge.client.model.ModelLoader;
 import net.minecraftforge.client.model.ModelLoaderRegistry;
+import net.minecraftforge.client.settings.KeyModifier;
+import net.minecraftforge.event.entity.EntityMountEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.TickEvent;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
 import org.valkyrienskies.addon.control.capability.controlNodeUser.ICapabilityControlNodeUser;
 import org.valkyrienskies.addon.control.capability.lastRelay.ICapabilityLastRelay;
 import org.valkyrienskies.addon.control.item.ItemBaseWire;
+import org.valkyrienskies.addon.control.network.VSStoppedUsingControlNodeMessage;
 import org.valkyrienskies.addon.control.renderer.infuser_core_rendering.InfuserCoreBakedModel;
 import org.valkyrienskies.addon.control.tileentity.ITileEntityControlNode;
+import org.valkyrienskies.mod.client.VSKeyHandler;
 
 public class ControlEventsClient {
+    private boolean suppressDismountUntilRelease = false;
+
     @SubscribeEvent
     public void render(RenderGameOverlayEvent.Post event) {
         Minecraft minecraft = Minecraft.getMinecraft();
@@ -118,4 +128,38 @@ public class ControlEventsClient {
 
     }
 
+    /**
+     * this exists to ensure that player cannot dismount whatever chair entity they're on
+     * when using shift to stop controlling any control node
+     * */
+    @SideOnly(Side.CLIENT)
+    @SubscribeEvent
+    public void playerTick(TickEvent.PlayerTickEvent event) {
+        if (event.side == Side.SERVER) return;
+        if (event.phase != TickEvent.Phase.START) return;
+
+        ICapabilityControlNodeUser controlNodeUser = event.player.getCapability(ValkyrienSkiesControl.controlNodeUserCapability, null);
+        if (controlNodeUser == null) return;
+
+        boolean dismountKeyDown = VSKeyHandler.dismountKey.isKeyDown();
+
+        //a new dismount can only happen after shift has been released.
+        if (!dismountKeyDown) this.suppressDismountUntilRelease = false;
+
+        //enable supress flag when theres conflict
+        if (dismountKeyDown && controlNodeUser.getUsedControlNodePos() != null
+            && event.player.isRiding() && VSKeyHandler.dismountKey.conflicts(Minecraft.getMinecraft().gameSettings.keyBindSneak)
+        ) {
+            this.suppressDismountUntilRelease = true;
+        }
+    }
+
+    //apply dismount supression
+    @SideOnly(Side.CLIENT)
+    @SubscribeEvent
+    public void onInputUpdate(InputUpdateEvent event) {
+        if (event.getEntityPlayer() != Minecraft.getMinecraft().player) return;
+
+        if (this.suppressDismountUntilRelease) event.getMovementInput().sneak = false;
+    }
 }

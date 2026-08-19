@@ -50,22 +50,10 @@ public class NodeKeyHandler {
 
             if (VSKeyHandler.dismountKey.isKeyDown() && controlNodeUser.getUsedControlNodePos() != null) {
                 BlockPos pilotedPos = controlNodeUser.getUsedControlNodePos();
-                VSStoppedUsingControlNodeMessage stopPilotingMessage = new VSStoppedUsingControlNodeMessage(
-                        pilotedPos
-                );
+                VSStoppedUsingControlNodeMessage stopPilotingMessage = new VSStoppedUsingControlNodeMessage(pilotedPos);
                 ValkyrienSkiesControl.controlNodeNetwork.sendToServer(stopPilotingMessage);
                 controlNodeUser.stopUsingEverything();
             }
-
-            /*
-            if (VSKeyHandler.dismountKey.isKeyDown() && controlNodeUser.getShipIDBeingControlled() != null) {
-                VSStoppedUsingControlNodeMessage stopPilotingMessage = new VSStoppedUsingControlNodeMessage(
-                        controlNodeUser.getShipIDBeingControlled()
-                );
-                ValkyrienSkiesControl.controlNodeNetwork.sendToServer(stopPilotingMessage);
-                controlNodeUser.stopUsingEverything();
-            }
-             */
         }
     }
 }
