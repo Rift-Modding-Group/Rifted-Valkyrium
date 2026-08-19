@@ -72,12 +72,13 @@ public abstract class MixinWorld {
      * @author DaPorkchop_
      */
     @Overwrite
-    public void spawnParticle(int particleID, boolean ignoreRange, double x, double y, double z,
-        double xSpeed,
-        double ySpeed, double zSpeed, int... parameters) {
+    public void spawnParticle(
+            int particleID, boolean ignoreRange, double x, double y, double z,
+            double xSpeed, double ySpeed, double zSpeed, int... parameters
+    ) {
         BlockPos pos = new BlockPos(x, y, z);
-        Optional<PhysicsObject> physicsObject = ValkyrienUtils
-            .getPhysoManagingBlock(World.class.cast(this), pos);
+        World thisWorld = (World) ((Object) this);
+        Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(thisWorld, pos);
 
         if (physicsObject.isPresent()) {
             Vector3d newPosVec = new Vector3d(x, y, z);
@@ -92,10 +93,8 @@ public abstract class MixinWorld {
             y = newPosVec.y;
             z = newPosVec.z;
         }
-        for (int i = 0; i < this.eventListeners.size(); ++i) {
-            this.eventListeners.get(i)
-                .spawnParticle(particleID, ignoreRange, x, y, z, xSpeed, ySpeed, zSpeed,
-                    parameters);
+        for (IWorldEventListener eventListener : this.eventListeners) {
+            eventListener.spawnParticle(particleID, ignoreRange, x, y, z, xSpeed, ySpeed, zSpeed, parameters);
         }
     }
 
@@ -236,8 +235,8 @@ public abstract class MixinWorld {
         List<T> toReturn = this.getEntitiesWithinAABBOriginal(clazz, aabb, filter);
         BlockPos pos = new BlockPos((aabb.minX + aabb.maxX) / 2D, (aabb.minY + aabb.maxY) / 2D,
             (aabb.minZ + aabb.maxZ) / 2D);
-        Optional<PhysicsObject> physicsObject = ValkyrienUtils
-            .getPhysoManagingBlock(World.class.cast(this), pos);
+        World thisWorld = (World) ((Object) this);
+        Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(thisWorld, pos);
 
         if (physicsObject.isPresent()) {
             TransformedAABB poly = new TransformedAABB(aabb, physicsObject.get()
@@ -270,8 +269,8 @@ public abstract class MixinWorld {
         BlockPos pos = new BlockPos((boundingBox.minX + boundingBox.maxX) / 2D,
             (boundingBox.minY + boundingBox.maxY) / 2D, (boundingBox.minZ + boundingBox.maxZ) / 2D);
 
-        Optional<PhysicsObject> physicsObject = ValkyrienUtils
-            .getPhysoManagingBlock(World.class.cast(this), pos);
+        World thisWorld = (World) ((Object) this);
+        Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(thisWorld, pos);
 
         if (physicsObject.isPresent()) {
             TransformedAABB poly = new TransformedAABB(boundingBox, physicsObject.get()

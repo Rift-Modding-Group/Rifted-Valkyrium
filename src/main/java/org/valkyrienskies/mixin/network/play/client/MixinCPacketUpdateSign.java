@@ -16,9 +16,6 @@ import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 
 @Mixin(CPacketUpdateSign.class)
 public class MixinCPacketUpdateSign implements ITransformablePacket {
-
-    private final CPacketUpdateSign thisAsPacketSign = CPacketUpdateSign.class.cast(this);
-
     @Inject(method = "processPacket", at = @At(value = "HEAD"))
     private void preHandleUseItemPacket(INetHandlerPlayServer server, CallbackInfo info) {
         this.doPreProcessing(server, false);
@@ -32,12 +29,8 @@ public class MixinCPacketUpdateSign implements ITransformablePacket {
     @Override
     public ShipData getPacketParent(NetHandlerPlayServer server) {
         World world = server.player.getEntityWorld();
-        Optional<PhysicsObject> physicsObject = ValkyrienUtils
-            .getPhysoManagingBlock(world, thisAsPacketSign.getPosition());
-        if (physicsObject.isPresent()) {
-            return physicsObject.get().getShipData();
-        } else {
-            return null;
-        }
+        CPacketUpdateSign thisPacketSign = (CPacketUpdateSign) ((Object) this);
+        Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(world, thisPacketSign.getPosition());
+        return physicsObject.map(PhysicsObject::getShipData).orElse(null);
     }
 }

@@ -13,6 +13,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.math.Vec3d;
+import net.minecraftforge.client.event.EntityViewRenderEvent;
 import org.joml.Quaterniond;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
@@ -209,14 +210,15 @@ public abstract class MixinEntityRenderer {
                 yaw = entityanimal.prevRotationYawHead + (entityanimal.rotationYawHead - entityanimal.prevRotationYawHead) * partialTicks + 180.0F;
             }
             IBlockState state = ActiveRenderInfo.getBlockStateAtEntityViewpoint(this.mc.world, entity, partialTicks);
-            net.minecraftforge.client.event.EntityViewRenderEvent.CameraSetup event = new net.minecraftforge.client.event.EntityViewRenderEvent.CameraSetup(EntityRenderer.class.cast(this), entity, state, partialTicks, yaw, pitch, roll);
+            EntityRenderer thisEntityRenderer = (EntityRenderer)((Object) this);
+            EntityViewRenderEvent.CameraSetup event = new EntityViewRenderEvent.CameraSetup(thisEntityRenderer, entity, state, partialTicks, yaw, pitch, roll);
             net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(event);
             GlStateManager.rotate(event.getRoll(), 0.0F, 0.0F, 1.0F);
             GlStateManager.rotate(event.getPitch(), 1.0F, 0.0F, 0.0F);
             GlStateManager.rotate(event.getYaw(), 0.0F, 1.0F, 0.0F);
         }
 
-        if (mountData.isMounted() && mountData.getMountedShip().getShipRenderer().offsetPos != null) {
+        if (mountData.isMounted()) {
             final ShipTransform renderTransform = mountData.getMountedShip().getShipTransformationManager().getRenderTransform();
 
             Quaterniond orientationQuat = renderTransform.rotationQuaternion(TransformType.SUBSPACE_TO_GLOBAL);

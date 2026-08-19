@@ -51,7 +51,7 @@ public class MixinClientWorld {
     @SideOnly(Side.CLIENT)
     @Overwrite
     public BlockPos getPrecipitationHeight(BlockPos input) {
-        final World thisAsWorld = World.class.cast(this);
+        final World thisAsWorld = (World) ((Object) this);;
         final BlockPos originalHeight = thisAsWorld.getChunk(input).getPrecipitationHeight(input);
 
         // Only do accurate rain on client side

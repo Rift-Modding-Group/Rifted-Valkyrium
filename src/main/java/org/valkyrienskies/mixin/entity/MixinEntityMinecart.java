@@ -16,9 +16,6 @@ import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 
 @Mixin(EntityMinecart.class)
 public class MixinEntityMinecart {
-
-    private final EntityMinecart self = EntityMinecart.class.cast(this);
-
     private ShipTransform transform = null;
     private boolean isInGlobal = true;
 
@@ -28,7 +25,9 @@ public class MixinEntityMinecart {
     )
     public void preOnUpdate(CallbackInfo ci) {
         if (!VSConfig.minecartsOnShips) return;
-        if (self.world.isRemote) return;
+
+        EntityMinecart thisEntityMinecart = (EntityMinecart) ((Object) this);
+        if (thisEntityMinecart.world.isRemote) return;
         moveToSubspace();
     }
 
@@ -41,7 +40,9 @@ public class MixinEntityMinecart {
     )
     public void preBlockCollisions(CallbackInfo ci) {
         if (!VSConfig.minecartsOnShips) return;
-        if (self.world.isRemote) return;
+
+        EntityMinecart thisEntityMinecart = (EntityMinecart) ((Object) this);
+        if (thisEntityMinecart.world.isRemote) return;
         moveToGlobal();
     }
 
@@ -54,18 +55,21 @@ public class MixinEntityMinecart {
     )
     public void preMoveDerailed(CallbackInfo ci) {
         if (!VSConfig.minecartsOnShips) return;
-        if (self.world.isRemote) return;
+
+        EntityMinecart thisEntityMinecart = (EntityMinecart) ((Object) this);
+        if (thisEntityMinecart.world.isRemote) return;
         moveToGlobal();
     }
 
     private void moveToSubspace() {
-        Vec3d position = self.getPositionVector();
-        for (PhysicsObject ship : ValkyrienUtils.getPhysosLoadedInWorld(self.world)) {
+        EntityMinecart thisEntityMinecart = (EntityMinecart) ((Object) this);
+        Vec3d position = thisEntityMinecart.getPositionVector();
+        for (PhysicsObject ship : ValkyrienUtils.getPhysosLoadedInWorld(thisEntityMinecart.world)) {
             if (ship.getShipBB().contains(position)) {
-                transform = ship.getShipTransform();
+                this.transform = ship.getShipTransform();
 
-                transformThis(transform.getGlobalToSubspace());
-                isInGlobal = false;
+                transformThis(this.transform.getGlobalToSubspace());
+                this.isInGlobal = false;
 
                 return;
             }
@@ -73,20 +77,20 @@ public class MixinEntityMinecart {
     }
     
     private void moveToGlobal() {
-        if (!isInGlobal) {
+        if (!this.isInGlobal) {
             transformThis(transform.getSubspaceToGlobal());
-            isInGlobal = true;
+            this.isInGlobal = true;
         }
     }
 
     private void transformThis(Matrix4dc transform) {
-        Vector3d pos = transform.transformPosition(JOML.convert(self.getPositionVector()));
-        Vector3d lastPos = transform.transformPosition(new Vector3d(self.lastTickPosX, self.lastTickPosY, self.lastTickPosZ));
+        EntityMinecart thisEntityMinecart = (EntityMinecart) ((Object) this);
+        Vector3d pos = transform.transformPosition(JOML.convert(thisEntityMinecart.getPositionVector()));
+        Vector3d lastPos = transform.transformPosition(new Vector3d(thisEntityMinecart.lastTickPosX, thisEntityMinecart.lastTickPosY, thisEntityMinecart.lastTickPosZ));
 
-        self.setPosition(pos.x, pos.y, pos.z);
-        self.lastTickPosX = lastPos.x;
-        self.lastTickPosY = lastPos.y;
-        self.lastTickPosZ = lastPos.z;
+        thisEntityMinecart.setPosition(pos.x, pos.y, pos.z);
+        thisEntityMinecart.lastTickPosX = lastPos.x;
+        thisEntityMinecart.lastTickPosY = lastPos.y;
+        thisEntityMinecart.lastTickPosZ = lastPos.z;
     }
-
 }

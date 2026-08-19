@@ -95,16 +95,15 @@ public abstract class MixinEntity {
         Vec3d vanilla = new Vec3d(f1 * f2, f3, f * f2);
         // END VANILLA CODE
 
-        EntityShipMountData mountData = ValkyrienUtils
-            .getMountedShipAndPos(Entity.class.cast(this));
+        Entity thisEntity = (Entity) ((Object) this);
+        EntityShipMountData mountData = ValkyrienUtils.getMountedShipAndPos(thisEntity);
         if (mountData.isMounted()) {
             return mountData.getMountedShip()
                 .getShipTransformationManager()
                 .getRenderTransform()
                 .rotate(vanilla, TransformType.SUBSPACE_TO_GLOBAL);
-        } else {
-            return vanilla;
         }
+        else return vanilla;
     }
 
     @Shadow
@@ -218,10 +217,9 @@ public abstract class MixinEntity {
     @Shadow public boolean inWater;
 
     @Inject(method = "getPositionEyes(F)Lnet/minecraft/util/math/Vec3d;", at = @At("HEAD"), cancellable = true)
-    private void getPositionEyesInject(float partialTicks,
-        CallbackInfoReturnable<Vec3d> callbackInfo) {
-        EntityShipMountData mountData = ValkyrienUtils
-            .getMountedShipAndPos(Entity.class.cast(this));
+    private void getPositionEyesInject(float partialTicks, CallbackInfoReturnable<Vec3d> callbackInfo) {
+        Entity thisEntity = (Entity) ((Object) this);
+        EntityShipMountData mountData = ValkyrienUtils.getMountedShipAndPos(thisEntity);
 
         if (mountData.isMounted()) {
             Vector3d playerPosition = JOML.convert(mountData.getMountPos());
