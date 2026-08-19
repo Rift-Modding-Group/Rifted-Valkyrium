@@ -3,8 +3,12 @@ package org.valkyrienskies.mod.client;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.audio.ISound;
 import net.minecraft.client.renderer.BufferBuilder;
+import net.minecraft.client.renderer.GlStateManager;
+import net.minecraft.client.renderer.RenderGlobal;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.entity.Entity;
+import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.world.World;
@@ -35,6 +39,7 @@ import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
+import org.valkyrienskies.mod.common.tileentity.TileEntityWaterPump;
 import org.valkyrienskies.mod.common.util.VSRenderUtils;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import org.valkyrienskies.mod.fixes.SoundFixWrapper;
@@ -243,20 +248,94 @@ public class EventsClient {
     }
 
     /**
-     * This appears to be for showing the bounding boxes for ships when viewing hitboxes
-     * after F3 + H (i think thats the key idk)
-     * */
+     * Renders temporary water pump ranges and ship debug bounding boxes.
+     */
     @SubscribeEvent
     public void onRenderWorldLastEvent(RenderWorldLastEvent event) {
         Minecraft mc = Minecraft.getMinecraft();
         World world = Minecraft.getMinecraft().world;
-        if (!mc.getRenderManager().isDebugBoundingBox() || mc.isReducedDebug() || mc.getRenderViewEntity() == null || world == null) return;
+        if (mc.getRenderViewEntity() == null || world == null) return;
 
         float partialTicks = event.getPartialTicks();
         Vector3dc offset = VSRenderUtils.getEntityPartialPosition(mc.getRenderViewEntity(), partialTicks).negate();
 
+        this.renderWaterPumpRanges(world, offset, partialTicks);
+
+        //---debug only stuff here---
+        if (!mc.getRenderManager().isDebugBoundingBox() || mc.isReducedDebug()) return;
         for (PhysicsObject physo : ValkyrienUtils.getPhysosLoadedInWorld(world)) {
             physo.getShipRenderer().renderDebugInfo(offset);
+        }
+    }
+
+    private void renderWaterPumpRanges(World world, Vector3dc offset, float partialTicks) {
+        boolean renderStateEnabled = false;
+
+        for (TileEntity tileEntity : world.loadedTileEntityList) {
+            if (!(tileEntity instanceof TileEntityWaterPump waterPump) || waterPump.getRangeVisualizationTicks() <= 0) {
+                continue;
+            }
+
+            //begin rendering
+            if (!renderStateEnabled) {
+                GlStateManager.enableBlend();
+                GlStateManager.tryBlendFuncSeparate(
+                        GlStateManager.SourceFactor.SRC_ALPHA,
+                        GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA,
+                        GlStateManager.SourceFactor.ONE,
+                        GlStateManager.DestFactor.ZERO
+                );
+                GlStateManager.disableTexture2D();
+                GlStateManager.disableLighting();
+                GlStateManager.disableCull();
+                GlStateManager.disableDepth();
+                GlStateManager.depthMask(false);
+
+                renderStateEnabled = true;
+            }
+
+            GlStateManager.pushMatrix();
+            Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(world, waterPump.getPos());
+            if (physicsObject.isPresent()) {
+                PhysicsObject ship = physicsObject.get();
+                ship.getShipRenderer().applyRenderTransform(partialTicks);
+                BlockPos renderOffset = ship.getShipRenderer().offsetPos;
+                GlStateManager.translate(
+                        waterPump.getPos().getX() - renderOffset.getX(),
+                        waterPump.getPos().getY() - renderOffset.getY(),
+                        waterPump.getPos().getZ() - renderOffset.getZ()
+                );
+            }
+            else {
+                GlStateManager.translate(
+                        waterPump.getPos().getX() + offset.x(),
+                        waterPump.getPos().getY() + offset.y(),
+                        waterPump.getPos().getZ() + offset.z()
+                );
+            }
+
+            //render water pump range
+            float fade = Math.clamp((waterPump.getRangeVisualizationTicks() - partialTicks) / 20f, 0f, 1f);
+            BlockPos pumpPos = waterPump.getPos();
+            AxisAlignedBB rangeBox = waterPump.getPumpRangeBB()
+                    .offset(-pumpPos.getX(), -pumpPos.getY(), -pumpPos.getZ())
+                    .grow(0.002D);
+
+            GlStateManager.glLineWidth(2f);
+            RenderGlobal.drawSelectionBoundingBox(rangeBox, 1f, 1f, 0f, 0.8f * fade);
+            GlStateManager.glLineWidth(1f);
+            GlStateManager.popMatrix();
+        }
+
+        //end bound rendering
+        if (renderStateEnabled) {
+            GlStateManager.depthMask(true);
+            GlStateManager.enableDepth();
+            GlStateManager.enableCull();
+            GlStateManager.enableLighting();
+            GlStateManager.enableTexture2D();
+            GlStateManager.disableBlend();
+            GlStateManager.resetColor();
         }
     }
 

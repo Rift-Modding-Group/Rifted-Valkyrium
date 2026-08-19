@@ -3,6 +3,7 @@
 ### Valkyrien Skies Main
 
 # Blocks
+message.valkyrienskies.water_pump.radius=Water pump radius: %s
 tile.captains_chair.name=Cap'ns Chair
 tooltip.valkyrienskies.captains_chair_1=Smartly sit and bring a spring upon 'er!
 tooltip.valkyrienskies.captains_chair_2=If ye be standing on yer ship, you will be seated when ye set sail. Arr, or ye'll steer her on the deck.

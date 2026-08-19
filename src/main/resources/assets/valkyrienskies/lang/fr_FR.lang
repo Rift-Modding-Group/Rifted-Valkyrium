@@ -3,6 +3,7 @@
 ### Valkyrien Skies Main
 
 # Blocks
+message.valkyrienskies.water_pump.radius=Rayon de la pompe à eau : %s
 tile.captains_chair.name=Siège du capitaine
 tooltip.valkyrienskies.captains_chair_1=Utilisé pour s'asseoir dans le vaisseau et le controler.
 tooltip.valkyrienskies.captains_chair_2=Si vous êtes sur le vaisseau vous allez vous asseoir. Sinon vous allez le controler à distance.
