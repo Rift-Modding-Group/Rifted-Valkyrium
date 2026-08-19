@@ -8,7 +8,6 @@ import net.minecraft.network.play.server.SPacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ITickable;
 import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.NotNull;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
@@ -16,16 +15,16 @@ import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShi
 import java.util.List;
 
 public class TileEntityWaterPump extends TileEntity implements ITickable {
-    public static final int MIN_PUMP_RADIUS = 1;
-    public static final int MAX_PUMP_RADIUS = 3;
-    public static final int DEFAULT_PUMP_RADIUS = 2;
+    public static final int MIN_PUMP_SIZE = 1;
+    public static final int MAX_PUMP_SIZE = 3;
+    public static final int DEFAULT_PUMP_SIZE = 2;
     public static final int RANGE_VISUALIZATION_DURATION_TICKS = 60;
 
-    private int pumpRadius;
+    private int pumpSize;
     private int rangeVisualizationTicks;
 
     public TileEntityWaterPump() {
-        this.pumpRadius = DEFAULT_PUMP_RADIUS;
+        this.pumpSize = DEFAULT_PUMP_SIZE;
         this.rangeVisualizationTicks = 0;
     }
 
@@ -46,12 +45,13 @@ public class TileEntityWaterPump extends TileEntity implements ITickable {
     }
 
     //---pump radius management---
-    public int cyclePumpRadius() {
-        int nextRadius = this.pumpRadius == MAX_PUMP_RADIUS ? MIN_PUMP_RADIUS : this.pumpRadius + 1;
-        this.pumpRadius = clampPumpRadius(nextRadius);
+    //change pump size, return the length of one of the sides in blocks
+    public int cyclePumpSize() {
+        int nextRadius = this.pumpSize == MAX_PUMP_SIZE ? MIN_PUMP_SIZE : this.pumpSize + 1;
+        this.pumpSize = clampPumpSize(nextRadius);
         this.markDirty();
         this.restartRangeVisualization();
-        return this.pumpRadius;
+        return this.pumpSize * 2 + 1;
     }
 
     @NotNull
@@ -59,7 +59,7 @@ public class TileEntityWaterPump extends TileEntity implements ITickable {
         double centerX = this.pos.getX() + 0.5;
         double centerY = this.pos.getY() + 0.5;
         double centerZ = this.pos.getZ() + 0.5;
-        return new AxisAlignedBB(centerX, centerY, centerZ, centerX, centerY, centerZ).grow(this.pumpRadius + 0.5D);
+        return new AxisAlignedBB(centerX, centerY, centerZ, centerX, centerY, centerZ).grow(this.pumpSize + 0.5D);
     }
 
     //---pump range visualization---
@@ -78,14 +78,14 @@ public class TileEntityWaterPump extends TileEntity implements ITickable {
     //---nbt management---
     @Override
     public NBTTagCompound writeToNBT(NBTTagCompound compound) {
-        compound.setInteger("PumpRadius", this.pumpRadius);
+        compound.setInteger("PumpSize", this.pumpSize);
         return super.writeToNBT(compound);
     }
 
     @Override
     public void readFromNBT(NBTTagCompound compound) {
         super.readFromNBT(compound);
-        this.pumpRadius = compound.hasKey("PumpRadius") ? clampPumpRadius(compound.getInteger("PumpRadius")) : DEFAULT_PUMP_RADIUS;
+        this.pumpSize = compound.hasKey("PumpSize") ? clampPumpSize(compound.getInteger("PumpSize")) : DEFAULT_PUMP_SIZE;
     }
 
     @Override
@@ -107,7 +107,7 @@ public class TileEntityWaterPump extends TileEntity implements ITickable {
         this.rangeVisualizationTicks = Math.clamp(rangeVisualizationTicks, 0, RANGE_VISUALIZATION_DURATION_TICKS);
     }
 
-    private static int clampPumpRadius(int pumpRadius) {
-        return Math.clamp(pumpRadius, MIN_PUMP_RADIUS, MAX_PUMP_RADIUS);
+    private static int clampPumpSize(int pumpSize) {
+        return Math.clamp(pumpSize, MIN_PUMP_SIZE, MAX_PUMP_SIZE);
     }
 }

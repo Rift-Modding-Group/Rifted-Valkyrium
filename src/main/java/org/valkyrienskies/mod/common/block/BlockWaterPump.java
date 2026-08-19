@@ -62,9 +62,11 @@ public class BlockWaterPump extends BaseBlock implements ITileEntityProvider {
         if (!worldIn.isRemote) {
             TileEntity tileEntity = worldIn.getTileEntity(pos);
             if (tileEntity instanceof TileEntityWaterPump) {
-                int pumpRadius = ((TileEntityWaterPump) tileEntity).cyclePumpRadius();
-                playerIn.sendStatusMessage(new TextComponentTranslation(
-                    "message.valkyrienskies.water_pump.radius", pumpRadius), true);
+                int pumpSize = ((TileEntityWaterPump) tileEntity).cyclePumpSize();
+                playerIn.sendStatusMessage(
+                        new TextComponentTranslation("message.valkyrienskies.water_pump.size", pumpSize, pumpSize, pumpSize),
+                        true
+                );
             }
         }
         return true;

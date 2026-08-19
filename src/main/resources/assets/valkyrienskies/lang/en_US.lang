@@ -12,7 +12,7 @@ tooltip.valkyrienskies.passenger_chair=Use to sit tight on ships.
 
 tile.vs_water_pump.name=Water Pump
 tooltip.valkyrienskies.vs_water_pump=Removes the effects of nearby water, useful for submarines. Range can be adjusted.
-message.valkyrienskies.water_pump.radius=Water pump radius: %s
+message.valkyrienskies.water_pump.size=Water pump range: %s x %s x %s
 
 tile.boat_chair.name=Boat Chair
 tooltip.valkyrienskies.boat_chair=Use to mount boats in the sea!

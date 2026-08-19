@@ -12,7 +12,7 @@ tooltip.valkyrienskies.passenger_chair=Nutze ihn, um fest auf Schiffen zu sitzen
 
 tile.vs_water_pump.name=Wasserpumpe
 tooltip.valkyrienskies.vs_water_pump=Nimmt Wasser in der Nähe seine Effekte, nützlich für U-Boote.
-message.valkyrienskies.water_pump.radius=Wasserpumpenradius: %s
+message.valkyrienskies.water_pump.size=Wasserpumpen-Sortiment: %s
 
 tile.boat_chair.name=Bootssitz
 tooltip.valkyrienskies.boat_chair=Nutze ihn, um dich in Boote im Wasser zu setzen!

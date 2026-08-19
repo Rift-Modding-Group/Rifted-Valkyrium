@@ -3,7 +3,7 @@
 ### Valkyrien Skies Main
 
 # Blocks
-message.valkyrienskies.water_pump.radius=水泵半径：%s
+message.valkyrienskies.water_pump.size=水泵系列：%s x %s x %s
 tile.captains_chair.name=舰长座椅
 tooltip.valkyrienskies.captains_chair_1=用这个来驾驶船只！
 tooltip.valkyrienskies.captains_chair_2=如果你在船上，你就会坐在上面开船。否则你会“遥控”这艘船。
