@@ -10,6 +10,7 @@ import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.BlockPos.MutableBlockPos;
 import net.minecraft.util.math.ChunkPos;
+import net.minecraft.world.EnumSkyBlock;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 import net.minecraft.world.chunk.Chunk;
@@ -346,6 +347,16 @@ public class WorldServerShipManager implements IPhysObjectWorld {
                     injectChunkIntoWorldServer(new Chunk(world, x, z), x, z);
                 }
             });
+
+            //transfer lighting properly when creating ship
+            if (toSpawn.blockPositions != null) {
+                for (BlockPos blockPos : toSpawn.blockPositions) {
+                    IBlockState blockState = world.getBlockState(blockPos);
+                    if (blockState.getLightValue(world, blockPos) > 0) {
+                        world.checkLightFor(EnumSkyBlock.BLOCK, blockPos);
+                    }
+                }
+            }
 
             // Add shipData to the ShipData storage
             QueryableShipData.get(world).addShip(toSpawn);
