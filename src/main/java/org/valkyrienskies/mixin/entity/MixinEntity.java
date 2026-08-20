@@ -290,6 +290,7 @@ public abstract class MixinEntity {
             IEntityShipDraggable draggable = thisEntity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
 
             //make sure nonplayer entities take fall damage when falling from a ship
+            //while also not taking fall damage when falling onto a ship
             if (draggable != null && draggable.getLastTouchedShip() != null && draggable.getTicksSinceTouchedShip() == 0) {
                 cir.setReturnValue(true);
             }
