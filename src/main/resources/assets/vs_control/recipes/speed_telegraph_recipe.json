@@ -14,34 +14,13 @@
             "item": "minecraft:lever"
         },
         "C": {
-            "item": "minecraft:stick"
+            "type": "forge:ore_dict",
+            "ore": "stickWood"
         },
-        "D": [
-            {
-                "item": "minecraft:planks",
-                "data": 0
-            },
-            {
-                "item": "minecraft:planks",
-                "data": 1
-            },
-            {
-                "item": "minecraft:planks",
-                "data": 2
-            },
-            {
-                "item": "minecraft:planks",
-                "data": 3
-            },
-            {
-                "item": "minecraft:planks",
-                "data": 4
-            },
-            {
-                "item": "minecraft:planks",
-                "data": 5
-            }
-        ]
+        "D": {
+            "type": "forge:ore_dict",
+            "ore": "plankWood"
+        }
     },
     
     "result":

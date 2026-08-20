@@ -13,32 +13,10 @@
         "I": {
             "item": "minecraft:iron_ingot"
         },
-        "C": [
-            {
-                "item": "minecraft:planks",
-                "data": 0
-            },
-            {
-                "item": "minecraft:planks",
-                "data": 1
-            },
-            {
-                "item": "minecraft:planks",
-                "data": 2
-            },
-            {
-                "item": "minecraft:planks",
-                "data": 3
-            },
-            {
-                "item": "minecraft:planks",
-                "data": 4
-            },
-            {
-                "item": "minecraft:planks",
-                "data": 5
-            }
-        ],
+        "C": {
+            "type": "forge:ore_dict",
+            "ore": "plankWood"
+        },
         "D": {
             "item": "minecraft:piston"
         }

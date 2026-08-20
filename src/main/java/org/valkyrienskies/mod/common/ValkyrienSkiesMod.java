@@ -217,19 +217,31 @@ public class ValkyrienSkiesMod {
                     "SLS",
                     "VWV",
                     " S ",
-                    'S', Items.STICK,
+                    'S', "stickWood",
                     'L', Items.LEATHER,
-                    'W', Item.getItemFromBlock(Blocks.LOG),
-                    'V', Items.DIAMOND);
+                    'W', "logWood",
+                    'V', Items.DIAMOND
+        );
 
         registerRecipe(event, "recipe_passenger_chair", new ItemStack(passengerChair),
                     "SLS",
                     "PWP",
                     " S ",
-                    'S', Items.STICK,
+                    'S', "stickWood",
                     'L', Items.LEATHER,
-                    'W', Item.getItemFromBlock(Blocks.LOG),
-                    'P', Item.getItemFromBlock(Blocks.PLANKS));
+                    'W', "logWood",
+                    'P', "plankWood"
+        );
+
+        registerRecipe(event, "recipe_boat_chair", new ItemStack(boatChair),
+                "SLS",
+                "PWP",
+                " S ",
+                'S', "stickWood",
+                'L', Items.LEATHER,
+                'W', "logWood",
+                'P', Items.PRISMARINE_SHARD
+        );
     }
 
     private static void registerRecipe(RegistryEvent.Register<IRecipe> event,

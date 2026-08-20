@@ -14,7 +14,8 @@
             "item": "minecraft:iron_ingot"
         },
         "C": {
-            "item": "minecraft:cobblestone"
+            "type": "forge:ore_dict",
+            "ore": "cobblestone"
         },
         "D": {
             "item": "minecraft:piston"
