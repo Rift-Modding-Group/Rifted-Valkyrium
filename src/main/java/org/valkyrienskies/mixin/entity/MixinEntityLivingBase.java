@@ -2,9 +2,9 @@ package org.valkyrienskies.mixin.entity;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -18,6 +18,8 @@ import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import valkyrienwarfare.api.TransformType;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 @Mixin(EntityLivingBase.class)
@@ -52,7 +54,7 @@ public class MixinEntityLivingBase {
         Entity mountedEntity = thisEntity.getRidingEntity();
         if (mountedEntity == null) return;
 
-        Vector3d dismountPos = this.getShipAnchoredBlockAboveDismountPos(mountedEntity);
+        Vector3d dismountPos = this.getShipAnchoredDismountPos(mountedEntity);
         if (dismountPos == null) return;
 
         this.clientShipAnchoredDismountEntity = mountedEntity;
@@ -78,12 +80,12 @@ public class MixinEntityLivingBase {
     }
 
     /**
-     * Dismounts riders from chair entities from other mods anchored to ships onto the
-     * ship-local block immediately above the seat, transformed back into world space.
+     * Dismounts riders from chair entities from other mods anchored to ships into a free
+     * space supported by the same ship, transformed back into world space.
      */
     @Inject(method = "dismountEntity", at = @At("HEAD"), cancellable = true)
     private void dismountFromShipAnchoredSeat(Entity mountedEntity, CallbackInfo ci) {
-        Vector3d dismountPos = this.getShipAnchoredBlockAboveDismountPos(mountedEntity);
+        Vector3d dismountPos = this.getShipAnchoredDismountPos(mountedEntity);
         if (dismountPos == null) return;
 
         EntityLivingBase thisEntity = (EntityLivingBase) (Object) this;
@@ -96,10 +98,8 @@ public class MixinEntityLivingBase {
         this.clientShipAnchoredDismountPos = null;
     }
 
-    /**
-     * When dismounting a chair on a modded ship, it will ideally teleport them to the top of the chair
-     * */
-    private Vector3d getShipAnchoredBlockAboveDismountPos(Entity mountedEntity) {
+    @Nullable
+    private Vector3d getShipAnchoredDismountPos(@Nullable Entity mountedEntity) {
         if (mountedEntity == null) return null;
 
         IShipAnchoredMount anchoredMount = mountedEntity.getCapability(VSCapabilityRegistry.VS_SHIP_ANCHORED_MOUNT, null);
@@ -109,39 +109,57 @@ public class MixinEntityLivingBase {
 
         BlockPos localAnchorBlock = anchoredMount.getLocalAnchorBlock();
         Optional<PhysicsObject> mountedShip = ValkyrienUtils.getPhysoManagingBlock(mountedEntity.world, localAnchorBlock);
-        if (mountedShip.isEmpty()) return null;
-
-        Vector3d dismountPos = new Vector3d(
-                localAnchorBlock.getX() + 0.5D,
-                this.getBlockAboveDismountY(mountedEntity, localAnchorBlock),
-                localAnchorBlock.getZ() + 0.5D
-        );
-        mountedShip.get().getShipTransform().transformPosition(dismountPos, TransformType.SUBSPACE_TO_GLOBAL);
-        return dismountPos;
+        return mountedShip.map(physicsObject -> this.findNearbyDismountPos(mountedEntity, localAnchorBlock, physicsObject)).orElse(null);
     }
 
     /**
-     * This is for the ideal y position above the chair we want the dismounting
-     * player to teleport to
-     * */
-    private double getBlockAboveDismountY(Entity mountedEntity, BlockPos localAnchorBlock) {
-        AxisAlignedBB collisionBox = mountedEntity.world
-                .getBlockState(localAnchorBlock)
-                .getCollisionBoundingBox(mountedEntity.world, localAnchorBlock);
+     * choose random position near block to dismount entity to
+     */
+    private Vector3d findNearbyDismountPos(@NotNull Entity mountedEntity, @NotNull BlockPos localAnchorBlock, @NotNull PhysicsObject mountedShip) {
+        List<BlockPos> cardinalPositions = new ArrayList<>();
+        List<BlockPos> diagonalPositions = new ArrayList<>();
 
-        if (collisionBox == null) return localAnchorBlock.getY() + 1D;
+        for (int offsetX = -1; offsetX <= 1; offsetX++) {
+            for (int offsetZ = -1; offsetZ <= 1; offsetZ++) {
+                int horizontalDistance = Math.abs(offsetX) + Math.abs(offsetZ);
+                if (horizontalDistance == 0) continue;
 
-        double blockAboveY = localAnchorBlock.getY() + 1D;
-        if (collisionBox.maxY <= 1D) return blockAboveY;
+                List<BlockPos> positions = horizontalDistance == 1 ? cardinalPositions : diagonalPositions;
+                for (int offsetY = -1; offsetY <= 1; offsetY++) {
+                    BlockPos localDismountBlock = localAnchorBlock.add(offsetX, offsetY, offsetZ);
+                    if (this.hasRoomForPlayerOnShip(mountedEntity, localDismountBlock, mountedShip)) {
+                        positions.add(localDismountBlock);
+                    }
+                }
+            }
+        }
 
-        return localAnchorBlock.getY() + collisionBox.maxY + 0.001D;
+        List<BlockPos> preferredPositions = cardinalPositions.isEmpty() ? diagonalPositions : cardinalPositions;
+        BlockPos localDismountBlock = preferredPositions.isEmpty()
+                ? localAnchorBlock.up() : preferredPositions.get(mountedEntity.world.rand.nextInt(preferredPositions.size()));
+        Vector3d dismountPos = new Vector3d(
+                localDismountBlock.getX() + 0.5D,
+                localDismountBlock.getY(),
+                localDismountBlock.getZ() + 0.5D
+        );
+        mountedShip.getShipTransform().transformPosition(dismountPos, TransformType.SUBSPACE_TO_GLOBAL);
+        return dismountPos;
+    }
+
+    private boolean hasRoomForPlayerOnShip(@NotNull Entity mountedEntity, @NotNull BlockPos localDismountBlock, @NotNull PhysicsObject mountedShip) {
+        Optional<PhysicsObject> supportingShip = ValkyrienUtils.getPhysoManagingBlock(mountedEntity.world, localDismountBlock.down());
+        return supportingShip.isPresent()
+                && supportingShip.get().getUuid().equals(mountedShip.getUuid())
+                && mountedEntity.world.getBlockState(localDismountBlock.down()).isTopSolid()
+                && !mountedEntity.world.getBlockState(localDismountBlock).getMaterial().isSolid()
+                && !mountedEntity.world.getBlockState(localDismountBlock.up()).getMaterial().isSolid();
     }
 
     private void applyShipAnchoredDismount(@NotNull EntityLivingBase thisEntity, @NotNull Entity mountedEntity, @NotNull Vector3d dismountPos) {
-        thisEntity.motionX = 0.0D;
-        thisEntity.motionY = 0.0D;
-        thisEntity.motionZ = 0.0D;
-        thisEntity.fallDistance = 0.0F;
+        thisEntity.motionX = 0D;
+        thisEntity.motionY = 0D;
+        thisEntity.motionZ = 0D;
+        thisEntity.fallDistance = 0f;
         thisEntity.setPositionAndUpdate(dismountPos.x, dismountPos.y, dismountPos.z);
         thisEntity.prevPosX = thisEntity.lastTickPosX = dismountPos.x;
         thisEntity.prevPosY = thisEntity.lastTickPosY = dismountPos.y;
