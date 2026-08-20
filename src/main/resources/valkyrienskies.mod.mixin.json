@@ -5,6 +5,7 @@
   "compatibilityLevel": "JAVA_8",
   "target": "@env(MOD)",
   "mixins": [
+    "rustic.MixinRusticEntityChair",
     "spongeforge.MixinChunkSponge",
     "spongeforge.MixinPacketUtil"
   ]
