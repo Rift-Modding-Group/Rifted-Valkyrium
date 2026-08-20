@@ -287,9 +287,10 @@ public abstract class MixinEntity {
     private void isEntityInvulnerable(DamageSource damageSource, CallbackInfoReturnable<Boolean> cir) {
         if (VSConfig.noFallDamageOnShip && damageSource == DamageSource.FALL) {
             Entity thisEntity = (Entity) ((Object) this);
-            final ShipData lastTouchedShip = getLastShipTouchedByEntity(thisEntity);
+            IEntityShipDraggable draggable = thisEntity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
 
-            if (lastTouchedShip != null) {
+            //make sure nonplayer entities take fall damage when falling from a ship
+            if (draggable != null && draggable.getLastTouchedShip() != null && draggable.getTicksSinceTouchedShip() == 0) {
                 cir.setReturnValue(true);
             }
         }
