@@ -66,6 +66,34 @@ public class EntityDraggable {
         IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
         if (draggable == null) return;
 
+        //fix to ensure players sleeping on beds on ships stay in place
+        final EntityShipMountData sleepingPlayerMountData = ValkyrienUtils.getSleepingPlayerShipAndPos(entity);
+        if (sleepingPlayerMountData.isMounted()) {
+            final Vector3dc oldPosition = new Vector3d(entity.posX, entity.posY, entity.posZ);
+            Vector3d globalSleepingPosition = new Vector3d(
+                    sleepingPlayerMountData.mountPos().x,
+                    sleepingPlayerMountData.mountPos().y,
+                    sleepingPlayerMountData.mountPos().z
+            );
+            sleepingPlayerMountData.mountedShip().getShipTransformationManager()
+                    .getCurrentTickTransform()
+                    .transformPosition(globalSleepingPosition, TransformType.SUBSPACE_TO_GLOBAL);
+            entity.setPosition(globalSleepingPosition.x, globalSleepingPosition.y, globalSleepingPosition.z);
+
+            entity.motionX = 0D;
+            entity.motionY = 0D;
+            entity.motionZ = 0D;
+
+            final Vector3dc shipAddedVelocity = globalSleepingPosition.sub(oldPosition, new Vector3d());
+            draggable.setLastTouchedShip(sleepingPlayerMountData.mountedShip().getShipData());
+            draggable.setTicksSinceTouchedShip(0);
+            draggable.setTicksPartOfGround(0);
+            draggable.setAddedLinearVelocity(shipAddedVelocity);
+            draggable.setAddedYawVelocity(0);
+            return;
+        }
+
+        //fix to ensure players sitting on modded chairs on ships stay in place
         final EntityShipMountData anchoredMountData = ValkyrienUtils.getAnchoredMountShipAndPos(entity);
         if (anchoredMountData.isMounted()) {
             draggable.setLastTouchedShip(anchoredMountData.mountedShip().getShipData());

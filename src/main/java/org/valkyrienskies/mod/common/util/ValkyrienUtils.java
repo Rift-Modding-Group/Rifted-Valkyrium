@@ -1,10 +1,14 @@
 package org.valkyrienskies.mod.common.util;
 
+import net.minecraft.block.BlockHorizontal;
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLiving;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.entity.projectile.EntityFireball;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.EnumFacing;
 import net.minecraft.util.Tuple;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
@@ -100,7 +104,13 @@ public final class ValkyrienUtils {
         }
     }
 
-    public static @NotNull EntityShipMountData getMountedShipAndPos(Entity entity) {
+    @NotNull
+    public static EntityShipMountData getMountedShipAndPos(Entity entity) {
+        EntityShipMountData sleepingPlayerMount = getSleepingPlayerShipAndPos(entity);
+        if (sleepingPlayerMount.isMounted()) {
+            return sleepingPlayerMount;
+        }
+
         Entity ridingEntity = entity.getRidingEntity();
         if (ridingEntity instanceof EntityMountable mountable) {
             Optional<PhysicsObject> mountedShip = mountable.getMountedShip();
@@ -112,7 +122,37 @@ public final class ValkyrienUtils {
         return getAnchoredMountShipAndPos(entity);
     }
 
-    public static @NotNull EntityShipMountData getAnchoredMountShipAndPos(Entity entity) {
+    /**
+     * position of player on ship when sleepin on bed attached to it
+     * */
+    @NotNull
+    public static EntityShipMountData getSleepingPlayerShipAndPos(Entity entity) {
+        if (!(entity instanceof EntityPlayer player) || !player.isPlayerSleeping() || player.bedLocation == null) {
+            return new EntityShipMountData();
+        }
+
+        Optional<PhysicsObject> mountedShip = getPhysoManagingBlock(player.world, player.bedLocation);
+        if (mountedShip.isEmpty()) return new EntityShipMountData();
+
+        IBlockState state = player.world.isBlockLoaded(player.bedLocation) ? player.world.getBlockState(player.bedLocation) : null;
+        boolean isBed = state != null && state.getBlock().isBed(state, player.world, player.bedLocation, player);
+        EnumFacing facing = isBed && state.getBlock() instanceof BlockHorizontal ? state.getValue(BlockHorizontal.FACING) : null;
+
+        double offsetX = facing == null ? 0.5D : 0.5D + facing.getXOffset() * 0.4D;
+        double offsetZ = facing == null ? 0.5D : 0.5D + facing.getZOffset() * 0.4D;
+        Vec3d localSleepingPosition = new Vec3d(
+                player.bedLocation.getX() + offsetX,
+                player.bedLocation.getY() + 0.6875D,
+                player.bedLocation.getZ() + offsetZ
+        );
+        return new EntityShipMountData(mountedShip.get(), localSleepingPosition);
+    }
+
+    /**
+     * position of player on ship when sittin on chair attached to it
+     * */
+    @NotNull
+    public static EntityShipMountData getAnchoredMountShipAndPos(Entity entity) {
         final Entity ridingEntity = entity.getRidingEntity();
         if (ridingEntity == null) return new EntityShipMountData();
 

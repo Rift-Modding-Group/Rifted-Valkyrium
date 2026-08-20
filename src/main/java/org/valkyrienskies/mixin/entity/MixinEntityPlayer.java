@@ -4,6 +4,7 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.math.BlockPos;
 import org.joml.Vector3d;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
@@ -14,6 +15,9 @@ import java.util.Optional;
 
 @Mixin(EntityPlayer.class)
 public class MixinEntityPlayer {
+    @Shadow
+    public BlockPos bedLocation;
+
     /**
      * this exists to ensure that players are positioned properly when sleeping on a bed on a ship
      * */
@@ -29,5 +33,30 @@ public class MixinEntityPlayer {
                     .transformPosition(globalPos, TransformType.SUBSPACE_TO_GLOBAL);
             player.setPosition(globalPos.x, globalPos.y, globalPos.z);
         }
+    }
+
+    /**
+     * same but for when waking up on a bed on a ship
+     * */
+    @Redirect(method = "wakeUpPlayer", at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/player/EntityPlayer;setPosition(DDD)V"))
+    private void wakeUpPlayer(EntityPlayer player, double x, double y, double z, boolean immediately, boolean updateWorldFlag, boolean setSpawn) {
+        if (this.bedLocation == null) {
+            player.setPosition(x, y, z);
+            return;
+        }
+
+        Optional<PhysicsObject> ship = ValkyrienUtils.getPhysoManagingBlock(player.world, this.bedLocation);
+
+        if (ship.isEmpty()) {
+            player.setPosition(x, y, z);
+            return;
+        }
+
+        Vector3d globalPos = new Vector3d(x, y, z);
+        ship.get().getShipTransformationManager()
+                .getCurrentTickTransform()
+                .transformPosition(globalPos, TransformType.SUBSPACE_TO_GLOBAL);
+
+        player.setPosition(globalPos.x, globalPos.y, globalPos.z);
     }
 }

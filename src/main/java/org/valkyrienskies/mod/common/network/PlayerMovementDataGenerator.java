@@ -21,17 +21,20 @@ public class PlayerMovementDataGenerator {
     public static PlayerMovementData generatePlayerMovementDataForClient() {
         final EntityPlayerSP entityPlayer = Minecraft.getMinecraft().player;
         final EntityShipMountData anchoredMountData = ValkyrienUtils.getAnchoredMountShipAndPos(entityPlayer);
+        final EntityShipMountData sleepingPlayerMountData = ValkyrienUtils.getSleepingPlayerShipAndPos(entityPlayer);
+        final EntityShipMountData fixedMountData = sleepingPlayerMountData.isMounted()
+                ? sleepingPlayerMountData : anchoredMountData;
 
-        //---send chair-mounted players using the anchored ship-local seat position---
-        if (anchoredMountData.isMounted()) {
-            final ShipData mountedShip = anchoredMountData.mountedShip().getShipData();
+        //---send anchored or sleeping players using their fixed ship-local position---
+        if (fixedMountData.isMounted()) {
+            final ShipData mountedShip = fixedMountData.mountedShip().getShipData();
             final Vector3d playerLookInLocal = JOML.convert(entityPlayer.getLook(1));
             mountedShip.getShipTransform().transformDirection(playerLookInLocal, TransformType.GLOBAL_TO_SUBSPACE);
 
             return new PlayerMovementData(
                     mountedShip.getUuid(),
                     0, 0,
-                    JOML.convert(anchoredMountData.mountPos()),
+                    JOML.convert(fixedMountData.mountPos()),
                     playerLookInLocal,
                     entityPlayer.onGround
             );
