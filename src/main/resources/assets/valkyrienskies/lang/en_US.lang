@@ -135,15 +135,25 @@ tooltip.vs_control.physics_infuser_dummy=The other half of a physics infuser.
 
 tile.ship_helm.name=Ship Helm
 tooltip.vs_control.ship_helm=This block will let you turn rudders in the same network as it.
+vs_control.ship_helm.wheel_rotation=Wheel Rotation: %s
 
 tile.speed_telegraph.name=Speed Telegraph
 tooltip.vs_control.speed_telegraph=This block will allow you to control the output speed of gearboxes, and thus control propeller speeds.
+vs_control.speed_telegraph.target_speed=Target Speed: %s
+vs_control.speed_telegraph.full_ahead=Full Ahead
+vs_control.speed_telegraph.half_ahead=Half Ahead
+vs_control.speed_telegraph.slow_ahead=Slow Ahead
+vs_control.speed_telegraph.stop=Stop
+vs_control.speed_telegraph.slow_astern=Slow Astern
+vs_control.speed_telegraph.half_astern=Half Astern
+vs_control.speed_telegraph.full_astern=Full Astern
 
 tile.dummy_telegraph.name=Dummy Telegraph
 tooltip.vs_control.dummy_telegraph=A non-functioning Speed Telegraph.\nActivates the block below it when activated.
 
 tile.lift_lever.name=Lift Lever
 tooltip.vs_control.lift_lever=This block lets you set the target altitude of Valkyrium Compressors.
+vs_control.lift_lever.target_altitude=Target Altitude: %s
 
 tile.gearbox.name=Gearbox
 tooltip.vs_control.gearbox_1=Allows changing torque direction and power.

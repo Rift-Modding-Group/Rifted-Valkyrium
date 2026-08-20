@@ -11,6 +11,12 @@ tooltip.valkyrienskies.captains_chair_2=如果你在船上，你就会坐在上�
 tile.passenger_chair.name=乘客座椅
 tooltip.valkyrienskies.passenger_chair=用这个来稳稳地坐在船上。
 
+tile.vs_water_pump.name=水泵
+tooltip.valkyrienskies.vs_water_pump=消除附近水的影响，适用于潜艇。可以调整范围。
+
+tile.boat_chair.name=船用座椅
+tooltip.valkyrienskies.boat_chair=用来坐上海中的船只！
+
 
 # Item Tab
 itemGroup.valkyrienskies=瓦尔基里天空
@@ -21,6 +27,8 @@ commands.vs.list-ships.noships=这个世界没有飞船!
 commands.vs.list-ships.ships=这个世界有以下飞船:\n%s
 
 commands.vs.gc.success=成功收集垃圾!
+
+commands.vs.rename.success=已成功将%s重命名为%s！
 
 
 # Config (Remember to update VSConfig after any changes are made here)
@@ -97,18 +105,21 @@ item.relay_wire.name=中继线缆
 tooltip.vs_control.relay_wire=用来把中继器连接到组件或其他中继器上。会中断已有链接
 message.vs_control.error_relay_wire_limit=其中一方连接数已达上限。网络中继器可以建立%d个连接，其余所有组件都只能建立1个连接。
 message.vs_control.error_relay_wire_length=线缆太短，无法建立连接！
+message.vs_control.error_relay_connection_already_exists=这些节点之间已存在连接！请使用剪刀将其剪断！
 
 item.vanishing_wire.name=隐形线缆
 tooltip.vs_control.vanishing_wire=功能和普通线缆一样，但是手里不拿着它的话你是看不见线缆的。
 
 item.vs_wrench.name=VS扳手
 tooltip.vs_control.wrench_usage=需要用VS扳手来构建它。
-tooltip.vs_control.wrench_modes=Shift+右击来改变模式。
+tooltip.vs_control.wrench_modes=%s + %s 来切换模式。
 tooltip.vs_control.wrench_switched.construct=已切换扳手至构建模式。
 tooltip.vs_control.wrench_switched.deconstruct=已切换扳手至拆解模式。
 tooltip.vs_control.wrench_toggle=右击多方块结构来拆解它。
 tooltip.vs_control.wrench.construct=可以用来构建多方块结构或调整齿轮箱朝向。
 tooltip.vs_control.wrench.deconstruct=可以用来安全拆解多方块结构。
+
+item.vs_ship_tracker.name=船只追踪器
 
 # Blocks
 ## Ship blocks
@@ -124,15 +135,25 @@ tooltip.vs_control.physics_infuser_dummy=物理注入器的另一半。
 
 tile.ship_helm.name=舵轮
 tooltip.vs_control.ship_helm=这个方块可以让你控制处在同一网络中的方向舵。
+vs_control.ship_helm.wheel_rotation=舵轮转角：%s
 
 tile.speed_telegraph.name=车钟
 tooltip.vs_control.speed_telegraph=这个方块可以让你控制齿轮箱的输出速度，借此来控制螺旋桨转速。
+vs_control.speed_telegraph.target_speed=目标速度：%s
+vs_control.speed_telegraph.full_ahead=全速前进
+vs_control.speed_telegraph.half_ahead=半速前进
+vs_control.speed_telegraph.slow_ahead=慢速前进
+vs_control.speed_telegraph.stop=停止
+vs_control.speed_telegraph.slow_astern=慢速后退
+vs_control.speed_telegraph.half_astern=半速后退
+vs_control.speed_telegraph.full_astern=全速后退
 
 tile.dummy_telegraph.name=附属车钟
 tooltip.vs_control.dummy_telegraph=没有功能的车钟。\n启动时会激活它下面的方块。
 
 tile.lift_lever.name=升降舵
 tooltip.vs_control.lift_lever=这个方块可以让你调整瓦尔基里压缩机的目标高度。
+vs_control.lift_lever.target_altitude=目标高度：%s
 
 tile.gearbox.name=齿轮箱
 tooltip.vs_control.gearbox_1=用来调整扭矩输出方向及功率大小。
@@ -179,6 +200,9 @@ tooltip.vs_control.legacy_engine=老式引擎，仅需红石信号即可工作�
 tile.compacted_valkyrium.name=压缩瓦尔基里块
 tooltip.vs_control.compacted_valkyrium=升力： %.0f 牛。
 
+tile.buoyancy_tank.name=浮力舱
+tooltip.vs_control.buoyancy_tank=完全浸没时的浮力：%.0f 牛。
+
 tile.gyroscope_stabilizer.name=稳定陀螺仪
 tooltip.vs_control.gyroscope_stabilizer=这个方块会被动地提供一个使船体保持水平的扭矩。
 
@@ -215,6 +239,9 @@ vs_control.general.relaywirelength.tooltip=中继线缆的最大长度，默认�
 
 vs_control.general.compactedvalkyriumlift=压缩瓦尔基里块升力
 vs_control.general.compactedvalkyriumlift.tooltip=每个压缩瓦尔基里块提供的升力，默认值是200000牛。
+
+vs_control.general.buoyancytankforce=浮力舱浮力
+vs_control.general.buoyancytankforce.tooltip=每个浮力舱完全浸没时提供的向上浮力。默认值为160000牛。
 
 vs_control.general.engine_thrust=引擎推力设置
 vs_control.general.engine_thrust.tooltip=设置引擎方块的推力。修改之后引擎必须重新放置。

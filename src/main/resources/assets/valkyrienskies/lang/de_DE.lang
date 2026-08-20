@@ -12,7 +12,7 @@ tooltip.valkyrienskies.passenger_chair=Nutze ihn, um fest auf Schiffen zu sitzen
 
 tile.vs_water_pump.name=Wasserpumpe
 tooltip.valkyrienskies.vs_water_pump=Nimmt Wasser in der Nähe seine Effekte, nützlich für U-Boote.
-message.valkyrienskies.water_pump.size=Wasserpumpen-Sortiment: %s
+message.valkyrienskies.water_pump.size=Wasserpumpenbereich: %s x %s x %s
 
 tile.boat_chair.name=Bootssitz
 tooltip.valkyrienskies.boat_chair=Nutze ihn, um dich in Boote im Wasser zu setzen!
@@ -27,6 +27,8 @@ commands.vs.list-ships.noships=Diese Welt beinhaltet keine Schiffe!
 commands.vs.list-ships.ships=Diese Welt beinhaltet die folgenden Schiffe:\n%s
 
 commands.vs.gc.success=Der Müll wurde erfolgreich beseitigt!
+
+commands.vs.rename.success=%s wurde erfolgreich in %s umbenannt!
 
 
 # Config (Remember to update VSConfig after any changes are made here)
@@ -103,6 +105,7 @@ item.relay_wire.name=Verschaltungskabel
 tooltip.vs_control.relay_wire=Wird verwendet, um Verschaltungen mit Komponenten und anderen Verschaltungen zu verbinden. Wird bereits verbundene Knotenpunkte lösen.
 message.vs_control.error_relay_wire_limit=Eine der Verbindungen ist voll. Verschaltungsknotenpunkte können %d Verbindungen haben, alle anderen Objekte können nur eine Verbindung haben.
 message.vs_control.error_relay_wire_length=Das Kabel ist zu kurz, um diese Knotenpunkte zu verbinden!
+message.vs_control.error_relay_connection_already_exists=Zwischen diesen Knotenpunkten besteht bereits eine Verbindung! Verwende eine Schere, um sie zu trennen!
 
 item.vanishing_wire.name=Verschwindendes Kabel
 tooltip.vs_control.vanishing_wire=Funktioniert wie Verschaltungskabel, nur dass es unsichtbar ist, wenn man es nicht in der Hand hält.
@@ -132,15 +135,25 @@ tooltip.vs_control.physics_infuser_dummy=Die andere Hälfte eines Physikinfusion
 
 tile.ship_helm.name=Steuerrad
 tooltip.vs_control.ship_helm=Dieser Block wird dich, im selben Netzwerk befindliche Ruder bedienen lassen.
+vs_control.ship_helm.wheel_rotation=Steuerraddrehung: %s
 
 tile.speed_telegraph.name=Maschinentelegraf
 tooltip.vs_control.speed_telegraph=Dieser Block wird dir die Steuerung der Ausgabegeschwindigkeit von Getriebekästen und so auch der Geschwindigkeit der Propeller erlauben.
+vs_control.speed_telegraph.target_speed=Zielgeschwindigkeit: %s
+vs_control.speed_telegraph.full_ahead=Volle Kraft voraus
+vs_control.speed_telegraph.half_ahead=Halbe Kraft voraus
+vs_control.speed_telegraph.slow_ahead=Langsam voraus
+vs_control.speed_telegraph.stop=Stopp
+vs_control.speed_telegraph.slow_astern=Langsam zurück
+vs_control.speed_telegraph.half_astern=Halbe Kraft zurück
+vs_control.speed_telegraph.full_astern=Volle Kraft zurück
 
 tile.dummy_telegraph.name=Attrappentelegraf
 tooltip.vs_control.dummy_telegraph=Ein nicht-funktionierender Maschinentelegraf.\nAktiviert den Block unter ihm, wenn aktiviert.
 
 tile.lift_lever.name=Auftriebshebel
 tooltip.vs_control.lift_lever=Dieser Block lässt dich die Zielflughöhe der Valkyriumkompressoren setzen.
+vs_control.lift_lever.target_altitude=Zielhöhe: %s
 
 tile.gearbox.name=Getriebekasten
 tooltip.vs_control.gearbox_1=Erlaubt es Drehmoment, Richtung und Leistung zu verändern.
@@ -187,6 +200,9 @@ tooltip.vs_control.legacy_engine=Legacy Motor, braucht bloß ein Redstone-Signal
 tile.compacted_valkyrium.name=Verdichtetes Valkyrium
 tooltip.vs_control.compacted_valkyrium=Auftriebskraft: %.0f Newton.
 
+tile.buoyancy_tank.name=Auftriebstank
+tooltip.vs_control.buoyancy_tank=Auftrieb bei vollständigem Eintauchen: %.0f Newton.
+
 tile.gyroscope_stabilizer.name=Schiffsstabilisationsgyroskop
 tooltip.vs_control.gyroscope_stabilizer=Dieser Block übt passiv ein Drehmoment auf das Schiff aus, um es zu horizontrieren.
 
@@ -223,6 +239,9 @@ vs_control.general.relaywirelength.tooltip=How long a single relay wire can exte
 
 vs_control.general.compactedvalkyriumlift=Compacted Valkyrium Upwards Force
 vs_control.general.compactedvalkyriumlift.tooltip=How much upwards force each block applies. Default is 200000 Newtons.
+
+vs_control.general.buoyancytankforce=Auftriebstankkraft
+vs_control.general.buoyancytankforce.tooltip=Die Auftriebskraft, die jeder vollständig eingetauchte Auftriebstank erzeugt. Der Standardwert ist 160000 Newton.
 
 vs_control.general.engine_thrust=Engine Thrust Settings
 vs_control.general.engine_thrust.tooltip=Set the thrust force of engine blocks. Engines blocks must be replaced after changes are made.

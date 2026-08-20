@@ -4,6 +4,7 @@ import gigaherz.graph.api.GraphObject;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.ScaledResolution;
+import net.minecraft.client.resources.I18n;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.network.NetworkManager;
@@ -194,15 +195,12 @@ public class TileEntityShipHelm extends TileEntityControlNodeImpl implements ITi
     @SideOnly(Side.CLIENT)
     @Override
     public void renderPilotText(FontRenderer renderer, ScaledResolution gameResolution) {
-        // White text.
-        int color = 0xFFFFFF;
-        // Extra spaces so the that the text is closer to the middle when rendered.
-        String message = "Wheel Rotation:    ";
-        int i = gameResolution.getScaledWidth();
+        String message = I18n.format("vs_control.ship_helm.wheel_rotation",
+            Math.round(this.wheelRotation));
+        int width = gameResolution.getScaledWidth();
         int height = gameResolution.getScaledHeight() - 35;
-        float middle = (float) (i / 2 - renderer.getStringWidth(message) / 2);
-        message = "Wheel Rotation: " + Math.round(wheelRotation);
-        renderer.drawStringWithShadow(message, middle, height, color);
+        float left = (width - renderer.getStringWidth(message)) / 2.0F;
+        renderer.drawStringWithShadow(message, left, height, 0xFFFFFF);
     }
 
 }

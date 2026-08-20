@@ -11,6 +11,12 @@ tooltip.valkyrienskies.captains_chair_2=If ye be standing on yer ship, you will 
 tile.passenger_chair.name=Crewmate's Chair
 tooltip.valkyrienskies.passenger_chair=Helps the tar with gettin' their sea legs.
 
+tile.vs_water_pump.name=Bilge Pump
+tooltip.valkyrienskies.vs_water_pump=Drives off nearby water, handy fer submarines. Ye can adjust its reach.
+
+tile.boat_chair.name=Boatman's Chair
+tooltip.valkyrienskies.boat_chair=Use it to board boats upon the sea!
+
 
 # Item Tab
 itemGroup.valkyrienskies=Valkyrien Skies
@@ -21,6 +27,8 @@ commands.vs.list-ships.noships=Arr, the seas be empty!
 commands.vs.list-ships.ships=The barrelman reports these ships:\n%s
 
 commands.vs.gc.success=The bilge be thrown abaft!
+
+commands.vs.rename.success=%s be rechristened as %s!
 
 
 # Config (Remember to update VSConfig after any changes are made here)
@@ -97,6 +105,7 @@ item.relay_wire.name=Rope
 tooltip.vs_control.relay_wire=Fer settin' up yer rigging. Ye can use it fer reeving or tossing what's been rove.
 message.vs_control.error_relay_wire_limit=This tackle be full, ye bilge rat! It fits only %d ropes!.
 message.vs_control.error_relay_wire_length=Yer rope can't stretch these fathoms!
+message.vs_control.error_relay_connection_already_exists=These tackles already be rove together! Use shears to cut the rope!
 
 item.vanishing_wire.name=Anchored Rigging
 tooltip.vs_control.vanishing_wire=Fer settin up yer rigging without yer hands knowin'.
@@ -109,6 +118,8 @@ tooltip.vs_control.wrench_switched.deconstruct=Arr, yer Shipwright's Tool is in 
 tooltip.vs_control.wrench_toggle=Arr, ye can flip yer tool when ye be needin it.
 tooltip.vs_control.wrench.construct=Used to work yer machines.
 tooltip.vs_control.wrench.deconstruct=Used to sink the damned machines.
+
+item.vs_ship_tracker.name=Ship Finder
 
 # Blocks
 ## Ship blocks
@@ -124,15 +135,25 @@ tooltip.vs_control.physics_infuser_dummy=This item be the cursed other half of D
 
 tile.ship_helm.name=Ship Helm
 tooltip.vs_control.ship_helm=Arr! Use fer bringin' a spring upon her cable.
+vs_control.ship_helm.wheel_rotation=Helm's Turn: %s
 
 tile.speed_telegraph.name=Sail Tackle
 tooltip.vs_control.speed_telegraph=Lets ye furl and unfurl yer mainsails.
+vs_control.speed_telegraph.target_speed=Ordered Speed: %s
+vs_control.speed_telegraph.full_ahead=Full Sail Ahead
+vs_control.speed_telegraph.half_ahead=Half Sail Ahead
+vs_control.speed_telegraph.slow_ahead=Easy Ahead
+vs_control.speed_telegraph.stop=All Stop
+vs_control.speed_telegraph.slow_astern=Easy Astern
+vs_control.speed_telegraph.half_astern=Half Sail Astern
+vs_control.speed_telegraph.full_astern=Full Sail Astern
 
 tile.dummy_telegraph.name=Sail Tackle's Block
 tooltip.vs_control.dummy_telegraph=This be the cursed other half of the Sail Tackle.
 
 tile.lift_lever.name=Scuttle's Post
 tooltip.vs_control.lift_lever=Set the openin' of yer Scuttles to raise or lower yer draft.
+vs_control.lift_lever.target_altitude=Ordered Altitude: %s
 
 tile.gearbox.name=Shroud Post
 tooltip.vs_control.gearbox_1=Rigs to yer masts and allows ye to turn them.
@@ -179,6 +200,9 @@ tooltip.vs_control.legacy_engine=Let yer rowboat set sail with but a Redstone si
 tile.compacted_valkyrium.name=Squished Upballast
 tooltip.vs_control.compacted_valkyrium=Floatin' tug: %.0f knots.
 
+tile.buoyancy_tank.name=Buoyancy Cask
+tooltip.vs_control.buoyancy_tank=Floatin' tug when sunk: %.0f newtons.
+
 tile.gyroscope_stabilizer.name=Listing Weights
 tooltip.vs_control.gyroscope_stabilizer=Arr, this weight prevents yer ship from listin'.
 
@@ -215,6 +239,9 @@ vs_control.general.relaywirelength.tooltip=How long yer riggin can be. Standards
 
 vs_control.general.compactedvalkyriumlift=Squished Upballast Floatin' Tug
 vs_control.general.compactedvalkyriumlift.tooltip=How fast yer upballast will tug at yer hull. Standards be 200000 knots.
+
+vs_control.general.buoyancytankforce=Buoyancy Cask Floatin' Tug
+vs_control.general.buoyancytankforce.tooltip=How hard each sunken Buoyancy Cask tugs upward. Standards be 160000 newtons.
 
 vs_control.general.engine_thrust=Oar Thrust Settings
 vs_control.general.engine_thrust.tooltip=Set how hard yer oars can push. Replace yer old oars with new ones at port.

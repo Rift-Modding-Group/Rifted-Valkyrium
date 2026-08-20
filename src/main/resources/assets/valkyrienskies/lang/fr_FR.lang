@@ -11,6 +11,12 @@ tooltip.valkyrienskies.captains_chair_2=Si vous êtes sur le vaisseau vous allez
 tile.passenger_chair.name=Siège passager
 tooltip.valkyrienskies.passenger_chair=Utilisé pour s'asseoir sur le vaisseau.
 
+tile.vs_water_pump.name=Pompe à eau
+tooltip.valkyrienskies.vs_water_pump=Supprime les effets de l'eau à proximité, ce qui est utile pour les sous-marins. La portée peut être ajustée.
+
+tile.boat_chair.name=Siège de bateau
+tooltip.valkyrienskies.boat_chair=Permet de monter à bord des bateaux en mer !
+
 # Item Tab
 itemGroup.valkyrienskies=Valkyrien Skies
 
@@ -20,6 +26,8 @@ commands.vs.list-ships.noships=This world contains no ships!
 commands.vs.list-ships.ships=This world contains the following ships:\n%s
 
 commands.vs.gc.success=Successfully garbage collected!
+
+commands.vs.rename.success=%s a bien été renommé en %s !
 
 
 # Config (Remember to update VSConfig after any changes are made here)
@@ -96,6 +104,7 @@ item.relay_wire.name=Cable
 tooltip.vs_control.relay_wire=Connecte les noeuds au composants (et vice versa). Déconnecte les noeuds déja connectés.
 message.vs_control.error_relay_wire_limit=Trop de connections. Les noeuds peuvent établir %d connections, tous les autres composants ne peuvent en établir qu'une seule.
 message.vs_control.error_relay_wire_length=Le cable est trop court!
+message.vs_control.error_relay_connection_already_exists=Une connexion existe déjà entre ces nœuds ! Utilisez des cisailles pour la couper !
 
 item.vanishing_wire.name=Cable invisible
 tooltip.vs_control.vanishing_wire=Invisible quand il n'est pas dans vos mains.
@@ -108,6 +117,8 @@ tooltip.vs_control.wrench_switched.deconstruct=Clé basculée en mode de décons
 tooltip.vs_control.wrench_toggle=Utilisez la clé sur une structure pour la construire / désconstruire.
 tooltip.vs_control.wrench.construct=Utilisé pour construire les structures / réorienter les boites à engrenages.
 tooltip.vs_control.wrench.deconstruct=Déconstruit les structures de façon sécurisée.
+
+item.vs_ship_tracker.name=Localisateur de vaisseau
 
 # Blocks
 ## Ship blocks
@@ -123,15 +134,25 @@ tooltip.vs_control.physics_infuser_dummy=The other half of a physics infuser.
 
 tile.ship_helm.name=Ship Helm
 tooltip.vs_control.ship_helm=This block will let you turn rudders in the same network as it.
+vs_control.ship_helm.wheel_rotation=Rotation de la barre : %s
 
 tile.speed_telegraph.name=Speed Telegraph
 tooltip.vs_control.speed_telegraph=This block will allow you to control the output speed of gearboxes, and thus control propeller speeds.
+vs_control.speed_telegraph.target_speed=Vitesse cible : %s
+vs_control.speed_telegraph.full_ahead=En avant toute
+vs_control.speed_telegraph.half_ahead=En avant demie
+vs_control.speed_telegraph.slow_ahead=En avant lente
+vs_control.speed_telegraph.stop=Stoppez
+vs_control.speed_telegraph.slow_astern=En arrière lente
+vs_control.speed_telegraph.half_astern=En arrière demie
+vs_control.speed_telegraph.full_astern=En arrière toute
 
 tile.dummy_telegraph.name=Dummy Telegraph
 tooltip.vs_control.dummy_telegraph=A non-functioning Speed Telegraph.\nActivates the block below it when activated.
 
 tile.lift_lever.name=Lift Lever
 tooltip.vs_control.lift_lever=This block lets you set the target altitude of Valkyrium Compressors.
+vs_control.lift_lever.target_altitude=Altitude cible : %s
 
 tile.gearbox.name=Gearbox
 tooltip.vs_control.gearbox_1=Allows changing torque direction and power.
@@ -178,6 +199,9 @@ tooltip.vs_control.legacy_engine=Legacy engine, only requires a redstone signal 
 tile.compacted_valkyrium.name=Compacted Valkyrium
 tooltip.vs_control.compacted_valkyrium=Lift force: %.0f Newtons.
 
+tile.buoyancy_tank.name=Réservoir de flottabilité
+tooltip.vs_control.buoyancy_tank=Flottabilité en immersion complète : %.0f newtons.
+
 tile.gyroscope_stabilizer.name=Ship Gyroscope Stabilizer
 tooltip.vs_control.gyroscope_stabilizer=This block passively provides a torque to makes the ship level.
 
@@ -214,6 +238,9 @@ vs_control.general.relaywirelength.tooltip=How long a single relay wire can exte
 
 vs_control.general.compactedvalkyriumlift=Compacted Valkyrium Upwards Force
 vs_control.general.compactedvalkyriumlift.tooltip=How much upwards force each block applies. Default is 200000 Newtons.
+
+vs_control.general.buoyancytankforce=Force du réservoir de flottabilité
+vs_control.general.buoyancytankforce.tooltip=Force de flottabilité ascendante produite par chaque réservoir entièrement immergé. La valeur par défaut est de 160000 newtons.
 
 vs_control.general.engine_thrust=Engine Thrust Settings
 vs_control.general.engine_thrust.tooltip=Set the thrust force of engine blocks. Engines blocks must be replaced after changes are made.

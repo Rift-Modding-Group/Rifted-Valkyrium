@@ -2,6 +2,9 @@ package org.valkyrienskies.addon.control.tileentity;
 
 import gigaherz.graph.api.GraphObject;
 import net.minecraft.block.state.IBlockState;
+import net.minecraft.client.gui.FontRenderer;
+import net.minecraft.client.gui.ScaledResolution;
+import net.minecraft.client.resources.I18n;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.network.play.server.SPacketUpdateTileEntity;
@@ -11,6 +14,7 @@ import net.minecraft.util.ITickable;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
+import org.jetbrains.annotations.NotNull;
 import org.valkyrienskies.addon.control.block.BlockSpeedTelegraph;
 import org.valkyrienskies.addon.control.network.VSNodeControlMessage;
 import org.valkyrienskies.addon.control.nodecontrols.NodeControl;
@@ -19,6 +23,7 @@ import org.valkyrienskies.addon.control.nodenetwork.VSNode_TileEntity;
 import org.valkyrienskies.mod.common.network.VSNetwork;
 
 import java.util.Collection;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -46,6 +51,16 @@ public class TileEntitySpeedTelegraph extends TileEntityControlNodeImpl implemen
         this.nextTelegraphState = ShipChadburnState.STOP;
         this.handleRotation = 0;
         this.prevHandleRotation = 0;
+    }
+
+    @SideOnly(Side.CLIENT)
+    @Override
+    public void renderPilotText(FontRenderer renderer, ScaledResolution gameResolution) {
+        String message = I18n.format("vs_control.speed_telegraph.target_speed", this.telegraphState.getTranslatedString());
+        int width = gameResolution.getScaledWidth();
+        int height = gameResolution.getScaledHeight() - 35;
+        float left = (width - renderer.getStringWidth(message)) / 2f;
+        renderer.drawStringWithShadow(message, left, height, 0xFFFFFF);
     }
 
     @Override
@@ -80,8 +95,7 @@ public class TileEntitySpeedTelegraph extends TileEntityControlNodeImpl implemen
     @Override
     public void onDataPacket(net.minecraft.network.NetworkManager net,
         SPacketUpdateTileEntity pkt) {
-        nextTelegraphState = ShipChadburnState
-            .valueOf(pkt.getNbtCompound().getString("TelegraphState"));
+        this.nextTelegraphState = ShipChadburnState.valueOf(pkt.getNbtCompound().getString("TelegraphState"));
     }
 
     @Override
@@ -92,8 +106,7 @@ public class TileEntitySpeedTelegraph extends TileEntityControlNodeImpl implemen
     }
 
     public double getHandleRenderRotation(float partialTicks) {
-        double interpolatedHandle =
-            prevHandleRotation + (handleRotation - prevHandleRotation) * partialTicks;
+        double interpolatedHandle = this.prevHandleRotation + (this.handleRotation - this.prevHandleRotation) * partialTicks;
         return -interpolatedHandle + 112.5;
     }
 
@@ -105,16 +118,13 @@ public class TileEntitySpeedTelegraph extends TileEntityControlNodeImpl implemen
         }
         if (getWorld().isRemote) {
             this.prevHandleRotation = this.handleRotation;
-            this.handleRotation = this.handleRotation
-                + (this.nextTelegraphState.renderRotation - this.handleRotation) * .5;
+            this.handleRotation = this.handleRotation + (this.nextTelegraphState.renderRotation - this.handleRotation) * 0.5D;
             this.telegraphState = nextTelegraphState;
-        } else {
-            Collection<GraphObject> connectedGraphObjects = getNode().getGraph()
-                .getObjects();
+        }
+        else {
+            Collection<GraphObject> connectedGraphObjects = getNode().getGraph().getObjects();
             if (connectedGraphObjects == null) {
-                new IllegalStateException(
-                    "Graph object neighbors are null! Skipping ship telegraph update.")
-                    .printStackTrace();
+                new IllegalStateException("Graph object neighbors are null! Skipping ship telegraph update.").printStackTrace();
                 return;
             }
             for (GraphObject object : connectedGraphObjects) {
@@ -135,20 +145,19 @@ public class TileEntitySpeedTelegraph extends TileEntityControlNodeImpl implemen
 
     @Override
     public NBTTagCompound getUpdateTag() {
-        NBTTagCompound toReturn = super.getUpdateTag();
-        return toReturn;
+        return super.getUpdateTag();
     }
 
     @Override
     public void readFromNBT(NBTTagCompound compound) {
         super.readFromNBT(compound);
-        telegraphState = ShipChadburnState.valueOf(compound.getString("TelegraphState"));
+        this.telegraphState = ShipChadburnState.valueOf(compound.getString("TelegraphState"));
     }
 
     @Override
     public NBTTagCompound writeToNBT(NBTTagCompound compound) {
         NBTTagCompound toReturn = super.writeToNBT(compound);
-        toReturn.setString("TelegraphState", telegraphState.name());
+        toReturn.setString("TelegraphState", this.telegraphState.name());
         return toReturn;
     }
 
@@ -168,6 +177,12 @@ public class TileEntitySpeedTelegraph extends TileEntityControlNodeImpl implemen
         ShipChadburnState(double renderRotation, double gearboxOutputRatio) {
             this.renderRotation = renderRotation;
             this.gearboxOutputRatio = gearboxOutputRatio;
+        }
+
+        @NotNull
+        public String getTranslatedString() {
+            return I18n.format("vs_control.speed_telegraph."
+                + this.name().toLowerCase(Locale.ROOT));
         }
     }
 
