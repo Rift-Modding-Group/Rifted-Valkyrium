@@ -24,6 +24,7 @@
   "mixins": [
     "entity.MixinEntity",
     "entity.MixinEntityIntrinsic",
+    "entity.MixinEntityLivingBase",
     "entity.MixinEntityMinecart",
     "entity.MixinEntityPlayer",
     "entity.MixinEntityTrackerEntry",
@@ -40,7 +41,9 @@
     "world.chunk.MixinBlockStateContainer",
     "world.chunk.MixinChunk",
     "world.gen.MixinChunkProviderServer",
-    "entity.MixinEntityLivingBase"
+    "mod.rustic.MixinRusticEntityChair",
+    "mod.spongeforge.MixinChunkSponge",
+    "mod.spongeforge.MixinPacketUtil"
   ],
   "server": [],
   "setSourceFile": true,
