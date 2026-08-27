@@ -33,6 +33,11 @@ public interface IEntityShipDraggable {
 
     void setAddedYawVelocity(double value);
 
+    //---syncing server to client---
+    boolean isShipLocalRenderSyncActive();
+
+    void setShipLocalRenderSyncActive(boolean active);
+
     //---other stuff---
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     boolean getInAirPocket();

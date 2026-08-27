@@ -6,6 +6,7 @@ eclipse/
 *.launch
 org.*
 /bin/
+AGENTS.md
 
 #idea
 *.iml

@@ -15,6 +15,7 @@ public class ImplCapabilityEntityShipDraggable implements IEntityShipDraggable {
     private Vector3dc addedLinearVelocity = new Vector3d();
     private double addedYawVelocity;
     private int ticksInAirPocket;
+    private boolean shipLocalRenderSyncActive;
 
     //---ship contact info---
     @Override
@@ -67,6 +68,17 @@ public class ImplCapabilityEntityShipDraggable implements IEntityShipDraggable {
     @Override
     public void setAddedYawVelocity(double value) {
         this.addedYawVelocity = value;
+    }
+
+    //---syncing server to client---
+    @Override
+    public boolean isShipLocalRenderSyncActive() {
+        return this.shipLocalRenderSyncActive;
+    }
+
+    @Override
+    public void setShipLocalRenderSyncActive(boolean active) {
+        this.shipLocalRenderSyncActive = active;
     }
 
     //---other stuff---
