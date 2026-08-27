@@ -8,7 +8,7 @@ import org.joml.Vector3dc;
 import org.valkyrienskies.addon.control.MultiblockRegistry;
 import org.valkyrienskies.addon.control.fuel.IValkyriumEngine;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
-import valkyrienwarfare.api.TransformType;
+import org.valkyrienskies.api.TransformType;
 
 import javax.annotation.Nonnull;
 import java.util.List;

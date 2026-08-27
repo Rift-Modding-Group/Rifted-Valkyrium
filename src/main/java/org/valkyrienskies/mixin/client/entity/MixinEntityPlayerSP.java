@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityShipMountData;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
-import valkyrienwarfare.api.TransformType;
+import org.valkyrienskies.api.TransformType;
 
 @Mixin(EntityPlayerSP.class)
 public abstract class MixinEntityPlayerSP {

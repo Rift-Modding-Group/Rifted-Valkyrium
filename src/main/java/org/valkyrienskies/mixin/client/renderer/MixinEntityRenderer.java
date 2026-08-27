@@ -30,7 +30,7 @@ import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityShipMountData;
 import org.valkyrienskies.mod.common.util.JOML;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
-import valkyrienwarfare.api.TransformType;
+import org.valkyrienskies.api.TransformType;
 
 /**
  * This used to be one giant overwrite, and has now been cleaned up to be a mess of various mixins.

@@ -43,7 +43,7 @@ import org.valkyrienskies.mod.common.tileentity.TileEntityWaterPump;
 import org.valkyrienskies.mod.common.util.VSRenderUtils;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import org.valkyrienskies.mod.fixes.SoundFixWrapper;
-import valkyrienwarfare.api.TransformType;
+import org.valkyrienskies.api.TransformType;
 
 import java.util.Optional;
 

@@ -20,7 +20,7 @@ import org.valkyrienskies.mod.common.ships.ship_transform.CoordinateSpaceType;
 import org.valkyrienskies.mod.common.entity.EntityMountable;
 import org.valkyrienskies.mod.common.physics.BlockSectionList;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
-import valkyrienwarfare.api.TransformType;
+import org.valkyrienskies.api.TransformType;
 
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;

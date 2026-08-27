@@ -33,7 +33,7 @@ import org.valkyrienskies.mod.common.util.JOML;
 import org.valkyrienskies.mod.common.util.TransformedAABB;
 import org.valkyrienskies.mod.common.util.VSMath;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
-import valkyrienwarfare.api.TransformType;
+import org.valkyrienskies.api.TransformType;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;

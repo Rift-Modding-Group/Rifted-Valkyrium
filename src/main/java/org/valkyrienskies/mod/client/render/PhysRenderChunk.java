@@ -21,7 +21,7 @@ import net.minecraftforge.client.MinecraftForgeClient;
 import org.lwjgl.opengl.GL11;
 import org.valkyrienskies.mod.common.util.TransformedAABB;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
-import valkyrienwarfare.api.TransformType;
+import org.valkyrienskies.api.TransformType;
 
 public class PhysRenderChunk {
 

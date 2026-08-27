@@ -44,7 +44,7 @@ import physx.physics.PxRigidBodyFlagEnum;
 import physx.physics.PxRigidDynamic;
 import physx.physics.PxScene;
 import physx.physics.PxShape;
-import valkyrienwarfare.api.TransformType;
+import org.valkyrienskies.api.TransformType;
 
 import java.util.*;
 

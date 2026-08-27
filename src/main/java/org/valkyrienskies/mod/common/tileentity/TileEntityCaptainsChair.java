@@ -13,7 +13,7 @@ import org.valkyrienskies.mod.common.physics.PhysicsCalculations;
 import org.valkyrienskies.mod.common.piloting.PilotControls;
 import org.valkyrienskies.mod.common.piloting.PilotControlsMessage;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
-import valkyrienwarfare.api.TransformType;
+import org.valkyrienskies.api.TransformType;
 
 public class TileEntityCaptainsChair extends TileEntityPilotableImpl implements ITickable {
     @Override

@@ -8,7 +8,7 @@ import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.entity_backup.ICapabilityEntityBackup;
 import org.valkyrienskies.mod.common.ships.ShipData;
-import valkyrienwarfare.api.TransformType;
+import org.valkyrienskies.api.TransformType;
 
 /**
  * Used to indicate when a packet must be transformed into ship space to work properly (Digging

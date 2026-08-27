@@ -377,7 +377,7 @@ public class WorldServerShipManager implements IPhysObjectWorld {
             originalTransform.getPosX() + positionOffset.x,
             originalTransform.getPosY() + positionOffset.y,
             originalTransform.getPosZ() + positionOffset.z,
-            originalTransform.rotationQuaternion(valkyrienwarfare.api.TransformType.SUBSPACE_TO_GLOBAL),
+            originalTransform.rotationQuaternion(org.valkyrienskies.api.TransformType.SUBSPACE_TO_GLOBAL),
             newCenter
         );
         shipData.setShipTransform(correctedTransform);

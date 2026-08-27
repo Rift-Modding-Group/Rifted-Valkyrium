@@ -16,7 +16,7 @@ import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.entity.EntityMountableChair;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
-import valkyrienwarfare.api.TransformType;
+import org.valkyrienskies.api.TransformType;
 
 // TODO: FIX THIS CLASS
 public class TileEntityPassengerChair extends TileEntity /*implements IRelocationAwareTile*/ {

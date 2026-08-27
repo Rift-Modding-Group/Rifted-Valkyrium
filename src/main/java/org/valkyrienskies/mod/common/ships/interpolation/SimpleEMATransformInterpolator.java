@@ -4,7 +4,7 @@ import net.minecraft.util.math.AxisAlignedBB;
 import org.joml.*;
 import org.valkyrienskies.mod.common.util.TransformedAABB;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
-import valkyrienwarfare.api.TransformType;
+import org.valkyrienskies.api.TransformType;
 
 import javax.annotation.Nonnull;
 

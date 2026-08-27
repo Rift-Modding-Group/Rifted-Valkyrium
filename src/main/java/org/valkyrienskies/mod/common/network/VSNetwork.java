@@ -14,7 +14,7 @@ import net.minecraftforge.common.DimensionManager;
 import org.joml.Vector3d;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
-import valkyrienwarfare.api.TransformType;
+import org.valkyrienskies.api.TransformType;
 
 import javax.annotation.Nullable;
 import java.util.List;

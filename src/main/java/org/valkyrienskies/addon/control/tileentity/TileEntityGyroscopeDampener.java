@@ -6,7 +6,7 @@ import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.valkyrienskies.addon.control.config.VSControlConfig;
 import org.valkyrienskies.mod.common.physics.PhysicsCalculations;
-import valkyrienwarfare.api.TransformType;
+import org.valkyrienskies.api.TransformType;
 
 public class TileEntityGyroscopeDampener extends TileEntity {
 

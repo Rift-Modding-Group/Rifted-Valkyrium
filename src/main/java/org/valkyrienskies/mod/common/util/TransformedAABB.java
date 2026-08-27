@@ -5,7 +5,7 @@ import org.joml.Matrix4dc;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
-import valkyrienwarfare.api.TransformType;
+import org.valkyrienskies.api.TransformType;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;

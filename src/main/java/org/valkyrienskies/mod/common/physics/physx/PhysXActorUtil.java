@@ -8,7 +8,7 @@ import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import physx.common.PxQuat;
 import physx.common.PxTransform;
 import physx.common.PxVec3;
-import valkyrienwarfare.api.TransformType;
+import org.valkyrienskies.api.TransformType;
 
 /**
  * Helper class to convert joml vectors and quaternions into their counterparts for physX.

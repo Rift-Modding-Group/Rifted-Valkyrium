@@ -1,0 +1,1 @@
+VS1 never really had any addons even on 1.12.2 lmao. So the old API, which was in a separate JAR and repo, will be put here instead. No problems involving compatibility will ever happen from this, lol.

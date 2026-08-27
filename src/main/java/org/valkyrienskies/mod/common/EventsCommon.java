@@ -45,7 +45,7 @@ import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
 import org.valkyrienskies.mod.common.ships.ship_transform.CoordinateSpaceType;
 import org.valkyrienskies.mod.common.ships.ship_world.*;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
-import valkyrienwarfare.api.TransformType;
+import org.valkyrienskies.api.TransformType;
 
 import java.util.HashMap;
 import java.util.List;

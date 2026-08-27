@@ -21,7 +21,7 @@ import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.JOML;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import org.valkyrienskies.mod.fixes.FixAccurateRain;
-import valkyrienwarfare.api.TransformType;
+import org.valkyrienskies.api.TransformType;
 
 import java.util.HashMap;
 import java.util.List;

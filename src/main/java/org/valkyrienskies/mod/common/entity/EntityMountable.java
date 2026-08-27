@@ -16,7 +16,7 @@ import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
 import org.valkyrienskies.mod.common.ships.ship_transform.CoordinateSpaceType;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
-import valkyrienwarfare.api.TransformType;
+import org.valkyrienskies.api.TransformType;
 
 /**
  * A simple entity whose only purpose is to allow mounting onto chairs, as well as fixing entities

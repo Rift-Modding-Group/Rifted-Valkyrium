@@ -27,7 +27,7 @@ import org.valkyrienskies.mod.common.util.TransformedAABB;
 import org.valkyrienskies.mod.common.util.VSMath;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import org.valkyrienskies.mod.fixes.MixinWorldIntrinsicMethods;
-import valkyrienwarfare.api.TransformType;
+import org.valkyrienskies.api.TransformType;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
