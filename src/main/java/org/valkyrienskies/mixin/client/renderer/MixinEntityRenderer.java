@@ -13,6 +13,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.World;
 import net.minecraftforge.client.ForgeHooksClient;
 import net.minecraftforge.client.event.EntityViewRenderEvent;
 import org.joml.Quaterniond;
@@ -21,16 +22,31 @@ import org.joml.Vector3dc;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.*;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.valkyrienskies.api.TransformType;
+import org.valkyrienskies.mod.client.entity_position.EntityRenderStateBackup;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
+import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
+import org.valkyrienskies.mod.common.capability.entity_ship_draggable.ShipLocalEntityMovementData;
 import org.valkyrienskies.mod.common.capability.ship_pilot.IShipPilot;
 import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
-import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
+import org.valkyrienskies.mod.common.config.VSConfig;
+import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityShipMountData;
+import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
+import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
+import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.JOML;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
-import org.valkyrienskies.api.TransformType;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * This used to be one giant overwrite, and has now been cleaned up to be a mess of various mixins.
@@ -43,7 +59,6 @@ import org.valkyrienskies.api.TransformType;
  */
 @Mixin(EntityRenderer.class)
 public abstract class MixinEntityRenderer {
-
     @Shadow
     @Final
     public Minecraft mc;
@@ -54,13 +69,188 @@ public abstract class MixinEntityRenderer {
     @Shadow
     public boolean cloudFog;
 
+    @Unique
+    private final Map<Entity, EntityRenderStateBackup> renderStateBackups = new IdentityHashMap<>();
+
+    @Inject(
+            method = "updateCameraAndRender",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/profiler/Profiler;endSection()V",
+                    ordinal = 0,
+                    shift = At.Shift.AFTER
+            )
+    )
+    private void prepareShipEntityRenderStates(float partialTicks, long nanoTime, CallbackInfo callbackInfo) {
+        this.restoreRenderStates();
+
+        World world = this.mc.world;
+        if (world == null) return;
+
+        double renderPartialTicks = Math.clamp(partialTicks, 0D, 1D);
+        for (PhysicsObject wrapper : ValkyrienUtils.getPhysosLoadedInWorld(world)) {
+            wrapper.getShipTransformationManager().updateRenderTransform(renderPartialTicks);
+        }
+
+        IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(world);
+        if (physObjectWorld == null) return;
+        List<Entity> renderPassengerCarriers = new ArrayList<>();
+
+        // First compute every desired render state without mutating an entity. Some render paths inspect other entities,
+        // so applying a temporary state during this loop would make the result depend on loaded-entity iteration order.
+        for (Entity entity : world.getLoadedEntityList()) {
+            IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
+            if (draggable == null) continue;
+
+            Vector3dc previousPosition = new Vector3d(entity.lastTickPosX, entity.lastTickPosY, entity.lastTickPosZ);
+            Vector3d renderPosition;
+            ShipLocalEntityMovementData movementData = draggable.getShipLocalMovementData();
+            ShipTransform shipLocalRenderTransform = null;
+            EntityShipMountData mountData = ValkyrienUtils.getMountedShipAndPos(entity);
+            if (mountData.isMounted()) {
+                if (mountData.mountPos() == null) continue;
+
+                // Mounted entities already have an exact ship-local position, so they do not use dragging velocity.
+                renderPosition = new Vector3d(
+                        mountData.mountPos().x,
+                        mountData.mountPos().y,
+                        mountData.mountPos().z
+                );
+                mountData.mountedShip().getShipTransformationManager().getRenderTransform()
+                        .transformPosition(renderPosition, TransformType.SUBSPACE_TO_GLOBAL);
+            }
+            else if (movementData != null && movementData.isActive()) {
+                if (!movementData.isInitialized() || movementData.getShipUuid() == null) continue;
+
+                PhysicsObject shipPhysicsObject = physObjectWorld.getPhysObjectFromUUID(movementData.getShipUuid());
+                if (shipPhysicsObject == null) continue;
+
+                shipLocalRenderTransform = shipPhysicsObject.getShipTransformationManager().getRenderTransform();
+                renderPosition = movementData.getWorldPosition(shipLocalRenderTransform, renderPartialTicks);
+            }
+            else {
+                if (draggable.getLastTouchedShip() == null || draggable.getTicksSinceTouchedShip() >= VSConfig.ticksToStickToShip) {
+                    continue;
+                }
+
+                PhysicsObject shipPhysicsObject = physObjectWorld.getPhysObjectFromUUID(draggable.getLastTouchedShip().getUuid());
+                if (shipPhysicsObject == null) {
+                    draggable.setLastTouchedShip(null);
+                    continue;
+                }
+
+                ShipTransform previousShipTransform = shipPhysicsObject.getPrevTickShipTransform();
+                ShipTransform renderShipTransform = shipPhysicsObject.getShipTransformationManager().getRenderTransform();
+                Vector3dc currentPosition = new Vector3d(entity.posX, entity.posY, entity.posZ);
+                renderPosition = EntityDraggable.getShipAdjustedRenderPosition(
+                        previousPosition,
+                        currentPosition,
+                        draggable.getAddedLinearVelocity(),
+                        previousShipTransform,
+                        renderShipTransform,
+                        renderPartialTicks
+                );
+            }
+
+            EntityRenderStateBackup renderStateBackup = new EntityRenderStateBackup(
+                    entity, renderPosition, renderPartialTicks
+            );
+            if (movementData != null && shipLocalRenderTransform != null) {
+                renderStateBackup.setShipLocalRotation(
+                        movementData.getWorldYaw(shipLocalRenderTransform, renderPartialTicks),
+                        movementData.getPitch(renderPartialTicks),
+                        movementData.getWorldHeadYaw(shipLocalRenderTransform, renderPartialTicks)
+                );
+            }
+            this.renderStateBackups.put(entity, renderStateBackup);
+
+            if (!entity.getPassengers().isEmpty()) renderPassengerCarriers.add(entity);
+        }
+
+        for (EntityRenderStateBackup renderStateBackup : this.renderStateBackups.values()) {
+            renderStateBackup.apply();
+        }
+
+        Set<Entity> positionedEntities = Collections.newSetFromMap(new IdentityHashMap<>());
+        for (Entity carrier : renderPassengerCarriers) {
+            Entity ridingAncestor = carrier.getRidingEntity();
+            boolean hasAdjustedAncestor = false;
+            while (ridingAncestor != null) {
+                if (this.renderStateBackups.containsKey(ridingAncestor)) {
+                    hasAdjustedAncestor = true;
+                    break;
+                }
+                ridingAncestor = ridingAncestor.getRidingEntity();
+            }
+            if (hasAdjustedAncestor || !positionedEntities.add(carrier)) continue;
+
+            EntityRenderStateBackup carrierBackup = this.renderStateBackups.get(carrier);
+            this.updateRenderPassengers(
+                    carrier,
+                    positionedEntities,
+                    carrierBackup.getRenderYawAdjustment(),
+                    renderPartialTicks
+            );
+        }
+    }
+
+    @Inject(method = "updateCameraAndRender", at = @At("RETURN"))
+    private void restoreShipEntityRenderStates(float partialTicks, long nanoTime, CallbackInfo callbackInfo) {
+        this.restoreRenderStates();
+    }
+
+    @Unique
+    private void updateRenderPassengers(Entity carrier, Set<Entity> positionedEntities, float inheritedYawAdjustment, double partialTicks) {
+        for (Entity passenger : carrier.getPassengers()) {
+            if (!positionedEntities.add(passenger)) continue;
+
+            EntityRenderStateBackup passengerBackup = this.renderStateBackups.get(passenger);
+            boolean needsCarrierPosition = passengerBackup == null;
+            if (needsCarrierPosition) {
+                passengerBackup = new EntityRenderStateBackup(
+                        passenger,
+                        new Vector3d(passenger.posX, passenger.posY, passenger.posZ),
+                        partialTicks
+                );
+                this.renderStateBackups.put(passenger, passengerBackup);
+            }
+
+            float passengerYawAdjustment;
+            if (passengerBackup.hasShipLocalRotation()) {
+                passengerYawAdjustment = passengerBackup.getRenderYawAdjustment();
+            }
+            else {
+                passengerYawAdjustment = inheritedYawAdjustment;
+                passengerBackup.applyYawAdjustment(passengerYawAdjustment);
+            }
+
+            if (needsCarrierPosition) {
+                // Ordinary riders have no independent ship render state, so derive their exact frame position from the
+                // already-adjusted carrier. Apply yaw first because horse offsets depend on the rider's body orientation.
+                // Fixed mounts were precomputed above and must retain their rotated offset.
+                EntityDraggable.updatePassengerPosition(carrier, passenger);
+                passengerBackup.snapPositionToCurrent();
+            }
+            this.updateRenderPassengers(passenger, positionedEntities, passengerYawAdjustment, partialTicks);
+        }
+    }
+
+    @Unique
+    private void restoreRenderStates() {
+        for (EntityRenderStateBackup renderStateBackup : this.renderStateBackups.values()) {
+            renderStateBackup.restore();
+        }
+        this.renderStateBackups.clear();
+    }
+
     @Inject(method = "orientCamera", at = @At("HEAD"), cancellable = true)
     private void orientCamera(float partialTicks, CallbackInfo ci) {
         EntityShipMountData mountData = ValkyrienUtils.getMountedShipAndPos(mc.getRenderViewEntity());
         if (mountData.mountedShip() == null) {
             // Do nothing. We don't want to mess with camera code unless we have to.
             return;
-        } else {
+        }
+        else {
             // Take over the camera orientation entirely. Don't let anything else touch it.
             ci.cancel();
         }
@@ -241,52 +431,4 @@ public abstract class MixinEntityRenderer {
         d2 = entity.prevPosZ + (entity.posZ - entity.prevPosZ) * partialTicks + eyeVector.z;
         this.cloudFog = this.mc.renderGlobal.hasCloudFog(d0, d1, d2, partialTicks);
     }
-
-    //below is the local variable table for orientCamera
-    /*****************************************************************************************************************/
-    /*         Target Class : net.minecraft.client.renderer.EntityRenderer                                           */
-    /*        Target Method : orientCamera                                                                           */
-    /*        Callback Name : localvar$zoomOutIfPiloting$zzo000                                                      */
-    /*         Capture Type : double                                                                                 */
-    /*          Instruction : FieldInsnNode GETFIELD                                                                 */
-    /*****************************************************************************************************************/
-    /*           Match mode : IMPLICIT (match single)                                                                */
-    /*        Match ordinal : any                                                                                    */
-    /*          Match index : any                                                                                    */
-    /*        Match name(s) : any                                                                                    */
-    /*            Args only : false                                                                                  */
-    /*****************************************************************************************************************/
-    /* INDEX  ORDINAL                            TYPE  NAME                                                CANDIDATE */
-    /* [  1]    [  0]                           float  partialTicks                                        -         */
-    /* [  2]    [  0]                          Entity  entity                                              -         */
-    /* [  3]    [  1]                           float  f                                                   -         */
-    /* [  4]    [  0]                          double  d0                                                  YES       */
-    /* [  5]                                    <top>                                                                */
-    /* [  6]    [  1]                          double  d1                                                  YES       */
-    /* [  7]                                    <top>                                                                */
-    /* [  8]    [  2]                          double  d2                                                  YES       */
-    /* [  9]                                    <top>                                                                */
-    /* [ 10]    [  3]                          double  d3                                                  YES       */
-    /* [ 11]    [  0]                     IBlockState  var11                                               -         */
-    /* [ 12]                                        -                                                                */
-    /* [ 13]                                        -                                                                */
-    /* [ 14]                                        -                                                                */
-    /* [ 15]                                        -                                                                */
-    /* [ 16]                                        -                                                                */
-    /* [ 17]                                        -                                                                */
-    /* [ 18]                                        -                                                                */
-    /* [ 19]                                        -                                                                */
-    /* [ 20]                                        -                                                                */
-    /* [ 21]                                        -                                                                */
-    /* [ 22]                                        -                                                                */
-    /* [ 23]                                        -                                                                */
-    /* [ 24]                                        -                                                                */
-    /* [ 25]                                        -                                                                */
-    /* [ 26]                                        -                                                                */
-    /* [ 27]    [  1]                          Entity  var27                                               -         */
-    /* [ 28]                                        -                                                                */
-    /* [ 29]                                        -                                                                */
-    /* [ 30]                                        -                                                                */
-    /* [ 31]                                        -                                                                */
-    /*****************************************************************************************************************/
 }

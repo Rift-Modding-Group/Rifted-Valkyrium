@@ -7,6 +7,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -14,6 +15,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMount;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
+import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import org.valkyrienskies.api.TransformType;
@@ -24,8 +26,19 @@ import java.util.Optional;
 
 @Mixin(EntityLivingBase.class)
 public class MixinEntityLivingBase {
+    @Shadow
+    protected int newPosRotationIncrements;
+
     private Entity clientShipAnchoredDismountEntity;
     private Vector3d clientShipAnchoredDismountPos;
+
+    @Inject(method = "onLivingUpdate", at = @At("HEAD"))
+    private void suppressVanillaLerpDuringShipLocalMovement(CallbackInfo callbackInfo) {
+        EntityLivingBase entity = (EntityLivingBase) (Object) this;
+        if (EntityDraggable.isUsingShipLocalMovement(entity)) {
+            this.newPosRotationIncrements = 0;
+        }
+    }
 
     /**
      * This mixin allows players to breathe underwater when they're in an air pocket.

@@ -15,6 +15,7 @@ import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShi
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityCollisionInjector;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityCollisionInjector.IntermediateMovementVariableStorage;
+import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityMoveInjectionMethods;
 
 @Mixin(value = Entity.class, priority = 1)
@@ -46,6 +47,10 @@ public abstract class MixinEntityIntrinsic {
     @Inject(method = "move", at = @At("HEAD"), cancellable = true)
     private void onEntityPreMove(MoverType type, double dx, double dy, double dz, CallbackInfo callbackInfo) {
         Entity thisEntity = (Entity) ((Object) this);
+        if (thisEntity.world.isRemote && EntityDraggable.isUsingShipLocalMovement(thisEntity)) {
+            this.alteredMovement = null;
+            return;
+        }
 
         // Only run this code if Minecraft invoked move().
         if (!VSConfig.collisionTransparentEntitiesSet.contains(EntityList.getKey(thisEntity)) && didMinecraftInvokeMove) {
@@ -70,6 +75,8 @@ public abstract class MixinEntityIntrinsic {
     @Inject(method = "move", at = @At("RETURN"))
     private void onEntityPostMove(CallbackInfo callbackInfo) {
         Entity thisEntity = (Entity) ((Object) this);
+        if (thisEntity.world.isRemote && EntityDraggable.isUsingShipLocalMovement(thisEntity)) return;
+
         IEntityShipDraggable entityShipDraggable = thisEntity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
         if (entityShipDraggable == null) return;
 

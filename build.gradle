@@ -132,6 +132,10 @@ sourceSets {
             }
         }
     }
+    test {
+        compileClasspath += main.compileClasspath
+        runtimeClasspath += main.runtimeClasspath
+    }
 }
 
 idea {

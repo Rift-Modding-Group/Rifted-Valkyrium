@@ -40,7 +40,7 @@ public class ImplCapabilityShipAnchoredMount implements IShipAnchoredMount {
     }
 
     @Override
-    public void setAnchorMountData(@NotNull final Vec3d localMountPos, @NotNull final BlockPos localAnchorBlock) {
+    public void setAnchorMountData(@NotNull Vec3d localMountPos, @NotNull BlockPos localAnchorBlock) {
         this.localMountPos = localMountPos;
         this.localAnchorBlock = localAnchorBlock.toImmutable();
         this.anchoredToShip = true;

@@ -33,10 +33,12 @@ public interface IEntityShipDraggable {
 
     void setAddedYawVelocity(double value);
 
-    //---syncing server to client---
-    boolean isShipLocalRenderSyncActive();
+    //---server-controlled movement in ship coordinates---
+    @Nullable
+    ShipLocalEntityMovementData getShipLocalMovementData();
 
-    void setShipLocalRenderSyncActive(boolean active);
+    @NotNull
+    ShipLocalEntityMovementData getOrCreateShipLocalMovementData();
 
     //---other stuff---
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")

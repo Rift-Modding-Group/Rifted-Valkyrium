@@ -1,38 +1,32 @@
 package org.valkyrienskies.mod.common.ships.entity_interaction;
 
-import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.Tuple;
 import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4d;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
-import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMount;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
+import org.valkyrienskies.mod.common.capability.entity_ship_draggable.ShipLocalEntityMovementData;
 import org.valkyrienskies.mod.common.config.VSConfig;
-import org.valkyrienskies.mod.common.network.MessageClearEntityShipRenderPosition;
-import org.valkyrienskies.mod.common.network.MessageEntityShipRenderPosition;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
+import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
-import org.valkyrienskies.mod.common.util.TransformedAABB;
 import org.valkyrienskies.mod.common.util.VSMath;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import org.valkyrienskies.api.TransformType;
 
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 /**
  * This class handles the logic of moving entities with the ships they're interacting with.
@@ -47,7 +41,6 @@ public class EntityDraggable {
             for (Entity entity : world.loadedEntityList) {
                 if (entity.isDead) continue;
                 addEntityVelocityFromShipBelow(entity);
-                syncShipLocalRenderPositionToClients(entity);
             }
         }
         catch (Exception e) {
@@ -56,11 +49,156 @@ public class EntityDraggable {
     }
 
     /**
+     * Returns the loaded ship currently carrying a server-authoritative entity, if one exists.
+     */
+    @Nullable
+    public static ShipData getActiveShip(@NotNull Entity entity) {
+        if (entity.isRiding()) return null;
+
+        IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
+        if (draggable == null || draggable.getLastTouchedShip() == null || draggable.getTicksSinceTouchedShip() >= VSConfig.ticksToStickToShip) {
+            return null;
+        }
+
+        IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(entity.world);
+        if (physObjectWorld == null) return null;
+
+        PhysicsObject physicsObject = physObjectWorld.getPhysObjectFromUUID(draggable.getLastTouchedShip().getUuid());
+        return physicsObject == null ? null : physicsObject.getShipData();
+    }
+
+    /**
+     * Returns whether this client entity is currently driven by a server ship-local movement stream.
+     */
+    public static boolean isUsingShipLocalMovement(@NotNull Entity entity) {
+        IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
+        if (draggable == null) return false;
+
+        ShipLocalEntityMovementData movementData = draggable.getShipLocalMovementData();
+        return movementData != null && movementData.isActive();
+    }
+
+    /**
      * Adds the ship below velocity to entity.
      */
-    private static void addEntityVelocityFromShipBelow(@NotNull final Entity entity) {
+    private static void addEntityVelocityFromShipBelow(@NotNull Entity entity) {
         IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
         if (draggable == null) return;
+
+        ShipLocalEntityMovementData shipLocalMovementData = draggable.getShipLocalMovementData();
+        if (entity.world.isRemote && shipLocalMovementData != null && shipLocalMovementData.isActive()) {
+            if (entity.isRiding() || entity.canPassengerSteer()) {
+                shipLocalMovementData.clear();
+            }
+            else {
+                IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(entity.world);
+                PhysicsObject physicsObject = physObjectWorld == null || shipLocalMovementData.getShipUuid() == null
+                        ? null : physObjectWorld.getPhysObjectFromUUID(shipLocalMovementData.getShipUuid());
+                if (physicsObject == null) return;
+
+                ShipTransform currentShipTransform = physicsObject.getShipTransformationManager().getCurrentTickTransform();
+                shipLocalMovementData.initializeIfNeeded(
+                        currentShipTransform,
+                        new Vector3d(entity.posX, entity.posY, entity.posZ),
+                        entity.rotationYaw,
+                        entity.rotationPitch,
+                        entity.getRotationYawHead()
+                );
+
+                Vector3d oldWorldPosition = new Vector3d(entity.posX, entity.posY, entity.posZ);
+                float oldYaw = entity.rotationYaw;
+                float oldHeadYaw = entity.getRotationYawHead();
+                shipLocalMovementData.advance();
+                Vector3d worldPosition = shipLocalMovementData.getWorldPosition(currentShipTransform, 1D);
+                entity.setPosition(worldPosition.x, worldPosition.y, worldPosition.z);
+                double worldYaw = shipLocalMovementData.getWorldYaw(currentShipTransform, 1D);
+                entity.rotationYaw = oldYaw + MathHelper.wrapDegrees((float) (worldYaw - oldYaw));
+                entity.rotationPitch = (float) shipLocalMovementData.getPitch(1D);
+                double worldHeadYaw = shipLocalMovementData.getWorldHeadYaw(currentShipTransform, 1D);
+                entity.setRotationYawHead(oldHeadYaw + MathHelper.wrapDegrees((float) (worldHeadYaw - oldHeadYaw)));
+                entity.onGround = shipLocalMovementData.isOnGround();
+                float yawMovement = MathHelper.wrapDegrees(entity.rotationYaw - oldYaw);
+
+                if (entity instanceof EntityLivingBase livingEntity) {
+                    livingEntity.renderYawOffset += yawMovement;
+
+                    Vector3d relativeMovement = shipLocalMovementData.getRelativeMovement();
+                    float targetLimbSwingAmount = (float) Math.sqrt(
+                            relativeMovement.x * relativeMovement.x + relativeMovement.z * relativeMovement.z
+                    ) * 4f;
+                    targetLimbSwingAmount = Math.min(targetLimbSwingAmount, 1F);
+                    float correctedLimbSwingAmount = livingEntity.prevLimbSwingAmount
+                            + (targetLimbSwingAmount - livingEntity.prevLimbSwingAmount) * 0.4F;
+                    livingEntity.limbSwing += correctedLimbSwingAmount - livingEntity.limbSwingAmount;
+                    livingEntity.limbSwingAmount = correctedLimbSwingAmount;
+                }
+
+                updatePassengersAfterCarrierMovement(entity, yawMovement);
+
+                if (shipLocalMovementData.hasVelocity()) {
+                    Vector3d worldVelocity = shipLocalMovementData.getWorldVelocity(currentShipTransform);
+                    entity.setVelocity(worldVelocity.x, worldVelocity.y, worldVelocity.z);
+                }
+
+                draggable.setLastTouchedShip(physicsObject.getShipData());
+                draggable.setTicksSinceTouchedShip(0);
+                draggable.setAddedLinearVelocity(worldPosition.sub(oldWorldPosition, new Vector3d()));
+                draggable.setAddedYawVelocity(yawMovement);
+                return;
+            }
+        }
+
+        ShipData touchedShip = draggable.getLastTouchedShip();
+        if (touchedShip != null) {
+            IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(entity.world);
+            if (physObjectWorld == null || physObjectWorld.getPhysObjectFromUUID(touchedShip.getUuid()) == null) {
+                draggable.setLastTouchedShip(null);
+            }
+        }
+
+        //For chairs from other mods
+        IShipAnchoredMount anchoredMount = entity.getCapability(VSCapabilityRegistry.VS_SHIP_ANCHORED_MOUNT, null);
+        boolean snapAnchorPosition = draggable.getLastTouchedShip() == null;
+        boolean wasAnchored = anchoredMount != null && anchoredMount.isAnchoredToShip();
+        if (anchoredMount != null && (wasAnchored || anchoredMount.tryAnchorMount(entity))) {
+            Optional<PhysicsObject> mountedShip = ValkyrienUtils.getPhysoManagingBlock(entity.world, anchoredMount.getLocalAnchorBlock());
+            if (mountedShip.isPresent()) {
+                PhysicsObject physicsObject = mountedShip.get();
+                Vector3d localMountPosition = new Vector3d(
+                        anchoredMount.getLocalMountPos().x,
+                        anchoredMount.getLocalMountPos().y,
+                        anchoredMount.getLocalMountPos().z
+                );
+                Vector3d globalMountPosition = new Vector3d(localMountPosition);
+                physicsObject.getShipTransformationManager().getCurrentTickTransform()
+                        .transformPosition(globalMountPosition, TransformType.SUBSPACE_TO_GLOBAL);
+                entity.setPosition(globalMountPosition.x, globalMountPosition.y, globalMountPosition.z);
+                Vector3d previousGlobalMountPosition = new Vector3d(localMountPosition);
+                physicsObject.getPrevTickShipTransform()
+                        .transformPosition(previousGlobalMountPosition, TransformType.SUBSPACE_TO_GLOBAL);
+                if (snapAnchorPosition) {
+                    entity.prevPosX = previousGlobalMountPosition.x;
+                    entity.prevPosY = previousGlobalMountPosition.y;
+                    entity.prevPosZ = previousGlobalMountPosition.z;
+                }
+                entity.lastTickPosX = previousGlobalMountPosition.x;
+                entity.lastTickPosY = previousGlobalMountPosition.y;
+                entity.lastTickPosZ = previousGlobalMountPosition.z;
+
+                updatePassengersAfterCarrierMovement(entity, 0F);
+
+                draggable.setLastTouchedShip(physicsObject.getShipData());
+                draggable.setTicksSinceTouchedShip(0);
+                draggable.setTicksPartOfGround(0);
+                draggable.setAddedLinearVelocity(new Vector3d(globalMountPosition).sub(
+                        entity.lastTickPosX,
+                        entity.lastTickPosY,
+                        entity.lastTickPosZ
+                ));
+                draggable.setAddedYawVelocity(0);
+                return;
+            }
+        }
 
         //fix to ensure players sleeping on beds on ships stay in place
         EntityShipMountData sleepingPlayerMountData = ValkyrienUtils.getSleepingPlayerShipAndPos(entity);
@@ -100,7 +238,17 @@ public class EntityDraggable {
             return;
         }
 
+        //for the mod's own chairs
         EntityShipMountData mountData = ValkyrienUtils.getMountedShipAndPos(entity);
+        if (entity.isRiding()) {
+            ShipData ridingShip = mountData.isMounted() ? mountData.mountedShip().getShipData() : null;
+            draggable.setLastTouchedShip(ridingShip);
+            draggable.setTicksSinceTouchedShip(ridingShip == null ? VSConfig.ticksToStickToShip : 0);
+            draggable.setAddedLinearVelocity(new Vector3d());
+            draggable.setAddedYawVelocity(0D);
+            return;
+        }
+
         ShipData lastShipTouchedPlayer = draggable.getLastTouchedShip();
         int oldTicksSinceTouchedShip = draggable.getTicksSinceTouchedShip();
         Vector3dc oldVelocityAdded = draggable.getAddedLinearVelocity();
@@ -115,8 +263,8 @@ public class EntityDraggable {
             else if (entity instanceof EntityPlayer player) {
                 if (player.isCreative() && player.capabilities.isFlying) {
                     // If the player is flying, then slow down their added velocity significantly every tick
-                    final Vector3dc newVelocityAdded = oldVelocityAdded.mul(0.95D, new Vector3d());
-                    final double newYawVelocityAdded = oldYawVelocityAdded * 0.95D * 0.95D;
+                    Vector3dc newVelocityAdded = oldVelocityAdded.mul(0.95D, new Vector3d());
+                    double newYawVelocityAdded = oldYawVelocityAdded * 0.95D * 0.95D;
 
                     draggable.setAddedLinearVelocity(newVelocityAdded);
                     draggable.setAddedYawVelocity(newYawVelocityAdded);
@@ -132,31 +280,26 @@ public class EntityDraggable {
             }
         }
         else {
-            float rotYaw = entity.rotationYaw;
-            float rotPitch = entity.rotationPitch;
-            float prevYaw = entity.prevRotationYaw;
-            float prevPitch = entity.prevRotationPitch;
-
-            Vector3dc oldPos = new Vector3d(entity.posX, entity.posY, entity.posZ);
+            float rotationYaw = entity.rotationYaw;
+            float rotationPitch = entity.rotationPitch;
+            float previousRotationYaw = entity.prevRotationYaw;
+            float previousRotationPitch = entity.prevRotationPitch;
+            Vector3dc oldPosition = new Vector3d(entity.posX, entity.posY, entity.posZ);
 
             Matrix4d betweenTransform = ShipTransform.createTransform(
                     lastShipTouchedPlayer.getPrevTickShipTransform(), lastShipTouchedPlayer.getShipTransform()
             );
-
             ValkyrienUtils.transformEntity(betweenTransform, entity, false);
+            Vector3dc transformedPosition = new Vector3d(entity.posX, entity.posY, entity.posZ);
 
-            Vector3dc newPos = new Vector3d(entity.posX, entity.posY, entity.posZ);
-
-            // Move the entity back to its old position, the added velocity will be used
-            // afterwards
-            entity.setPosition(oldPos.x(), oldPos.y(), oldPos.z());
-            Vector3dc addedVel = newPos.sub(oldPos, new Vector3d());
-
-            // Now compute the added yaw velocity
-            entity.rotationYaw = rotYaw;
-            entity.rotationPitch = rotPitch;
-            entity.prevRotationYaw = prevYaw;
-            entity.prevRotationPitch = prevPitch;
+            // Apply the carrier displacement through collision handling below. Evaluating it at the tick endpoint keeps
+            // the render-time curve continuous with the entity's actual current position.
+            entity.setPosition(oldPosition.x(), oldPosition.y(), oldPosition.z());
+            Vector3dc addedVelocity = transformedPosition.sub(oldPosition, new Vector3d());
+            entity.rotationYaw = rotationYaw;
+            entity.rotationPitch = rotationPitch;
+            entity.prevRotationYaw = previousRotationYaw;
+            entity.prevRotationPitch = previousRotationPitch;
 
             // Ignore the pitch, calculate the look vector using only the yaw
             Vector3d newLookYawVec;
@@ -179,8 +322,8 @@ public class EntityDraggable {
             // Calculate the yaw of the transformed player look vector
             Tuple<Double, Double> newPlayerLookYawOnly = VSMath.getPitchYawFromVector(newLookYawVec);
 
-            final double wrappedYaw = MathHelper.wrapDegrees(newPlayerLookYawOnly.getSecond());
-            final double wrappedRotYaw;
+            double wrappedYaw = MathHelper.wrapDegrees(newPlayerLookYawOnly.getSecond());
+            double wrappedRotYaw;
             // We do this because entity.getLook() is calculated differently for EntityLivingBase, it uses
             // rotationYawHead instead of just rotationYaw.
 
@@ -198,11 +341,11 @@ public class EntityDraggable {
                 else yawDif -= 360D;
             }
             yawDif %= 360D;
-            final double threshold = .1D;
+            double threshold = .1D;
             if (Math.abs(yawDif) < threshold) {
                 yawDif = 0D;
             }
-            draggable.setAddedLinearVelocity(addedVel.mul(1, new Vector3d()));
+            draggable.setAddedLinearVelocity(addedVelocity);
             draggable.setAddedYawVelocity(yawDif);
         }
 
@@ -210,137 +353,121 @@ public class EntityDraggable {
         // it unless we have to.
         if (draggable.getAddedLinearVelocity().lengthSquared() > 0) {
             // Now that we've determined the added velocity, move the entity forward by that amount
-            final boolean originallySneaking = entity.isSneaking();
+            boolean originallySneaking = entity.isSneaking();
             entity.setSneaking(false);
 
             // The added velocity vector of the player, except we have made sure that it won't push the player inside of a
             // solid block.
-            final Vector3dc addedVelocityNoNoClip = applyAddedVelocity(draggable.getAddedLinearVelocity(), entity);
+            Vector3dc addedVelocityNoNoClip = applyAddedVelocity(draggable.getAddedLinearVelocity(), entity);
             draggable.setAddedLinearVelocity(addedVelocityNoNoClip);
 
             entity.setSneaking(originallySneaking);
         }
 
         // Add the yaw velocity to the player as well, because its possible for addedVelocity=0 and yawVel != 0
-        final double addedYawVelocity = draggable.getAddedYawVelocity();
+        double addedYawVelocity = draggable.getAddedYawVelocity();
+        float appliedYawMovement = 0F;
         if (!mountData.isMounted() && addedYawVelocity != 0) {
             entity.setRotationYawHead((float) (entity.getRotationYawHead() + addedYawVelocity));
             entity.rotationYaw += (float) addedYawVelocity;
-        }
-    }
-
-    /**
-     * Sends render-only ship-local positions for entities supported by ships and anchored chairs.
-     * Clients use this to avoid vanilla's delayed global interpolation.
-     */
-    private static void syncShipLocalRenderPositionToClients(@NotNull final Entity entity) {
-        if (entity.world.isRemote || entity instanceof EntityPlayer) return;
-
-        IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
-        if (draggable == null) return;
-
-        ShipData mountedShip = null;
-        Vector3d localPosition = null;
-
-        ShipData lastTouchedShip = draggable.getLastTouchedShip();
-        boolean shipContactIsActive = lastTouchedShip != null && draggable.getTicksSinceTouchedShip() < VSConfig.ticksToStickToShip;
-
-        if (shipContactIsActive && isEntitySupportedByShip(entity, lastTouchedShip)) {
-            mountedShip = lastTouchedShip;
-            localPosition = new Vector3d(entity.posX, entity.posY, entity.posZ);
-            mountedShip.getShipTransform().transformPosition(localPosition, TransformType.GLOBAL_TO_SUBSPACE);
-        }
-
-        if (mountedShip == null) {
-            IShipAnchoredMount anchoredMount = entity.getCapability(VSCapabilityRegistry.VS_SHIP_ANCHORED_MOUNT, null);
-            if (anchoredMount != null && (anchoredMount.isAnchoredToShip() || anchoredMount.tryAnchorMount(entity))) {
-                Optional<PhysicsObject> mountedPhysicsObject = ValkyrienUtils.getPhysoManagingBlock(entity.world, anchoredMount.getLocalAnchorBlock());
-                if (mountedPhysicsObject.isPresent()) {
-                    mountedShip = mountedPhysicsObject.get().getShipData();
-                    localPosition = new Vector3d(
-                            anchoredMount.getLocalMountPos().x,
-                            anchoredMount.getLocalMountPos().y,
-                            anchoredMount.getLocalMountPos().z
-                    );
-                }
+            appliedYawMovement = (float) addedYawVelocity;
+            if (entity instanceof EntityLivingBase livingEntity) {
+                livingEntity.renderYawOffset += appliedYawMovement;
             }
         }
 
-        if (mountedShip == null && draggable.isShipLocalRenderSyncActive()) {
-            //remove render position
-            ValkyrienSkiesMod.physWrapperNetwork.sendToAllTracking(
-                    new MessageClearEntityShipRenderPosition(entity),
-                    entity
-            );
-            draggable.setShipLocalRenderSyncActive(false);
-        }
-        else if (mountedShip != null) {
-            //create render position
-            draggable.setShipLocalRenderSyncActive(true);
-            ValkyrienSkiesMod.physWrapperNetwork.sendToAllTracking(
-                    new MessageEntityShipRenderPosition(entity, mountedShip, localPosition),
-                    entity
-            );
+        if (!entity.getPassengers().isEmpty() && (draggable.getAddedLinearVelocity().lengthSquared() > 0D || appliedYawMovement != 0F)) {
+            updatePassengersAfterCarrierMovement(entity, appliedYawMovement);
         }
     }
 
     /**
-     * Checks whether the entity is standing on collision owned by the ship.
-     * This prevents ship-local render sync from applying to entities only pushed from the side.
+     * Repositions every rider in a carrier hierarchy and applies the carrier's ship-induced yaw exactly once.
      */
-    private static boolean isEntitySupportedByShip(@NotNull final Entity entity, @NotNull final ShipData shipData) {
-        final AxisAlignedBB entityBox = entity.getEntityBoundingBox();
-        final double insetX = Math.clamp((entityBox.maxX - entityBox.minX) * 0.25D, 0.0D, 0.05D);
-        final double insetZ = Math.clamp((entityBox.maxZ - entityBox.minZ) * 0.25D, 0.0D, 0.05D);
-        final AxisAlignedBB supportProbe = new AxisAlignedBB(
-                entityBox.minX + insetX,
-                entityBox.minY - 0.15D,
-                entityBox.minZ + insetZ,
-                entityBox.maxX - insetX,
-                entityBox.minY + 0.05D,
-                entityBox.maxZ - insetZ
+    private static void updatePassengersAfterCarrierMovement(@NotNull Entity carrier, float yawMovement) {
+        for (Entity passenger : carrier.getPassengers()) {
+            passenger.rotationYaw += yawMovement;
+            passenger.setRotationYawHead(passenger.getRotationYawHead() + yawMovement);
+            if (passenger instanceof EntityLivingBase livingPassenger) {
+                livingPassenger.renderYawOffset += yawMovement;
+            }
+            updatePassengerPosition(carrier, passenger);
+            updatePassengersAfterCarrierMovement(passenger, yawMovement);
+        }
+    }
+
+    /**
+     * Computes the render-time entity position after interpolating its non-ship movement in the ship's frame.
+     */
+    public static Vector3d getShipAdjustedRenderPosition(
+            Vector3dc previousPosition,
+            Vector3dc currentPosition,
+            Vector3dc addedShipMovement,
+            ShipTransform previousShipTransform,
+            ShipTransform renderShipTransform,
+            double partialTicks
+    ) {
+        double entityMovementX = currentPosition.x() - addedShipMovement.x() - previousPosition.x();
+        double entityMovementY = currentPosition.y() - addedShipMovement.y() - previousPosition.y();
+        double entityMovementZ = currentPosition.z() - addedShipMovement.z() - previousPosition.z();
+
+        Vector3d renderPosition = new Vector3d(previousPosition).add(
+                entityMovementX * partialTicks,
+                entityMovementY * partialTicks,
+                entityMovementZ * partialTicks
         );
-        final AxisAlignedBB localProbe = new TransformedAABB(
-                supportProbe,
-                shipData.getShipTransform(),
-                TransformType.GLOBAL_TO_SUBSPACE
-        ).getEnclosedAABB();
+        previousShipTransform.transformPosition(renderPosition, TransformType.GLOBAL_TO_SUBSPACE);
+        renderShipTransform.transformPosition(renderPosition, TransformType.SUBSPACE_TO_GLOBAL);
+        return renderPosition;
+    }
 
-        final int minX = MathHelper.floor(localProbe.minX);
-        final int minY = MathHelper.floor(localProbe.minY);
-        final int minZ = MathHelper.floor(localProbe.minZ);
-        final int maxX = MathHelper.floor(localProbe.maxX + 1.0D);
-        final int maxY = MathHelper.floor(localProbe.maxY + 1.0D);
-        final int maxZ = MathHelper.floor(localProbe.maxZ + 1.0D);
-        final List<AxisAlignedBB> collisionBoxes = new ArrayList<>();
+    /**
+     * Updates a rider from its carrier's current position without applying a vehicle's orientation callback twice.
+     */
+    public static void updatePassengerPosition(@NotNull Entity carrier, @NotNull Entity passenger) {
+        float carrierRotationYaw = carrier.rotationYaw;
+        float carrierRotationPitch = carrier.rotationPitch;
+        float carrierPreviousRotationYaw = carrier.prevRotationYaw;
+        float carrierPreviousRotationPitch = carrier.prevRotationPitch;
+        EntityLivingBase livingCarrier = carrier instanceof EntityLivingBase livingEntity ? livingEntity : null;
+        float carrierRenderYawOffset = livingCarrier == null ? 0F : livingCarrier.renderYawOffset;
+        float carrierPreviousRenderYawOffset = livingCarrier == null ? 0f : livingCarrier.prevRenderYawOffset;
+        float carrierRotationYawHead = livingCarrier == null ? 0f : livingCarrier.rotationYawHead;
+        float carrierPreviousRotationYawHead = livingCarrier == null ? 0f : livingCarrier.prevRotationYawHead;
 
-        for (int x = minX; x < maxX; x++) {
-            for (int y = minY; y < maxY; y++) {
-                for (int z = minZ; z < maxZ; z++) {
-                    final BlockPos localBlockPos = new BlockPos(x, y, z);
-                    final Optional<ShipData> managingShip = ValkyrienUtils.getShipManagingBlock(entity.world, localBlockPos);
-                    if (managingShip.isEmpty() || !managingShip.get().getUuid().equals(shipData.getUuid())) continue;
+        float rotationYaw = passenger.rotationYaw;
+        float rotationPitch = passenger.rotationPitch;
+        float previousRotationYaw = passenger.prevRotationYaw;
+        float previousRotationPitch = passenger.prevRotationPitch;
+        EntityLivingBase livingPassenger = passenger instanceof EntityLivingBase livingEntity ? livingEntity : null;
+        float renderYawOffset = livingPassenger == null ? 0f : livingPassenger.renderYawOffset;
+        float previousRenderYawOffset = livingPassenger == null ? 0f : livingPassenger.prevRenderYawOffset;
+        float rotationYawHead = livingPassenger == null ? 0f : livingPassenger.rotationYawHead;
+        float previousRotationYawHead = livingPassenger == null ? 0f : livingPassenger.prevRotationYawHead;
 
-                    collisionBoxes.clear();
-                    final IBlockState blockState = entity.world.getBlockState(localBlockPos);
-                    try {
-                        blockState.addCollisionBoxToList(entity.world, localBlockPos, localProbe, collisionBoxes, null, false);
-                    }
-                    catch (Throwable ignored) {
-                        try {
-                            final AxisAlignedBB fallbackBox = blockState.getCollisionBoundingBox(entity.world, localBlockPos);
-                            if (fallbackBox != null && fallbackBox.offset(localBlockPos).intersects(localProbe)) return true;
-                        }
-                        catch (Throwable ignoredFallback) {
-                            if (blockState.getMaterial().blocksMovement() && new AxisAlignedBB(localBlockPos).intersects(localProbe)) return true;
-                        }
-                    }
-                    if (!collisionBoxes.isEmpty()) return true;
-                }
-            }
+        carrier.updatePassenger(passenger);
+
+        carrier.rotationYaw = carrierRotationYaw;
+        carrier.rotationPitch = carrierRotationPitch;
+        carrier.prevRotationYaw = carrierPreviousRotationYaw;
+        carrier.prevRotationPitch = carrierPreviousRotationPitch;
+        if (livingCarrier != null) {
+            livingCarrier.renderYawOffset = carrierRenderYawOffset;
+            livingCarrier.prevRenderYawOffset = carrierPreviousRenderYawOffset;
+            livingCarrier.rotationYawHead = carrierRotationYawHead;
+            livingCarrier.prevRotationYawHead = carrierPreviousRotationYawHead;
         }
 
-        return false;
+        passenger.rotationYaw = rotationYaw;
+        passenger.rotationPitch = rotationPitch;
+        passenger.prevRotationYaw = previousRotationYaw;
+        passenger.prevRotationPitch = previousRotationPitch;
+        if (livingPassenger != null) {
+            livingPassenger.renderYawOffset = renderYawOffset;
+            livingPassenger.prevRenderYawOffset = previousRenderYawOffset;
+            livingPassenger.rotationYawHead = rotationYawHead;
+            livingPassenger.prevRotationYawHead = previousRotationYawHead;
+        }
     }
 
     /**
@@ -349,7 +476,7 @@ public class EntityDraggable {
      * @param entity The entity to be moved
      * @return The vector that the entity actually moved, after detecting collisions with blocks in the world.
      */
-    public static Vector3dc applyAddedVelocity(final Vector3dc addedVelocity, final Entity entity) {
+    public static Vector3dc applyAddedVelocity(Vector3dc addedVelocity, Entity entity) {
         double x = addedVelocity.x();
         double y = addedVelocity.y();
         double z = addedVelocity.z();

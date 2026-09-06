@@ -19,8 +19,7 @@ import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 public class ClientProxy extends CommonProxy {
     // This can be called from addon code because it doesnt set namespace:id.
     public void registerItemRender(Item item, int meta) {
-        ModelLoader.setCustomModelResourceLocation(item, meta,
-            new ModelResourceLocation(item.getRegistryName(), "inventory"));
+        ModelLoader.setCustomModelResourceLocation(item, meta, new ModelResourceLocation(item.getRegistryName(), "inventory"));
     }
 
     @Override
@@ -39,8 +38,6 @@ public class ClientProxy extends CommonProxy {
 
         // When Minecraft reloads resources tell GibsModelRegistry to delete all its caches.
         mcResourceManager.registerReloadListener(GibsModelRegistry::onResourceManagerReload);
-
-        registerAnimations();
     }
 
     @Override
@@ -50,10 +47,6 @@ public class ClientProxy extends CommonProxy {
 
         registerBlockItem(ValkyrienSkiesMod.INSTANCE.captainsChair);
         registerBlockItem(ValkyrienSkiesMod.INSTANCE.passengerChair);
-    }
-
-    private void registerAnimations() {
-
     }
 
     // Registers the inventory model for the ItemBlock of "toRegister"
@@ -66,5 +59,4 @@ public class ClientProxy extends CommonProxy {
                         ValkyrienSkiesMod.MOD_ID + ":" + item.getTranslationKey()
                                 .substring(5), "inventory"));
     }
-
 }

@@ -5,7 +5,11 @@
   "target": "@env(DEFAULT)",
   "client": [
     "client.MixinMinecraft",
+    "client.entity.MixinEntityBoatInterpolation",
+    "client.entity.MixinEntityMinecartInterpolation",
+    "client.entity.MixinEntityOtherPlayerMPInterpolation",
     "client.entity.MixinEntityPlayerSP",
+    "client.network.MixinNetHandlerPlayClient",
     "client.particle.MixinParticleManager",
     "client.renderer.MixinEntityRenderer",
     "client.renderer.MixinRenderGlobal",
