@@ -2,14 +2,14 @@ package org.valkyrienskies.mixin.entity;
 
 import net.minecraft.block.material.Material;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.MoverType;
-import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import org.joml.Vector3d;
+import org.joml.Vector3dc;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
@@ -30,6 +30,7 @@ import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import org.valkyrienskies.api.TransformType;
 
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.valkyrienskies.mod.common.util.ValkyrienUtils.getLastShipTouchedByEntity;
 
@@ -334,5 +335,80 @@ public abstract class MixinEntity {
         if (mount.isAnchoredToShip()) {
             callbackInfo.setReturnValue(mount.getLocalAnchorBlock());
         }
+    }
+
+    /**
+     * Mostly to help out in making position on ship persistent
+     */
+    @Inject(method = "writeToNBT", at = @At("RETURN"))
+    private void saveShipPosition(NBTTagCompound compound, CallbackInfoReturnable<NBTTagCompound> callbackInfo) {
+        Entity entity = (Entity) (Object) this;
+        if (entity.world == null || entity.world.isRemote) return;
+
+        UUID shipId = null;
+        Vector3d localPosition = null;
+
+        //get from entity thats collidin w ship
+        IEntityShipDraggable entityDraggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
+        if (entityDraggable != null) {
+            Vector3dc pendingLocalPosition = entityDraggable.getPendingShipLocalPosition();
+            if (entityDraggable.getPendingShipId() != null && pendingLocalPosition != null) {
+                shipId = entityDraggable.getPendingShipId();
+                localPosition = new Vector3d(pendingLocalPosition);
+            }
+        }
+
+        //get from entity thats on a modded chair entity
+        if (shipId == null) {
+            ShipData carryingShip = null;
+            Entity rootCarrier = entity;
+            Entity ridingEntity = rootCarrier.getRidingEntity();
+            while (ridingEntity != null) {
+                rootCarrier = ridingEntity;
+                ridingEntity = rootCarrier.getRidingEntity();
+            }
+            IEntityShipDraggable rootDraggable = rootCarrier.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
+            if (rootDraggable != null && rootDraggable.getLastTouchedShip() != null
+                    && rootDraggable.getTicksSinceTouchedShip() < VSConfig.ticksToStickToShip
+            ) {
+                carryingShip = rootDraggable.getLastTouchedShip();
+            }
+
+            if (carryingShip == null) return;
+
+            shipId = carryingShip.getUuid();
+            localPosition = new Vector3d(entity.posX, entity.posY, entity.posZ);
+            carryingShip.getShipTransform().transformPosition(localPosition, TransformType.GLOBAL_TO_SUBSPACE);
+        }
+
+        NBTTagCompound shipPosition = new NBTTagCompound();
+        shipPosition.setUniqueId("Ship", shipId);
+        shipPosition.setDouble("X", localPosition.x);
+        shipPosition.setDouble("Y", localPosition.y);
+        shipPosition.setDouble("Z", localPosition.z);
+        compound.setTag("VSShipPosition", shipPosition);
+    }
+
+    /**
+     * same here lol
+     */
+    @Inject(method = "readFromNBT", at = @At("RETURN"))
+    private void restoreShipPosition(NBTTagCompound compound, CallbackInfo callbackInfo) {
+        Entity entity = (Entity) (Object) this;
+        if (entity.world == null || entity.world.isRemote || !compound.hasKey("VSShipPosition", 10)) {
+            return;
+        }
+
+        NBTTagCompound shipPosition = compound.getCompoundTag("VSShipPosition");
+        if (!shipPosition.hasUniqueId("Ship")) return;
+
+        IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
+        if (draggable == null) return;
+
+        draggable.setPendingShipPosition(shipPosition.getUniqueId("Ship"), new Vector3d(
+                shipPosition.getDouble("X"),
+                shipPosition.getDouble("Y"),
+                shipPosition.getDouble("Z")
+        ));
     }
 }

@@ -5,6 +5,7 @@ import org.joml.Vector3dc;
 import org.valkyrienskies.mod.common.ships.ShipData;
 
 import javax.annotation.Nullable;
+import java.util.UUID;
 
 public interface IEntityShipDraggable {
     //---ship contact info---
@@ -32,6 +33,17 @@ public interface IEntityShipDraggable {
     double getAddedYawVelocity();
 
     void setAddedYawVelocity(double value);
+
+    //---position restoration after loading---
+    @Nullable
+    UUID getPendingShipId();
+
+    @Nullable
+    Vector3dc getPendingShipLocalPosition();
+
+    void setPendingShipPosition(@Nullable UUID shipId, @Nullable Vector3dc localPosition);
+
+    void clearPendingShipPosition();
 
     //---server-controlled movement in ship coordinates---
     @Nullable

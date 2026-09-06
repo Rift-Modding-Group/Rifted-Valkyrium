@@ -13,6 +13,7 @@ import org.joml.Matrix4d;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
+import org.valkyrienskies.mod.common.capability.VSWorldDataCapability;
 import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMount;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.ShipLocalEntityMovementData;
@@ -27,6 +28,7 @@ import org.valkyrienskies.api.TransformType;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * This class handles the logic of moving entities with the ships they're interacting with.
@@ -84,6 +86,48 @@ public class EntityDraggable {
     private static void addEntityVelocityFromShipBelow(@NotNull Entity entity) {
         IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
         if (draggable == null) return;
+
+        UUID pendingShipId = draggable.getPendingShipId();
+        Vector3dc pendingLocalPosition = draggable.getPendingShipLocalPosition();
+        if (!entity.world.isRemote && pendingShipId != null && pendingLocalPosition != null) {
+            VSWorldDataCapability worldData = entity.world.getCapability(VSCapabilityRegistry.VS_WORLD_DATA, null);
+            if (worldData == null) return;
+
+            ShipData pendingShip = worldData.get().getQueryableShipData().getShip(pendingShipId).orElse(null);
+            if (pendingShip == null) {
+                draggable.clearPendingShipPosition();
+            }
+            else {
+                Vector3d worldPosition = new Vector3d(pendingLocalPosition);
+                pendingShip.getShipTransform().transformPosition(worldPosition, TransformType.SUBSPACE_TO_GLOBAL);
+                entity.setPosition(worldPosition.x, worldPosition.y, worldPosition.z);
+                entity.prevPosX = worldPosition.x;
+                entity.prevPosY = worldPosition.y;
+                entity.prevPosZ = worldPosition.z;
+                entity.lastTickPosX = worldPosition.x;
+                entity.lastTickPosY = worldPosition.y;
+                entity.lastTickPosZ = worldPosition.z;
+                entity.motionX = 0D;
+                entity.motionY = 0D;
+                entity.motionZ = 0D;
+                entity.fallDistance = 0f;
+                entity.onGround = true;
+
+                IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(entity.world);
+                PhysicsObject physicsObject = physObjectWorld == null
+                        ? null : physObjectWorld.getPhysObjectFromUUID(pendingShipId);
+                if (physicsObject != null) {
+                    draggable.clearPendingShipPosition();
+                }
+
+                draggable.setLastTouchedShip(pendingShip);
+                draggable.setTicksSinceTouchedShip(0);
+                draggable.setTicksPartOfGround(0);
+                draggable.setAddedLinearVelocity(new Vector3d());
+                draggable.setAddedYawVelocity(0D);
+                return;
+            }
+        }
 
         ShipLocalEntityMovementData shipLocalMovementData = draggable.getShipLocalMovementData();
         if (entity.world.isRemote && shipLocalMovementData != null && shipLocalMovementData.isActive()) {
@@ -152,6 +196,11 @@ public class EntityDraggable {
         if (touchedShip != null) {
             IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(entity.world);
             if (physObjectWorld == null || physObjectWorld.getPhysObjectFromUUID(touchedShip.getUuid()) == null) {
+                if (!entity.world.isRemote) {
+                    Vector3d localPosition = new Vector3d(entity.posX, entity.posY, entity.posZ);
+                    touchedShip.getShipTransform().transformPosition(localPosition, TransformType.GLOBAL_TO_SUBSPACE);
+                    draggable.setPendingShipPosition(touchedShip.getUuid(), localPosition);
+                }
                 draggable.setLastTouchedShip(null);
             }
         }
