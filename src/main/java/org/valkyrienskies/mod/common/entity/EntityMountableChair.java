@@ -5,25 +5,25 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import org.valkyrienskies.mod.common.ships.ship_transform.CoordinateSpaceType;
 
+/**
+ * For vanilla passenger's chair
+ * */
 public class EntityMountableChair extends EntityMountable {
-
     // Minecraft requires this constructor.
     @SuppressWarnings("unused")
     public EntityMountableChair(World worldIn) {
         super(worldIn);
     }
 
-    public EntityMountableChair(World world, Vec3d mountPos,
-        CoordinateSpaceType coordinateSpaceType, BlockPos chairPos) {
+    public EntityMountableChair(World world, Vec3d mountPos, CoordinateSpaceType coordinateSpaceType, BlockPos chairPos) {
         super(world, mountPos, coordinateSpaceType, chairPos);
     }
 
     @Override
     public void onUpdate() {
-        if (!getReferencePosOptional().isPresent()) {
-            // Some error occurred, kill this chair.
-            new IllegalStateException("Chair mountable entity has no reference position.")
-                .printStackTrace();
+        // Some error occurred, kill this chair.
+        if (this.getReferencePosOptional().isEmpty()) {
+            new IllegalStateException("Chair mountable entity has no reference position.").printStackTrace();
             this.setDead();
             return;
         }

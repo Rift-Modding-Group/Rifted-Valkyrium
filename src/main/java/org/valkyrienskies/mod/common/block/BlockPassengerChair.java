@@ -32,7 +32,6 @@ import org.valkyrienskies.mod.common.util.BaseBlock;
 
 @ParametersAreNonnullByDefault
 public class BlockPassengerChair extends BaseBlock {
-
     public static final PropertyDirection FACING = BlockHorizontal.FACING;
 
     public BlockPassengerChair() {
@@ -61,15 +60,13 @@ public class BlockPassengerChair extends BaseBlock {
         if (!worldIn.isRemote) {
             Vec3d chairPos = getPlayerMountOffset(state, pos);
 
-            TileEntity chairTile = worldIn.getTileEntity(pos);
-            if (chairTile instanceof TileEntityPassengerChair) {
+            TileEntity tileEntity = worldIn.getTileEntity(pos);
+            if (tileEntity instanceof TileEntityPassengerChair chairTile) {
                 // Try mounting the player onto the chair if possible.
-                ((TileEntityPassengerChair) chairTile).tryToMountPlayerToChair(playerIn, chairPos);
+                chairTile.tryToMountPlayerToChair(playerIn, chairPos);
             }
             else {
-                new IllegalStateException(
-                    "world.getTileEntity() returned a tile that wasn't a chair at pos " + pos)
-                    .printStackTrace();
+                new IllegalStateException("world.getTileEntity() returned a tile that wasn't a chair at pos " + pos).printStackTrace();
             }
         }
         return true;
@@ -77,9 +74,9 @@ public class BlockPassengerChair extends BaseBlock {
 
     @Override
     public void breakBlock(World worldIn, BlockPos pos, IBlockState state) {
-        TileEntity passengerChair = worldIn.getTileEntity(pos);
-        if (passengerChair instanceof TileEntityPassengerChair && !passengerChair.isInvalid()) {
-            ((TileEntityPassengerChair) passengerChair).onBlockBroken(state);
+        TileEntity tileEntity = worldIn.getTileEntity(pos);
+        if (tileEntity instanceof TileEntityPassengerChair passengerChair && !tileEntity.isInvalid()) {
+            passengerChair.onBlockBroken(state);
         }
         super.breakBlock(worldIn, pos, state);
     }
@@ -148,5 +145,4 @@ public class BlockPassengerChair extends BaseBlock {
     public AxisAlignedBB getCollisionBoundingBox(IBlockState blockState, IBlockAccess worldIn, BlockPos pos) {
         return null;
     }
-
 }
