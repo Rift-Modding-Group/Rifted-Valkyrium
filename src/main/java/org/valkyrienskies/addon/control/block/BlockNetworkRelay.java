@@ -170,21 +170,11 @@ public class BlockNetworkRelay extends BlockNodeComponentBasic {
         super.breakBlock(worldIn, pos, state);
     }
 
-    //believe it or not all the code below is copied from BlockLever
     @Override
     public void neighborChanged(IBlockState state, World worldIn, BlockPos pos, Block blockIn, BlockPos fromPos) {
-        if (this.checkCanSurvive(worldIn, pos, state) && !BlockButton.canPlaceBlock(worldIn, pos, state.getValue(FACING))) {
+        if (!BlockButton.canPlaceBlock(worldIn, pos, state.getValue(FACING))) {
             this.dropBlockAsItem(worldIn, pos, state, 0);
             worldIn.setBlockToAir(pos);
-        }
-    }
-
-    private boolean checkCanSurvive(World worldIn, BlockPos pos, IBlockState state) {
-        if (this.canPlaceBlockAt(worldIn, pos)) return true;
-        else {
-            this.dropBlockAsItem(worldIn, pos, state, 0);
-            worldIn.setBlockToAir(pos);
-            return false;
         }
     }
 }
