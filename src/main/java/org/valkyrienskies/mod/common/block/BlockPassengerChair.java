@@ -65,7 +65,8 @@ public class BlockPassengerChair extends BaseBlock {
             if (chairTile instanceof TileEntityPassengerChair) {
                 // Try mounting the player onto the chair if possible.
                 ((TileEntityPassengerChair) chairTile).tryToMountPlayerToChair(playerIn, chairPos);
-            } else {
+            }
+            else {
                 new IllegalStateException(
                     "world.getTileEntity() returned a tile that wasn't a chair at pos " + pos)
                     .printStackTrace();
@@ -84,26 +85,20 @@ public class BlockPassengerChair extends BaseBlock {
     }
 
     @Override
-    public void addInformation(ItemStack stack, @Nullable World player,
-        List<String> itemInformation, ITooltipFlag advanced) {
+    public void addInformation(ItemStack stack, @Nullable World player, List<String> itemInformation, ITooltipFlag advanced) {
         itemInformation.add(TextFormatting.ITALIC + "" + TextFormatting.BLUE + I18n
             .format("tooltip.valkyrienskies.passenger_chair"));
     }
 
     private @NotNull Vec3d getPlayerMountOffset(IBlockState state, BlockPos pos) {
         EnumFacing facing = state.getValue(FACING);
-        switch (facing) {
-            case NORTH:
-                return new Vec3d(pos.getX() + .5, pos.getY(), pos.getZ() + .6);
-            case SOUTH:
-                return new Vec3d(pos.getX() + .5, pos.getY(), pos.getZ() + .4);
-            case WEST:
-                return new Vec3d(pos.getX() + .6, pos.getY(), pos.getZ() + .5);
-            case EAST:
-                return new Vec3d(pos.getX() + .4, pos.getY(), pos.getZ() + .5);
-            default:
-                return new Vec3d(pos.getX() + .5, pos.getY(), pos.getZ() + .5);
-        }
+        return switch (facing) {
+            case NORTH -> new Vec3d(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.6);
+            case SOUTH -> new Vec3d(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.4);
+            case WEST -> new Vec3d(pos.getX() + 0.6, pos.getY(), pos.getZ() + 0.5);
+            case EAST -> new Vec3d(pos.getX() + 0.4, pos.getY(), pos.getZ() + 0.5);
+            default -> new Vec3d(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
+        };
     }
 
     @Override

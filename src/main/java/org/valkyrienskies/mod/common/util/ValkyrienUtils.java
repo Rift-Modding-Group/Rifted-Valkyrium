@@ -172,8 +172,7 @@ public final class ValkyrienUtils {
         ));
     }
 
-    public static void fixEntityToShip(Entity toFix, Vector3dc posInLocal,
-                                       PhysicsObject mountingShip) {
+    public static void fixEntityToShip(Entity toFix, Vector3dc posInLocal, PhysicsObject mountingShip) {
         World world = mountingShip.getWorld();
         EntityMountable entityMountable = new EntityMountable(world, JOML.toMinecraft(posInLocal),
                 CoordinateSpaceType.SUBSPACE_COORDINATES, mountingShip.getReferenceBlockPos());
@@ -182,14 +181,12 @@ public final class ValkyrienUtils {
     }
 
     private static @NotNull VSWorldDataCapability getWorldDataCapability(World world) {
-        VSWorldDataCapability worldData = world
-                .getCapability(VSCapabilityRegistry.VS_WORLD_DATA, null);
+        VSWorldDataCapability worldData = world.getCapability(VSCapabilityRegistry.VS_WORLD_DATA, null);
         if (worldData == null) {
             // I hate it when other mods add their custom worlds without calling the forge world
             // load events, so I don't feel bad crashing the game here. Although we could also get
             // away with just adding the capability to world instead of crashing.
-            throw new IllegalStateException(
-                    "World " + world + " doesn't have an VSWorldDataCapability. This is wrong!");
+            throw new IllegalStateException("World " + world + " doesn't have an VSWorldDataCapability. This is wrong!");
         }
 
         return worldData;
