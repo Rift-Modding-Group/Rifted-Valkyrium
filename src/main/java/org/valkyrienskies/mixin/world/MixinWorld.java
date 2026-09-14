@@ -22,24 +22,30 @@ import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.config.VSConfig.ExplosionMode;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
+import org.valkyrienskies.mod.common.ships.ship_world.IHasShipManager;
+import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.TransformedAABB;
 import org.valkyrienskies.mod.common.util.VSMath;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import org.valkyrienskies.mod.fixes.MixinWorldIntrinsicMethods;
-import org.valkyrienskies.api.TransformType;
+import valkyrienwarfare.api.TransformType;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 
 // TODO: This class is horrible
 //       Who cares lol ~Tri0de
 //       Well I don't care at least xd ~Zoroark
 @Mixin(value = World.class, priority = 2018)
-@Implements(@Interface(iface = MixinWorldIntrinsicMethods.class, prefix = "vs$", remap = Remap.NONE))
+@Implements({
+        @Interface(iface = MixinWorldIntrinsicMethods.class, prefix = "vs$", remap = Remap.NONE),
+        @Interface(iface = IHasShipManager.class, prefix = "legacy$", remap = Remap.NONE)
+})
 public abstract class MixinWorld {
     private static final double MAX_ENTITY_RADIUS_ALT = 2;
     private static final double BOUNDING_BOX_EDGE_LIMIT = 120000000;
@@ -47,6 +53,31 @@ public abstract class MixinWorld {
 
     @Shadow
     protected List<IWorldEventListener> eventListeners;
+
+    /**
+     * Bridges integrations compiled against the former world-backed ship manager to its
+     * capability-backed replacement.
+     */
+    public IPhysObjectWorld legacy$getManager() {
+        World world = (World) ((Object) this);
+        IShipWorld shipWorld = world.getCapability(VSCapabilityRegistry.VS_SHIP_WORLD, null);
+        if (shipWorld == null || shipWorld.getManager() == null) {
+            throw new IllegalStateException("Cannot access the ship manager before its world capability is initialized");
+        }
+        return shipWorld.getManager();
+    }
+
+    /**
+     * Bridges the legacy manager initializer to the ship-world capability.
+     */
+    public void legacy$setManager(Function<World, IPhysObjectWorld> managerSupplier) {
+        World world = (World) ((Object) this);
+        IShipWorld shipWorld = world.getCapability(VSCapabilityRegistry.VS_SHIP_WORLD, null);
+        if (shipWorld == null) {
+            throw new IllegalStateException("Cannot initialize the ship manager without its world capability");
+        }
+        shipWorld.setManager(managerSupplier.apply(world));
+    }
 
     private static boolean isBoundingBoxTooLarge(AxisAlignedBB alignedBB) {
         if ((alignedBB.maxX - alignedBB.minX) * (alignedBB.maxY - alignedBB.minY) * (alignedBB.maxZ

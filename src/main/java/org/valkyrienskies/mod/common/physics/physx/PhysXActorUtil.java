@@ -4,11 +4,9 @@ import org.joml.Quaterniond;
 import org.joml.Quaterniondc;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
-import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import physx.common.PxQuat;
 import physx.common.PxTransform;
 import physx.common.PxVec3;
-import org.valkyrienskies.api.TransformType;
 
 /**
  * Helper class to convert joml vectors and quaternions into their counterparts for physX.

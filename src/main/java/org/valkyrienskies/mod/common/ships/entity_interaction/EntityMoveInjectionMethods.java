@@ -5,11 +5,10 @@ import net.minecraft.entity.MoverType;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.math.BlockPos;
 import org.joml.Vector3d;
-import org.valkyrienskies.mod.common.ships.entity_interaction.EntityCollisionInjector;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityCollisionInjector.IntermediateMovementVariableStorage;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
-import org.valkyrienskies.api.TransformType;
+import valkyrienwarfare.api.TransformType;
 
 import java.util.Optional;
 

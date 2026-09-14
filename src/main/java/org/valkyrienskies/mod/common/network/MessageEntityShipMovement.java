@@ -16,7 +16,7 @@ import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
-import org.valkyrienskies.api.TransformType;
+import valkyrienwarfare.api.TransformType;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMount;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;

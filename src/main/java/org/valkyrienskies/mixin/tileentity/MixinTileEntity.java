@@ -9,7 +9,7 @@ import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
-import org.valkyrienskies.api.TransformType;
+import valkyrienwarfare.api.TransformType;
 
 import java.util.Optional;
 

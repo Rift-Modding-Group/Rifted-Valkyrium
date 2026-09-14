@@ -27,7 +27,7 @@ import org.valkyrienskies.mod.common.physics.PhysicsCalculations;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.tileentity.TileEntityBoatChair;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
-import org.valkyrienskies.api.TransformType;
+import valkyrienwarfare.api.TransformType;
 
 import javax.annotation.Nullable;
 import java.util.List;

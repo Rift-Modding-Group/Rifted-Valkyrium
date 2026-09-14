@@ -31,6 +31,7 @@ import org.valkyrienskies.mod.common.ships.physics_data.IPhysicsObjectCenterOfMa
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.util.multithreaded.CalledFromWrongThreadException;
 import org.valkyrienskies.mod.common.util.multithreaded.VSWorldPhysicsLoop;
+import valkyrienwarfare.api.TransformType;
 
 import javax.annotation.Nonnull;
 import java.util.*;
@@ -377,7 +378,7 @@ public class WorldServerShipManager implements IPhysObjectWorld {
             originalTransform.getPosX() + positionOffset.x,
             originalTransform.getPosY() + positionOffset.y,
             originalTransform.getPosZ() + positionOffset.z,
-            originalTransform.rotationQuaternion(org.valkyrienskies.api.TransformType.SUBSPACE_TO_GLOBAL),
+            originalTransform.rotationQuaternion(TransformType.SUBSPACE_TO_GLOBAL),
             newCenter
         );
         shipData.setShipTransform(correctedTransform);

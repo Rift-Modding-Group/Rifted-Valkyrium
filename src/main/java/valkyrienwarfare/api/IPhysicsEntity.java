@@ -1,4 +1,4 @@
-package org.valkyrienskies.api;
+package valkyrienwarfare.api;
 
 import net.minecraft.util.math.Vec3d;
 

@@ -23,10 +23,9 @@ import org.valkyrienskies.addon.control.network.VSNodeControlMessage;
 import org.valkyrienskies.addon.control.nodecontrols.NodeControl;
 import org.valkyrienskies.addon.control.nodecontrols.NodeKeyHandler;
 import org.valkyrienskies.addon.control.nodenetwork.VSNode_TileEntity;
-import org.valkyrienskies.mod.common.network.VSNetwork;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
-import org.valkyrienskies.api.TransformType;
+import valkyrienwarfare.api.TransformType;
 
 import java.util.Map;
 import java.util.Optional;

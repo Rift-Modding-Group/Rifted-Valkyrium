@@ -4,7 +4,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
-import org.valkyrienskies.api.TransformType;
+import valkyrienwarfare.api.TransformType;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 
 import java.util.UUID;

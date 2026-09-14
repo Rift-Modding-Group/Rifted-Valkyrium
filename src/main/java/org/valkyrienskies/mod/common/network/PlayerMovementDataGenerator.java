@@ -10,7 +10,7 @@ import org.valkyrienskies.mod.common.ships.entity_interaction.EntityShipMountDat
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.util.JOML;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
-import org.valkyrienskies.api.TransformType;
+import valkyrienwarfare.api.TransformType;
 
 import java.util.UUID;
 

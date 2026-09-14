@@ -10,7 +10,7 @@ import org.valkyrienskies.mod.common.piloting.PilotControls;
 import org.valkyrienskies.mod.common.piloting.PilotControlsMessage;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
-import org.valkyrienskies.api.TransformType;
+import valkyrienwarfare.api.TransformType;
 
 import javax.annotation.Nullable;
 

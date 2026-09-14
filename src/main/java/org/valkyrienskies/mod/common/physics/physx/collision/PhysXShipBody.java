@@ -24,10 +24,8 @@ import org.valkyrienskies.mod.common.block.IBlockTorqueProvider;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.physics.GreedyBlockMerger;
 import org.valkyrienskies.mod.common.physics.PhysicsUtils;
-import org.valkyrienskies.mod.common.physics.physx.IPhysicsBlockController;
 import org.valkyrienskies.mod.common.physics.physx.PhysXActor;
 import org.valkyrienskies.mod.common.physics.physx.PhysXActorUtil;
-import org.valkyrienskies.mod.common.physics.physx.PhysXCollisionFilters;
 import org.valkyrienskies.mod.common.physics.PhysicsCalculations;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
@@ -39,12 +37,11 @@ import physx.physics.PxActorFlagEnum;
 import physx.physics.PxForceModeEnum;
 import physx.physics.PxMaterial;
 import physx.physics.PxPhysics;
-import physx.physics.PxRigidActor;
 import physx.physics.PxRigidBodyFlagEnum;
 import physx.physics.PxRigidDynamic;
 import physx.physics.PxScene;
 import physx.physics.PxShape;
-import org.valkyrienskies.api.TransformType;
+import valkyrienwarfare.api.TransformType;
 
 import java.util.*;
 

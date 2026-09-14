@@ -18,7 +18,7 @@ import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShi
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
-import org.valkyrienskies.api.TransformType;
+import valkyrienwarfare.api.TransformType;
 
 import java.util.ArrayList;
 import java.util.List;

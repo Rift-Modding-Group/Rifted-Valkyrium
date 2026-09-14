@@ -1,4 +1,4 @@
-package org.valkyrienskies.api;
+package valkyrienwarfare.api;
 
 /**
  * A simple enum used to tell the ship transform which coordinates system we are
