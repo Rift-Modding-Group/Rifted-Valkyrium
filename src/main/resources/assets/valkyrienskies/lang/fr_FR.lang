@@ -37,6 +37,9 @@ valkyrienskies.general.shiplowerlimit.tooltip=
 valkyrienskies.general.shipupperlimit=Ship Y Position Maximum
 valkyrienskies.general.shipupperlimit.tooltip=
 
+valkyrienskies.general.atmosphericpressureceiling=Plafond de pression atmosphérique
+valkyrienskies.general.atmosphericpressureceiling.tooltip=Les forces ascendantes des blocs physiques diminuent avec l'altitude et atteignent zéro ici. La valeur par défaut est 256.
+
 valkyrienskies.general.dogravity=Enable Gravity
 valkyrienskies.general.dogravity.tooltip=
 

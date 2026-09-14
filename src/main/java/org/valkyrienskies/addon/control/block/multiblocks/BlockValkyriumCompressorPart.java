@@ -63,6 +63,11 @@ public class BlockValkyriumCompressorPart extends BaseBlock implements ITileEnti
     }
 
     @Override
+    public boolean affectedByAtmosphericPressure() {
+        return false;
+    }
+
+    @Override
     public Vector3dc getBlockForceInShipSpace(World world, BlockPos pos, IBlockState state, PhysicsObject physicsObject) {
         if (!(world.getTileEntity(pos) instanceof TileEntityValkyriumCompressorPart tileCompressorPart)) return null;
         return tileCompressorPart.getForceOutputUnoriented(physicsObject);

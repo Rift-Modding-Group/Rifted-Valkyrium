@@ -38,6 +38,9 @@ valkyrienskies.general.shiplowerlimit.tooltip=
 valkyrienskies.general.shipupperlimit=Ship Y Position Maximum
 valkyrienskies.general.shipupperlimit.tooltip=
 
+valkyrienskies.general.atmosphericpressureceiling=Atmospheric Pressure Ceiling
+valkyrienskies.general.atmosphericpressureceiling.tooltip=Upward physics-block forces weaken with altitude and reach zero at this height. Default is 256.
+
 valkyrienskies.general.dogravity=Enable Gravity
 valkyrienskies.general.dogravity.tooltip=
 

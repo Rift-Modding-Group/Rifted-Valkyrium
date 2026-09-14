@@ -38,6 +38,9 @@ valkyrienskies.general.shiplowerlimit.tooltip=
 valkyrienskies.general.shipupperlimit=Ship Y Position Maximum
 valkyrienskies.general.shipupperlimit.tooltip=
 
+valkyrienskies.general.atmosphericpressureceiling=Atmosphärendruckgrenze
+valkyrienskies.general.atmosphericpressureceiling.tooltip=Aufwärts gerichtete Kräfte von Physikblöcken werden mit zunehmender Höhe schwächer und erreichen hier null. Standardwert ist 256.
+
 valkyrienskies.general.dogravity=Enable Gravity
 valkyrienskies.general.dogravity.tooltip=
 

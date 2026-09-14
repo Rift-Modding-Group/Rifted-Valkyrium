@@ -38,6 +38,9 @@ valkyrienskies.general.shiplowerlimit.tooltip=
 valkyrienskies.general.shipupperlimit=The highest waves!
 valkyrienskies.general.shipupperlimit.tooltip=
 
+valkyrienskies.general.atmosphericpressureceiling=The Sky Air's Ceiling
+valkyrienskies.general.atmosphericpressureceiling.tooltip=Upward tugs from physics blocks weaken as they climb and run dry here. Standards be 256.
+
 valkyrienskies.general.dogravity=Let Davy Jones tug at ye!
 valkyrienskies.general.dogravity.tooltip=
 

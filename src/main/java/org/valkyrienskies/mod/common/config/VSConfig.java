@@ -28,6 +28,14 @@ public class VSConfig extends VSConfigTemplate {
     @Name("Ship Y Position Maximum")
     public static double shipUpperLimit = 1000;
 
+    @Name("Atmospheric Pressure Ceiling")
+    @Comment({
+            "Upward forces from physics blocks weaken as they approach this world height.",
+            "They have full strength at Y=0 and no upward strength at or above this height. Default is 256."
+    })
+    @RangeDouble(min = 1D)
+    public static double atmosphericPressureCeiling = 256D;
+
     @Name("Enable Gravity")
     public static boolean doGravity = true;
 

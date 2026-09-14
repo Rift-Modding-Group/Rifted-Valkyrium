@@ -50,4 +50,11 @@ public interface IBlockForceProvider {
     default Vector3dc getCustomBlockForcePosition(World world, BlockPos pos, IBlockState state, PhysicsObject physicsObject) {
         return null;
     }
+
+    /**
+     * If you want your force-applying block to not be blocked by atmospheric pressure, override this
+     * */
+    default boolean affectedByAtmosphericPressure() {
+        return true;
+    }
 }

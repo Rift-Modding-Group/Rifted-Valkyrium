@@ -38,6 +38,9 @@ valkyrienskies.general.shiplowerlimit.tooltip=
 valkyrienskies.general.shipupperlimit=飞船最高高度
 valkyrienskies.general.shipupperlimit.tooltip=
 
+valkyrienskies.general.atmosphericpressureceiling=大气压力上限高度
+valkyrienskies.general.atmosphericpressureceiling.tooltip=物理方块产生的向上作用力随高度增加而减弱，并在此高度降至零。默认值为256。
+
 valkyrienskies.general.dogravity=启动物理
 valkyrienskies.general.dogravity.tooltip=
 

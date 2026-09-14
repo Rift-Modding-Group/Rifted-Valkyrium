@@ -38,6 +38,9 @@ valkyrienskies.general.shiplowerlimit.tooltip=
 valkyrienskies.general.shipupperlimit=Posición Y máxima de las naves
 valkyrienskies.general.shipupperlimit.tooltip=
 
+valkyrienskies.general.atmosphericpressureceiling=Límite de presión atmosférica
+valkyrienskies.general.atmosphericpressureceiling.tooltip=Las fuerzas ascendentes de los bloques físicos se debilitan con la altura y llegan a cero aquí. El valor predeterminado es 256.
+
 valkyrienskies.general.dogravity=Activar gravedad
 valkyrienskies.general.dogravity.tooltip=
 

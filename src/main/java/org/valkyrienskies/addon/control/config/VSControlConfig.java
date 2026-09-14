@@ -53,10 +53,6 @@ public class VSControlConfig extends VSConfigTemplate {
     @Config.Comment("Max torque in newton-meters")
     public static double dampenerMaxTorque = 10000;
 
-    @Config.Name("Valkyrium Compressor Max Height")
-    @Config.Comment("Valkyrium Compressor efficiency linearly decreases until it reaches 0 at this height")
-    public static double compressorMaxHeight = 500;
-
     @Config.Name("Engine Thrust Settings")
     @ShortName("engineThrust")
     @Config.Comment({

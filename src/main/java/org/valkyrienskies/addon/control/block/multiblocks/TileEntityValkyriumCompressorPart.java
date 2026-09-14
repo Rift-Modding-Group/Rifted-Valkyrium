@@ -6,14 +6,11 @@ import net.minecraft.world.World;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.valkyrienskies.addon.control.MultiblockRegistry;
-import org.valkyrienskies.addon.control.fuel.IValkyriumEngine;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
-import org.valkyrienskies.api.TransformType;
 
-import javax.annotation.Nonnull;
 import java.util.List;
 
-public class TileEntityValkyriumCompressorPart extends TileEntityMultiblockPartForce<ValkyriumCompressorMultiblockSchematic, TileEntityValkyriumCompressorPart> implements IValkyriumEngine {
+public class TileEntityValkyriumCompressorPart extends TileEntityMultiblockPartForce<ValkyriumCompressorMultiblockSchematic, TileEntityValkyriumCompressorPart> {
     private static final Vector3dc FORCE_NORMAL = new Vector3d(0, 1, 0);
     private double prevKeyframe;
     private double currentKeyframe;
@@ -54,19 +51,9 @@ public class TileEntityValkyriumCompressorPart extends TileEntityMultiblockPartF
     @Override
     public double getThrustMagnitude(PhysicsObject physicsObject) {
         if (this.isPartOfAssembledMultiblock() && this.getMaster() != null) {
-            return this.getMaxThrust() * this.getMaster().getThrustMultiplierGoal() * this.getCurrentValkyriumEfficiency(physicsObject);
+            return this.getMaxThrust() * this.getMaster().getThrustMultiplierGoal();
         }
         return 0;
-    }
-
-    @Override
-    public double getCurrentValkyriumEfficiency(@Nonnull PhysicsObject physicsObject) {
-        Vector3d tilePos = new Vector3d(this.getPos().getX() + 0.5D, this.getPos().getY() + 0.5D, this.getPos().getZ() + 0.5D);
-        physicsObject.getShipTransformationManager()
-            .getCurrentPhysicsTransform()
-            .transformPosition(tilePos, TransformType.SUBSPACE_TO_GLOBAL);
-        double yPos = tilePos.y;
-        return IValkyriumEngine.getValkyriumEfficiencyFromHeight(yPos);
     }
 
     public double getCurrentKeyframe(double partialTick) {

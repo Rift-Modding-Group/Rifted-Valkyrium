@@ -358,8 +358,10 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
     private void calculateForces(PhysicsCalculations calculations) {
         Vector3d blockForce = new Vector3d();
         Vector3d inBodyWO = new Vector3d();
+        Vector3d forcePositionInWorld = new Vector3d();
         Vector3d crossVector = new Vector3d();
         World world = this.ship.getWorld();
+        ShipTransform physicsTransform = this.ship.getShipTransformationManager().getCurrentPhysicsTransform();
 
         //forces from physics blocks
         if (VSConfig.doPhysicsBlocks) {
@@ -374,8 +376,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
                     //normal force blocks
                     if (blockAt instanceof IBlockForceProvider blockForceProvider) {
                         Vector3dc forceVector = blockForceProvider.getBlockForceInWorldSpace(
-                                world, mutablePos, state,
-                                this.ship
+                                world, mutablePos, state, this.ship
                         );
                         if (forceVector == null) blockForce.zero();
                         else {
@@ -385,17 +386,23 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
                         }
 
                         Vector3dc otherPosition = blockForceProvider.getCustomBlockForcePosition(
-                                world, mutablePos, state,
-                                this.ship
+                                world, mutablePos, state, this.ship
                         );
 
                         if (otherPosition != null) inBodyWO.set(otherPosition);
                         else inBodyWO.set(mutablePos.getX() + 0.5, mutablePos.getY() + 0.5, mutablePos.getZ() + 0.5);
 
+                        if (blockForce.y > 0D && blockForceProvider.affectedByAtmosphericPressure()) {
+                            forcePositionInWorld.set(inBodyWO);
+                            physicsTransform.transformPosition(forcePositionInWorld, TransformType.SUBSPACE_TO_GLOBAL);
+                            double atmosphericPressure = Math.clamp(
+                                    1D - forcePositionInWorld.y / VSConfig.atmosphericPressureCeiling, 0D, 1D
+                            );
+                            blockForce.y *= atmosphericPressure;
+                        }
+
                         inBodyWO.sub(calculations.getPhysCenterOfMass());
-                        this.ship.getShipTransformationManager()
-                                .getCurrentPhysicsTransform()
-                                .transformDirection(inBodyWO, TransformType.SUBSPACE_TO_GLOBAL);
+                        physicsTransform.transformDirection(inBodyWO, TransformType.SUBSPACE_TO_GLOBAL);
                         calculations.addForceAtPoint(inBodyWO, blockForce, crossVector);
                     }
                     //torque blocks
