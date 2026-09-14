@@ -198,10 +198,10 @@ tooltip.vs_control.legacy_engine=Legacy engine, only requires a redstone signal 
 
 ## Misc.
 tile.compacted_valkyrium.name=Compacted Valkyrium
-tooltip.vs_control.compacted_valkyrium=Lift force: %.0f Newtons.
+tooltip.vs_control.compacted_valkyrium=Lift force: %s.
 
 tile.buoyancy_tank.name=Buoyancy Tank
-tooltip.vs_control.buoyancy_tank=Fully submerged buoyancy: %.0f Newtons.
+tooltip.vs_control.buoyancy_tank=Fully submerged buoyancy: %s.
 
 tile.gyroscope_stabilizer.name=Ship Gyroscope Stabilizer
 tooltip.vs_control.gyroscope_stabilizer=This block passively provides torque to keep the ship level.

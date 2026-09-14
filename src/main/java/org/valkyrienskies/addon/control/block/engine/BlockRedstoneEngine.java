@@ -2,6 +2,7 @@ package org.valkyrienskies.addon.control.block.engine;
 
 import net.minecraft.block.material.Material;
 import org.valkyrienskies.addon.control.config.VSControlConfig;
+import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 
 public class BlockRedstoneEngine extends BlockAirshipEngineLore {
 
@@ -11,7 +12,8 @@ public class BlockRedstoneEngine extends BlockAirshipEngineLore {
 
     @Override
     public String getEnginePowerTooltip() {
-        return this.enginePower + " * redstone power level";
+        return ValkyrienUtils.formatMagnitude(this.enginePower)
+                + " * redstone power level";
     }
 
 }

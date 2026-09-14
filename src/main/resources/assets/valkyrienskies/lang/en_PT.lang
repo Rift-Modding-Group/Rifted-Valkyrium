@@ -198,10 +198,10 @@ tooltip.vs_control.legacy_engine=Let yer rowboat set sail with but a Redstone si
 
 ## Misc.
 tile.compacted_valkyrium.name=Squished Upballast
-tooltip.vs_control.compacted_valkyrium=Floatin' tug: %.0f knots.
+tooltip.vs_control.compacted_valkyrium=Floatin' tug: %s.
 
 tile.buoyancy_tank.name=Buoyancy Cask
-tooltip.vs_control.buoyancy_tank=Floatin' tug when sunk: %.0f newtons.
+tooltip.vs_control.buoyancy_tank=Floatin' tug when sunk: %s.
 
 tile.gyroscope_stabilizer.name=Listing Weights
 tooltip.vs_control.gyroscope_stabilizer=Arr, this weight prevents yer ship from listin'.

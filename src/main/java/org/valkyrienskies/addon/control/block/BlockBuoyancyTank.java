@@ -12,6 +12,7 @@ import org.valkyrienskies.addon.control.config.VSControlConfig;
 import org.valkyrienskies.mod.common.block.IBlockBuoyancyProvider;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.BaseBlock;
+import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -36,7 +37,8 @@ public class BlockBuoyancyTank extends BaseBlock implements IBlockBuoyancyProvid
     ) {
         itemInformation.add(
                 TextFormatting.GRAY + "" + TextFormatting.ITALIC + TextFormatting.BOLD
-                        + I18n.format("tooltip.vs_control.buoyancy_tank", VSControlConfig.buoyancyTankForce)
+                        + I18n.format("tooltip.vs_control.buoyancy_tank",
+                                ValkyrienUtils.formatMagnitude(VSControlConfig.buoyancyTankForce))
         );
     }
 }

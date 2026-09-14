@@ -198,10 +198,10 @@ tooltip.vs_control.legacy_engine=Motor antiguo que solo necesita una señal de r
 
 ## Misc.
 tile.compacted_valkyrium.name=Valkyrium compactado
-tooltip.vs_control.compacted_valkyrium=Fuerza de elevación: %.0f newtons.
+tooltip.vs_control.compacted_valkyrium=Fuerza de elevación: %s.
 
 tile.buoyancy_tank.name=Tanque de flotabilidad
-tooltip.vs_control.buoyancy_tank=Flotabilidad al estar completamente sumergido: %.0f newtons.
+tooltip.vs_control.buoyancy_tank=Flotabilidad al estar completamente sumergido: %s.
 
 tile.gyroscope_stabilizer.name=Giroscopio estabilizador de nave
 tooltip.vs_control.gyroscope_stabilizer=Este bloque proporciona torque de manera pasiva para mantener nivelada la nave.

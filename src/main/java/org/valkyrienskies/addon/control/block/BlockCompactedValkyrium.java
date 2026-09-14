@@ -14,6 +14,7 @@ import org.valkyrienskies.addon.control.config.VSControlConfig;
 import org.valkyrienskies.mod.common.util.BaseBlock;
 import org.valkyrienskies.mod.common.block.IBlockForceProvider;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
+import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -47,7 +48,8 @@ public class BlockCompactedValkyrium extends BaseBlock implements IBlockForcePro
         ITooltipFlag advanced) {
         itemInformation.add(
                 TextFormatting.GRAY + "" + TextFormatting.ITALIC + TextFormatting.BOLD +
-                I18n.format("tooltip.vs_control.compacted_valkyrium", VSControlConfig.compactedValkyriumLift)
+                I18n.format("tooltip.vs_control.compacted_valkyrium",
+                        ValkyrienUtils.formatMagnitude(VSControlConfig.compactedValkyriumLift))
         );
     }
 

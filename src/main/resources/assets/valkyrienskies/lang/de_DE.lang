@@ -198,10 +198,10 @@ tooltip.vs_control.legacy_engine=Legacy Motor, braucht bloß ein Redstone-Signal
 
 ## Misc.
 tile.compacted_valkyrium.name=Verdichtetes Valkyrium
-tooltip.vs_control.compacted_valkyrium=Auftriebskraft: %.0f Newton.
+tooltip.vs_control.compacted_valkyrium=Auftriebskraft: %s.
 
 tile.buoyancy_tank.name=Auftriebstank
-tooltip.vs_control.buoyancy_tank=Auftrieb bei vollständigem Eintauchen: %.0f Newton.
+tooltip.vs_control.buoyancy_tank=Auftrieb bei vollständigem Eintauchen: %s.
 
 tile.gyroscope_stabilizer.name=Schiffsstabilisationsgyroskop
 tooltip.vs_control.gyroscope_stabilizer=Dieser Block übt passiv ein Drehmoment auf das Schiff aus, um es zu horizontrieren.

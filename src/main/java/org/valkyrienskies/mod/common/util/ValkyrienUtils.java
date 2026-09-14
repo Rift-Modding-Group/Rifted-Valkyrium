@@ -43,6 +43,9 @@ import org.valkyrienskies.api.TransformType;
 
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -51,7 +54,6 @@ import java.util.UUID;
  */
 @ParametersAreNonnullByDefault
 public final class ValkyrienUtils {
-
     private ValkyrienUtils() {
         throw new UnsupportedOperationException("Utility class");
     }
@@ -368,5 +370,34 @@ public final class ValkyrienUtils {
         IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
         if (draggable == null) return null;
         return draggable.getLastTouchedShip();
+    }
+
+    /**
+     * Formats a force magnitude using the next SI unit whenever its absolute value reaches four digits
+     */
+    @NotNull
+    public static String formatMagnitude(double magnitude) {
+        return formatMagnitude(magnitude, 0);
+    }
+
+    @NotNull
+    private static String formatMagnitude(double magnitude, int unitIndex) {
+        if ((magnitude <= -1000D || magnitude >= 1000D) && unitIndex < 8) {
+            return formatMagnitude(magnitude / 1000D, unitIndex + 1);
+        }
+
+        String unit = switch (unitIndex) {
+            case 1 -> "kN";
+            case 2 -> "MN";
+            case 3 -> "GN";
+            case 4 -> "TN";
+            case 5 -> "PN";
+            case 6 -> "EN";
+            case 7 -> "ZN";
+            case 8 -> "YN";
+            default -> "N";
+        };
+        DecimalFormat magnitudeFormat = new DecimalFormat("0.##", DecimalFormatSymbols.getInstance(Locale.ROOT));
+        return magnitudeFormat.format(magnitude) + " " + unit;
     }
 }
