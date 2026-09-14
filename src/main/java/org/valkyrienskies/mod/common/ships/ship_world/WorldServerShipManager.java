@@ -198,16 +198,22 @@ public class WorldServerShipManager implements IPhysObjectWorld {
 
             Map<Long, Chunk> copiedChunksMap = new HashMap<>();
 
-            // First, copy the blocks and tiles to the new chunks
+            // Relocation-aware tiles need the complete destination set before any tile is copied.
             TIntIterator blocksIterator = detector.foundSet.iterator();
+            while (blocksIterator.hasNext()) {
+                int hashedPos = blocksIterator.next();
+                SpatialDetector.setPosWithRespectTo(hashedPos, detector.firstBlock, srcLocationPos);
+                pasteLocationPos.setPos(srcLocationPos.getX() + centerDifference.getX(), srcLocationPos.getY() + centerDifference.getY(), srcLocationPos.getZ() + centerDifference.getZ());
+                toSpawn.blockPositions.add(pasteLocationPos.getX(), pasteLocationPos.getY(), pasteLocationPos.getZ());
+            }
+
+            // First, copy the blocks and tiles to the new chunks
+            blocksIterator = detector.foundSet.iterator();
             while (blocksIterator.hasNext()) {
                 int hashedPos = blocksIterator.next();
                 SpatialDetector.setPosWithRespectTo(hashedPos, detector.firstBlock, srcLocationPos);
                 // Get the BlockPos from the hashedPos
                 pasteLocationPos.setPos(srcLocationPos.getX() + centerDifference.getX(), srcLocationPos.getY() + centerDifference.getY(), srcLocationPos.getZ() + centerDifference.getZ());
-
-                // Then add it to the ShipData block positions set
-                toSpawn.blockPositions.add(pasteLocationPos.getX(), pasteLocationPos.getY(), pasteLocationPos.getZ());
 
                 // Then create a chunk to accommodate this block (if one does not already exist).
                 int newChunkX = pasteLocationPos.getX() >> 4;

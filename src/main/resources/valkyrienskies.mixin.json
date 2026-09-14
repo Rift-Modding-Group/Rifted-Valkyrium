@@ -46,6 +46,7 @@
     "world.chunk.MixinBlockStateContainer",
     "world.chunk.MixinChunk",
     "world.gen.MixinChunkProviderServer",
+    "mod.fairylights.MixinBlockEntityFastener",
     "mod.rustic.MixinRusticEntityChair",
     "mod.spongeforge.MixinChunkSponge",
     "mod.spongeforge.MixinPacketUtil"
