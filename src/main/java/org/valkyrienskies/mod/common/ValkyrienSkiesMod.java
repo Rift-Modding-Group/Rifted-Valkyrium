@@ -1,5 +1,6 @@
 package org.valkyrienskies.mod.common;
 
+import com.cleanroommc.hackery.ReflectionHackery;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.block.Block;
 import net.minecraft.creativetab.CreativeTabs;
@@ -13,6 +14,8 @@ import net.minecraft.item.crafting.IRecipe;
 import net.minecraft.item.crafting.ShapedRecipes;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
 import net.minecraftforge.common.crafting.CraftingHelper;
 import net.minecraftforge.event.RegistryEvent;
 import net.minecraftforge.fml.common.Loader;
@@ -51,9 +54,13 @@ import org.valkyrienskies.mod.common.tileentity.TileEntityBoatChair;
 import org.valkyrienskies.mod.common.tileentity.TileEntityCaptainsChair;
 import org.valkyrienskies.mod.common.tileentity.TileEntityPassengerChair;
 import org.valkyrienskies.mod.common.tileentity.TileEntityWaterPump;
+import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import org.valkyrienskies.mod.fixes.darkness_lib_fix.VSDarknessLibAPILightProvider;
 import org.valkyrienskies.mod.proxy.CommonProxy;
+import valkyrienwarfare.api.IPhysicsEntity;
+import valkyrienwarfare.api.IPhysicsEntityManager;
 
+import javax.annotation.Nullable;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
@@ -115,6 +122,21 @@ public class ValkyrienSkiesMod {
 
 		VSCapabilityRegistry.registerCapabilities();
         proxy.preInit(event);
+
+        LOGGER.debug("Initializing the Rifted Valkyrium API.");
+        try {
+            Field instanceField = IPhysicsEntityManager.class.getDeclaredField("INSTANCE");
+            ReflectionHackery.setField(instanceField, null, new IPhysicsEntityManager() {
+                @Nullable
+                @Override
+                public IPhysicsEntity getPhysicsEntityFromShipSpace(World world, BlockPos pos) {
+                    return ValkyrienUtils.getPhysoManagingBlock(world, pos).orElse(null);
+                }
+            });
+        }
+        catch (Exception exception) {
+            LOGGER.fatal("Failed to initialize the Rifted Valkyrium API", exception);
+        }
 
         registerItems();
 		registerBlocks();

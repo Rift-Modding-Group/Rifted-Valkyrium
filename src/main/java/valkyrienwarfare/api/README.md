@@ -1,1 +1,1 @@
-VS1 never really had any addons even on 1.12.2 lmao. So the old API, which was in a separate JAR and repo, will be put here instead. No problems involving compatibility will ever happen from this, lol.
+The Rifted Valkyrium API, formerly the Valkyrien Warfare API. Now inlined. Most of the classes here are conserved to maintain compat w other mods that manually implement compat w VS in some way or another. Can't bother to force their authors to rewrite for Rifted Valkyrium smh.

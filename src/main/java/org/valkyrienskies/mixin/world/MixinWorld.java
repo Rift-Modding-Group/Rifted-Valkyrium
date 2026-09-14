@@ -54,6 +54,7 @@ public abstract class MixinWorld {
     @Shadow
     protected List<IWorldEventListener> eventListeners;
 
+    //-----legacy stuff starts here-----
     /**
      * Bridges integrations compiled against the former world-backed ship manager to its
      * capability-backed replacement.
@@ -78,6 +79,7 @@ public abstract class MixinWorld {
         }
         shipWorld.setManager(managerSupplier.apply(world));
     }
+    //-----legacy stuff ends here-----
 
     private static boolean isBoundingBoxTooLarge(AxisAlignedBB alignedBB) {
         if ((alignedBB.maxX - alignedBB.minX) * (alignedBB.maxY - alignedBB.minY) * (alignedBB.maxZ
