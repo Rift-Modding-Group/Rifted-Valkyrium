@@ -1,7 +1,9 @@
 package org.valkyrienskies.mod.common.ships.ship_world;
 
 import net.minecraft.client.multiplayer.ChunkProviderClient;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.network.play.server.SPacketEntityTeleport;
 import net.minecraft.network.play.server.SPacketUnloadChunk;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.math.AxisAlignedBB;
@@ -10,6 +12,7 @@ import net.minecraft.util.math.BlockPos.MutableBlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldServer;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.gen.ChunkProviderServer;
 import net.minecraftforge.fml.relauncher.Side;
@@ -18,6 +21,9 @@ import org.joml.Quaterniondc;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.valkyrienskies.mod.client.render.PhysObjectRenderManager;
+import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
+import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
+import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.physics.PhysicsCalculations;
 import org.valkyrienskies.mod.common.physics.BlockSectionList;
 import org.valkyrienskies.mod.common.physics.physx.IPhysicsBlockController;
@@ -239,37 +245,27 @@ public class PhysicsObject implements IPhysicsEntity {
         return Math.toDegrees(shipQuat.angle()) < 2;
     }
 
-    void destroyShip() {
-        // Then tell the game to stop tracking/loading the chunks
-        List<EntityPlayerMP> watchersCopy = new ArrayList<>(getWatchingPlayers());
-        for (ChunkPos chunkPos : getChunkClaim()) {
-            SPacketUnloadChunk unloadPacket = new SPacketUnloadChunk(chunkPos.x, chunkPos.z);
-            for (EntityPlayerMP wachingPlayer : watchersCopy) {
-                wachingPlayer.connection.sendPacket(unloadPacket);
-            }
-            // NOTICE: This method isnt being called to avoid the
-            // watchingPlayers.remove(player) call, which is a waste of CPU time
-            // onPlayerUntracking(wachingPlayer);
-        }
-        getWatchingPlayers().clear();
-
-        // Finally, copy all the blocks from the ship to the world
-        if (!getBlockPositions().isEmpty()) {
-            if (deconstructState.copyBlocks) {
+    public void destroyShip() {
+        //copy all the blocks from the ship to the world
+        if (!this.getBlockPositions().isEmpty()) {
+            if (this.deconstructState.copyBlocks) {
                 MutableBlockPos newPos = new MutableBlockPos();
 
-                ShipTransform currentTransform = getShipTransformationManager().getCurrentTickTransform();
-                Vector3dc position = new Vector3d(currentTransform.getPosX(), currentTransform.getPosY(),
-                        currentTransform.getPosZ());
+                ShipTransform currentTransform = this.getShipTransformationManager().getCurrentTickTransform();
+                Vector3dc position = new Vector3d(currentTransform.getPosX(), currentTransform.getPosY(), currentTransform.getPosZ());
 
                 BlockPos centerDifference = new BlockPos(
-                        Math.round(getCenterCoord().x() - position.x()),
-                        Math.round(getCenterCoord().y() - position.y()),
-                        Math.round(getCenterCoord().z() - position.z()));
+                        Math.round(this.getCenterCoord().x() - position.x()),
+                        Math.round(this.getCenterCoord().y() - position.y()),
+                        Math.round(this.getCenterCoord().z() - position.z())
+                );
 
                 for (BlockPos oldPos : this.getBlockPositions()) {
-                    newPos.setPos(oldPos.getX() - centerDifference.getX(),
-                            oldPos.getY() - centerDifference.getY(), oldPos.getZ() - centerDifference.getZ());
+                    newPos.setPos(
+                            oldPos.getX() - centerDifference.getX(),
+                            oldPos.getY() - centerDifference.getY(),
+                            oldPos.getZ() - centerDifference.getZ()
+                    );
                     MoveBlocks.copyBlockToPos(getWorld(), oldPos, newPos, null);
                 }
 
@@ -291,20 +287,79 @@ public class PhysicsObject implements IPhysicsEntity {
                         chunksRelit.add(changedChunkPos);
                     }
                 }
+
+                //the blocks discard the ship's remaining rotation when they return to the world grid
+                //project associated entities through that same transform so their contact points still line up
+                WorldServer serverWorld = (WorldServer) this.world;
+                for (Entity entity : this.world.loadedEntityList) {
+                    if (entity.isDead) continue;
+
+                    IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
+                    if (draggable == null) continue;
+
+                    ShipData touchedShip = draggable.getLastTouchedShip();
+                    if (touchedShip == null || !touchedShip.getUuid().equals(this.shipData.getUuid())
+                            || draggable.getTicksSinceTouchedShip() >= VSConfig.ticksToStickToShip
+                    ) {
+                        continue;
+                    }
+
+                    Vector3d deconstructedPosition = new Vector3d(entity.posX, entity.posY, entity.posZ);
+                    currentTransform.transformPosition(deconstructedPosition, TransformType.GLOBAL_TO_SUBSPACE);
+                    deconstructedPosition.sub(centerDifference.getX(), centerDifference.getY(), centerDifference.getZ());
+
+                    entity.setPosition(deconstructedPosition.x, deconstructedPosition.y, deconstructedPosition.z);
+                    entity.prevPosX = deconstructedPosition.x;
+                    entity.prevPosY = deconstructedPosition.y;
+                    entity.prevPosZ = deconstructedPosition.z;
+                    entity.lastTickPosX = deconstructedPosition.x;
+                    entity.lastTickPosY = deconstructedPosition.y;
+                    entity.lastTickPosZ = deconstructedPosition.z;
+
+                    draggable.setLastTouchedShip(null);
+                    draggable.setTicksSinceTouchedShip(VSConfig.ticksToStickToShip);
+                    draggable.setTicksPartOfGround(0);
+                    draggable.setAddedLinearVelocity(new Vector3d());
+                    draggable.setAddedYawVelocity(0D);
+                    draggable.clearPendingShipPosition();
+
+                    if (entity instanceof EntityPlayerMP player) {
+                        player.connection.setPlayerLocation(
+                                deconstructedPosition.x,
+                                deconstructedPosition.y,
+                                deconstructedPosition.z,
+                                player.rotationYaw,
+                                player.rotationPitch
+                        );
+                    }
+                    serverWorld.getEntityTracker().sendToTracking(entity, new SPacketEntityTeleport(entity));
+                }
             }
 
             // Just delete the tile entities in ship to prevent any dupe bugs.
             for (BlockPos oldPos : this.getBlockPositions()) {
-                getWorld().removeTileEntity(oldPos);
+                this.getWorld().removeTileEntity(oldPos);
             }
         }
 
-        // Delete all the old ship chunks
-        getClaimedChunkCache().deleteShipChunksFromWorld();
+        //send the ship chunk unloads after the replacement block updates
+        //clients keep colliding with the ship until its static world blocks have arrived,
+        //so entities remain at their last world-space position during teardown
+        List<EntityPlayerMP> watchersCopy = List.copyOf(this.getWatchingPlayers());
+        for (ChunkPos chunkPos : getChunkClaim()) {
+            SPacketUnloadChunk unloadPacket = new SPacketUnloadChunk(chunkPos.x, chunkPos.z);
+            for (EntityPlayerMP watchingPlayer : watchersCopy) {
+                watchingPlayer.connection.sendPacket(unloadPacket);
+            }
+        }
+        this.getWatchingPlayers().clear();
+
+        //delete all the old ship chunks
+        this.getClaimedChunkCache().deleteShipChunksFromWorld();
     }
 
     public Vector3dc getCenterCoord() {
-        return getShipData().getShipTransform().getCenterCoord();
+        return this.getShipData().getShipTransform().getCenterCoord();
     }
 
     // region VS API Functions
