@@ -27,6 +27,7 @@
   ],
   "mixins": [
     "entity.MixinEntity",
+    "entity.MixinEntityArrow",
     "entity.MixinEntityIntrinsic",
     "entity.MixinEntityLivingBase",
     "entity.MixinEntityMinecart",

@@ -172,10 +172,15 @@ public class ShipLocalEntityMovementData {
 
     @NotNull
     public Vector3d getWorldPosition(@NotNull ShipTransform shipTransform, double partialTicks) {
-        double clampedPartialTicks = Math.clamp(partialTicks, 0D, 1D);
-        Vector3d worldPosition = this.previousRelativePosition.lerp(this.relativePosition, clampedPartialTicks, new Vector3d());
+        Vector3d worldPosition = this.getRelativePosition(partialTicks);
         shipTransform.transformPosition(worldPosition, TransformType.SUBSPACE_TO_GLOBAL);
         return worldPosition;
+    }
+
+    @NotNull
+    public Vector3d getRelativePosition(double partialTicks) {
+        double clampedPartialTicks = Math.clamp(partialTicks, 0D, 1D);
+        return this.previousRelativePosition.lerp(this.relativePosition, clampedPartialTicks, new Vector3d());
     }
 
     @NotNull
@@ -186,9 +191,12 @@ public class ShipLocalEntityMovementData {
     }
 
     public double getWorldYaw(@NotNull ShipTransform shipTransform, double partialTicks) {
+        return transformYaw(shipTransform, this.getRelativeYaw(partialTicks), TransformType.SUBSPACE_TO_GLOBAL);
+    }
+
+    public double getRelativeYaw(double partialTicks) {
         double clampedPartialTicks = Math.clamp(partialTicks, 0D, 1D);
-        double interpolatedYaw = this.previousRelativeYaw + wrapDegrees(this.relativeYaw - this.previousRelativeYaw) * clampedPartialTicks;
-        return transformYaw(shipTransform, interpolatedYaw, TransformType.SUBSPACE_TO_GLOBAL);
+        return this.previousRelativeYaw + wrapDegrees(this.relativeYaw - this.previousRelativeYaw) * clampedPartialTicks;
     }
 
     public double getWorldHeadYaw(@NotNull ShipTransform shipTransform, double partialTicks) {
