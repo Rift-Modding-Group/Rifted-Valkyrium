@@ -54,6 +54,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
     private static final double WATER_DENSITY = 1000D;
     private static final double WATER_VERTICAL_DAMPING = 1800D;
     private static final double WATER_HORIZONTAL_DAMPING = 450D;
+    private static final double WATER_LATERAL_VELOCITY_RETENTION_PER_SECOND = 0.1D;
     private static final double BLOCK_HALF_EXTENT = 0.5D;
     private static final double MASS_PROPERTY_EPSILON = 1.0E-6D;
 
@@ -176,6 +177,20 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
         if (shipAabb != null && this.isTouchingLiquidActor(shipAabb, blockSectionsWithLiquids)) {
             //sample each ship block against nearby water and apply submerged force.
             ShipTransform transform = this.ship.getShipTransformationManager().getCurrentPhysicsTransform();
+            AxisAlignedBB localShipAabb = this.ship.getBlockPositions().makeAABB();
+            Vector3d longitudinalDirection = new Vector3d();
+            if (localShipAabb != null) {
+                double shipLengthX = localShipAabb.maxX - localShipAabb.minX + 1D;
+                double shipLengthZ = localShipAabb.maxZ - localShipAabb.minZ + 1D;
+                if (shipLengthX > shipLengthZ) longitudinalDirection.x = 1D;
+                else if (shipLengthZ > shipLengthX) longitudinalDirection.z = 1D;
+
+                transform.transformDirection(longitudinalDirection, TransformType.SUBSPACE_TO_GLOBAL);
+                longitudinalDirection.y = 0D;
+                if (longitudinalDirection.lengthSquared() > PhysicsCalculations.EPSILON) longitudinalDirection.normalize();
+            }
+            double lateralVelocityRetention = Math.pow(WATER_LATERAL_VELOCITY_RETENTION_PER_SECOND, timeStep);
+            boolean lateralVelocityDamped = false;
 
             Vector3d tempTorque = new Vector3d();
             BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
@@ -196,6 +211,16 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
 
                 double submergedFraction = this.getSubmergedFraction(hostWorld, mutablePos, centerWorld);
                 if (submergedFraction > 0D) {
+                    if (!lateralVelocityDamped && longitudinalDirection.lengthSquared() > PhysicsCalculations.EPSILON) {
+                        Vector3d linearVelocity = calculations.getLinearVelocity();
+                        double longitudinalSpeed = linearVelocity.x * longitudinalDirection.x + linearVelocity.z * longitudinalDirection.z;
+                        double lateralVelocityX = linearVelocity.x - longitudinalDirection.x * longitudinalSpeed;
+                        double lateralVelocityZ = linearVelocity.z - longitudinalDirection.z * longitudinalSpeed;
+                        linearVelocity.x -= lateralVelocityX * (1D - lateralVelocityRetention);
+                        linearVelocity.z -= lateralVelocityZ * (1D - lateralVelocityRetention);
+                        lateralVelocityDamped = true;
+                    }
+
                     Vector3d relativeToShipCenter = centerWorld.sub(
                             new Vector3d(transform.getPosX(), transform.getPosY(), transform.getPosZ()),
                             new Vector3d()
