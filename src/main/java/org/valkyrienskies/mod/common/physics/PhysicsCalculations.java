@@ -27,6 +27,10 @@ public class PhysicsCalculations {
     private final Vector3d torque;
     @NotNull
     private final Vector3d force;
+    @NotNull
+    private Vector3d pendingImpulse;
+    @NotNull
+    private Vector3d pendingAngularImpulse;
     private double physTickTimeDelta;
     private final Matrix3d physMOITensor;
     private final Matrix3d physInvMOITensor;
@@ -46,6 +50,8 @@ public class PhysicsCalculations {
         this.physCenterOfMass = new Vector3d();
         this.torque = new Vector3d();
         this.force = new Vector3d();
+        this.pendingImpulse = new Vector3d();
+        this.pendingAngularImpulse = new Vector3d();
         this.forceToUseGameTransform = false;
         this.generatePhysicsTransform();
     }
@@ -69,6 +75,25 @@ public class PhysicsCalculations {
         posRelToShipCenter.cross(forceToApply, crossVector);
         this.addTorque(crossVector);
         this.addForce(forceToApply);
+    }
+
+    /**
+     * Queues an instantaneous impulse and its resulting angular impulse for the next physics tick.
+     */
+    public void addImpulseAtPoint(Vector3dc posRelToShipCenter, Vector3dc impulseToApply, Vector3d crossVector) {
+        posRelToShipCenter.cross(impulseToApply, crossVector);
+        this.pendingAngularImpulse.add(crossVector);
+        this.pendingImpulse.add(impulseToApply);
+    }
+
+    /**
+     * Moves queued impulses into the active accumulators after their per-tick reset.
+     */
+    public void applyPendingImpulses() {
+        this.force.add(this.pendingImpulse);
+        this.torque.add(this.pendingAngularImpulse);
+        this.pendingImpulse.zero();
+        this.pendingAngularImpulse.zero();
     }
 
     public Vector3d getVelocityAtPoint(Vector3dc posRelativeToShipCenter) {

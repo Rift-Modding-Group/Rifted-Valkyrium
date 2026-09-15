@@ -7,8 +7,11 @@ import net.minecraft.entity.EntityLiving;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.entity.projectile.EntityFireball;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumFacing;
+import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.Tuple;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
@@ -16,6 +19,7 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 import net.minecraft.world.chunk.Chunk;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4dc;
 import org.joml.Vector3d;
@@ -67,7 +71,8 @@ public final class ValkyrienUtils {
      * @return The PhysicsObject that owns the chunk at pos within the given world.
      */
     @SuppressWarnings("ConstantConditions")
-    public static @NotNull Optional<PhysicsObject> getPhysoManagingBlock(@Nullable World world, @Nullable BlockPos pos) {
+    @NotNull
+    public static Optional<PhysicsObject> getPhysoManagingBlock(@Nullable World world, @Nullable BlockPos pos) {
         Optional<ShipData> shipData = getShipManagingBlock(world, pos);
         if (shipData.isEmpty()) return Optional.empty();
 
@@ -77,22 +82,21 @@ public final class ValkyrienUtils {
         return shipData.map(data -> physObjectWorld.getPhysObjectFromUUID(data.getUuid()));
     }
 
-    public static @NotNull Optional<ShipData> getShipManagingBlock(@Nullable World world, @Nullable BlockPos pos) {
-        if (world == null ||
-            pos == null ||
-            !ShipChunkAllocator.isChunkInShipyard(pos.getX() >> 4, pos.getZ() >> 4)) {
+    @NotNull
+    public static Optional<ShipData> getShipManagingBlock(@Nullable World world, @Nullable BlockPos pos) {
+        if (world == null || pos == null || !ShipChunkAllocator.isChunkInShipyard(pos.getX() >> 4, pos.getZ() >> 4)) {
             return Optional.empty();
         }
 
-        return QueryableShipData.get(world)
-            .getShipFromChunk(pos.getX() >> 4, pos.getZ() >> 4);
+        return QueryableShipData.get(world).getShipFromChunk(pos.getX() >> 4, pos.getZ() >> 4);
     }
 
     /**
      * If the given AxisAlignedBB is in ship space, then this will return that AxisAlignedBB
      * transformed to global space. Otherwise it just returns the input AxisAlignedBB.
      */
-    public static @NotNull AxisAlignedBB getAABBInGlobal(AxisAlignedBB axisAlignedBB, @Nullable World world, @Nullable BlockPos pos) {
+    @NotNull
+    public static AxisAlignedBB getAABBInGlobal(AxisAlignedBB axisAlignedBB, @Nullable World world, @Nullable BlockPos pos) {
         Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(world, pos);
         if (physicsObject.isPresent()) {
             // We're in a physics object; convert the bounding box to a polygon; put its coordinates
@@ -182,7 +186,8 @@ public final class ValkyrienUtils {
         toFix.startRiding(entityMountable);
     }
 
-    private static @NotNull VSWorldDataCapability getWorldDataCapability(World world) {
+    @NotNull
+    private static VSWorldDataCapability getWorldDataCapability(World world) {
         VSWorldDataCapability worldData = world.getCapability(VSCapabilityRegistry.VS_WORLD_DATA, null);
         if (worldData == null) {
             // I hate it when other mods add their custom worlds without calling the forge world
@@ -210,7 +215,8 @@ public final class ValkyrienUtils {
      * @param world The world we are getting the QueryableShipData from
      * @return The QueryableShipData corresponding to the given world
      */
-    public static @NotNull QueryableShipData getQueryableData(World world) {
+    @NotNull
+    public static QueryableShipData getQueryableData(World world) {
         return getWorldDataCapability(world).get().getQueryableShipData();
     }
 
@@ -221,11 +227,13 @@ public final class ValkyrienUtils {
      * @param world The world we are getting the QueryableShipData from
      * @return The QueryableShipData corresponding to the given world
      */
-    public static @NotNull ShipChunkAllocator getShipChunkAllocator(World world) {
+    @NotNull
+    public static ShipChunkAllocator getShipChunkAllocator(World world) {
         return getWorldDataCapability(world).get().getShipChunkAllocator();
     }
 
-    public static @NotNull WorldServerShipManager getServerShipManager(World world) {
+    @NotNull
+    public static WorldServerShipManager getServerShipManager(World world) {
         IShipWorld shipWorld = world.getCapability(VSCapabilityRegistry.VS_SHIP_WORLD, null);
         if (shipWorld == null) {
             throw new RuntimeException("IShipWorld doesn't appear to exist!");
@@ -236,7 +244,8 @@ public final class ValkyrienUtils {
     /**
      * Creates a new ShipIndexedData based on the inputs provided by the physics infuser block.
      */
-    public static @NotNull ShipData createNewShip(World world, BlockPos physInfuserPos) {
+    @NotNull
+    public static ShipData createNewShip(World world, BlockPos physInfuserPos) {
         String name = NounListNameGenerator.getInstance().generateName();
         UUID shipID = UUID.randomUUID();
         // Create ship chunk claims
@@ -250,7 +259,8 @@ public final class ValkyrienUtils {
             name, chunkClaim, shipID, initial, axisAlignedBB);
     }
 
-    public static @NotNull Iterable<PhysicsObject> getPhysosLoadedInWorld(World world) {
+    @NotNull
+    public static Iterable<PhysicsObject> getPhysosLoadedInWorld(World world) {
         IShipWorld shipWorld = world.getCapability(VSCapabilityRegistry.VS_SHIP_WORLD, null);
         if (shipWorld == null) {
             throw new RuntimeException("IShipWorld doesn't appear to exist!");
@@ -258,8 +268,10 @@ public final class ValkyrienUtils {
         return shipWorld.getManager().getAllLoadedPhysObj();
     }
 
-    public static void assembleShipAsOrderedByPlayer(World world, @Nullable EntityPlayerMP creator,
-                                              BlockPos physicsInfuserPos, BlockFinder.BlockFinderType blockFinderType) {
+    public static void assembleShipAsOrderedByPlayer(
+            World world, @Nullable EntityPlayerMP creator,
+            BlockPos physicsInfuserPos, BlockFinder.BlockFinderType blockFinderType
+    ) {
         if (world.isRemote) {
             throw new IllegalStateException("This method cannot be invoked on client side!");
         }
@@ -276,7 +288,8 @@ public final class ValkyrienUtils {
         serverShipManager.queueShipSpawn(shipData, physicsInfuserPos, blockFinderType);
     }
 
-    public static @Nullable IPhysObjectWorld getPhysObjWorld(@Nullable World world) {
+    @Nullable
+    public static IPhysObjectWorld getPhysObjWorld(@Nullable World world) {
         if (world == null) return null;
         IShipWorld shipWorld = world.getCapability(VSCapabilityRegistry.VS_SHIP_WORLD, null);
         if (shipWorld == null) return null;
@@ -309,8 +322,7 @@ public final class ValkyrienUtils {
         entityLook.normalize();
 
         // This is correct, works properly when tested with cows
-        if (entity instanceof EntityLiving) {
-            EntityLiving living = (EntityLiving) entity;
+        if (entity instanceof EntityLiving living) {
             living.rotationYawHead = entity.rotationYaw;
             living.prevRotationYawHead = entity.rotationYaw;
         }
@@ -320,8 +332,7 @@ public final class ValkyrienUtils {
         entity.rotationPitch = pitchYawTuple.getFirst().floatValue();
         entity.rotationYaw = pitchYawTuple.getSecond().floatValue();
 
-        if (entity instanceof EntityFireball) {
-            EntityFireball ball = (EntityFireball) entity;
+        if (entity instanceof EntityFireball ball) {
             ball.accelerationX = entityMotion.x;
             ball.accelerationY = entityMotion.y;
             ball.accelerationZ = entityMotion.z;
@@ -370,6 +381,35 @@ public final class ValkyrienUtils {
         IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
         if (draggable == null) return null;
         return draggable.getLastTouchedShip();
+    }
+
+    /**
+     * the good ol reliable
+     * */
+    public static boolean itemStackMatchesString(ItemStack itemStack, String string) {
+        ResourceLocation itemResource = Item.REGISTRY.getNameForObject(itemStack.getItem());
+        if (itemResource == null) return false;
+
+        ImmutablePair<String, Integer> stackNameAndMeta = getItemStackNameAndMeta(string);
+        String testedStackName = itemResource.toString();
+
+        //if metadata is negative, presume wildcard
+        if (stackNameAndMeta.getRight() < 0) return testedStackName.equals(stackNameAndMeta.getLeft());
+        else return testedStackName.equals(stackNameAndMeta.getLeft()) && itemStack.getMetadata() == stackNameAndMeta.getRight();
+    }
+
+    @NotNull
+    private static ImmutablePair<String, Integer> getItemStackNameAndMeta(String string) {
+        int firstColonIndex = string.indexOf(":");
+        int secondColonIndex = string.indexOf(":", firstColonIndex + 1);
+
+        //no metadata provided, presume its 0 then
+        if (secondColonIndex < 0) return new ImmutablePair<>(string, 0);
+
+        String itemId = string.substring(0, secondColonIndex);
+        int metadata = Integer.parseInt(string.substring(secondColonIndex + 1));
+
+        return new ImmutablePair<>(itemId, metadata);
     }
 
     /**

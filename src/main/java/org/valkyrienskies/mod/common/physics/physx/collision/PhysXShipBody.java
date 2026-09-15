@@ -127,6 +127,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
 
         //reset force state and record this simulation step length.
         calculations.resetForceAndTorque();
+        calculations.applyPendingImpulses();
         calculations.setPhysicsTimeDeltaPerPhysTick(timeStep);
         this.centerOfMassPoseDirty = false;
 

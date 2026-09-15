@@ -65,6 +65,26 @@ public class VSConfig extends VSConfigTemplate {
     })
     public static double targetTps = 60;
 
+    @Name("Oaring Items")
+    @Comment("Items that players can use as oars. Entries use namespace:item or namespace:item:metadata.")
+    public static String[] oaringItems = {
+            "minecraft:wooden_shovel",
+            "minecraft:stone_shovel",
+            "minecraft:iron_shovel",
+            "minecraft:golden_shovel",
+            "minecraft:diamond_shovel"
+    };
+
+    @Name("Oaring Impulse")
+    @Comment("The impulse in Newtons applied to a ship each time a player rows with an oaring item.")
+    @RangeDouble(min = 0D)
+    public static double oaringImpulse = 5000D;
+
+    @Name("Oaring Cooldown Ticks")
+    @Comment("The minimum delay in game ticks between rowing strokes.")
+    @RangeInt(min = 0)
+    public static int oaringCooldownTicks = 10;
+
     // @Name("Use dynamic steps")
     // @Comment("Step physics by time since last tick instead of a fixed number")
     // public static boolean useDynamicSteps = false;

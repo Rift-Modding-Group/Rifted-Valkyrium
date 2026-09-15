@@ -1,18 +1,26 @@
 package org.valkyrienskies.mixin.client;
 
+import net.minecraft.block.material.Material;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.client.multiplayer.PlayerControllerMP;
 import net.minecraft.client.multiplayer.WorldClient;
+import net.minecraft.item.ItemStack;
 import net.minecraft.util.EnumActionResult;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.EnumHand;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.math.Vec3d;
 import org.joml.Vector3d;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
+import org.valkyrienskies.mod.common.config.VSConfig;
+import org.valkyrienskies.mod.common.network.MessageOarShip;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.util.JOML;
@@ -23,6 +31,50 @@ import java.util.Optional;
 
 @Mixin(Minecraft.class)
 public class MixinMinecraft {
+    /**
+     * Adds ship rowing :D
+     * */
+    @Inject(method = "clickMouse", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/entity/EntityPlayerSP;resetCooldown()V"))
+    private void tryOaringShip(CallbackInfo callbackInfo) {
+        Minecraft minecraft = (Minecraft) (Object) this;
+        ItemStack heldItem = minecraft.player.getHeldItemMainhand();
+        if (heldItem.isEmpty() || minecraft.player.getCooldownTracker().hasCooldown(heldItem.getItem()) || VSConfig.oaringItems == null) {
+            return;
+        }
+
+        //see if we can oar based on available items
+        boolean canOar = false;
+        for (String configuredItem : VSConfig.oaringItems) {
+            if (ValkyrienUtils.itemStackMatchesString(heldItem, configuredItem)) {
+                canOar = true;
+                break;
+            }
+        }
+        if (!canOar) return;
+
+        //determine if we hittin water
+        double reachDistance = minecraft.playerController.getBlockReachDistance();
+        Vec3d eyePosition = minecraft.player.getPositionEyes(1f);
+        Vec3d lookDirection = minecraft.player.getLook(1f);
+        Vec3d traceEnd = eyePosition.add(
+                lookDirection.x * reachDistance,
+                lookDirection.y * reachDistance,
+                lookDirection.z * reachDistance
+        );
+        RayTraceResult liquidHit = minecraft.world.rayTraceBlocks(eyePosition, traceEnd, true, false, false);
+        if (liquidHit == null || liquidHit.typeOfHit != RayTraceResult.Type.BLOCK
+                || minecraft.world.getBlockState(liquidHit.getBlockPos()).getMaterial() != Material.WATER
+        ) {
+            return;
+        }
+
+        //send
+        ValkyrienSkiesMod.physWrapperNetwork.sendToServer(new MessageOarShip(
+                minecraft.player.isSneaking(), lookDirection.x, lookDirection.z,
+                liquidHit.hitVec.x, liquidHit.hitVec.y, liquidHit.hitVec.z
+        ));
+    }
+
     /**
      * This mixin fixes slabs not placing correctly on ships.
      */
