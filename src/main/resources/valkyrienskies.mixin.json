@@ -23,7 +23,9 @@
     "network.play.client.MixinCPacketPlayerRotation",
     "world.MixinClientWorld",
     "client.renderer.MixinActiveRenderInfo",
-    "client.multiplayer.MixinWorldClient"
+    "client.multiplayer.MixinWorldClient",
+    "mod.effortlessbuilding.MixinBlockPlacedMessage",
+    "mod.effortlessbuilding.MixinRenderHandler"
   ],
   "mixins": [
     "entity.MixinEntity",
@@ -46,6 +48,11 @@
     "world.chunk.MixinBlockStateContainer",
     "world.chunk.MixinChunk",
     "world.gen.MixinChunkProviderServer",
+    "mod.effortlessbuilding.MixinBuildModes",
+    "mod.effortlessbuilding.MixinFloor",
+    "mod.effortlessbuilding.MixinLine",
+    "mod.effortlessbuilding.MixinThreeClicksBuildMode",
+    "mod.effortlessbuilding.MixinWall",
     "mod.fairylights.MixinBlockEntityFastener",
     "mod.rustic.MixinRusticEntityChair",
     "mod.spongeforge.MixinChunkSponge",

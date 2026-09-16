@@ -22,6 +22,8 @@ public class ModMixinConfigPlugin implements IMixinConfigPlugin {
         return switch (mixinClassName.split("\\.")[4]) {
             case "spongeforge" -> Loader.isModLoaded("spongeforge");
             case "rustic" -> Loader.isModLoaded("rustic");
+            case "fairylights" -> Loader.isModLoaded("fairylights");
+            case "effortlessbuilding" -> Loader.isModLoaded("effortlessbuilding");
             default -> true;
         };
     }
