@@ -2,7 +2,6 @@ package org.valkyrienskies.mod.common.ships.entity_interaction;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockHorizontal;
-import net.minecraft.block.BlockSlime;
 import net.minecraft.block.SoundType;
 import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
@@ -46,8 +45,7 @@ public class EntityCollisionInjector {
 
     // Returns false if game should use default collision
     @Nullable
-    public static IntermediateMovementVariableStorage alterEntityMovement(Entity entity,
-        MoverType type, double dx, double dy, double dz) {
+    public static IntermediateMovementVariableStorage alterEntityMovement(Entity entity, MoverType type, double dx, double dy, double dz) {
         final double origDx = dx;
         final double origDy = dy;
         final double origDz = dz;
@@ -355,11 +353,6 @@ public class EntityCollisionInjector {
 
         // TODO: Use Mixins to call entity.updateFallState() instead!
 
-        // fixes slime blocks
-        if (block instanceof BlockSlime && !entity.isInWeb) {
-            entity.motionY = motionYBefore;
-        }
-
         entity.fallDistance = oldFallDistance;
         if (entity instanceof EntityLivingBase) {
 
@@ -394,14 +387,12 @@ public class EntityCollisionInjector {
             entity.fallDistance = (float) (entity.fallDistance - entity.motionY);
         }
 
-        if (/* entity.canTriggerWalking() **/
-            entity instanceof EntityPlayer && !entity.isRiding()) {
-            if (dy != origDy) {
-                // if (!(entity.motionY > 0 && dy > 0)) {
-                block.onLanded(entity.world, entity);
-                // }
-            }
+        if (dy != origDy) {
+            entity.motionY = motionYBefore;
+            block.onLanded(entity.world, entity);
+        }
 
+        if (/* entity.canTriggerWalking() **/ entity instanceof EntityPlayer && !entity.isRiding()) {
             if (block != null && entity.onGround) {
                 block.onEntityWalk(entity.world, blockpos, entity);
             }
@@ -448,11 +439,6 @@ public class EntityCollisionInjector {
 
         if (dx != origDx) {
             entity.motionX = dx;
-        }
-        if (dy != origDy) {
-            if (!(entity.motionY > 0 && dy > 0)) {
-                entity.motionY = 0;
-            }
         }
         if (dz != origDz) {
             entity.motionZ = dz;
