@@ -1,0 +1,15 @@
+{
+  "required": false,
+  "package": "org.valkyrienskies.mixin.mod.spongeforge",
+  "plugin": "org.valkyrienskies.mixin.mod.spongeforge.SpongeMixinPlugin",
+  "compatibilityLevel": "JAVA_8",
+  "target": "@env(DEFAULT)",
+  "mixins": [
+    "MixinChunkSponge",
+    "MixinPacketUtil"
+  ],
+  "client": [],
+  "server": [],
+  "setSourceFile": true,
+  "minVersion": "0.8.7"
+}
