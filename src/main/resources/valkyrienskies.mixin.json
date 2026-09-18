@@ -54,9 +54,7 @@
     "mod.effortlessbuilding.MixinThreeClicksBuildMode",
     "mod.effortlessbuilding.MixinWall",
     "mod.fairylights.MixinBlockEntityFastener",
-    "mod.rustic.MixinRusticEntityChair",
-    "mod.spongeforge.MixinChunkSponge",
-    "mod.spongeforge.MixinPacketUtil"
+    "mod.rustic.MixinRusticEntityChair"
   ],
   "server": [],
   "setSourceFile": true,
