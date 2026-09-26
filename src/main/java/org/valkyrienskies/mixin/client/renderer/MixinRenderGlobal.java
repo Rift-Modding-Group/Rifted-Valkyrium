@@ -6,8 +6,6 @@ import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.WorldClient;
 import net.minecraft.client.renderer.*;
-import net.minecraft.client.renderer.culling.Frustum;
-import net.minecraft.client.renderer.culling.ICamera;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.client.renderer.texture.TextureMap;
@@ -15,20 +13,13 @@ import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.BlockRenderLayer;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.RayTraceResult;
-import org.lwjgl.opengl.GL11;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 
@@ -229,61 +220,4 @@ public abstract class MixinRenderGlobal {
         }
     }
 
-    @Inject(method = "renderEntities(Lnet/minecraft/entity/Entity;Lnet/minecraft/client/renderer/culling/ICamera;F)V", at = @At("HEAD"))
-    private void preRenderEntities(Entity renderViewEntity, ICamera camera, float partialTicks,
-        CallbackInfo callbackInfo) {
-        // ClientProxy.lastCamera = camera;
-    }
-
-    @Inject(method = "renderBlockLayer(Lnet/minecraft/util/BlockRenderLayer;DILnet/minecraft/entity/Entity;)I", at = @At("HEAD"))
-    private void preRenderBlockLayer(BlockRenderLayer blockLayerIn, double partialTicks, int pass,
-                                     Entity entityIn, CallbackInfoReturnable callbackInfo) {
-        RenderHelper.disableStandardItemLighting();
-
-        // This probably won't work with strange mods, but I'm too lazy to do it better
-        ICamera icamera = new Frustum();
-        Entity entity = this.mc.getRenderViewEntity();
-        double d0 = entity.lastTickPosX + (entity.posX - entity.lastTickPosX) * (double)partialTicks;
-        double d1 = entity.lastTickPosY + (entity.posY - entity.lastTickPosY) * (double)partialTicks;
-        double d2 = entity.lastTickPosZ + (entity.posZ - entity.lastTickPosZ) * (double)partialTicks;
-        icamera.setPosition(d0, d1, d2);
-
-
-        IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(world);
-        if (physObjectWorld == null) {
-            throw new IllegalStateException("Could not get ship manager from world!");
-        }
-        for (PhysicsObject physicsObject : physObjectWorld.getAllLoadedPhysObj()) {
-            GL11.glPushMatrix();
-            if (physicsObject.getShipRenderer().shouldRender(icamera)) {
-                physicsObject.getShipRenderer()
-                    .renderBlockLayer(blockLayerIn, partialTicks, pass, icamera);
-            }
-            GL11.glPopMatrix();
-        }
-
-        GlStateManager.resetColor();
-    }
-
-    @Inject(method = "markBlocksForUpdate", at = @At("HEAD"))
-    private void preMarkBlocksForUpdate(int minX, int minY, int minZ, int maxX, int maxY, int maxZ,
-        boolean updateImmediately, CallbackInfo ci) {
-
-        Optional<PhysicsObject> physicsObject =
-            ValkyrienUtils.getPhysoManagingBlock(world, new BlockPos(minX, minY, minZ));
-        if (!physicsObject.isPresent()) {
-            // Try again
-            physicsObject = ValkyrienUtils.getPhysoManagingBlock(world, new BlockPos(minX, maxY, maxZ));
-        }
-        if (!physicsObject.isPresent()) {
-            // Try again
-            physicsObject = ValkyrienUtils.getPhysoManagingBlock(world, new BlockPos(maxX, maxY, minZ));
-        }
-        if (!physicsObject.isPresent()) {
-            // Try again
-            physicsObject = ValkyrienUtils.getPhysoManagingBlock(world, new BlockPos(maxX, maxY, maxZ));
-        }
-        physicsObject.ifPresent(p ->
-            p.getShipRenderer().updateRange(minX, minY, minZ, maxX, maxY, maxZ, updateImmediately));
-    }
 }

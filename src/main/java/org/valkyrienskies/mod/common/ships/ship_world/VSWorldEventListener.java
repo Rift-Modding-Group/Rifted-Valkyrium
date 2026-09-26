@@ -36,7 +36,21 @@ public class VSWorldEventListener implements IWorldEventListener {
 
     @Override
     public void notifyBlockUpdate(World worldIn, BlockPos pos, IBlockState oldState, IBlockState newState, int flags) {
-        if (worldIn.isRemote || oldState == newState || oldState.equals(newState)) return;
+        //is here for nothirium compat
+        if (worldIn.isRemote) {
+            Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(worldIn, pos);
+            physicsObject.ifPresent(ship -> ship.getShipRenderer().updateRange(
+                    pos.getX() - 1,
+                    pos.getY() - 1,
+                    pos.getZ() - 1,
+                    pos.getX() + 1,
+                    pos.getY() + 1,
+                    pos.getZ() + 1,
+                    (flags & 8) != 0
+            ));
+            return;
+        }
+        if (oldState == newState || oldState.equals(newState)) return;
         BlockSectionList.invalidateBlockSectionAt(worldIn, pos);
     }
 
