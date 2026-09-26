@@ -98,6 +98,9 @@ valkyrienskies.general.shipspawndetectorblacklist.tooltip=These materials should
 valkyrienskies.general.blockmass=Weight of yer Vessel
 valkyrienskies.general.blockmass.tooltip=How low yer draft be when on the seas.
 
+valkyrienskies.general.invertoaringdirection=Reverse Rowin' Direction
+valkyrienskies.general.invertoaringdirection.tooltip=Reverses the way a sailor goes when rowin'.
+
 ### Valkyrien Skies Control
 
 # Items

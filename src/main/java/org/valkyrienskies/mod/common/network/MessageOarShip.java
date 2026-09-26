@@ -84,6 +84,7 @@ public class MessageOarShip implements IMessage {
 
                 //create impulse to apply
                 Vector3d impulse = new Vector3d(-lookDirection.x, 0D, -lookDirection.z);
+                if (VSConfig.invertOaringDirection) impulse.mul(-1);
                 if (rowingPlayer.isSneaking()) impulse.mul(-1);
                 if (impulse.lengthSquared() < 0.000001D) return;
                 impulse.normalize(VSConfig.oaringImpulse);

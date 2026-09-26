@@ -98,6 +98,9 @@ valkyrienskies.general.shipspawndetectorblacklist.tooltip=Bloques que no se incl
 valkyrienskies.general.blockmass=Masa de los bloques
 valkyrienskies.general.blockmass.tooltip=Sobrescribe el valor de masa generado automáticamente para los bloques. La unidad de masa es el kg.
 
+valkyrienskies.general.invertoaringdirection=Invertir dirección de remado
+valkyrienskies.general.invertoaringdirection.tooltip=Invierte la dirección en la que se mueve un jugador al remar.
+
 ### Valkyrien Skies Control
 
 # Items

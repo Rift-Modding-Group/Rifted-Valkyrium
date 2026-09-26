@@ -98,6 +98,9 @@ valkyrienskies.general.shipspawndetectorblacklist.tooltip=这些方块构建飞�
 valkyrienskies.general.blockmass=方块质量
 valkyrienskies.general.blockmass.tooltip=修改自动生成的方块质量，单位是千克。
 
+valkyrienskies.general.invertoaringdirection=反转划桨方向
+valkyrienskies.general.invertoaringdirection.tooltip=反转玩家划桨时的移动方向。
+
 ### Valkyrien Skies Control
 
 # Items

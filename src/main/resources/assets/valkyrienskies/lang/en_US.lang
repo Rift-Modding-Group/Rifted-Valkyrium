@@ -98,6 +98,9 @@ valkyrienskies.general.shipspawndetectorblacklist.tooltip=Blocks to not be inclu
 valkyrienskies.general.blockmass=Block Mass
 valkyrienskies.general.blockmass.tooltip=Override the auto generated mass value of blocks. The units of mass are kg.
 
+valkyrienskies.general.invertoaringdirection=Invert Oaring Direction
+valkyrienskies.general.invertoaringdirection.tooltip=Inverts the direction a player goes in when rowing.
+
 ### Valkyrien Skies Control
 
 # Items

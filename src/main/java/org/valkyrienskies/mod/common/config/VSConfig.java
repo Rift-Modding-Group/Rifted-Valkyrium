@@ -85,6 +85,10 @@ public class VSConfig extends VSConfigTemplate {
     @RangeInt(min = 0)
     public static int oaringCooldownTicks = 10;
 
+    @Name("Invert Oaring Direction")
+    @Comment("Invert direction a player goes in when rowing.")
+    public static boolean invertOaringDirection = false;
+
     // @Name("Use dynamic steps")
     // @Comment("Step physics by time since last tick instead of a fixed number")
     // public static boolean useDynamicSteps = false;
