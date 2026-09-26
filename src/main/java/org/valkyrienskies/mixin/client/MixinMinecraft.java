@@ -61,6 +61,8 @@ public class MixinMinecraft {
                 lookDirection.y * reachDistance,
                 lookDirection.z * reachDistance
         );
+        //note: the liquid hit result used here is only for makin
+        //particle and sound effects and testing if water is hit
         RayTraceResult liquidHit = minecraft.world.rayTraceBlocks(eyePosition, traceEnd, true, false, false);
         if (liquidHit == null || liquidHit.typeOfHit != RayTraceResult.Type.BLOCK
                 || minecraft.world.getBlockState(liquidHit.getBlockPos()).getMaterial() != Material.WATER
@@ -70,7 +72,7 @@ public class MixinMinecraft {
 
         //send
         ValkyrienSkiesMod.physWrapperNetwork.sendToServer(new MessageOarShip(
-                minecraft.player.isSneaking(), lookDirection.x, lookDirection.z,
+                minecraft.player, reachDistance,
                 liquidHit.hitVec.x, liquidHit.hitVec.y, liquidHit.hitVec.z
         ));
     }

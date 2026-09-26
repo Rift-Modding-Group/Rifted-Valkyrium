@@ -28,9 +28,9 @@ public class PhysicsCalculations {
     @NotNull
     private final Vector3d force;
     @NotNull
-    private Vector3d pendingImpulse;
+    private final Vector3d pendingImpulse;
     @NotNull
-    private Vector3d pendingAngularImpulse;
+    private final Vector3d pendingAngularImpulse;
     private double physTickTimeDelta;
     private final Matrix3d physMOITensor;
     private final Matrix3d physInvMOITensor;

@@ -26,19 +26,20 @@ import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import valkyrienwarfare.api.TransformType;
 
 public class MessageOarShip implements IMessage {
-    private boolean isSneaking;
-    private double lookDirectionX;
-    private double lookDirectionZ;
+    private int rowingPlayerId;
+    private double reachDistance;
     private double hitWaterX;
     private double hitWaterY;
     private double hitWaterZ;
 
     public MessageOarShip() {}
 
-    public MessageOarShip(boolean isSneaking, double lookDirectionX, double lookDirectionZ, double hitWaterX, double hitWaterY, double hitWaterZ) {
-        this.isSneaking = isSneaking;
-        this.lookDirectionX = lookDirectionX;
-        this.lookDirectionZ = lookDirectionZ;
+    public MessageOarShip(
+            EntityPlayer rowingPlayer, double reachDistance,
+            double hitWaterX, double hitWaterY, double hitWaterZ
+    ) {
+        this.rowingPlayerId = rowingPlayer.getEntityId();
+        this.reachDistance = reachDistance;
         this.hitWaterX = hitWaterX;
         this.hitWaterY = hitWaterY;
         this.hitWaterZ = hitWaterZ;
@@ -46,9 +47,8 @@ public class MessageOarShip implements IMessage {
 
     @Override
     public void fromBytes(ByteBuf buf) {
-        this.isSneaking = buf.readBoolean();
-        this.lookDirectionX = buf.readDouble();
-        this.lookDirectionZ = buf.readDouble();
+        this.rowingPlayerId = buf.readInt();
+        this.reachDistance = buf.readDouble();
         this.hitWaterX = buf.readDouble();
         this.hitWaterY = buf.readDouble();
         this.hitWaterZ = buf.readDouble();
@@ -56,9 +56,8 @@ public class MessageOarShip implements IMessage {
 
     @Override
     public void toBytes(ByteBuf buf) {
-        buf.writeBoolean(this.isSneaking);
-        buf.writeDouble(this.lookDirectionX);
-        buf.writeDouble(this.lookDirectionZ);
+        buf.writeInt(this.rowingPlayerId);
+        buf.writeDouble(this.reachDistance);
         buf.writeDouble(this.hitWaterX);
         buf.writeDouble(this.hitWaterY);
         buf.writeDouble(this.hitWaterZ);
@@ -69,16 +68,23 @@ public class MessageOarShip implements IMessage {
         public IMessage onMessage(MessageOarShip message, MessageContext context) {
             EntityPlayerMP player = context.getServerHandler().player;
             player.getServerWorld().addScheduledTask(() -> {
-                IEntityShipDraggable draggable = player.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
+                EntityPlayer rowingPlayer = (EntityPlayer) player.getServerWorld().getEntityByID(message.rowingPlayerId);
+                if (rowingPlayer == null) return;
+
+                //get draggable info
+                IEntityShipDraggable draggable = rowingPlayer.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
                 if (draggable == null || draggable.getLastTouchedShip() == null
                         || draggable.getTicksSinceTouchedShip() >= VSConfig.ticksToStickToShip
                 ) {
                     return;
                 }
 
+                //get look direction
+                Vec3d lookDirection = rowingPlayer.getLook(1f);
+
                 //create impulse to apply
-                Vector3d impulse = new Vector3d(-message.lookDirectionX, 0D, -message.lookDirectionZ);
-                if (message.isSneaking) impulse.mul(-1);
+                Vector3d impulse = new Vector3d(-lookDirection.x, 0D, -lookDirection.z);
+                if (rowingPlayer.isSneaking()) impulse.mul(-1);
                 if (impulse.lengthSquared() < 0.000001D) return;
                 impulse.normalize(VSConfig.oaringImpulse);
 
@@ -88,10 +94,9 @@ public class MessageOarShip implements IMessage {
                 PhysicsObject physicsObject = shipManager.getPhysObjectFromUUID(touchedShip.getUuid());
                 if (physicsObject == null || !physicsObject.isPhysicsReady() || !physicsObject.isPhysicsEnabled()) return;
 
-                //create position
-                Vector3d hitPosition = new Vector3d(message.hitWaterX, message.hitWaterY, message.hitWaterZ);
+                //set oaring cooldown
                 if (VSConfig.oaringCooldownTicks > 0) {
-                    player.getCooldownTracker().setCooldown(player.getHeldItemMainhand().getItem(), VSConfig.oaringCooldownTicks);
+                    rowingPlayer.getCooldownTracker().setCooldown(rowingPlayer.getHeldItemMainhand().getItem(), VSConfig.oaringCooldownTicks);
                 }
 
                 //apply effects
@@ -113,9 +118,24 @@ public class MessageOarShip implements IMessage {
 
                 //send impulse
                 shipManager.getPhysicsLoop().addScheduledTask(() -> {
+                    //get hit direction again
+                    Vec3d eyePosition = rowingPlayer.getPositionEyes(1f);
+                    Vec3d traceEnd = eyePosition.add(
+                            lookDirection.x * message.reachDistance,
+                            lookDirection.y * message.reachDistance,
+                            lookDirection.z * message.reachDistance
+                    );
+                    RayTraceResult trueLiquidHit = player.getServerWorld().rayTraceBlocks(eyePosition, traceEnd, true, false, false);
+                    if (trueLiquidHit == null || trueLiquidHit.typeOfHit != RayTraceResult.Type.BLOCK
+                            || player.getServerWorld().getBlockState(trueLiquidHit.getBlockPos()).getMaterial() != Material.WATER
+                    ) {
+                        return;
+                    }
+
+                    //now add impulse
                     PhysicsCalculations calculations = physicsObject.getPhysicsCalculations();
                     ShipTransform transform = physicsObject.getShipTransformationManager().getCurrentPhysicsTransform();
-                    Vector3d relativeHitPosition = new Vector3d(hitPosition);
+                    Vector3d relativeHitPosition = new Vector3d(trueLiquidHit.hitVec.x, trueLiquidHit.hitVec.y, trueLiquidHit.hitVec.z);
                     transform.transformPosition(relativeHitPosition, TransformType.GLOBAL_TO_SUBSPACE);
                     relativeHitPosition.sub(calculations.getPhysCenterOfMass());
                     transform.transformDirection(relativeHitPosition, TransformType.SUBSPACE_TO_GLOBAL);
