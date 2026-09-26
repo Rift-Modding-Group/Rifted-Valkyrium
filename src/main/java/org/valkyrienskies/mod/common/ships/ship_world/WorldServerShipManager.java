@@ -46,7 +46,7 @@ public class WorldServerShipManager implements IPhysObjectWorld {
     private final LinkedHashSet<ImmutableTriple<BlockPos, ShipData, BlockFinder.BlockFinderType>> spawnQueue;
     private final LinkedHashSet<UUID> loadQueue, unloadQueue, backgroundLoadQueue;
     private final Set<UUID> loadingInBackground;
-    private ImmutableList<PhysicsObject> threadSafeLoadedShips;
+    private volatile ImmutableList<PhysicsObject> threadSafeLoadedShips;
 
     public WorldServerShipManager(World world) {
         this.world = (WorldServer) world;
@@ -73,6 +73,7 @@ public class WorldServerShipManager implements IPhysObjectWorld {
 
     @Override
     public void onWorldUnload() {
+        this.threadSafeLoadedShips = ImmutableList.of();
         this.physicsLoop.kill();
         this.physicsThread.interrupt();
         try {
@@ -85,14 +86,20 @@ public class WorldServerShipManager implements IPhysObjectWorld {
 
     @Override
     public PhysicsObject getPhysObjectFromUUID(@Nonnull UUID shipID) throws CalledFromWrongThreadException {
-        enforceGameThread();
-        return loadedShips.get(shipID);
+        if (this.world.isCallingFromMinecraftThread()) {
+            return this.loadedShips.get(shipID);
+        }
+        for (PhysicsObject physicsObject : this.threadSafeLoadedShips) {
+            if (shipID.equals(physicsObject.getShipData().getUuid())) {
+                return physicsObject;
+            }
+        }
+        return null;
     }
 
     @Nonnull
     @Override
     public List<PhysicsObject> getPhysObjectsInAABB(@Nonnull AxisAlignedBB toCheck) throws CalledFromWrongThreadException {
-        enforceGameThread();
         List<PhysicsObject> nearby = new ArrayList<>();
         for (PhysicsObject ship : getAllLoadedPhysObj()) {
             if (toCheck.intersects(ship.getShipBB())) {
@@ -104,7 +111,7 @@ public class WorldServerShipManager implements IPhysObjectWorld {
 
     public void tick() {
         // First destroy any ships that want to be destroyed (copy blocks from ship to world, and then unload)
-        Iterator<Map.Entry<UUID, PhysicsObject>> iterator = loadedShips.entrySet().iterator();
+        Iterator<Map.Entry<UUID, PhysicsObject>> iterator = this.loadedShips.entrySet().iterator();
         while (iterator.hasNext()) {
             PhysicsObject physicsObject = iterator.next().getValue();
             if (physicsObject.shouldShipBeDestroyed()) {
@@ -120,7 +127,7 @@ public class WorldServerShipManager implements IPhysObjectWorld {
         spawnNewShips();
 
         // Then determine which ships to load and unload
-        loadingController.determineLoadAndUnload();
+        this.loadingController.determineLoadAndUnload();
 
         // Then execute queued ship load and unload operations
         loadAndUnloadShips();
@@ -131,10 +138,10 @@ public class WorldServerShipManager implements IPhysObjectWorld {
         }
 
         // Finally, send the players updates about the ships.
-        loadingController.sendUpdatesToPlayers();
+        this.loadingController.sendUpdatesToPlayers();
 
         // And then update the thread safe ship list.
-        this.threadSafeLoadedShips = ImmutableList.copyOf(loadedShips.values());
+        this.threadSafeLoadedShips = ImmutableList.copyOf(this.loadedShips.values());
     }
 
     private void spawnNewShips() {
@@ -143,14 +150,14 @@ public class WorldServerShipManager implements IPhysObjectWorld {
             final ShipData toSpawn = spawnData.getMiddle();
             final BlockFinder.BlockFinderType blockBlockFinderType = spawnData.getRight();
 
-            if (loadedShips.containsKey(toSpawn.getUuid())) {
+            if (this.loadedShips.containsKey(toSpawn.getUuid())) {
                 throw new IllegalStateException("Tried spawning a ShipData that was already loaded?\n" + toSpawn);
             }
 
             final SpatialDetector detector = BlockFinder.getBlockFinderFor(
                     blockBlockFinderType,
                     physicsInfuserPos,
-                    world,
+                    this.world,
                     VSConfig.maxDetectedShipSize + 1,
                     true
             );
@@ -204,7 +211,7 @@ public class WorldServerShipManager implements IPhysObjectWorld {
                 int hashedPos = blocksIterator.next();
                 SpatialDetector.setPosWithRespectTo(hashedPos, detector.firstBlock, srcLocationPos);
                 pasteLocationPos.setPos(srcLocationPos.getX() + centerDifference.getX(), srcLocationPos.getY() + centerDifference.getY(), srcLocationPos.getZ() + centerDifference.getZ());
-                toSpawn.blockPositions.add(pasteLocationPos.getX(), pasteLocationPos.getY(), pasteLocationPos.getZ());
+                if (toSpawn.blockPositions != null) toSpawn.blockPositions.add(pasteLocationPos.getX(), pasteLocationPos.getY(), pasteLocationPos.getZ());
             }
 
             // First, copy the blocks and tiles to the new chunks
@@ -255,7 +262,7 @@ public class WorldServerShipManager implements IPhysObjectWorld {
                         .set(pasteLocationPos.getX() & 15, pasteLocationPos.getY() & 15, pasteLocationPos.getZ() & 15, srcState);
 
                 // If this block is force block, then add it to the activeForcePositions list of the ship.
-                if (BlockPhysicsDetails.isBlockProvidingForce(srcState)) {
+                if (BlockPhysicsDetails.isBlockProvidingForce(srcState) && toSpawn.activeForcePositions != null) {
                     toSpawn.activeForcePositions.add(pasteLocationPos);
                 }
 
@@ -266,9 +273,10 @@ public class WorldServerShipManager implements IPhysObjectWorld {
                 TileEntity srcTile = world.getTileEntity(srcLocationPos);
                 if (srcTile != null) {
                     TileEntity pasteTile;
-                    if (srcTile instanceof IRelocationAwareTile) {
-                        pasteTile = ((IRelocationAwareTile) srcTile).createRelocatedTile(pasteLocationPos, toSpawn);
-                    } else {
+                    if (srcTile instanceof IRelocationAwareTile relocationAwareTile) {
+                        pasteTile = relocationAwareTile.createRelocatedTile(pasteLocationPos, toSpawn);
+                    }
+                    else {
                         NBTTagCompound tileEntNBT = srcTile.writeToNBT(new NBTTagCompound());
                         // Change the block position to be inside of the Ship
                         tileEntNBT.setInteger("x", pasteLocationPos.getX());
@@ -490,8 +498,10 @@ public class WorldServerShipManager implements IPhysObjectWorld {
     @Nonnull
     @Override
     public Iterable<PhysicsObject> getAllLoadedPhysObj() throws CalledFromWrongThreadException {
-        enforceGameThread();
-        return this.loadedShips.values();
+        if (this.world.isCallingFromMinecraftThread()) {
+            return this.loadedShips.values();
+        }
+        return this.threadSafeLoadedShips;
     }
 
     @Nonnull

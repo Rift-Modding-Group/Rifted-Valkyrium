@@ -4,6 +4,7 @@ import net.minecraft.block.Block;
 import org.valkyrienskies.mod.client.EventsClient;
 import org.valkyrienskies.mod.client.VSKeyHandler;
 import org.valkyrienskies.mod.client.render.GibsModelRegistry;
+import org.valkyrienskies.mod.client.render.ValkyrienSkiesOBJLoader;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 
 import net.minecraft.client.Minecraft;
@@ -11,7 +12,7 @@ import net.minecraft.client.renderer.block.model.ModelResourceLocation;
 import net.minecraft.client.resources.IReloadableResourceManager;
 import net.minecraft.item.Item;
 import net.minecraftforge.client.model.ModelLoader;
-import net.minecraftforge.client.model.obj.OBJLoader;
+import net.minecraftforge.client.model.ModelLoaderRegistry;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
@@ -25,7 +26,7 @@ public class ClientProxy extends CommonProxy {
     @Override
     public void preInit(FMLPreInitializationEvent e) {
         super.preInit(e);
-        OBJLoader.INSTANCE.addDomain(ValkyrienSkiesMod.MOD_ID.toLowerCase());
+        ModelLoaderRegistry.registerLoader(new ValkyrienSkiesOBJLoader());
 
         // Register events
         MinecraftForge.EVENT_BUS.register(new EventsClient());

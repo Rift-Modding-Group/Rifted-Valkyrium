@@ -6,7 +6,6 @@ import net.minecraft.client.renderer.RenderItem;
 import net.minecraft.client.renderer.block.model.ModelResourceLocation;
 import net.minecraft.item.Item;
 import net.minecraft.util.ResourceLocation;
-import net.minecraftforge.client.model.obj.OBJLoader;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.client.registry.ClientRegistry;
 import net.minecraftforge.fml.common.event.FMLStateEvent;
@@ -119,8 +118,6 @@ public class ClientProxyControl extends CommonProxyControl {
         MinecraftForge.EVENT_BUS.register(new ControlEventsClient());
         MinecraftForge.EVENT_BUS.register(new NodeKeyHandler());
         // Register gibs
-        OBJLoader.INSTANCE.addDomain(ValkyrienSkiesControl.MOD_ID.toLowerCase());
-
         registerControlGibs("chadburn_dial_simplevoxel_geo");
         registerControlGibs("chadburn_glass_simplevoxel_geo");
         registerControlGibs("chadburn_handles_simplevoxel_geo");

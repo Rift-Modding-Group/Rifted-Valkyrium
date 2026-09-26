@@ -26,18 +26,24 @@ public interface IPhysObjectWorld {
     void onWorldUnload();
 
     /**
-     * Only allowed to be called by the game thread.
+     * Uses the latest immutable ship snapshot when called outside the game thread.
+     *
      * @return Null if there doesn't exist a PhysicsObject for the given shipID.
      */
     @Nullable
     PhysicsObject getPhysObjectFromUUID(@Nonnull UUID shipID) throws CalledFromWrongThreadException;
 
     /**
+     * Uses the latest immutable ship snapshot when called outside the game thread.
+     *
      * @return A list of all the physics objects whose AABB intersect with toCheck.
      */
     @Nonnull
     List<PhysicsObject> getPhysObjectsInAABB(@Nonnull AxisAlignedBB toCheck) throws CalledFromWrongThreadException;
 
+    /**
+     * Returns the live ship collection on the game thread and the latest immutable snapshot on other threads.
+     */
     @Nonnull
     Iterable<PhysicsObject> getAllLoadedPhysObj() throws CalledFromWrongThreadException;
 
