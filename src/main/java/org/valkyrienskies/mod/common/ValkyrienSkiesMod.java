@@ -3,6 +3,7 @@ package org.valkyrienskies.mod.common;
 import com.cleanroommc.hackery.ReflectionHackery;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.block.Block;
+import net.minecraft.command.ServerCommandManager;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Blocks;
@@ -40,7 +41,8 @@ import org.valkyrienskies.mod.common.block.BlockCaptainsChair;
 import org.valkyrienskies.mod.common.block.BlockPassengerChair;
 import org.valkyrienskies.mod.common.block.BlockWaterPump;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
-import org.valkyrienskies.mod.common.command.framework.VSCommandRegistry;
+import org.valkyrienskies.mod.common.command.MainCommand;
+import org.valkyrienskies.mod.common.command.config.VSConfigCommand;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.item.ItemShipTracker;
 import org.valkyrienskies.mod.common.network.MessageEntityShipMovement;
@@ -181,7 +183,9 @@ public class ValkyrienSkiesMod {
     @EventHandler
     public void serverStart(FMLServerStartingEvent event) {
         MinecraftServer server = event.getServer();
-        VSCommandRegistry.registerCommands(server);
+        ServerCommandManager manager = (ServerCommandManager) server.getCommandManager();
+        manager.registerCommand(new MainCommand());
+        manager.registerCommand(new VSConfigCommand("vsconfig", VSConfig.class, "vsc"));
     }
 
     private void registerNetworks(FMLStateEvent event) {

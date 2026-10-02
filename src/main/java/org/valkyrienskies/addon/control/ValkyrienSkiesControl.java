@@ -42,7 +42,7 @@ import org.valkyrienskies.addon.control.proxy.CommonProxyControl;
 import org.valkyrienskies.addon.control.tileentity.*;
 import org.valkyrienskies.addon.world.ValkyrienSkiesWorld;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
-import org.valkyrienskies.mod.common.command.config.VSConfigCommandBase;
+import org.valkyrienskies.mod.common.command.config.VSConfigCommand;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -132,7 +132,7 @@ public class ValkyrienSkiesControl {
     @Mod.EventHandler
     public void serverStart(FMLServerStartingEvent event) {
 	    ServerCommandManager manager = (ServerCommandManager) event.getServer().getCommandManager();
-	    manager.registerCommand(new VSConfigCommandBase("vscontrolconfig", VSControlConfig.class));
+	    manager.registerCommand(new VSConfigCommand("vscontrolconfig", VSControlConfig.class));
     }
 
     @Mod.EventHandler

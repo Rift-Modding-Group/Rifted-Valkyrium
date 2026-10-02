@@ -31,7 +31,7 @@ import org.valkyrienskies.addon.world.config.VSWorldConfig;
 import org.valkyrienskies.addon.world.proxy.CommonProxyWorld;
 import org.valkyrienskies.addon.world.worldgen.ValkyrienSkiesWorldGen;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
-import org.valkyrienskies.mod.common.command.config.VSConfigCommandBase;
+import org.valkyrienskies.mod.common.command.config.VSConfigCommand;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -96,7 +96,7 @@ public class ValkyrienSkiesWorld {
     @Mod.EventHandler
     public void serverStart(FMLServerStartingEvent event) {
         ServerCommandManager manager = (ServerCommandManager) event.getServer().getCommandManager();
-        manager.registerCommand(new VSConfigCommandBase("vsworldconfig", VSWorldConfig.class));
+        manager.registerCommand(new VSConfigCommand("vsworldconfig", VSWorldConfig.class));
     }
 
     private void registerCapabilities() {

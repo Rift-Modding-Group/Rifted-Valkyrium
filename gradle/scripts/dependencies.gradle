@@ -60,14 +60,6 @@ dependencies {
     //spongeforge lts
     implementation 'curse.maven:spongeforge-1279505:6611085'
 
-    // javax inject annotation
-    shadow "javax.inject:javax.inject:1" // 2KB
-    implementation "javax.inject:javax.inject:1" // 2KB
-
-    // Command framework
-    shadow "info.picocli:picocli:4.7.7"
-    implementation "info.picocli:picocli:4.7.7"
-
     // CQEngine for in-memory nonpersistent database
     // Provides Kryo
     shadow("com.googlecode.cqengine:cqengine:3.4.0") {
@@ -97,10 +89,6 @@ dependencies {
     implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.10.0"
     implementation "com.fasterxml.jackson.module:jackson-module-parameter-names:2.10.0"
     implementation "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.10.0"
-
-    //picocli jar
-    shadow fileTree("dependencies/picocli-4.0.1.jar")
-    implementation fileTree("dependencies/picocli-4.0.1.jar")
 
     //celeritas jar for compat
     implementation files("dependencies/celeritas-forge-mc12.2-2.4.0-dev.jar")
