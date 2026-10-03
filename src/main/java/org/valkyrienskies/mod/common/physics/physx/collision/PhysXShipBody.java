@@ -357,8 +357,6 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
         this.ship.getShipTransformationManager().setCurrentPhysicsTransform(finalTransform);
         this.ship.getShipData().getPhysicsData().setAngularVelocity(new Vector3d(calculations.getAngularVelocity()));
         this.ship.getShipData().getPhysicsData().setLinearVelocity(new Vector3d(calculations.getLinearVelocity()));
-
-        System.out.println("angular velocity: "+this.ship.getShipData().getPhysicsData().getAngularVelocity());
     }
 
     //fallback for if something bad happened with the physics
