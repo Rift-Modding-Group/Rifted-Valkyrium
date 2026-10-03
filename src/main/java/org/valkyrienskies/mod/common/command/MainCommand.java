@@ -39,16 +39,16 @@ import java.util.stream.Collectors;
 @ParametersAreNonnullByDefault
 public class MainCommand extends CommandTreeBase {
     public MainCommand() {
-        addSubcommand(new ListShipsCommand());
-        addSubcommand(new ShipPhysicsCommand());
-        addSubcommand(new GarbageCollectCommand());
-        addSubcommand(new PhysicsTpsCommand());
-        addSubcommand(new TeleportToShipCommand());
-        addSubcommand(new DeconstructShipCommand());
-        addSubcommand(new DeleteShipCommand());
-        addSubcommand(new TeleportShipToCommand());
-        addSubcommand(new TeleportShipHereCommand());
-        addSubcommand(new CommandTreeHelp(this));
+        this.addSubcommand(new ListShipsCommand());
+        this.addSubcommand(new ShipPhysicsCommand());
+        this.addSubcommand(new GarbageCollectCommand());
+        this.addSubcommand(new PhysicsTpsCommand());
+        this.addSubcommand(new TeleportToShipCommand());
+        this.addSubcommand(new DeconstructShipCommand());
+        this.addSubcommand(new DeleteShipCommand());
+        this.addSubcommand(new TeleportShipToCommand());
+        this.addSubcommand(new TeleportShipHereCommand());
+        this.addSubcommand(new CommandTreeHelp(this));
     }
 
     @Override
@@ -73,8 +73,7 @@ public class MainCommand extends CommandTreeBase {
 
     private static List<String> getShipCompletions(ICommandSender sender, String[] args) {
         String currentWord = args.length == 0 ? "" : args[args.length - 1];
-        String completedPrefix = args.length <= 1 ? "" :
-            String.join(" ", Arrays.copyOf(args, args.length - 1)) + " ";
+        String completedPrefix = args.length <= 1 ? "" : String.join(" ", Arrays.copyOf(args, args.length - 1)) + " ";
         String enteredName = completedPrefix + currentWord;
         String lowercaseEnteredName = enteredName.toLowerCase(Locale.ROOT);
 
@@ -124,7 +123,6 @@ public class MainCommand extends CommandTreeBase {
     }
 
     private abstract static class SubCommand extends CommandBase {
-
         private final String name;
         private final String usage;
         private final List<String> aliases;
@@ -152,7 +150,6 @@ public class MainCommand extends CommandTreeBase {
     }
 
     private static class DeconstructShipCommand extends SubCommand {
-
         private DeconstructShipCommand() {
             super("deconstruct-ship", "/vs deconstruct-ship <ship>", "deconstruct");
         }
@@ -160,7 +157,7 @@ public class MainCommand extends CommandTreeBase {
         @Override
         public void execute(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException {
             if (args.length == 0) {
-                throw new WrongUsageException(getUsage(sender));
+                throw new WrongUsageException(this.getUsage(sender));
             }
             changeDeconstructState(sender, getShip(sender, String.join(" ", args)),
                 PhysicsObject.DeconstructState.DECONSTRUCT_NORMAL);
@@ -174,16 +171,13 @@ public class MainCommand extends CommandTreeBase {
     }
 
     private static class DeleteShipCommand extends SubCommand {
-
         private DeleteShipCommand() {
             super("delete-ship", "/vs delete-ship <ship>", "delete");
         }
 
         @Override
         public void execute(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException {
-            if (args.length == 0) {
-                throw new WrongUsageException(getUsage(sender));
-            }
+            if (args.length == 0) throw new WrongUsageException(this.getUsage(sender));
             changeDeconstructState(sender, getShip(sender, String.join(" ", args)),
                 PhysicsObject.DeconstructState.DECONSTRUCT_IMMEDIATE_NO_COPY);
         }
@@ -196,16 +190,13 @@ public class MainCommand extends CommandTreeBase {
     }
 
     private static class TeleportToShipCommand extends SubCommand {
-
         private TeleportToShipCommand() {
             super("teleport-to", "/vs teleport-to <ship>", "tpto");
         }
 
         @Override
         public void execute(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException {
-            if (args.length == 0) {
-                throw new WrongUsageException(getUsage(sender));
-            }
+            if (args.length == 0) throw new WrongUsageException(this.getUsage(sender));
 
             EntityPlayerMP player = getCommandSenderAsPlayer(sender);
             ShipTransform transform = getShip(sender, String.join(" ", args)).getShipTransform();
@@ -220,23 +211,19 @@ public class MainCommand extends CommandTreeBase {
     }
 
     private static class GarbageCollectCommand extends SubCommand {
-
         private GarbageCollectCommand() {
             super("gc", "/vs gc");
         }
 
         @Override
         public void execute(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException {
-            if (args.length != 0) {
-                throw new WrongUsageException(getUsage(sender));
-            }
+            if (args.length != 0) throw new WrongUsageException(this.getUsage(sender));
             System.gc();
             sender.sendMessage(new TextComponentTranslation("commands.vs.gc.success"));
         }
     }
 
     private static class PhysicsTpsCommand extends SubCommand {
-
         private PhysicsTpsCommand() {
             super("tps", "/vs tps [--world|-w <world>]");
         }
@@ -246,7 +233,7 @@ public class MainCommand extends CommandTreeBase {
             World world = sender.getEntityWorld();
             if (args.length != 0) {
                 if (args.length != 2 || !(args[0].equals("--world") || args[0].equals("-w"))) {
-                    throw new WrongUsageException(getUsage(sender));
+                    throw new WrongUsageException(this.getUsage(sender));
                 }
 
                 Optional<WorldServer> selectedWorld = Arrays.stream(DimensionManager.getWorlds())
@@ -273,16 +260,13 @@ public class MainCommand extends CommandTreeBase {
 
             double ticksPerSecond = 1_000_000_000D / physicsLoop.getAveragePhysicsTickTimeNano();
             double roundedTicksPerSecond = Math.floor(ticksPerSecond * 100D) / 100D;
-            sender.sendMessage(new TextComponentString(world.provider.getDimensionType().getName() + ": "
-                + roundedTicksPerSecond + " physics ticks per second"));
+            sender.sendMessage(new TextComponentString(world.provider.getDimensionType().getName() + ": " + roundedTicksPerSecond + " physics ticks per second"));
         }
 
         @Override
         public List<String> getTabCompletions(MinecraftServer server, ICommandSender sender, String[] args,
             @Nullable BlockPos targetPos) {
-            if (args.length == 1) {
-                return getListOfStringsMatchingLastWord(args, "--world", "-w");
-            }
+            if (args.length == 1) return getListOfStringsMatchingLastWord(args, "--world", "-w");
             if (args.length == 2 && (args[0].equals("--world") || args[0].equals("-w"))) {
                 List<String> worldNames = Arrays.stream(DimensionManager.getWorlds())
                     .map(candidate -> candidate.provider.getDimensionType().getName())
@@ -294,16 +278,13 @@ public class MainCommand extends CommandTreeBase {
     }
 
     private static class ShipPhysicsCommand extends SubCommand {
-
         private ShipPhysicsCommand() {
             super("ship-physics", "/vs ship-physics <ship> [true|false]");
         }
 
         @Override
         public void execute(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException {
-            if (args.length == 0) {
-                throw new WrongUsageException(getUsage(sender));
-            }
+            if (args.length == 0) throw new WrongUsageException(this.getUsage(sender));
 
             String completeName = String.join(" ", args);
             Optional<ShipData> exactShip = QueryableShipData.get(sender.getEntityWorld()).getShipFromName(completeName);
@@ -311,16 +292,14 @@ public class MainCommand extends CommandTreeBase {
             boolean enabledWasSpecified = false;
             boolean enabled = false;
 
-            if (exactShip.isPresent()) {
-                ship = exactShip.get();
-            } else if (args.length > 1) {
+            if (exactShip.isPresent()) ship = exactShip.get();
+            else if (args.length > 1) {
                 String possibleName = String.join(" ", Arrays.copyOf(args, args.length - 1));
                 ship = getShip(sender, possibleName);
                 enabled = parseBoolean(args[args.length - 1]);
                 enabledWasSpecified = true;
-            } else {
-                ship = getShip(sender, completeName);
             }
+            else ship = getShip(sender, completeName);
 
             boolean physicsWasEnabled = ship.isPhysicsEnabled();
             String oldState = physicsWasEnabled ? "enabled" : "disabled";
@@ -332,10 +311,10 @@ public class MainCommand extends CommandTreeBase {
             ship.setPhysicsEnabled(enabled);
             if (physicsWasEnabled == enabled) {
                 sender.sendMessage(new TextComponentString("That ship's physics were not changed from " + oldState));
-            } else {
+            }
+            else {
                 String newState = enabled ? "enabled" : "disabled";
-                sender.sendMessage(new TextComponentString("That ship's physics were changed from " + oldState
-                    + " to " + newState));
+                sender.sendMessage(new TextComponentString("That ship's physics were changed from " + oldState + " to " + newState));
             }
         }
 
@@ -353,7 +332,6 @@ public class MainCommand extends CommandTreeBase {
     }
 
     private static class ListShipsCommand extends SubCommand {
-
         private ListShipsCommand() {
             super("list-ships", "/vs list-ships [-v|--verbose]", "ls");
         }
@@ -363,9 +341,8 @@ public class MainCommand extends CommandTreeBase {
             boolean verbose = false;
             if (args.length == 1 && (args[0].equals("-v") || args[0].equals("--verbose"))) {
                 verbose = true;
-            } else if (args.length != 0) {
-                throw new WrongUsageException(getUsage(sender));
             }
+            else if (args.length != 0) throw new WrongUsageException(this.getUsage(sender));
 
             QueryableShipData data = ValkyrienUtils.getQueryableData(sender.getEntityWorld());
             if (data.getShips().isEmpty()) {
@@ -376,14 +353,13 @@ public class MainCommand extends CommandTreeBase {
             String listOfShips;
             if (verbose) {
                 listOfShips = data.getShips().stream().map(shipData -> {
-                    if (shipData.getShipTransform() == null) {
-                        return shipData.getName() + ", Unknown Location";
-                    }
+                    if (shipData.getShipTransform() == null) return shipData.getName() + ", Unknown Location";
                     return String.format("%s [%.1f, %.1f, %.1f]", shipData.getName(),
                         shipData.getShipTransform().getPosX(), shipData.getShipTransform().getPosY(),
                         shipData.getShipTransform().getPosZ());
                 }).collect(Collectors.joining(",\n"));
-            } else {
+            }
+            else {
                 listOfShips = data.getShips().stream().map(ShipData::getName).collect(Collectors.joining(",\n"));
             }
 
@@ -391,26 +367,20 @@ public class MainCommand extends CommandTreeBase {
         }
 
         @Override
-        public List<String> getTabCompletions(MinecraftServer server, ICommandSender sender, String[] args,
-            @Nullable BlockPos targetPos) {
-            if (args.length == 1) {
-                return getListOfStringsMatchingLastWord(args, "-v", "--verbose");
-            }
+        public List<String> getTabCompletions(MinecraftServer server, ICommandSender sender, String[] args, @Nullable BlockPos targetPos) {
+            if (args.length == 1) return getListOfStringsMatchingLastWord(args, "-v", "--verbose");
             return Collections.emptyList();
         }
     }
 
     private static class TeleportShipToCommand extends SubCommand {
-
         private TeleportShipToCommand() {
             super("teleport-ship-to", "/vs teleport-ship-to <ship> <x> <y> <z>", "tp-ship-to");
         }
 
         @Override
         public void execute(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException {
-            if (args.length < 4) {
-                throw new WrongUsageException(getUsage(sender));
-            }
+            if (args.length < 4) throw new WrongUsageException(this.getUsage(sender));
 
             int coordinateStart = args.length - 3;
             ShipData ship = getShip(sender, String.join(" ", Arrays.copyOf(args, coordinateStart)));
@@ -422,8 +392,7 @@ public class MainCommand extends CommandTreeBase {
         }
 
         @Override
-        public List<String> getTabCompletions(MinecraftServer server, ICommandSender sender, String[] args,
-            @Nullable BlockPos targetPos) {
+        public List<String> getTabCompletions(MinecraftServer server, ICommandSender sender, String[] args, @Nullable BlockPos targetPos) {
             int coordinateStart = -1;
             for (int index = 1; index < args.length; index++) {
                 String possibleName = String.join(" ", Arrays.copyOf(args, index));
@@ -440,22 +409,18 @@ public class MainCommand extends CommandTreeBase {
     }
 
     private static class TeleportShipHereCommand extends SubCommand {
-
         private TeleportShipHereCommand() {
             super("teleport-ship-here", "/vs teleport-ship-here <ship>", "tp-ship-here");
         }
 
         @Override
         public void execute(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException {
-            if (args.length == 0) {
-                throw new WrongUsageException(getUsage(sender));
-            }
+            if (args.length == 0) throw new WrongUsageException(this.getUsage(sender));
             teleportShipToPosition(getShip(sender, String.join(" ", args)), sender.getPositionVector(), sender);
         }
 
         @Override
-        public List<String> getTabCompletions(MinecraftServer server, ICommandSender sender, String[] args,
-            @Nullable BlockPos targetPos) {
+        public List<String> getTabCompletions(MinecraftServer server, ICommandSender sender, String[] args, @Nullable BlockPos targetPos) {
             return getShipCompletions(sender, args);
         }
     }

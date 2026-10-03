@@ -32,7 +32,8 @@ public class VSConfigCommand extends CommandTreeBase {
         Method syncMethod;
         try {
             syncMethod = configClass.getMethod("sync");
-        } catch (NoSuchMethodException exception) {
+        }
+        catch (NoSuchMethodException exception) {
             throw new IllegalArgumentException("The config class must define public static void sync()", exception);
         }
         if (!Modifier.isStatic(syncMethod.getModifiers()) || syncMethod.getReturnType() != void.class) {
@@ -49,12 +50,13 @@ public class VSConfigCommand extends CommandTreeBase {
 
             if (subcategoryTypes.contains(field.getType())) {
                 try {
-                    addSubcommand(new ConfigCategoryCommand(getCommandName(field), name, field.getType(),
-                        field.get(null), syncMethod));
-                } catch (IllegalAccessException exception) {
+                    addSubcommand(new ConfigCategoryCommand(getCommandName(field), name, field.getType(), field.get(null), syncMethod));
+                }
+                catch (IllegalAccessException exception) {
                     throw new IllegalArgumentException("Could not read config category " + field.getName(), exception);
                 }
-            } else if (isSupportedType(field.getType())) {
+            }
+            else if (isSupportedType(field.getType())) {
                 addSubcommand(new ConfigValueCommand(getCommandName(field), "/" + name, field, null, syncMethod));
             }
         }
@@ -63,17 +65,17 @@ public class VSConfigCommand extends CommandTreeBase {
 
     @Override
     public String getName() {
-        return name;
+        return this.name;
     }
 
     @Override
     public List<String> getAliases() {
-        return aliases;
+        return this.aliases;
     }
 
     @Override
     public String getUsage(ICommandSender sender) {
-        return "/" + name + " <option> [value]";
+        return "/" + this.name + " <option> [value]";
     }
 
     private static String getCommandName(Field field) {
@@ -98,9 +100,9 @@ public class VSConfigCommand extends CommandTreeBase {
 
             for (Field field : categoryClass.getFields()) {
                 if (Modifier.isPublic(field.getModifiers()) && !Modifier.isStatic(field.getModifiers())
-                    && isSupportedType(field.getType())) {
-                    addSubcommand(new ConfigValueCommand(getCommandName(field), "/" + rootName + " " + name,
-                        field, category, syncMethod));
+                    && isSupportedType(field.getType())
+                ) {
+                    this.addSubcommand(new ConfigValueCommand(getCommandName(field), "/" + rootName + " " + name, field, category, syncMethod));
                 }
             }
             addSubcommand(new CommandTreeHelp(this));
@@ -108,12 +110,12 @@ public class VSConfigCommand extends CommandTreeBase {
 
         @Override
         public String getName() {
-            return name;
+            return this.name;
         }
 
         @Override
         public String getUsage(ICommandSender sender) {
-            return usage;
+            return this.usage;
         }
     }
 
@@ -125,8 +127,7 @@ public class VSConfigCommand extends CommandTreeBase {
         private final Object owner;
         private final Method syncMethod;
 
-        private ConfigValueCommand(String name, String parentUsage, Field field, @Nullable Object owner,
-            Method syncMethod) {
+        private ConfigValueCommand(String name, String parentUsage, Field field, @Nullable Object owner, Method syncMethod) {
             this.name = name;
             this.usage = parentUsage + " " + name + " [value]";
             this.field = field;
@@ -136,53 +137,61 @@ public class VSConfigCommand extends CommandTreeBase {
 
         @Override
         public String getName() {
-            return name;
+            return this.name;
         }
 
         @Override
         public String getUsage(ICommandSender sender) {
-            return usage;
+            return this.usage;
         }
 
         @Override
         public void execute(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException {
             if (args.length == 0) {
                 try {
-                    sender.sendMessage(new TextComponentString(name + " = " + field.get(owner)));
+                    sender.sendMessage(new TextComponentString(this.name + " = " + this.field.get(this.owner)));
                     return;
-                } catch (IllegalAccessException exception) {
-                    throw new CommandException("Could not read config option %s", name);
+                }
+                catch (IllegalAccessException exception) {
+                    throw new CommandException("Could not read config option %s", this.name);
                 }
             }
-            if (args.length > 1 && field.getType() != String.class) {
+            if (args.length > 1 && this.field.getType() != String.class) {
                 throw new WrongUsageException(getUsage(sender));
             }
 
             String value = field.getType() == String.class ? String.join(" ", args) : args[0];
             try {
-                Class<?> type = field.getType();
+                Class<?> type = this.field.getType();
                 if (type == int.class) {
-                    field.setInt(owner, parseInt(value));
-                } else if (type == double.class) {
-                    field.setDouble(owner, parseDouble(value));
-                } else if (type == float.class) {
-                    field.setFloat(owner, (float) parseDouble(value, -Float.MAX_VALUE, Float.MAX_VALUE));
-                } else if (type == boolean.class) {
-                    field.setBoolean(owner, parseBoolean(value));
-                } else if (type == byte.class) {
-                    field.setByte(owner, (byte) parseInt(value, Byte.MIN_VALUE, Byte.MAX_VALUE));
-                } else if (type == long.class) {
-                    field.setLong(owner, parseLong(value, Long.MIN_VALUE, Long.MAX_VALUE));
-                } else if (type == short.class) {
-                    field.setShort(owner, (short) parseInt(value, Short.MIN_VALUE, Short.MAX_VALUE));
-                } else if (type == char.class) {
-                    if (value.length() != 1) {
-                        throw new CommandException("Config option %s requires one character", name);
-                    }
-                    field.setChar(owner, value.charAt(0));
-                } else if (type == String.class) {
-                    field.set(owner, value);
-                } else if (type.isEnum()) {
+                    this.field.setInt(this.owner, parseInt(value));
+                }
+                else if (type == double.class) {
+                    this.field.setDouble(this.owner, parseDouble(value));
+                }
+                else if (type == float.class) {
+                    this.field.setFloat(this.owner, (float) parseDouble(value, -Float.MAX_VALUE, Float.MAX_VALUE));
+                }
+                else if (type == boolean.class) {
+                    this.field.setBoolean(this.owner, parseBoolean(value));
+                }
+                else if (type == byte.class) {
+                    this.field.setByte(this.owner, (byte) parseInt(value, Byte.MIN_VALUE, Byte.MAX_VALUE));
+                }
+                else if (type == long.class) {
+                    this.field.setLong(this.owner, parseLong(value, Long.MIN_VALUE, Long.MAX_VALUE));
+                }
+                else if (type == short.class) {
+                    this.field.setShort(this.owner, (short) parseInt(value, Short.MIN_VALUE, Short.MAX_VALUE));
+                }
+                else if (type == char.class) {
+                    if (value.length() != 1) throw new CommandException("Config option %s requires one character", this.name);
+                    this.field.setChar(this.owner, value.charAt(0));
+                }
+                else if (type == String.class) {
+                    this.field.set(this.owner, value);
+                }
+                else if (type.isEnum()) {
                     Object selected = null;
                     for (Object enumValue : type.getEnumConstants()) {
                         if (enumValue.toString().equalsIgnoreCase(value)) {
@@ -191,15 +200,16 @@ public class VSConfigCommand extends CommandTreeBase {
                         }
                     }
                     if (selected == null) {
-                        throw new CommandException("Unknown value %s for config option %s", value, name);
+                        throw new CommandException("Unknown value %s for config option %s", value, this.name);
                     }
-                    field.set(owner, selected);
+                    this.field.set(this.owner, selected);
                 }
 
-                syncMethod.invoke(null);
-                sender.sendMessage(new TextComponentString("Set " + name + " = " + field.get(owner)));
-            } catch (IllegalAccessException | InvocationTargetException exception) {
-                throw new CommandException("Could not update config option %s: %s", name, exception.getMessage());
+                this.syncMethod.invoke(null);
+                sender.sendMessage(new TextComponentString("Set " + this.name + " = " + this.field.get(this.owner)));
+            }
+            catch (IllegalAccessException | InvocationTargetException exception) {
+                throw new CommandException("Could not update config option %s: %s", this.name, exception.getMessage());
             }
         }
 
@@ -209,11 +219,11 @@ public class VSConfigCommand extends CommandTreeBase {
             if (args.length != 1) {
                 return Collections.emptyList();
             }
-            if (field.getType() == boolean.class) {
+            if (this.field.getType() == boolean.class) {
                 return getListOfStringsMatchingLastWord(args, "true", "false");
             }
-            if (field.getType().isEnum()) {
-                return getListOfStringsMatchingLastWord(args, Arrays.asList(field.getType().getEnumConstants()));
+            if (this.field.getType().isEnum()) {
+                return getListOfStringsMatchingLastWord(args, Arrays.asList(this.field.getType().getEnumConstants()));
             }
             return Collections.emptyList();
         }
