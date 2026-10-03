@@ -55,6 +55,8 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
     private static final double WATER_VERTICAL_DAMPING = 1800D;
     private static final double WATER_HORIZONTAL_DAMPING = 450D;
     private static final double WATER_LATERAL_VELOCITY_RETENTION_PER_SECOND = 0.1D;
+    private static final double WATER_YAW_VELOCITY_RETENTION_PER_SECOND = 0.5D;
+    private static final double WATER_YAW_STOP_THRESHOLD = 0.001D;
     private static final double BLOCK_HALF_EXTENT = 0.5D;
     private static final double MASS_PROPERTY_EPSILON = 1.0E-6D;
 
@@ -190,9 +192,12 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
                 if (longitudinalDirection.lengthSquared() > PhysicsCalculations.EPSILON) longitudinalDirection.normalize();
             }
             double lateralVelocityRetention = Math.pow(WATER_LATERAL_VELOCITY_RETENTION_PER_SECOND, timeStep);
+            double yawVelocityRetention = Math.pow(WATER_YAW_VELOCITY_RETENTION_PER_SECOND, timeStep);
             boolean lateralVelocityDamped = false;
+            boolean yawVelocityDamped = false;
 
             Vector3d tempTorque = new Vector3d();
+            double translationYawTorque = 0D;
             BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
 
             //iterate over each block position
@@ -211,6 +216,12 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
 
                 double submergedFraction = this.getSubmergedFraction(hostWorld, mutablePos, centerWorld);
                 if (submergedFraction > 0D) {
+                    if (!yawVelocityDamped) {
+                        Vector3d angularVelocity = calculations.getAngularVelocity();
+                        angularVelocity.y *= yawVelocityRetention;
+                        if (Math.abs(angularVelocity.y) < WATER_YAW_STOP_THRESHOLD) angularVelocity.y = 0D;
+                        yawVelocityDamped = true;
+                    }
                     if (!lateralVelocityDamped && longitudinalDirection.lengthSquared() > PhysicsCalculations.EPSILON) {
                         Vector3d linearVelocity = calculations.getLinearVelocity();
                         double longitudinalSpeed = linearVelocity.x * longitudinalDirection.x + linearVelocity.z * longitudinalDirection.z;
@@ -227,14 +238,22 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
                     );
                     Vector3d velocityAtPoint = calculations.getVelocityAtPoint(relativeToShipCenter, new Vector3d());
                     double lift = buoyancyForce * submergedFraction;
+                    double horizontalDamping = WATER_HORIZONTAL_DAMPING * submergedFraction;
                     Vector3d force = new Vector3d(
-                            -velocityAtPoint.x * WATER_HORIZONTAL_DAMPING * submergedFraction,
+                            -velocityAtPoint.x * horizontalDamping,
                             lift - velocityAtPoint.y * WATER_VERTICAL_DAMPING * submergedFraction,
-                            -velocityAtPoint.z * WATER_HORIZONTAL_DAMPING * submergedFraction
+                            -velocityAtPoint.z * horizontalDamping
+                    );
+                    Vector3d linearVelocity = calculations.getLinearVelocity();
+                    translationYawTorque += horizontalDamping * (
+                            relativeToShipCenter.x * linearVelocity.z - relativeToShipCenter.z * linearVelocity.x
                     );
                     calculations.addForceAtPoint(relativeToShipCenter, force, tempTorque);
                 }
             }
+
+            // Cancel yaw from translational water drag while retaining the water drag produced by rotation at each block.
+            calculations.addTorque(new Vector3d(0D, -translationYawTorque, 0D));
         }
 
         //rebuild or patch collision shapes when ship block collision data changed.
@@ -338,6 +357,8 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
         this.ship.getShipTransformationManager().setCurrentPhysicsTransform(finalTransform);
         this.ship.getShipData().getPhysicsData().setAngularVelocity(new Vector3d(calculations.getAngularVelocity()));
         this.ship.getShipData().getPhysicsData().setLinearVelocity(new Vector3d(calculations.getLinearVelocity()));
+
+        System.out.println("angular velocity: "+this.ship.getShipData().getPhysicsData().getAngularVelocity());
     }
 
     //fallback for if something bad happened with the physics
