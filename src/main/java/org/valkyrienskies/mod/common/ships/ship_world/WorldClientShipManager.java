@@ -96,6 +96,9 @@ public class WorldClientShipManager implements IPhysObjectWorld {
 
     @Override
     public void onWorldUnload() {
+        for (PhysicsObject physicsObject : this.loadedShips.values()) {
+            physicsObject.getPhysicsCollideWith().close();
+        }
         this.loadedShips.clear();
         this.threadSafeLoadedShips = ImmutableList.of();
     }

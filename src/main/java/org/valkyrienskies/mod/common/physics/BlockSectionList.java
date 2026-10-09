@@ -16,7 +16,6 @@ import org.valkyrienskies.mod.common.entity.EntityMountable;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
@@ -26,7 +25,6 @@ public class BlockSectionList {
     private static final int BLOCK_SECTION_CACHE_RESCAN_INTERVAL_TICKS = 20;
     private static final int BLOCK_SECTION_CACHE_PADDING_BLOCKS = 16;
     private static final int BLOCK_SECTION_CACHE_HYSTERESIS_BLOCKS = 4;
-    private static final Map<BlockSection.Key, Set<BlockSectionList>> CACHES_BY_SECTION = new ConcurrentHashMap<>();
 
     @Nullable
     private World cachedBlockSectionWorld;
@@ -36,7 +34,6 @@ public class BlockSectionList {
     private final Map<BlockSection.Key, BlockSection> cachedBlockSections = new HashMap<>();
     private final Set<BlockSection.Key> cachedEmptyBlockSections = new HashSet<>();
     private final Queue<BlockSection.Key> dirtyBlockSections = new ConcurrentLinkedQueue<>();
-    private final Set<BlockSection.Key> registeredBlockSections = new HashSet<>();
     @NotNull
     private List<BlockSection> blockSections = List.of();
 
@@ -90,7 +87,7 @@ public class BlockSectionList {
         BlockSection.Range nextRange = useCachedRange ? this.cachedBlockSectionRange : paddedRange;
         if (!this.areChunksLoaded(world, nextRange)) nextRange = exactRange;
 
-        List<BlockSection.Key> nextRegisteredSections = nextRange.keys(world);
+        List<BlockSection.Key> nextSectionKeys = nextRange.keys(world);
         boolean sameRange = sameWorld && nextRange.equals(this.cachedBlockSectionRange);
         boolean forceRescan = !sameWorld || (sameRange && this.blockSectionCacheAge >= BLOCK_SECTION_CACHE_RESCAN_INTERVAL_TICKS);
         int nextCacheAge = sameRange && !forceRescan ? this.blockSectionCacheAge + 1 : 0;
@@ -114,7 +111,7 @@ public class BlockSectionList {
                 (nextRange.maxZ() << 4) + 15
         );
 
-        for (BlockSection.Key sectionKey : nextRegisteredSections) {
+        for (BlockSection.Key sectionKey : nextSectionKeys) {
             BlockSection cachedSection = previousSections.get(sectionKey);
             boolean knownEmpty = previousEmptySections.contains(sectionKey);
             boolean shouldRescan = forceRescan || dirtySections.contains(sectionKey) || (cachedSection == null && !knownEmpty);
@@ -139,7 +136,6 @@ public class BlockSectionList {
             }
         }
 
-        this.updateRegisteredBlockSections(nextRegisteredSections);
         this.cachedBlockSectionWorld = world;
         this.cachedBlockSectionRange = nextRange;
         this.blockSectionCacheAge = nextCacheAge;
@@ -151,11 +147,10 @@ public class BlockSectionList {
     }
 
     /**
-     * Clears the block section cache and stops watching its old sections.
+     * Clears the block section cache.
      * Dirty section updates stay queued unless the whole cache is being closed.
      */
     private void clearBlockSectionCache() {
-        this.updateRegisteredBlockSections(List.of());
         this.cachedBlockSections.clear();
         this.cachedEmptyBlockSections.clear();
         this.cachedBlockSectionWorld = null;
@@ -190,28 +185,6 @@ public class BlockSectionList {
             dirtySections.add(dirtySection);
         }
         return dirtySections;
-    }
-
-    private void updateRegisteredBlockSections(@NotNull List<BlockSection.Key> nextBlockSections) {
-        Set<BlockSection.Key> nextBlockSectionSet = new HashSet<>(nextBlockSections);
-        for (BlockSection.Key sectionKey : new ArrayList<>(this.registeredBlockSections)) {
-            if (nextBlockSectionSet.contains(sectionKey)) continue;
-            this.removeBlockSectionRegistration(sectionKey);
-            this.registeredBlockSections.remove(sectionKey);
-        }
-
-        for (BlockSection.Key sectionKey : nextBlockSections) {
-            if (!this.registeredBlockSections.add(sectionKey)) continue;
-            CACHES_BY_SECTION.computeIfAbsent(sectionKey, ignored -> Collections.newSetFromMap(new ConcurrentHashMap<>())).add(this);
-        }
-    }
-
-    private void removeBlockSectionRegistration(@NotNull BlockSection.Key sectionKey) {
-        Set<BlockSectionList> sectionCaches = CACHES_BY_SECTION.get(sectionKey);
-        if (sectionCaches == null) return;
-
-        sectionCaches.remove(this);
-        if (sectionCaches.isEmpty()) CACHES_BY_SECTION.remove(sectionKey, sectionCaches);
     }
 
     @Nullable
@@ -263,36 +236,21 @@ public class BlockSectionList {
         return this.blockSections;
     }
 
-    //-----stuff for editing caches by section map-----
-    public static void invalidateBlockSectionAt(@NotNull World world, @NotNull BlockPos pos) {
+    public void invalidateBlockSectionAt(@NotNull World world, @NotNull BlockPos pos) {
         BlockSection.Key sectionKey = BlockSection.Key.fromBlockPos(world, pos);
-        Set<BlockSectionList> sectionCaches = CACHES_BY_SECTION.get(sectionKey);
-        if (sectionCaches == null) return;
-
-        for (BlockSectionList collideWith : new ArrayList<>(sectionCaches)) {
-            collideWith.dirtyBlockSections.add(sectionKey);
-        }
+        BlockSection.Range cachedRange = this.cachedBlockSectionRange;
+        if (this.cachedBlockSectionWorld != world || cachedRange == null || !cachedRange.contains(sectionKey)) return;
+        this.dirtyBlockSections.add(sectionKey);
     }
 
-    public static void invalidateBlockSectionsInChunk(@NotNull World world, int chunkX, int chunkZ) {
-        for (Map.Entry<BlockSection.Key, Set<BlockSectionList>> entry : CACHES_BY_SECTION.entrySet()) {
-            BlockSection.Key sectionKey = entry.getKey();
-            if (sectionKey.world() != world || sectionKey.sectionX() != chunkX || sectionKey.sectionZ() != chunkZ) {
-                continue;
-            }
+    public void invalidateBlockSectionsInChunk(@NotNull World world, int chunkX, int chunkZ) {
+        BlockSection.Range cachedRange = this.cachedBlockSectionRange;
+        if (this.cachedBlockSectionWorld != world || cachedRange == null) return;
+        if (chunkX < cachedRange.minX() || chunkX > cachedRange.maxX()) return;
+        if (chunkZ < cachedRange.minZ() || chunkZ > cachedRange.maxZ()) return;
 
-            for (BlockSectionList collideWith : new ArrayList<>(entry.getValue())) {
-                collideWith.dirtyBlockSections.add(sectionKey);
-            }
-        }
-    }
-
-    public static void clearBlockSectionRegistrationsForWorld(@NotNull World world) {
-        for (Map.Entry<BlockSection.Key, Set<BlockSectionList>> entry : CACHES_BY_SECTION.entrySet()) {
-            if (entry.getKey().world() != world) continue;
-            for (BlockSectionList collideWith : new ArrayList<>(entry.getValue())) {
-                collideWith.close();
-            }
+        for (int sectionY = cachedRange.minY(); sectionY <= cachedRange.maxY(); sectionY++) {
+            this.dirtyBlockSections.add(new BlockSection.Key(world, chunkX, sectionY, chunkZ));
         }
     }
 }

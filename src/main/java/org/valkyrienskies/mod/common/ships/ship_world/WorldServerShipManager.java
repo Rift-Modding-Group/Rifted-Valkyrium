@@ -73,6 +73,9 @@ public class WorldServerShipManager implements IPhysObjectWorld {
 
     @Override
     public void onWorldUnload() {
+        for (PhysicsObject physicsObject : this.loadedShips.values()) {
+            physicsObject.getPhysicsCollideWith().close();
+        }
         this.threadSafeLoadedShips = ImmutableList.of();
         this.physicsLoop.kill();
         this.physicsThread.interrupt();
@@ -82,6 +85,7 @@ public class WorldServerShipManager implements IPhysObjectWorld {
         catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
+        this.loadedShips.clear();
     }
 
     @Override

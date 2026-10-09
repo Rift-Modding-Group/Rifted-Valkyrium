@@ -2,6 +2,7 @@ package org.valkyrienskies.mod.common.ships.ship_world;
 
 import com.google.common.collect.ImmutableList;
 import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import org.valkyrienskies.mod.common.util.multithreaded.CalledFromWrongThreadException;
 
@@ -53,6 +54,27 @@ public interface IPhysObjectWorld {
      */
     @Nonnull
     ImmutableList<PhysicsObject> getAllLoadedThreadSafe();
+
+    /**
+     * Marks the terrain section containing {@code pos} as dirty for every loaded ship whose
+     * collision cache currently covers it.
+     */
+    default void invalidateBlockSectionAt(@Nonnull BlockPos pos) throws CalledFromWrongThreadException {
+        World world = this.getWorld();
+        for (PhysicsObject physicsObject : this.getAllLoadedPhysObj()) {
+            physicsObject.getPhysicsCollideWith().invalidateBlockSectionAt(world, pos);
+        }
+    }
+
+    /**
+     * Marks the cached terrain sections in a loaded or unloaded chunk as dirty.
+     */
+    default void invalidateBlockSectionsInChunk(int chunkX, int chunkZ) throws CalledFromWrongThreadException {
+        World world = this.getWorld();
+        for (PhysicsObject physicsObject : this.getAllLoadedPhysObj()) {
+            physicsObject.getPhysicsCollideWith().invalidateBlockSectionsInChunk(world, chunkX, chunkZ);
+        }
+    }
 
     /**
      * Queues a ship load, must be called on the game thread.

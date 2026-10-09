@@ -16,9 +16,9 @@ import net.minecraft.world.World;
 import org.joml.Vector3d;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMount;
+import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
 import org.valkyrienskies.mod.common.ships.ship_transform.CoordinateSpaceType;
 import org.valkyrienskies.mod.common.entity.EntityMountable;
-import org.valkyrienskies.mod.common.physics.BlockSectionList;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import valkyrienwarfare.api.TransformType;
 
@@ -51,7 +51,8 @@ public class VSWorldEventListener implements IWorldEventListener {
             return;
         }
         if (oldState == newState || oldState.equals(newState)) return;
-        BlockSectionList.invalidateBlockSectionAt(worldIn, pos);
+        IShipWorld shipWorld = worldIn.getCapability(VSCapabilityRegistry.VS_SHIP_WORLD, null);
+        if (shipWorld != null) shipWorld.getManager().invalidateBlockSectionAt(pos);
     }
 
     @Override
