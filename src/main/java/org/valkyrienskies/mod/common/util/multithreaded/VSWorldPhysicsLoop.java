@@ -103,13 +103,7 @@ public class VSWorldPhysicsLoop implements Runnable {
                     // waiting.
                     if (physTickDuration < idealTickTime) {
                         final long sleepMillis = (idealTickTime - physTickDuration) / 1_000_000L;
-                        try {
-                            Thread.sleep(sleepMillis);
-                        }
-                        catch (InterruptedException e) {
-                            if (this.threadRunning) e.printStackTrace();
-                            Thread.currentThread().interrupt();
-                        }
+                        if (!this.sleep(sleepMillis)) return;
                     }
 
                     // Keep track of the time it took to run the physics tick, including the time we spent sleeping.
@@ -123,12 +117,7 @@ public class VSWorldPhysicsLoop implements Runnable {
                 else {
                     // If physics are disabled then sleep for 100 ms.
                     // If we don't sleep then we waste a ton of CPU just being in this while(true) loop.
-                    try {
-                        Thread.sleep(100L);
-                    }
-                    catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
+                    if (!this.sleep(100L)) return;
                 }
             }
         }
@@ -137,6 +126,22 @@ public class VSWorldPhysicsLoop implements Runnable {
             // If we get to this point of run(), then we are about to return and this thread
             // will terminate soon.
             ValkyrienSkiesMod.LOGGER.trace(this.name + " killed");
+        }
+    }
+
+    //non-noisy thread sleeper method to make log shut up
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
+    private boolean sleep(long sleepMillis) {
+        try {
+            Thread.sleep(sleepMillis);
+            return true;
+        }
+        catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            if (this.threadRunning) {
+                ValkyrienSkiesMod.LOGGER.warn(this.name + " interrupted unexpectedly; stopping physics loop.", e);
+            }
+            return false;
         }
     }
 
