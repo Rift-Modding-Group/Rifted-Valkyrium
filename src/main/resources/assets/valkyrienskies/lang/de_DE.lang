@@ -2,24 +2,26 @@
 
 ### Valkyrien Skies Main
 
+tooltip.valkyrienskies.legacy=Veraltet
+
 # Blocks
-tile.captains_chair.name=Kapitänssitz
+tile.captains_chair.name=§6Veraltet§r - Kapitänssitz
 tooltip.valkyrienskies.captains_chair_1=Nutze ihn, um dich in Schiffe zu setzen und sie zu steuern!
 tooltip.valkyrienskies.captains_chair_2=Wenn du auf dem Schiff stehst, wirst du dich hineinsetzen sobald du es steuerst. Ansonsten steuerst du das Schiff von Außerhalb ohne dich hinein zusetzen.
 
-tile.passenger_chair.name=Passagiersitz
+tile.passenger_chair.name=§6Veraltet§r - Passagiersitz
 tooltip.valkyrienskies.passenger_chair=Nutze ihn, um fest auf Schiffen zu sitzen.
 
-tile.vs_water_pump.name=Wasserpumpe
+tile.vs_water_pump.name=§6Veraltet§r - Wasserpumpe
 tooltip.valkyrienskies.vs_water_pump=Nimmt Wasser in der Nähe seine Effekte, nützlich für U-Boote.
 message.valkyrienskies.water_pump.size=Wasserpumpenbereich: %s x %s x %s
 
-tile.boat_chair.name=Bootssitz
+tile.boat_chair.name=§6Veraltet§r - Bootssitz
 tooltip.valkyrienskies.boat_chair=Nutze ihn, um dich in Boote im Wasser zu setzen!
 
 
 # Item Tab
-itemGroup.valkyrienskies=Valkyrien Skies
+itemGroup.valkyrienskies=§6Veraltet§r - Valkyrien Skies
 
 
 ## Commands
@@ -104,19 +106,19 @@ valkyrienskies.general.invertoaringdirection.tooltip=Kehrt die Richtung um, in d
 ### Valkyrien Skies Control
 
 # Items
-item.physics_core.name=Physikkern
+item.physics_core.name=§6Veraltet§r - Physikkern
 tooltip.vs_control.physics_core=Der Kern einer Physikinfusionsaggregat.
 
-item.relay_wire.name=Verschaltungskabel
+item.relay_wire.name=§6Veraltet§r - Verschaltungskabel
 tooltip.vs_control.relay_wire=Wird verwendet, um Verschaltungen mit Komponenten und anderen Verschaltungen zu verbinden. Wird bereits verbundene Knotenpunkte lösen.
 message.vs_control.error_relay_wire_limit=Eine der Verbindungen ist voll. Verschaltungsknotenpunkte können %d Verbindungen haben, alle anderen Objekte können nur eine Verbindung haben.
 message.vs_control.error_relay_wire_length=Das Kabel ist zu kurz, um diese Knotenpunkte zu verbinden!
 message.vs_control.error_relay_connection_already_exists=Zwischen diesen Knotenpunkten besteht bereits eine Verbindung! Verwende eine Schere, um sie zu trennen!
 
-item.vanishing_wire.name=Verschwindendes Kabel
+item.vanishing_wire.name=§6Veraltet§r - Verschwindendes Kabel
 tooltip.vs_control.vanishing_wire=Funktioniert wie Verschaltungskabel, nur dass es unsichtbar ist, wenn man es nicht in der Hand hält.
 
-item.vs_wrench.name=VS Schraubenschlüssel
+item.vs_wrench.name=§6Veraltet§r - VS Schraubenschlüssel
 tooltip.vs_control.wrench_usage=Ein VS Schraubenschlüssel wird benötigt, um das zu bauen.
 tooltip.vs_control.wrench_modes=%s + %s ,um zwischen den Modi zu wechseln.
 tooltip.vs_control.wrench_switched.construct=Der VS Schraubenschlüssel ist nun im Konstruktionsmodus.
@@ -125,25 +127,26 @@ tooltip.vs_control.wrench_toggle=Rechtsklicke Multi-Block-Strukturen, um sie von
 tooltip.vs_control.wrench.construct=Wird verwendet, um Multi-Block-Strukturen zu konstruieren und die Orientierung des Getriebekastens zu verändern.
 tooltip.vs_control.wrench.deconstruct=Wird verwendet, um Multi-Block-Strukturen sicher zu dekonstruieren.
 
-item.vs_ship_tracker.name=Schiffsortungsgerät
+item.vs_ship_tracker.name=§6Veraltet§r - Schiffsortungsgerät
 
 # Blocks
 ## Ship blocks
-tile.physics_infuser.name=Physikinfusionsaggregat
+tile.physics_infuser.name=§6Veraltet§r - Physikinfusionsaggregat
 tooltip.vs_control.physics_infuser=Macht aus jedem hieran befestigten Block ein brandneues Schiff, wird die meisten pregenerierten Blöcke, wie Stein nicht infusionieren.
 
-tile.physics_infuser_creative.name=Kreativ Physikinfusionsaggregat
+tile.physics_infuser_creative.name=§6Veraltet§r - Kreativ Physikinfusionsaggregat
 tooltip.vs_control.physics_infuser_creative_1=Macht aus wirklich jedem hieran befestigten Block ein brandneues Schiff, sei bloß vorsichtig, dass du nicht die ganze Welt infusionierst.
 tooltip.vs_control.physics_infuser_creative_2=Warnung, es hat keine Blocklimits und es wird alles infusionieren, was es berührt! Verwende es mit extremer Vorsicht.
 
-tile.physics_infuser_dummy.name=Attrappenphysikinfusionsaggregat
+tile.physics_infuser_dummy.name=§6Veraltet§r - Attrappenphysikinfusionsaggregat
 tooltip.vs_control.physics_infuser_dummy=Die andere Hälfte eines Physikinfusionsaggregates.
 
-tile.ship_helm.name=Steuerrad
+tile.ship_helm.name=§6Veraltet§r - Steuerrad
+tile.ship_helm_wheel.name=§6Veraltet§r - Steuerrad
 tooltip.vs_control.ship_helm=Dieser Block wird dich, im selben Netzwerk befindliche Ruder bedienen lassen.
 vs_control.ship_helm.wheel_rotation=Steuerraddrehung: %s
 
-tile.speed_telegraph.name=Maschinentelegraf
+tile.speed_telegraph.name=§6Veraltet§r - Maschinentelegraf
 tooltip.vs_control.speed_telegraph=Dieser Block wird dir die Steuerung der Ausgabegeschwindigkeit von Getriebekästen und so auch der Geschwindigkeit der Propeller erlauben.
 vs_control.speed_telegraph.target_speed=Zielgeschwindigkeit: %s
 vs_control.speed_telegraph.full_ahead=Volle Kraft voraus
@@ -154,65 +157,65 @@ vs_control.speed_telegraph.slow_astern=Langsam zurück
 vs_control.speed_telegraph.half_astern=Halbe Kraft zurück
 vs_control.speed_telegraph.full_astern=Volle Kraft zurück
 
-tile.dummy_telegraph.name=Attrappentelegraf
+tile.dummy_telegraph.name=§6Veraltet§r - Attrappentelegraf
 tooltip.vs_control.dummy_telegraph=Ein nicht-funktionierender Maschinentelegraf.\nAktiviert den Block unter ihm, wenn aktiviert.
 
-tile.lift_lever.name=Auftriebshebel
+tile.lift_lever.name=§6Veraltet§r - Auftriebshebel
 tooltip.vs_control.lift_lever=Dieser Block lässt dich die Zielflughöhe der Valkyriumkompressoren setzen.
 vs_control.lift_lever.target_altitude=Zielhöhe: %s
 
-tile.gearbox.name=Getriebekasten
+tile.gearbox.name=§6Veraltet§r - Getriebekasten
 tooltip.vs_control.gearbox_1=Erlaubt es Drehmoment, Richtung und Leistung zu verändern.
 tooltip.vs_control.gearbox_2=Verbinde ihn mit einem Maschinentelegrafen, um die Drehmomentausgabe zu verändern.
 
-tile.rotation_axle.name=Achse
+tile.rotation_axle.name=§6Veraltet§r - Achse
 tooltip.vs_control.rotation_axle=Wird verwendet, um Valkyriummotoren von Getriebekästen mit Propellern zu verbinden.
 
 
 ## Network
-tile.network_display.name=Netzwerkmonitor
+tile.network_display.name=§6Veraltet§r - Netzwerkmonitor
 tooltip.vs_control.network_display=[WIP] Listet alle Knotenpunkte im verbundenen Netzwerk auf.
 
-tile.network_relay.name=Netzwerkverschaltung
+tile.network_relay.name=§6Veraltet§r - Netzwerkverschaltung
 tooltip.vs_control.network_relay=Lässt dich %d Komponenten, Verschaltungen eingeschlossen, durch Verschaltungskabel oder Verschwindendes Kabel hiermit verbinden.
 
 
 ## Multi-Block parts
-tile.valkyrium_compressor_part.name=Valkyriumkompressorteil
+tile.valkyrium_compressor_part.name=§6Veraltet§r - Valkyriumkompressorteil
 tooltip.vs_control.valkyrium_compressor_part_1=Teil einer 2x2x2 Multi-Block-Struktur, dem Valkyriumkompressor.
 tooltip.vs_control.valkyrium_compressor_part_2=Der Zweck dieser Multi-Block-Struktur ist es, viel Schub nach oben oder unten zu generieren.
 
-tile.rudder_part.name=Ruderteil
+tile.rudder_part.name=§6Veraltet§r - Ruderteil
 tooltip.vs_control.rudder_part=Ändert die Richtung des Schubs von Propellern; wird durch das Steuerrad gesteuert.
 
-tile.giant_propeller_part.name=Riesiges Propellerteil
+tile.giant_propeller_part.name=§6Veraltet§r - Riesiges Propellerteil
 tooltip.vs_control.giant_propeller_part=3x3 bis 7x7 Multi-Block-Struktur, welche Drehmoment zu Schub konvertiert.
 
-tile.valkyrium_engine_part.name=Valkyriummotorenteil
+tile.valkyrium_engine_part.name=§6Veraltet§r - Valkyriummotorenteil
 tooltip.vs_control.valkyrium_engine_part=Teil einer Multi-Block-Struktur, welche Drehmoment generiert, um Propeller anzutreiben.
 
 
 ## Legacy engines
-tile.basic_engine.name=Einfacher Motor
-tile.advanced_engine.name=Verbesserter Motor
-tile.elite_engine.name=Spitzenklassiger Motor
-tile.ultimate_engine.name=Ultimativer Motor
-tile.redstone_engine.name=Redstonemotor
+tile.basic_engine.name=§6Veraltet§r - Einfacher Motor
+tile.advanced_engine.name=§6Veraltet§r - Verbesserter Motor
+tile.elite_engine.name=§6Veraltet§r - Spitzenklassiger Motor
+tile.ultimate_engine.name=§6Veraltet§r - Ultimativer Motor
+tile.redstone_engine.name=§6Veraltet§r - Redstonemotor
 
 tooltip.vs_control.legacy_engine=Legacy Motor, braucht bloß ein Redstone-Signal, um zu funktionieren.
 
 
 ## Misc.
-tile.compacted_valkyrium.name=Verdichtetes Valkyrium
+tile.compacted_valkyrium.name=§6Veraltet§r - Verdichtetes Valkyrium
 tooltip.vs_control.compacted_valkyrium=Auftriebskraft: %s.
 
-tile.buoyancy_tank.name=Auftriebstank
+tile.buoyancy_tank.name=§6Veraltet§r - Auftriebstank
 tooltip.vs_control.buoyancy_tank=Auftrieb bei vollständigem Eintauchen: %s.
 
-tile.gyroscope_stabilizer.name=Schiffsstabilisationsgyroskop
+tile.gyroscope_stabilizer.name=§6Veraltet§r - Schiffsstabilisationsgyroskop
 tooltip.vs_control.gyroscope_stabilizer=Dieser Block übt passiv ein Drehmoment auf das Schiff aus, um es zu horizontrieren.
 
-tile.gyroscope_dampener.name=Schiffsdämpfergyroskop
+tile.gyroscope_dampener.name=§6Veraltet§r - Schiffsdämpfergyroskop
 tooltip.vs_control.gyroscope_dampener=Dieser Block übt passiv ein Drehmoment auf das Schiff aus, um es am wackeln zu hindern.
 
 tooltip.vs_control.wrench.switched.construct=Schraubenschlüssel im Konstruktionsmodus
@@ -230,7 +233,7 @@ gui.stop_align_ship=Ausrichtung stoppen
 
 
 ## Not Yet Implemented
-tile.lift_valve.name=Auftriebsventil
+tile.lift_valve.name=§6Veraltet§r - Auftriebsventil
 tooltip.vs_control.lift_valve=Noch nicht implementiert.
 
 # Config (Remember to update VSControlConfig after any changes are made here)
@@ -270,12 +273,12 @@ vs_control.general.engine_thrust.redstoneenginethrust.tooltip=
 ### Valkyrien Skies World
 
 # Items
-item.valkyrium_crystal.name=Valkyrium Kristall
+item.valkyrium_crystal.name=§6Veraltet§r - Valkyrium Kristall
 tooltip.vs_world.valkyrium_crystal=Zu viel davon bei dir zu tragen wird dich zum Schweben bringen.
 
 
 # Blocks
-tile.valkyrium_ore.name=Valkyriumerz
+tile.valkyrium_ore.name=§6Veraltet§r - Valkyriumerz
 tooltip.vs_world.valkyrium_ore_1=Ein mysteriöses schwebendes Erz.
 tooltip.vs_world.valkyrium_ore_2=Zu viel davon bei dir zu tragen wird dich zum Schweben bringen.
 

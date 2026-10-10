@@ -2,24 +2,26 @@
 
 ### Valkyrien Skies Main
 
+tooltip.valkyrienskies.legacy=Obsoleto
+
 # Blocks
-tile.captains_chair.name=Silla del capitán
+tile.captains_chair.name=§6Obsoleto§r - Silla del capitán
 tooltip.valkyrienskies.captains_chair_1=¡Úsala para subir y controlar naves!
 tooltip.valkyrienskies.captains_chair_2=Si estás de pie sobre la nave, subirás a ella al tomar el control. De lo contrario, controlarás la nave a distancia sin subirte.
 
-tile.passenger_chair.name=Silla de pasajero
+tile.passenger_chair.name=§6Obsoleto§r - Silla de pasajero
 tooltip.valkyrienskies.passenger_chair=Úsala para sentarte firmemente en las naves.
 
-tile.vs_water_pump.name=Bomba de agua
+tile.vs_water_pump.name=§6Obsoleto§r - Bomba de agua
 tooltip.valkyrienskies.vs_water_pump=Elimina los efectos del agua cercana, lo que resulta útil para submarinos. Se puede ajustar su alcance.
 message.valkyrienskies.water_pump.size=Alcance de la bomba de agua: %s x %s x %s
 
-tile.boat_chair.name=Silla para bote
+tile.boat_chair.name=§6Obsoleto§r - Silla para bote
 tooltip.valkyrienskies.boat_chair=¡Úsala para subir a los botes en el mar!
 
 
 # Item Tab
-itemGroup.valkyrienskies=Valkyrien Skies
+itemGroup.valkyrienskies=§6Obsoleto§r - Valkyrien Skies
 
 
 ## Commands
@@ -104,19 +106,19 @@ valkyrienskies.general.invertoaringdirection.tooltip=Invierte la dirección en l
 ### Valkyrien Skies Control
 
 # Items
-item.physics_core.name=Núcleo de física
+item.physics_core.name=§6Obsoleto§r - Núcleo de física
 tooltip.vs_control.physics_core=El núcleo de un infusor de física.
 
-item.relay_wire.name=Cable de relé
+item.relay_wire.name=§6Obsoleto§r - Cable de relé
 tooltip.vs_control.relay_wire=Se usa para conectar relés con componentes y otros relés. Debes usar tijeras para desconectarlos.
 message.vs_control.error_relay_wire_limit=Una de las conexiones alcanzó su límite. Los nodos de relé pueden tener %d conexiones; los demás objetos solo pueden tener una.
 message.vs_control.error_relay_wire_length=¡El cable es demasiado corto para conectar estos nodos!
 message.vs_control.error_relay_connection_already_exists=¡Ya existe una conexión entre estos nodos! ¡Usa tijeras para cortarla!
 
-item.vanishing_wire.name=Cable invisible
+item.vanishing_wire.name=§6Obsoleto§r - Cable invisible
 tooltip.vs_control.vanishing_wire=Funciona como el cable de relé, pero es invisible cuando no lo sostienes.
 
-item.vs_wrench.name=Llave inglesa de VS
+item.vs_wrench.name=§6Obsoleto§r - Llave inglesa de VS
 tooltip.vs_control.wrench_usage=Necesitas una llave inglesa de VS para construir esto.
 tooltip.vs_control.wrench_modes=%s + %s para cambiar de modo.
 tooltip.vs_control.wrench_switched.construct=La llave inglesa de VS cambió al modo de construcción.
@@ -125,25 +127,26 @@ tooltip.vs_control.wrench_toggle=Haz clic derecho en estructuras multibloque par
 tooltip.vs_control.wrench.construct=Se usa para construir estructuras multibloque y orientar la caja de engranajes.
 tooltip.vs_control.wrench.deconstruct=Se usa para desmontar estructuras multibloque de forma segura.
 
-item.vs_ship_tracker.name=Rastreador de naves
+item.vs_ship_tracker.name=§6Obsoleto§r - Rastreador de naves
 
 # Blocks
 ## Ship blocks
-tile.physics_infuser.name=Infusor de física
+tile.physics_infuser.name=§6Obsoleto§r - Infusor de física
 tooltip.vs_control.physics_infuser=Convierte los bloques conectados en una nueva nave, excepto la mayoría de los bloques generados previamente, como la piedra.
 
-tile.physics_infuser_creative.name=Infusor de física creativo
+tile.physics_infuser_creative.name=§6Obsoleto§r - Infusor de física creativo
 tooltip.vs_control.physics_infuser_creative_1=Convierte cualquier bloque conectado en una nueva nave. Ten cuidado de no infundir el mundo entero.
 tooltip.vs_control.physics_infuser_creative_2=Advertencia: no tiene límite de bloques e infundirá todo lo que toque. ¡Úsalo con extrema precaución!
 
-tile.physics_infuser_dummy.name=Infusor de física auxiliar
+tile.physics_infuser_dummy.name=§6Obsoleto§r - Infusor de física auxiliar
 tooltip.vs_control.physics_infuser_dummy=La otra mitad de un infusor de física.
 
-tile.ship_helm.name=Timón de nave
+tile.ship_helm.name=§6Obsoleto§r - Timón de nave
+tile.ship_helm_wheel.name=§6Obsoleto§r - Rueda de timón
 tooltip.vs_control.ship_helm=Este bloque te permite girar los timones conectados a la misma red.
 vs_control.ship_helm.wheel_rotation=Giro del timón: %s
 
-tile.speed_telegraph.name=Telégrafo de máquinas
+tile.speed_telegraph.name=§6Obsoleto§r - Telégrafo de máquinas
 tooltip.vs_control.speed_telegraph=Este bloque te permite controlar la velocidad de salida de las cajas de engranajes y, con ello, la velocidad de las hélices.
 vs_control.speed_telegraph.target_speed=Velocidad objetivo: %s
 vs_control.speed_telegraph.full_ahead=Avante toda
@@ -154,65 +157,65 @@ vs_control.speed_telegraph.slow_astern=Atrás despacio
 vs_control.speed_telegraph.half_astern=Media atrás
 vs_control.speed_telegraph.full_astern=Atrás toda
 
-tile.dummy_telegraph.name=Telégrafo auxiliar
+tile.dummy_telegraph.name=§6Obsoleto§r - Telégrafo auxiliar
 tooltip.vs_control.dummy_telegraph=Un telégrafo de máquinas que no funciona.\nActiva el bloque situado debajo al accionarlo.
 
-tile.lift_lever.name=Palanca de elevación
+tile.lift_lever.name=§6Obsoleto§r - Palanca de elevación
 tooltip.vs_control.lift_lever=Este bloque te permite establecer la altitud objetivo de los compresores de Valkyrium.
 vs_control.lift_lever.target_altitude=Altitud objetivo: %s
 
-tile.gearbox.name=Caja de engranajes
+tile.gearbox.name=§6Obsoleto§r - Caja de engranajes
 tooltip.vs_control.gearbox_1=Permite cambiar la dirección y la potencia del torque.
 tooltip.vs_control.gearbox_2=Conéctala a un telégrafo de máquinas para controlar la salida de torque.
 
-tile.rotation_axle.name=Eje de rotación
+tile.rotation_axle.name=§6Obsoleto§r - Eje de rotación
 tooltip.vs_control.rotation_axle=Se usa para conectar motores de Valkyrium desde las cajas de engranajes hasta las hélices.
 
 
 ## Network
-tile.network_display.name=Monitor de red
+tile.network_display.name=§6Obsoleto§r - Monitor de red
 tooltip.vs_control.network_display=[WIP] Muestra todos los nodos de la red conectada.
 
-tile.network_relay.name=Relé de red
+tile.network_relay.name=§6Obsoleto§r - Relé de red
 tooltip.vs_control.network_relay=Permite conectar %d componentes, incluidos otros relés, mediante cable de relé o cable invisible.
 
 
 ## Multi-Block parts
-tile.valkyrium_compressor_part.name=Pieza de compresor de Valkyrium
+tile.valkyrium_compressor_part.name=§6Obsoleto§r - Pieza de compresor de Valkyrium
 tooltip.vs_control.valkyrium_compressor_part_1=Forma parte del compresor de Valkyrium, una estructura multibloque de 2x2x2.
 tooltip.vs_control.valkyrium_compressor_part_2=El propósito de esta estructura multibloque es proporcionar mucho empuje hacia arriba o hacia abajo.
 
-tile.rudder_part.name=Pieza de timón
+tile.rudder_part.name=§6Obsoleto§r - Pieza de timón
 tooltip.vs_control.rudder_part=Cambia la dirección del empuje de las hélices y se controla mediante el timón de nave.
 
-tile.giant_propeller_part.name=Pieza de hélice gigante
+tile.giant_propeller_part.name=§6Obsoleto§r - Pieza de hélice gigante
 tooltip.vs_control.giant_propeller_part=Estructura multibloque de 3x3 a 7x7 que convierte el torque en empuje.
 
-tile.valkyrium_engine_part.name=Pieza de motor de Valkyrium
+tile.valkyrium_engine_part.name=§6Obsoleto§r - Pieza de motor de Valkyrium
 tooltip.vs_control.valkyrium_engine_part=Forma parte de una estructura multibloque que genera torque para impulsar las hélices.
 
 
 ## Legacy engines
-tile.basic_engine.name=Motor básico
-tile.advanced_engine.name=Motor avanzado
-tile.elite_engine.name=Motor de élite
-tile.ultimate_engine.name=Motor definitivo
-tile.redstone_engine.name=Motor de redstone
+tile.basic_engine.name=§6Obsoleto§r - Motor básico
+tile.advanced_engine.name=§6Obsoleto§r - Motor avanzado
+tile.elite_engine.name=§6Obsoleto§r - Motor de élite
+tile.ultimate_engine.name=§6Obsoleto§r - Motor definitivo
+tile.redstone_engine.name=§6Obsoleto§r - Motor de redstone
 
 tooltip.vs_control.legacy_engine=Motor antiguo que solo necesita una señal de redstone para funcionar.
 
 
 ## Misc.
-tile.compacted_valkyrium.name=Valkyrium compactado
+tile.compacted_valkyrium.name=§6Obsoleto§r - Valkyrium compactado
 tooltip.vs_control.compacted_valkyrium=Fuerza de elevación: %s.
 
-tile.buoyancy_tank.name=Tanque de flotabilidad
+tile.buoyancy_tank.name=§6Obsoleto§r - Tanque de flotabilidad
 tooltip.vs_control.buoyancy_tank=Flotabilidad al estar completamente sumergido: %s.
 
-tile.gyroscope_stabilizer.name=Giroscopio estabilizador de nave
+tile.gyroscope_stabilizer.name=§6Obsoleto§r - Giroscopio estabilizador de nave
 tooltip.vs_control.gyroscope_stabilizer=Este bloque proporciona torque de manera pasiva para mantener nivelada la nave.
 
-tile.gyroscope_dampener.name=Giroscopio amortiguador de nave
+tile.gyroscope_dampener.name=§6Obsoleto§r - Giroscopio amortiguador de nave
 tooltip.vs_control.gyroscope_dampener=Este bloque proporciona torque de manera pasiva para evitar que la nave se balancee.
 
 tooltip.vs_control.wrench.switched.construct=Llave inglesa en modo de construcción
@@ -265,12 +268,12 @@ vs_control.general.engine_thrust.redstoneenginethrust.tooltip=
 ### Valkyrien Skies World
 
 # Items
-item.valkyrium_crystal.name=Cristal de Valkyrium
+item.valkyrium_crystal.name=§6Obsoleto§r - Cristal de Valkyrium
 tooltip.vs_world.valkyrium_crystal=Llevar demasiados hará que levites.
 
 
 # Blocks
-tile.valkyrium_ore.name=Mineral de Valkyrium
+tile.valkyrium_ore.name=§6Obsoleto§r - Mineral de Valkyrium
 tooltip.vs_world.valkyrium_ore_1=Un misterioso mineral flotante.
 tooltip.vs_world.valkyrium_ore_2=Llevar demasiado hará que levites.
 

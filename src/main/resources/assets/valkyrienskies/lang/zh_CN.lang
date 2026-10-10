@@ -2,24 +2,26 @@
 
 ### Valkyrien Skies Main
 
+tooltip.valkyrienskies.legacy=旧版
+
 # Blocks
 message.valkyrienskies.water_pump.size=水泵系列：%s x %s x %s
-tile.captains_chair.name=舰长座椅
+tile.captains_chair.name=§6旧版§r - 舰长座椅
 tooltip.valkyrienskies.captains_chair_1=用这个来驾驶船只！
 tooltip.valkyrienskies.captains_chair_2=如果你在船上，你就会坐在上面开船。否则你会“遥控”这艘船。
 
-tile.passenger_chair.name=乘客座椅
+tile.passenger_chair.name=§6旧版§r - 乘客座椅
 tooltip.valkyrienskies.passenger_chair=用这个来稳稳地坐在船上。
 
-tile.vs_water_pump.name=水泵
+tile.vs_water_pump.name=§6旧版§r - 水泵
 tooltip.valkyrienskies.vs_water_pump=消除附近水的影响，适用于潜艇。可以调整范围。
 
-tile.boat_chair.name=船用座椅
+tile.boat_chair.name=§6旧版§r - 船用座椅
 tooltip.valkyrienskies.boat_chair=用来坐上海中的船只！
 
 
 # Item Tab
-itemGroup.valkyrienskies=瓦尔基里天空
+itemGroup.valkyrienskies=§6旧版§r - 瓦尔基里天空
 
 
 ## Commands
@@ -104,19 +106,19 @@ valkyrienskies.general.invertoaringdirection.tooltip=反转玩家划桨时的移
 ### Valkyrien Skies Control
 
 # Items
-item.physics_core.name=物理核心
+item.physics_core.name=§6旧版§r - 物理核心
 tooltip.vs_control.physics_core=物理注入器的核心。
 
-item.relay_wire.name=中继线缆
+item.relay_wire.name=§6旧版§r - 中继线缆
 tooltip.vs_control.relay_wire=用来把中继器连接到组件或其他中继器上。会中断已有链接
 message.vs_control.error_relay_wire_limit=其中一方连接数已达上限。网络中继器可以建立%d个连接，其余所有组件都只能建立1个连接。
 message.vs_control.error_relay_wire_length=线缆太短，无法建立连接！
 message.vs_control.error_relay_connection_already_exists=这些节点之间已存在连接！请使用剪刀将其剪断！
 
-item.vanishing_wire.name=隐形线缆
+item.vanishing_wire.name=§6旧版§r - 隐形线缆
 tooltip.vs_control.vanishing_wire=功能和普通线缆一样，但是手里不拿着它的话你是看不见线缆的。
 
-item.vs_wrench.name=VS扳手
+item.vs_wrench.name=§6旧版§r - VS扳手
 tooltip.vs_control.wrench_usage=需要用VS扳手来构建它。
 tooltip.vs_control.wrench_modes=%s + %s 来切换模式。
 tooltip.vs_control.wrench_switched.construct=已切换扳手至构建模式。
@@ -125,25 +127,26 @@ tooltip.vs_control.wrench_toggle=右击多方块结构来拆解它。
 tooltip.vs_control.wrench.construct=可以用来构建多方块结构或调整齿轮箱朝向。
 tooltip.vs_control.wrench.deconstruct=可以用来安全拆解多方块结构。
 
-item.vs_ship_tracker.name=船只追踪器
+item.vs_ship_tracker.name=§6旧版§r - 船只追踪器
 
 # Blocks
 ## Ship blocks
-tile.physics_infuser.name=物理注入器
+tile.physics_infuser.name=§6旧版§r - 物理注入器
 tooltip.vs_control.physics_infuser=会将除了自然生成的绝大多数方块（如石头）外与此连接的任何方块组建成船只。
 
-tile.physics_infuser_creative.name=创造物理注入器
+tile.physics_infuser_creative.name=§6旧版§r - 创造物理注入器
 tooltip.vs_control.physics_infuser_creative_1=会将与此连接的任何方块组建成船只，当心别影响到整个世界。
 tooltip.vs_control.physics_infuser_creative_2=警告：此注入器没有连接上限，会影响到与此连接的所有方块！请谨慎使用。
 
-tile.physics_infuser_dummy.name=附属物理注入器
+tile.physics_infuser_dummy.name=§6旧版§r - 附属物理注入器
 tooltip.vs_control.physics_infuser_dummy=物理注入器的另一半。
 
-tile.ship_helm.name=舵轮
+tile.ship_helm.name=§6旧版§r - 舵轮
+tile.ship_helm_wheel.name=§6旧版§r - 船舵轮
 tooltip.vs_control.ship_helm=这个方块可以让你控制处在同一网络中的方向舵。
 vs_control.ship_helm.wheel_rotation=舵轮转角：%s
 
-tile.speed_telegraph.name=车钟
+tile.speed_telegraph.name=§6旧版§r - 车钟
 tooltip.vs_control.speed_telegraph=这个方块可以让你控制齿轮箱的输出速度，借此来控制螺旋桨转速。
 vs_control.speed_telegraph.target_speed=目标速度：%s
 vs_control.speed_telegraph.full_ahead=全速前进
@@ -154,65 +157,65 @@ vs_control.speed_telegraph.slow_astern=慢速后退
 vs_control.speed_telegraph.half_astern=半速后退
 vs_control.speed_telegraph.full_astern=全速后退
 
-tile.dummy_telegraph.name=附属车钟
+tile.dummy_telegraph.name=§6旧版§r - 附属车钟
 tooltip.vs_control.dummy_telegraph=没有功能的车钟。\n启动时会激活它下面的方块。
 
-tile.lift_lever.name=升降舵
+tile.lift_lever.name=§6旧版§r - 升降舵
 tooltip.vs_control.lift_lever=这个方块可以让你调整瓦尔基里压缩机的目标高度。
 vs_control.lift_lever.target_altitude=目标高度：%s
 
-tile.gearbox.name=齿轮箱
+tile.gearbox.name=§6旧版§r - 齿轮箱
 tooltip.vs_control.gearbox_1=用来调整扭矩输出方向及功率大小。
 tooltip.vs_control.gearbox_2=连接到速度计来调整扭矩输出。
 
-tile.rotation_axle.name=传动轴
+tile.rotation_axle.name=§6旧版§r - 传动轴
 tooltip.vs_control.rotation_axle=用来把瓦尔基里发动机连接到齿轮箱或螺旋桨上。
 
 
 ## Network
-tile.network_display.name=网络显示器
+tile.network_display.name=§6旧版§r - 网络显示器
 tooltip.vs_control.network_display=[未完成]可以列出当前网络中的所有连接的节点。
 
-tile.network_relay.name=网络中继器
+tile.network_relay.name=§6旧版§r - 网络中继器
 tooltip.vs_control.network_relay=通过使用线缆来把最多%d个组件或其他中继器连接起来。
 
 
 ## Multi-Block parts
-tile.valkyrium_compressor_part.name=瓦尔基里压缩机构件
+tile.valkyrium_compressor_part.name=§6旧版§r - 瓦尔基里压缩机构件
 tooltip.vs_control.valkyrium_compressor_part_1=瓦尔基里压缩机（2x2x2的多方块结构）的构件。
 tooltip.vs_control.valkyrium_compressor_part_2=这个多方块结构可以提供大量垂直升力。
 
-tile.rudder_part.name=方向舵构件
+tile.rudder_part.name=§6旧版§r - 方向舵构件
 tooltip.vs_control.rudder_part=可以通过船舵来改变螺旋桨的推进方向。
 
-tile.giant_propeller_part.name=巨型螺旋桨构件
+tile.giant_propeller_part.name=§6旧版§r - 巨型螺旋桨构件
 tooltip.vs_control.giant_propeller_part=能将扭矩转换为推力的3x3至7x7大小的多方块结构。
 
-tile.valkyrium_engine_part.name=瓦尔基里引擎构件
+tile.valkyrium_engine_part.name=§6旧版§r - 瓦尔基里引擎构件
 tooltip.vs_control.valkyrium_engine_part=为螺旋桨提供扭矩的2x3x2大小的多方块结构。
 
 
 ## Legacy engines
-tile.basic_engine.name=基础引擎
-tile.advanced_engine.name=高级引擎
-tile.elite_engine.name=精英引擎
-tile.ultimate_engine.name=终极引擎
-tile.redstone_engine.name=红石引擎
+tile.basic_engine.name=§6旧版§r - 基础引擎
+tile.advanced_engine.name=§6旧版§r - 高级引擎
+tile.elite_engine.name=§6旧版§r - 精英引擎
+tile.ultimate_engine.name=§6旧版§r - 终极引擎
+tile.redstone_engine.name=§6旧版§r - 红石引擎
 
 tooltip.vs_control.legacy_engine=老式引擎，仅需红石信号即可工作。
 
 
 ## Misc.
-tile.compacted_valkyrium.name=压缩瓦尔基里块
+tile.compacted_valkyrium.name=§6旧版§r - 压缩瓦尔基里块
 tooltip.vs_control.compacted_valkyrium=升力： %s。
 
-tile.buoyancy_tank.name=浮力舱
+tile.buoyancy_tank.name=§6旧版§r - 浮力舱
 tooltip.vs_control.buoyancy_tank=完全浸没时的浮力：%s。
 
-tile.gyroscope_stabilizer.name=稳定陀螺仪
+tile.gyroscope_stabilizer.name=§6旧版§r - 稳定陀螺仪
 tooltip.vs_control.gyroscope_stabilizer=这个方块会被动地提供一个使船体保持水平的扭矩。
 
-tile.gyroscope_dampener.name=减震陀螺仪
+tile.gyroscope_dampener.name=§6旧版§r - 减震陀螺仪
 tooltip.vs_control.gyroscope_dampener=这个方块会被动地提供一个防止船体摇摆的扭矩。
 
 tooltip.vs_control.wrench.switched.construct=扳手 构建模式
@@ -230,7 +233,7 @@ gui.stop_align_ship=停止对正
 
 
 ## Not Yet Implemented
-tile.lift_valve.name=支撑阀
+tile.lift_valve.name=§6旧版§r - 支撑阀
 tooltip.vs_control.lift_valve=尚未实装
 
 # Config (Remember to update VSControlConfig after any changes are made here)
@@ -270,12 +273,12 @@ vs_control.general.engine_thrust.redstoneenginethrust.tooltip=
 ### Valkyrien Skies World
 
 # Items
-item.valkyrium_crystal.name=瓦尔基里水晶
+item.valkyrium_crystal.name=§6旧版§r - 瓦尔基里水晶
 tooltip.vs_world.valkyrium_crystal=带太多可能会要了你的命。
 
 
 # Blocks
-tile.valkyrium_ore.name=瓦尔基里矿石
+tile.valkyrium_ore.name=§6旧版§r - 瓦尔基里矿石
 tooltip.vs_world.valkyrium_ore_1=一种神秘的漂浮着的矿石。
 tooltip.vs_world.valkyrium_ore_2=带太多可能会要了你的命。
 

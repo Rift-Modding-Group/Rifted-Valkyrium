@@ -2,24 +2,26 @@
 
 ### Valkyrien Skies Main
 
+tooltip.valkyrienskies.legacy=Legacy
+
 # Blocks
-tile.captains_chair.name=Captain's Chair
+tile.captains_chair.name=§6Legacy§r - Captain's Chair
 tooltip.valkyrienskies.captains_chair_1=Use to mount and control Ships!
 tooltip.valkyrienskies.captains_chair_2=If you are standing on the ship, you will mount it upon control. Otherwise you will control the ship remotely without mounting.
 
-tile.passenger_chair.name=Passenger Chair
+tile.passenger_chair.name=§6Legacy§r - Passenger Chair
 tooltip.valkyrienskies.passenger_chair=Use to sit tight on ships.
 
-tile.vs_water_pump.name=Water Pump
+tile.vs_water_pump.name=§6Legacy§r - Water Pump
 tooltip.valkyrienskies.vs_water_pump=Removes the effects of nearby water, useful for submarines. Range can be adjusted.
 message.valkyrienskies.water_pump.size=Water pump range: %s x %s x %s
 
-tile.boat_chair.name=Boat Chair
+tile.boat_chair.name=§6Legacy§r - Boat Chair
 tooltip.valkyrienskies.boat_chair=Use to mount boats in the sea!
 
 
 # Item Tab
-itemGroup.valkyrienskies=Valkyrien Skies
+itemGroup.valkyrienskies=§6Legacy§r - Valkyrien Skies
 
 
 ## Commands
@@ -104,19 +106,19 @@ valkyrienskies.general.invertoaringdirection.tooltip=Inverts the direction a pla
 ### Valkyrien Skies Control
 
 # Items
-item.physics_core.name=Physics Core
+item.physics_core.name=§6Legacy§r - Physics Core
 tooltip.vs_control.physics_core=The core of a physics infuser.
 
-item.relay_wire.name=Relay Wire
+item.relay_wire.name=§6Legacy§r - Relay Wire
 tooltip.vs_control.relay_wire=Used to connect relays to components and other relays. Shears must be used to disconnect.
 message.vs_control.error_relay_wire_limit=One of the connections is maxed out. Relay Nodes can make %d connections, all other objects can only make 1 connection.
 message.vs_control.error_relay_wire_length=The wire is too short to connect these nodes!
 message.vs_control.error_relay_connection_already_exists=A connection already exists between these nodes! Use shears to cut them!
 
-item.vanishing_wire.name=Vanishing Wire
+item.vanishing_wire.name=§6Legacy§r - Vanishing Wire
 tooltip.vs_control.vanishing_wire=Works like Relay Wire, but it's invisible when not held.
 
-item.vs_wrench.name=VS Wrench
+item.vs_wrench.name=§6Legacy§r - VS Wrench
 tooltip.vs_control.wrench_usage=A VS Wrench is needed to construct this.
 tooltip.vs_control.wrench_modes=%s + %s to change modes.
 tooltip.vs_control.wrench_switched.construct=Switched VS Wrench to Construction mode.
@@ -125,25 +127,26 @@ tooltip.vs_control.wrench_toggle=Right click multi-blocks to toggle constructed 
 tooltip.vs_control.wrench.construct=Used to construct multi-blocks and orient the gearbox.
 tooltip.vs_control.wrench.deconstruct=Used to safely deconstruct multi-blocks.
 
-item.vs_ship_tracker.name=Ship Tracker
+item.vs_ship_tracker.name=§6Legacy§r - Ship Tracker
 
 # Blocks
 ## Ship blocks
-tile.physics_infuser.name=Physics Infuser
+tile.physics_infuser.name=§6Legacy§r - Physics Infuser
 tooltip.vs_control.physics_infuser=Turns any blocks attached to this one into a brand new Ship, won't infuse most pregenerated blocks like stone.
 
-tile.physics_infuser_creative.name=Creative Physics Infuser
+tile.physics_infuser_creative.name=§6Legacy§r - Creative Physics Infuser
 tooltip.vs_control.physics_infuser_creative_1=Turns any blocks attached to this one into a brand new Ship, just be careful not to infuse your entire world.
 tooltip.vs_control.physics_infuser_creative_2=Warning, this has no block limits, and it will infuse everything it touches! Use with extreme caution.
 
-tile.physics_infuser_dummy.name=Dummy Physics Infuser
+tile.physics_infuser_dummy.name=§6Legacy§r - Dummy Physics Infuser
 tooltip.vs_control.physics_infuser_dummy=The other half of a physics infuser.
 
-tile.ship_helm.name=Ship Helm
+tile.ship_helm.name=§6Legacy§r - Ship Helm
+tile.ship_helm_wheel.name=§6Legacy§r - Ship Helm Wheel
 tooltip.vs_control.ship_helm=This block will let you turn rudders in the same network as it.
 vs_control.ship_helm.wheel_rotation=Wheel Rotation: %s
 
-tile.speed_telegraph.name=Speed Telegraph
+tile.speed_telegraph.name=§6Legacy§r - Speed Telegraph
 tooltip.vs_control.speed_telegraph=This block will allow you to control the output speed of gearboxes, and thus control propeller speeds.
 vs_control.speed_telegraph.target_speed=Target Speed: %s
 vs_control.speed_telegraph.full_ahead=Full Ahead
@@ -154,65 +157,65 @@ vs_control.speed_telegraph.slow_astern=Slow Astern
 vs_control.speed_telegraph.half_astern=Half Astern
 vs_control.speed_telegraph.full_astern=Full Astern
 
-tile.dummy_telegraph.name=Dummy Telegraph
+tile.dummy_telegraph.name=§6Legacy§r - Dummy Telegraph
 tooltip.vs_control.dummy_telegraph=A non-functioning Speed Telegraph.\nActivates the block below it when activated.
 
-tile.lift_lever.name=Lift Lever
+tile.lift_lever.name=§6Legacy§r - Lift Lever
 tooltip.vs_control.lift_lever=This block lets you set the target altitude of Valkyrium Compressors.
 vs_control.lift_lever.target_altitude=Target Altitude: %s
 
-tile.gearbox.name=Gearbox
+tile.gearbox.name=§6Legacy§r - Gearbox
 tooltip.vs_control.gearbox_1=Allows changing torque direction and power.
 tooltip.vs_control.gearbox_2=Connect to a Speed Telegraph to control torque output.
 
-tile.rotation_axle.name=Rotation Axle
+tile.rotation_axle.name=§6Legacy§r - Rotation Axle
 tooltip.vs_control.rotation_axle=Used to connect valkyrium engines from gearboxes to propellers.
 
 
 ## Network
-tile.network_display.name=Network Display
+tile.network_display.name=§6Legacy§r - Network Display
 tooltip.vs_control.network_display=[WIP] Lists all nodes on the connected network.
 
-tile.network_relay.name=Network Relay
+tile.network_relay.name=§6Legacy§r - Network Relay
 tooltip.vs_control.network_relay=Lets you connect %d components, including relays, to this using Relay Wire or Vanishing Wire.
 
 
 ## Multi-Block parts
-tile.valkyrium_compressor_part.name=Valkyrium Compressor Part
+tile.valkyrium_compressor_part.name=§6Legacy§r - Valkyrium Compressor Part
 tooltip.vs_control.valkyrium_compressor_part_1=Part of a 2x2x2 multiblock, the Valkyrium Compressor.
 tooltip.vs_control.valkyrium_compressor_part_2=This multiblock's purpose is to provide a lot of thrust up or down.
 
-tile.rudder_part.name=Rudder Part
+tile.rudder_part.name=§6Legacy§r - Rudder Part
 tooltip.vs_control.rudder_part=Changes the direction of the thrust from propellers; controlled by the Ship Helm.
 
-tile.giant_propeller_part.name=Giant Propeller Part
+tile.giant_propeller_part.name=§6Legacy§r - Giant Propeller Part
 tooltip.vs_control.giant_propeller_part=3x3 to 7x7 multiblock that converts torque to thrust.
 
-tile.valkyrium_engine_part.name=Valkyrium Engine Part
+tile.valkyrium_engine_part.name=§6Legacy§r - Valkyrium Engine Part
 tooltip.vs_control.valkyrium_engine_part=Part of a multiblock that generates torque to power propellers.
 
 
 ## Legacy engines
-tile.basic_engine.name=Basic Engine
-tile.advanced_engine.name=Advanced Engine
-tile.elite_engine.name=Elite Engine
-tile.ultimate_engine.name=Ultimate Engine
-tile.redstone_engine.name=Redstone Engine
+tile.basic_engine.name=§6Legacy§r - Basic Engine
+tile.advanced_engine.name=§6Legacy§r - Advanced Engine
+tile.elite_engine.name=§6Legacy§r - Elite Engine
+tile.ultimate_engine.name=§6Legacy§r - Ultimate Engine
+tile.redstone_engine.name=§6Legacy§r - Redstone Engine
 
 tooltip.vs_control.legacy_engine=Legacy engine, only requires a redstone signal to function.
 
 
 ## Misc.
-tile.compacted_valkyrium.name=Compacted Valkyrium
+tile.compacted_valkyrium.name=§6Legacy§r - Compacted Valkyrium
 tooltip.vs_control.compacted_valkyrium=Lift force: %s.
 
-tile.buoyancy_tank.name=Buoyancy Tank
+tile.buoyancy_tank.name=§6Legacy§r - Buoyancy Tank
 tooltip.vs_control.buoyancy_tank=Fully submerged buoyancy: %s.
 
-tile.gyroscope_stabilizer.name=Ship Gyroscope Stabilizer
+tile.gyroscope_stabilizer.name=§6Legacy§r - Ship Gyroscope Stabilizer
 tooltip.vs_control.gyroscope_stabilizer=This block passively provides torque to keep the ship level.
 
-tile.gyroscope_dampener.name=Ship Gyroscope Dampener
+tile.gyroscope_dampener.name=§6Legacy§r - Ship Gyroscope Dampener
 tooltip.vs_control.gyroscope_dampener=This block passively provides a torque to prevent the ship from rocking.
 
 tooltip.vs_control.wrench.switched.construct=Wrench in construct mode
@@ -265,12 +268,12 @@ vs_control.general.engine_thrust.redstoneenginethrust.tooltip=
 ### Valkyrien Skies World
 
 # Items
-item.valkyrium_crystal.name=Valkyrium Crystal
+item.valkyrium_crystal.name=§6Legacy§r - Valkyrium Crystal
 tooltip.vs_world.valkyrium_crystal=Holding too much will make you levitate.
 
 
 # Blocks
-tile.valkyrium_ore.name=Valkyrium Ore
+tile.valkyrium_ore.name=§6Legacy§r - Valkyrium Ore
 tooltip.vs_world.valkyrium_ore_1=A mysterious floating ore.
 tooltip.vs_world.valkyrium_ore_2=Holding too much will make you levitate.
 
