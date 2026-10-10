@@ -66,6 +66,7 @@ public class MixinMinecraft {
         RayTraceResult liquidHit = minecraft.world.rayTraceBlocks(eyePosition, traceEnd, true, false, false);
         if (liquidHit == null || liquidHit.typeOfHit != RayTraceResult.Type.BLOCK
                 || minecraft.world.getBlockState(liquidHit.getBlockPos()).getMaterial() != Material.WATER
+                || ValkyrienUtils.getShipManagingBlock(minecraft.world, liquidHit.getBlockPos()).isPresent()
         ) {
             return;
         }

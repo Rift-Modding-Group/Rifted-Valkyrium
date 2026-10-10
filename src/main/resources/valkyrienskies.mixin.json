@@ -43,6 +43,7 @@
     "server.management.MixinPlayerList",
     "tileentity.MixinTileEntity",
     "util.math.MixinChunkPos",
+    "world.MixinBlockDynamicLiquid",
     "world.MixinWorld",
     "world.border.MixinWorldBorder",
     "world.chunk.MixinBlockStateContainer",

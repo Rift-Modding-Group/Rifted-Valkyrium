@@ -82,6 +82,9 @@ public final class ValkyrienUtils {
         return shipData.map(data -> physObjectWorld.getPhysObjectFromUUID(data.getUuid()));
     }
 
+    /**
+     * Get ship data from a given position as an Optional.
+     * */
     @NotNull
     public static Optional<ShipData> getShipManagingBlock(@Nullable World world, @Nullable BlockPos pos) {
         if (world == null || pos == null || !ShipChunkAllocator.isChunkInShipyard(pos.getX() >> 4, pos.getZ() >> 4)) {

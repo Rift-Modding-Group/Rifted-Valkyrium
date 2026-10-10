@@ -129,6 +129,7 @@ public class MessageOarShip implements IMessage {
                     RayTraceResult trueLiquidHit = player.getServerWorld().rayTraceBlocks(eyePosition, traceEnd, true, false, false);
                     if (trueLiquidHit == null || trueLiquidHit.typeOfHit != RayTraceResult.Type.BLOCK
                             || player.getServerWorld().getBlockState(trueLiquidHit.getBlockPos()).getMaterial() != Material.WATER
+                            || ValkyrienUtils.getShipManagingBlock(player.world, trueLiquidHit.getBlockPos()).isPresent()
                     ) {
                         return;
                     }

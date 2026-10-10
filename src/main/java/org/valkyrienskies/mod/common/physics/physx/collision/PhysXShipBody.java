@@ -204,6 +204,9 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
             for (BlockPos blockPos : this.ship.getBlockPositions()) {
                 mutablePos.setPos(blockPos);
                 IBlockState state = this.getShipBlockState(this.ship, mutablePos);
+                //prevent water from colliding
+                if (PhysicsUtils.isLiquid(state)) continue;
+
                 double buoyancyForce = (state.getBlock() instanceof IBlockBuoyancyProvider buoyancyProvider) ?
                         buoyancyProvider.getBuoyancyForce(hostWorld, mutablePos, state, this.ship) : WATER_DENSITY * Math.abs(VSConfig.gravityVecY);
 
