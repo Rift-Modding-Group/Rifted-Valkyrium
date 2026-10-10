@@ -54,16 +54,13 @@ public class SmallBlockPosSetAABB implements IBlockPosSetAABB {
     @Nullable
     @Override
     public AxisAlignedBB makeAABB() {
-        if (blockPosSet.isEmpty()) {
-            return null;
-        } else {
-            int minX = xMap.getFront() - (xSize / 2), maxX = xMap.getBack() - (xSize / 2);
-            int minY = yMap.getFront() - (ySize / 2), maxY = yMap.getBack() - (ySize / 2);
-            int minZ = zMap.getFront() - (zSize / 2), maxZ = zMap.getBack() - (zSize / 2);
-            minX += blockPosSet.getCenterX(); maxX += blockPosSet.getCenterX();
-            minZ += blockPosSet.getCenterZ(); maxZ += blockPosSet.getCenterZ();
-            return new AxisAlignedBB(minX, minY, minZ, maxX, maxY, maxZ);
-        }
+        if (this.blockPosSet.isEmpty()) return null;
+        int minX = xMap.getFront() - (xSize / 2), maxX = xMap.getBack() - (xSize / 2);
+        int minY = yMap.getFront() - (ySize / 2), maxY = yMap.getBack() - (ySize / 2);
+        int minZ = zMap.getFront() - (zSize / 2), maxZ = zMap.getBack() - (zSize / 2);
+        minX += blockPosSet.getCenterX(); maxX += blockPosSet.getCenterX();
+        minZ += blockPosSet.getCenterZ(); maxZ += blockPosSet.getCenterZ();
+        return new AxisAlignedBB(minX, minY, minZ, maxX, maxY, maxZ);
     }
 
     @Override

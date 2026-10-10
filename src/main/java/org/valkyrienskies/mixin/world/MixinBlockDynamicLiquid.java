@@ -25,19 +25,18 @@ public abstract class MixinBlockDynamicLiquid {
             ),
             require = 1
     )
-    private boolean limitShipWaterDownflow(
-            BlockDynamicLiquid liquid, World world, BlockPos targetPos, IBlockState targetState
-    ) {
+    private boolean limitShipWaterDownflow(BlockDynamicLiquid liquid, World world, BlockPos targetPos, IBlockState targetState) {
         if (!liquid.canFlowInto(world, targetPos, targetState)) return false;
         if (liquid.getDefaultState().getMaterial() != Material.WATER) return true;
 
         BlockPos sourcePos = targetPos.up();
         if (ValkyrienUtils.getShipManagingBlock(world, sourcePos).isEmpty()) return true;
+        if (world.getBlockState(sourcePos).getMaterial() != Material.WATER) return false;
 
         BlockPos.MutableBlockPos waterPos = new BlockPos.MutableBlockPos(sourcePos);
-        for (int distance = 0; distance <= 4; distance++) { //max downfall of 4 blocks
-            if (world.getBlockState(waterPos).getMaterial() != Material.WATER) return true;
+        for (int distance = 1; distance <= 4; distance++) { //max downfall of 4 blocks
             waterPos.move(EnumFacing.UP);
+            if (world.getBlockState(waterPos).getMaterial() != Material.WATER) return true;
         }
         return false;
     }

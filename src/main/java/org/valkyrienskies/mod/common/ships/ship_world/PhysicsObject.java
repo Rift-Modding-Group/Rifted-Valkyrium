@@ -152,8 +152,9 @@ public class PhysicsObject implements IPhysicsEntity {
         }
         else {
             this.shipRenderer = null;
-            this.getShipTransformationManager()
-                .updateAllTransforms(this.getShipData().getShipTransform(), true, true);
+            this.getShipTransformationManager().updateShipTransform(this.getShipData().getShipTransform());
+            this.getShipTransformationManager().updatePhysicsTransform();
+            this.getShipTransformationManager().updateShipBoundingBox();
             this.transformInterpolator = null;
         }
     }
@@ -175,7 +176,8 @@ public class PhysicsObject implements IPhysicsEntity {
             this.ticksSinceShipTeleport++;
 
             ShipTransform physicsTransform = this.getShipTransformationManager().getCurrentPhysicsTransform();
-            this.getShipTransformationManager().updateAllTransforms(physicsTransform, false, true);
+            this.getShipTransformationManager().updateShipTransform(physicsTransform);
+            this.getShipTransformationManager().updateShipBoundingBox();
             // Copy the current and prev transforms into ShipData
             this.getShipData().setShipTransform(getShipTransformationManager().getCurrentTickTransform());
             this.getShipData().setPrevTickShipTransform(getShipTransformationManager().getPrevTickTransform());
@@ -191,7 +193,7 @@ public class PhysicsObject implements IPhysicsEntity {
             this.shipData.setShipTransform(newTransform);
             this.shipData.setShipBB(newAABB);
 
-            this.shipTransformationManager.updateAllTransforms(newTransform, false, false);
+            this.shipTransformationManager.updateShipTransform(newTransform);
         }
         this.ticksExisted++;
     }

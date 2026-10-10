@@ -13,14 +13,12 @@ import valkyrienwarfare.api.TransformType;
  * Stores various coordinates and transforms for the ship.
  */
 public class ShipTransformationManager {
-
     private final PhysicsObject parent;
     public Vector3dc[] normals;
     private ShipTransform currentTickTransform;
     private ShipTransform renderTransform;
     private ShipTransform prevTickTransform;
-    // Used exclusively by the physics engine; should never even be used by the
-    // client.
+    // Used exclusively by the physics engine; should never even be used by the client.
     private ShipTransform currentPhysicsTransform;
     private ShipTransform prevPhysicsTransform;
 
@@ -43,11 +41,8 @@ public class ShipTransformationManager {
         final Vector3dc[] rotatedNorms = generateRotationNormals(transform);
         for (int i = 0; i < 6; i++) {
             Vector3dc currentNorm;
-            if (i < 3) {
-                currentNorm = alignedNorms[i];
-            } else {
-                currentNorm = rotatedNorms[i - 3];
-            }
+            if (i < 3) currentNorm = alignedNorms[i];
+            else currentNorm = rotatedNorms[i - 3];
             newNormals[i] = currentNorm;
         }
         int cont = 6;
@@ -81,63 +76,73 @@ public class ShipTransformationManager {
 
     /**
      * Updates all the transformations, only updates the AABB if passed true.
+     * @deprecated Use any one of new separate methods instead
      */
     @Deprecated
-    public void updateAllTransforms(ShipTransform newTransform, boolean updatePhysicsTransform, boolean updateParentAABB) {
-        prevTickTransform = currentTickTransform;
-        currentTickTransform = newTransform;
-        // The client should never be updating the AABB on its own.
-        if (parent.getWorld().isRemote) {
-            updateParentAABB = false;
-        }
+    public void updateAllTransforms(ShipTransform newTransform, boolean updatePhysicsTransform, boolean updateShipBoundingBox) {
+        this.updateShipTransform(newTransform);
+        if (updatePhysicsTransform) this.updatePhysicsTransform();
+        if (updateShipBoundingBox) this.updateShipBoundingBox();
+    }
 
-        if (prevTickTransform == null) {
-            prevTickTransform = currentTickTransform;
-        }
-        if (updatePhysicsTransform) {
-            // This should only be called once when the ship finally loads from nbt.
-            parent.getPhysicsCalculations()
-                    .generatePhysicsTransform();
-            prevPhysicsTransform = currentPhysicsTransform;
-        }
-        if (updateParentAABB) {
-            updateParentAABB();
-        }
+    public void updateShipTransform(ShipTransform newTransform) {
+        this.prevTickTransform = this.currentTickTransform;
+        this.currentTickTransform = newTransform;
+        if (this.prevTickTransform == null) this.prevTickTransform = this.currentTickTransform;
         this.normals = createCollisionNormals(currentTickTransform);
     }
 
-    // TODO: Use Octrees to optimize this, or more preferably QuickHull3D.
-    private void updateParentAABB() {
-        AxisAlignedBB subspaceBB = parent.getBlockPositions().makeAABB();
-        if (subspaceBB == null) {
-            // The aabbMaker didn't know what the aabb was, just don't update the aabb for now.
-            return;
-        }
+    /**
+     * Update physics transformation of the ship
+     * This should only be called once when the ship finally loads from nbt
+     * */
+    public void updatePhysicsTransform() {
+        this.parent.getPhysicsCalculations().generatePhysicsTransform();
+        this.prevPhysicsTransform = this.currentPhysicsTransform;
+    }
+
+    /**
+     * @deprecated Use {@link updateShipBoundingBox()} instead
+     * */
+    @Deprecated
+    public void updateParentAABB() {
+        this.updateShipBoundingBox();
+    }
+
+    /**
+     * Update the ship's AABB
+     * */
+    public void updateShipBoundingBox() {
+        // The client should never be updating the AABB on its own.
+        if (this.parent.getWorld().isRemote) return;
+
+        AxisAlignedBB subspaceBB = this.parent.getBlockPositions().makeAABB();
+        if (subspaceBB == null) return; // The aabbMaker didn't know what the aabb was, just don't update the aabb for now.
+
         // Expand subspaceBB by 1 to fit the block grid.
         subspaceBB = subspaceBB.expand(1, 1, 1);
         // Now transform the subspaceBB to world coordinates
-        TransformedAABB largerPoly = new TransformedAABB(subspaceBB, getCurrentTickTransform(),
-            TransformType.SUBSPACE_TO_GLOBAL);
+        TransformedAABB largerPoly = new TransformedAABB(subspaceBB, getCurrentTickTransform(), TransformType.SUBSPACE_TO_GLOBAL);
         // Set the ship AABB to that of the polygon.
         AxisAlignedBB worldBB = largerPoly.getEnclosedAABB();
-        parent.setShipBoundingBox(worldBB);
+        this.parent.setShipBoundingBox(worldBB);
     }
 
     /**
      * @return the current transformation being used this tick.
      */
     public ShipTransform getCurrentTickTransform() {
-        return currentTickTransform;
+        return this.currentTickTransform;
     }
 
     /**
      * @return the renderTransform
      */
     public ShipTransform getRenderTransform() {
-        if (!this.parent.getWorld().isRemote || renderTransform == null) {
-            return currentTickTransform;
+        if (!this.parent.getWorld().isRemote || this.renderTransform == null) {
+            return this.currentTickTransform;
         }
-        return renderTransform;
+        return this.renderTransform;
     }
 
     /**

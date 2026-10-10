@@ -5,6 +5,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
+import org.jetbrains.annotations.NotNull;
 import org.joml.*;
 import org.valkyrienskies.mod.common.util.JOML;
 import org.valkyrienskies.mod.common.util.ValkyrienNBTUtils;
@@ -155,54 +156,59 @@ public class ShipTransform {
     }
 
     /**
-     * Returns the same matrix this object has (not a copy). For that reason please <h1>DO NOT CAST
-     * THIS</h1> to Matrix4d. Doing so would violate the contract that the internal transform never
+     * <p>
+     * Returns the same matrix this object has (not a copy). For that reason please <b>DO NOT CAST
+     * THIS</b> to Matrix4d. Doing so would violate the contract that the internal transform never
      * changes, so DO NOT DO IT! You would be worse than Thanos! You wouldn't break half the mod,
      * you would break EVERYTHING. Your computer would explode, your house would burn down, your dog
      * will die, you'll be exiled from your home country, and your parents will disown you. Even if
      * you so much as think about casting this back to a Matrix4d you'll likely get struck by an
      * asteroid. You've been warned.
+     * </p>
      *
-     * @deprecated use {@link #getSubspaceToGlobal()} and {@link #getGlobalToSubspace()} instead
+     * <p>
+     * If you are 100% sure about what transformation you want to apply, you can use
+     * {@link getSubspaceToGlobal()} or {@link getGlobalToSubspace()}
+     * </p>
      */
-    @Deprecated
-    public Matrix4dc getTransformMatrix(TransformType transformType) {
-        switch (transformType) {
-            case SUBSPACE_TO_GLOBAL:
-                return subspaceToGlobal;
-            case GLOBAL_TO_SUBSPACE:
-                return globalToSubspace;
-            default:
-                throw new IllegalArgumentException(
-                    "Unexpected TransformType Enum: " + transformType);
-        }
+    public Matrix4dc getTransformMatrix(@NotNull TransformType transformType) {
+        return switch (transformType) {
+            case SUBSPACE_TO_GLOBAL -> this.subspaceToGlobal;
+            case GLOBAL_TO_SUBSPACE -> this.globalToSubspace;
+        };
     }
 
     public void transform(final Entity player, final TransformType globalToSubspace, final boolean transformEntityBoundingBox) {
-        ValkyrienUtils.transformEntity(getTransformMatrix(globalToSubspace), player, transformEntityBoundingBox);
+        ValkyrienUtils.transformEntity(this.getTransformMatrix(globalToSubspace), player, transformEntityBoundingBox);
     }
 
+    /**
+     * A matrix for converting subspace coords to global coords
+     * */
     public Matrix4dc getSubspaceToGlobal() {
-        return subspaceToGlobal;
+        return this.subspaceToGlobal;
     }
 
+    /**
+     * A matrix for converting global coords to subspace coords
+     * */
     public Matrix4dc getGlobalToSubspace() {
-        return globalToSubspace;
+        return this.globalToSubspace;
     }
 
     public double getPosX() {
-        return posX;
+        return this.posX;
     }
 
     public double getPosY() {
-        return posY;
+        return this.posY;
     }
 
     public double getPosZ() {
-        return posZ;
+        return this.posZ;
     }
 
     public Vector3dc getCenterCoord() {
-        return centerCoord;
+        return this.centerCoord;
     }
 }
