@@ -9,6 +9,7 @@
     "client.entity.MixinEntityMinecartInterpolation",
     "client.entity.MixinEntityOtherPlayerMPInterpolation",
     "client.entity.MixinEntityPlayerSP",
+    "client.entity.MixinEntityRunningParticles",
     "client.network.MixinNetHandlerPlayClient",
     "client.particle.MixinParticleManager",
     "client.renderer.MixinEntityRenderer",
