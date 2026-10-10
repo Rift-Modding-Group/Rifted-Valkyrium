@@ -1,7 +1,6 @@
 package org.valkyrienskies.addon.control.jei;
 
 import jakarta.annotation.Nullable;
-import mezz.jei.api.IJeiRuntime;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.IModRegistry;
 import mezz.jei.api.JEIPlugin;
@@ -11,6 +10,7 @@ import net.minecraft.item.ItemStack;
 import org.jspecify.annotations.NonNull;
 import org.valkyrienskies.addon.control.ValkyrienSkiesControl;
 import org.valkyrienskies.addon.control.gui.GuiPhysicsInfuser;
+import org.valkyrienskies.mod.common.config.VSConfig;
 
 import java.awt.*;
 import java.util.Collections;
@@ -19,7 +19,8 @@ import java.util.List;
 @JEIPlugin
 public class VSControlJEI implements IModPlugin {
     @Override
-    public void register(IModRegistry registry) {
+    public void register(@NonNull IModRegistry registry) {
+        if (VSConfig.disableLegacyContent) return;
         //hide dummy blocks
         IIngredientBlacklist blacklist = registry.getJeiHelpers().getIngredientBlacklist();
         blacklist.addIngredientToBlacklist(new ItemStack(ValkyrienSkiesControl.INSTANCE.vsControlBlocks.dummyTelegraph));

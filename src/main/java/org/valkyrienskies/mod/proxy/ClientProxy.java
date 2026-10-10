@@ -6,6 +6,7 @@ import org.valkyrienskies.mod.client.VSKeyHandler;
 import org.valkyrienskies.mod.client.render.GibsModelRegistry;
 import org.valkyrienskies.mod.client.render.ValkyrienSkiesOBJLoader;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
+import org.valkyrienskies.mod.common.config.VSConfig;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.block.model.ModelResourceLocation;
@@ -46,6 +47,9 @@ public class ClientProxy extends CommonProxy {
         super.postInit(e);
         Minecraft.getMinecraft().getFramebuffer().enableStencil();
 
+        if (VSConfig.disableLegacyContent) {
+            return;
+        }
         registerBlockItem(ValkyrienSkiesMod.INSTANCE.captainsChair);
         registerBlockItem(ValkyrienSkiesMod.INSTANCE.passengerChair);
     }

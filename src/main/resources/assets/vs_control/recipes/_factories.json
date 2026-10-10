@@ -1,0 +1,5 @@
+{
+    "conditions": {
+        "legacy_content_enabled": "org.valkyrienskies.mod.common.config.LegacyContentEnabledCondition"
+    }
+}

@@ -1,4 +1,9 @@
 {
+  "conditions": [
+    {
+      "type": "valkyrienskies:legacy_content_enabled"
+    }
+  ],
   "type": "minecraft:crafting_shaped",
 
   "pattern":

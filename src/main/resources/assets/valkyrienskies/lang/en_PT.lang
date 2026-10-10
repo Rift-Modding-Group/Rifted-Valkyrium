@@ -61,6 +61,9 @@ valkyrienskies.general.timesimulatedperphysicstick.tooltip=How fast the waters r
 valkyrienskies.general.threadcount=Amount of Waves
 valkyrienskies.general.threadcount.tooltip=The number of waves ye be hit by, should be yer vessel's sails subtract 2. Can't be allowed when ye be sailin'!
 
+valkyrienskies.general.disablelegacycontent=Disable Legacy Cargo
+valkyrienskies.general.disablelegacycontent.tooltip=Disables legacy cargo. Set this to true if ye only care about content added by yer addons.
+
 valkyrienskies.general.maxdetectedshipsize=Largest Ship Size
 valkyrienskies.general.maxdetectedshipsize.tooltip=The biggest vessel on the seas. If yer freeboard be longer than this, yer hornswaggler will belay it's order.
 

@@ -60,6 +60,9 @@ valkyrienskies.general.timesimulatedperphysicstick.tooltip=The amount of seconds
 valkyrienskies.general.threadcount=Number of Physics Threads
 valkyrienskies.general.threadcount.tooltip=The number of threads to use for physics, recommended to use your cpu's thread count minus 2. Cannot be set at runtime.
 
+valkyrienskies.general.disablelegacycontent=Désactiver le contenu obsolète
+valkyrienskies.general.disablelegacycontent.tooltip=Désactive le contenu obsolète. Définissez cette option sur « true » si seul le contenu ajouté par vos extensions vous intéresse.
+
 valkyrienskies.general.maxdetectedshipsize=Max Detected Ship Size
 valkyrienskies.general.maxdetectedshipsize.tooltip=The largest size ship a physics infuser will attempt to make. If a ship is larger than this the infuser will assume it was placed on the ground and give up.
 

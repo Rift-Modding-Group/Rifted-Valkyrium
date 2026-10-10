@@ -108,7 +108,7 @@ public class ValkyrienSkiesMod {
     public static SimpleNetworkWrapper physWrapperNetwork;
     public static SimpleNetworkWrapper physWrapperTransformUpdateNetwork;
     public static SimpleNetworkWrapper controlNetwork;
-    public static final CreativeTabs VS_CREATIVE_TAB = new TabValkyrienSkies(MOD_ID);
+    public static CreativeTabs VS_CREATIVE_TAB;
 
     private static final List<String> MODULES = ImmutableList.of("vs_control", "vs_world");
 
@@ -116,6 +116,12 @@ public class ValkyrienSkiesMod {
     public void preInit(FMLPreInitializationEvent event) {
         LOGGER.debug("Initializing configuration.");
         runConfiguration();
+
+        if (!VSConfig.disableLegacyContent) {
+            VS_CREATIVE_TAB = new TabValkyrienSkies(MOD_ID);
+            registerItems();
+		    registerBlocks();
+        }
 
         LOGGER.debug("Instantiating the physics thread executor.");
         ValkyrienSkiesMod.physicsThreadPool = new ForkJoinPool(VSConfig.threadCount);
@@ -140,9 +146,6 @@ public class ValkyrienSkiesMod {
         catch (Exception exception) {
             LOGGER.fatal("Failed to initialize the Rifted Valkyrium API", exception);
         }
-
-        registerItems();
-		registerBlocks();
 
 		registerDarknessLib();
     }
@@ -236,7 +239,7 @@ public class ValkyrienSkiesMod {
     }
 
     void registerRecipes(RegistryEvent.Register<IRecipe> event) {
-        if (!VSConfig.chairRecipes) return;
+        if (VSConfig.disableLegacyContent || !VSConfig.chairRecipes) return;
 
         registerRecipe(event, "recipe_captains_chair", new ItemStack(captainsChair),
                     "SLS",

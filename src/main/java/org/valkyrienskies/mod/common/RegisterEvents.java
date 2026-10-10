@@ -3,6 +3,7 @@ package org.valkyrienskies.mod.common;
 import javax.annotation.Nonnull;
 
 import org.valkyrienskies.mod.client.BaseModel;
+import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.entity.EntityMountable;
 import org.valkyrienskies.mod.common.entity.EntityMountableChair;
 
@@ -22,6 +23,9 @@ public class RegisterEvents {
 
     @SubscribeEvent
     public static void registerBlocks(@Nonnull final RegistryEvent.Register<Block> event) {
+        if (VSConfig.disableLegacyContent) {
+            return;
+        }
         ValkyrienSkiesMod.LOGGER.debug("Registering blocks");
         Block[] blockArray = ValkyrienSkiesMod.BLOCKS.toArray(new Block[0]);
         event.getRegistry().registerAll(blockArray);
@@ -29,17 +33,26 @@ public class RegisterEvents {
 
     @SubscribeEvent
     public static void registerItems(@Nonnull final RegistryEvent.Register<Item> event) {
+        if (VSConfig.disableLegacyContent) {
+            return;
+        }
         ValkyrienSkiesMod.LOGGER.debug("Registering items");
         event.getRegistry().registerAll(ValkyrienSkiesMod.ITEMS.toArray(new Item[0]));
     }
 
     @SubscribeEvent
     public static void registerRecipes(@Nonnull final RegistryEvent.Register<IRecipe> event) {
+        if (VSConfig.disableLegacyContent) {
+            return;
+        }
         ValkyrienSkiesMod.INSTANCE.registerRecipes(event);
     }
 
     @SubscribeEvent
     public static void onModelRegister(ModelRegistryEvent event) {
+        if (VSConfig.disableLegacyContent) {
+            return;
+        }
         for (Item item : ValkyrienSkiesMod.ITEMS) {
             if (item instanceof BaseModel) {
                 ((BaseModel) item).registerModels();
@@ -68,20 +81,24 @@ public class RegisterEvents {
                 "entity_mountable_chair");
         // Used to ensure no duplicates of entity network id's
         int entityId = 0;
-        event.getRegistry()
-                .registerAll(
-                        EntityEntryBuilder.create()
-                                .entity(EntityMountable.class)
-                                .id(entityMountable, entityId++)
-                                .name(entityMountable.getPath())
-                                .tracker(ValkyrienSkiesMod.VS_ENTITY_LOAD_DISTANCE, 1, false)
-                                .build(),
-                        EntityEntryBuilder.create()
-                                .entity(EntityMountableChair.class)
-                                .id(entityMountableChair, entityId++)
-                                .name(entityMountableChair.getPath())
-                                .tracker(ValkyrienSkiesMod.VS_ENTITY_LOAD_DISTANCE, 1, false)
-                                .build()
-                );
+        event.getRegistry().register(
+                EntityEntryBuilder.create()
+                        .entity(EntityMountable.class)
+                        .id(entityMountable, entityId++)
+                        .name(entityMountable.getPath())
+                        .tracker(ValkyrienSkiesMod.VS_ENTITY_LOAD_DISTANCE, 1, false)
+                        .build()
+        );
+
+        if (!VSConfig.disableLegacyContent) {
+            event.getRegistry().register(
+                    EntityEntryBuilder.create()
+                            .entity(EntityMountableChair.class)
+                            .id(entityMountableChair, entityId)
+                            .name(entityMountableChair.getPath())
+                            .tracker(ValkyrienSkiesMod.VS_ENTITY_LOAD_DISTANCE, 1, false)
+                            .build()
+            );
+        }
     }
 }

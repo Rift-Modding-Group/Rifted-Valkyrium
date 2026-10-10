@@ -134,10 +134,12 @@ public class BlockPhysicsDetails {
         blockToMass.put(Blocks.LAVA, Mass.NONE);
         blockToMass.put(Blocks.BEDROCK, Mass.VERY_HEAVY);
 
-        blockToMass.put(ValkyrienSkiesControl.INSTANCE.vsControlBlocks.gyroscopeDampener, Mass.NONE);
-        blockToMass.put(ValkyrienSkiesControl.INSTANCE.vsControlBlocks.gyroscopeStabilizer, Mass.NONE);
-        blockToMass.put(ValkyrienSkiesControl.INSTANCE.vsControlBlocks.buoyancyTank, Mass.VERY_LIGHT);
-        blockToMass.put(ValkyrienSkiesControl.INSTANCE.vsControlBlocks.networkRelay, Mass.NONE);
+        if (!VSConfig.disableLegacyContent) {
+            blockToMass.put(ValkyrienSkiesControl.INSTANCE.vsControlBlocks.gyroscopeDampener, Mass.NONE);
+            blockToMass.put(ValkyrienSkiesControl.INSTANCE.vsControlBlocks.gyroscopeStabilizer, Mass.NONE);
+            blockToMass.put(ValkyrienSkiesControl.INSTANCE.vsControlBlocks.buoyancyTank, Mass.VERY_LIGHT);
+            blockToMass.put(ValkyrienSkiesControl.INSTANCE.vsControlBlocks.networkRelay, Mass.NONE);
+        }
     }
 
     private static void generateBlocksToNotPhysicsInfuse() {

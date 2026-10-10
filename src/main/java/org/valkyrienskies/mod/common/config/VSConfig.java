@@ -152,6 +152,13 @@ public class VSConfig extends VSConfigTemplate {
     })
     public static boolean chairRecipes = true;
 
+    @Name("Disable Legacy Content")
+    @Comment({
+            "Disables legacy content. Set this to true if you only care about content added by your addons."
+    })
+    @RequiresMcRestart
+    public static boolean disableLegacyContent = false;
+
     @Name("Fake Dimensions")
     @Comment({
         "A compatibility option: dimensions that are incapable of generating the VSWorldDataCapability are to be added to this list",

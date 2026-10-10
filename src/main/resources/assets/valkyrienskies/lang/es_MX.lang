@@ -61,6 +61,9 @@ valkyrienskies.general.timesimulatedperphysicstick.tooltip=La cantidad de segund
 valkyrienskies.general.threadcount=Número de hilos de física
 valkyrienskies.general.threadcount.tooltip=El número de hilos que usará la simulación física. Se recomienda usar el número de hilos de tu CPU menos 2. No se puede cambiar durante la ejecución.
 
+valkyrienskies.general.disablelegacycontent=Desactivar contenido obsoleto
+valkyrienskies.general.disablelegacycontent.tooltip=Desactiva el contenido obsoleto. Establece esta opción en verdadero si solo te interesa el contenido añadido por tus complementos.
+
 valkyrienskies.general.maxdetectedshipsize=Tamaño máximo de nave detectado
 valkyrienskies.general.maxdetectedshipsize.tooltip=El mayor tamaño de nave que un infusor de física intentará crear. Si una nave supera este tamaño, el infusor asumirá que se colocó en el suelo y abandonará el proceso.
 

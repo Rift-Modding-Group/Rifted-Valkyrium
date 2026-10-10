@@ -7,6 +7,7 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import org.valkyrienskies.addon.control.ValkyrienSkiesControl;
 import org.valkyrienskies.mod.common.command.config.ShortName;
+import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.config.VSConfigTemplate;
 
 // NOTE: When updating names/comments remember to update them in the lang files.
@@ -102,6 +103,9 @@ public class VSControlConfig extends VSConfigTemplate {
 
         @SubscribeEvent
         public static void onConfigChanged(final ConfigChangedEvent.OnConfigChangedEvent event) {
+            if (VSConfig.disableLegacyContent) {
+                return;
+            }
             if (event.getModID().equals(ValkyrienSkiesControl.MOD_ID)) {
                 sync();
             }
