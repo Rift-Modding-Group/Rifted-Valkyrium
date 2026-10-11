@@ -2,7 +2,6 @@ package org.valkyrienskies.mod.common.ships.chunk_claims;
 import net.minecraft.server.management.PlayerChunkMap;
 import net.minecraft.server.management.PlayerChunkMapEntry;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 import net.minecraft.world.chunk.Chunk;
@@ -135,9 +134,7 @@ public class ClaimedChunkCacheController implements Iterable<Chunk> {
     public void deleteShipChunksFromWorld() {
         PlayerChunkMap map = ((WorldServer) world).getPlayerChunkMap();
 
-        final Iterator<Chunk> chunkIterator = iterator();
-        while (chunkIterator.hasNext()) {
-            final Chunk chunk = chunkIterator.next();
+        for (Chunk chunk : this) {
             // First delete all the TileEntities in the chunk
             List<BlockPos> chunkTilesPos = new ArrayList<>(chunk.getTileEntityMap().keySet());
             for (BlockPos tilePos : chunkTilesPos) {
@@ -149,13 +146,16 @@ public class ClaimedChunkCacheController implements Iterable<Chunk> {
             }
             chunk.markDirty();
 
-            // Finally, remove the PlayerChunkMapEntry that was watching that chunk
+            // Finally, remove the PlayerChunkMapEntry that was watching that chunk, if it still exists.
+            // The chunk can remain loaded after its player map entry has already been removed.
             PlayerChunkMapEntry entry = map.getEntry(chunk.x, chunk.z);
+            /*
             if (entry == null) {
                 // This should be impossible, throw exception if it happens.
                 throw new IllegalStateException("How did the entry at " + chunk.x + " : " + chunk.z + " return as null?");
             }
-            map.removeEntry(entry);
+             */
+            if (entry != null) map.removeEntry(entry);
         }
     }
 
