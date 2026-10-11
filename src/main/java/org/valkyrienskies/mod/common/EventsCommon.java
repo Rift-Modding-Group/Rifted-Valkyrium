@@ -17,6 +17,7 @@ import net.minecraft.world.Explosion;
 import net.minecraft.world.World;
 import net.minecraftforge.client.event.InputUpdateEvent;
 import net.minecraftforge.event.entity.EntityJoinWorldEvent;
+import net.minecraftforge.event.entity.living.LivingDropsEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.world.BlockEvent;
 import net.minecraftforge.event.world.ChunkEvent;
@@ -40,7 +41,6 @@ import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShi
 import org.valkyrienskies.mod.common.capability.ship_pilot.IShipPilot;
 import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
 import org.valkyrienskies.mod.common.entity.EntityMountable;
-import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
 import org.valkyrienskies.mod.common.ships.ship_transform.CoordinateSpaceType;
 import org.valkyrienskies.mod.common.ships.ship_world.*;
@@ -88,19 +88,25 @@ public class EventsCommon {
         }
 
         if (!event.getWorld().isRemote && entity instanceof EntityItem entityItem) {
-            if (copyThrowerShipTracking(entityItem)) return;
-
-            ShipData shipBelow = EntityDraggable.getActiveShip(entityItem);
-            if (shipBelow != null) EntityDraggable.startTrackingShip(entityItem, shipBelow);
+            copyThrowerShipTracking(entityItem);
         }
     }
 
-    private static boolean copyThrowerShipTracking(@NotNull EntityItem item) {
+    private static void copyThrowerShipTracking(@NotNull EntityItem item) {
         String throwerName = item.getThrower();
-        if (throwerName == null) return false;
+        if (throwerName == null) return;
 
         EntityPlayer thrower = item.world.getPlayerEntityByName(throwerName);
-        return thrower != null && EntityDraggable.copyShipTrackingFromItemThrower(thrower, item);
+        if (thrower != null) EntityDraggable.copyShipTracking(thrower, item);
+    }
+
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void onLivingDrops(@NotNull LivingDropsEvent event) {
+        if (event.getEntityLiving().world.isRemote) return;
+
+        for (EntityItem item : event.getDrops()) {
+            EntityDraggable.copyShipTracking(event.getEntityLiving(), item);
+        }
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)

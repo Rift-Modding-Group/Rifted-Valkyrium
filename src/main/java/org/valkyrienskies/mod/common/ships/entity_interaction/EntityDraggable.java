@@ -3,6 +3,7 @@ package org.valkyrienskies.mod.common.ships.entity_interaction;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.item.EntityItem;
+import net.minecraft.entity.item.EntityXPOrb;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.Tuple;
 import net.minecraft.util.math.AxisAlignedBB;
@@ -71,11 +72,11 @@ public class EntityDraggable {
     }
 
     /**
-     * Starts moving a newly spawned item entity in the coordinate frame of a ship. The entity's own
+     * Starts moving a newly spawned entity in the coordinate frame of a ship. The entity's own
      * motion remains relative to the ship, while the draggable capability supplies carrier motion.
      */
-    public static boolean startTrackingShip(@NotNull EntityItem thrownItem, @NotNull ShipData ship) {
-        IEntityShipDraggable draggable = thrownItem.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
+    public static boolean startTrackingShip(@NotNull Entity entity, @NotNull ShipData ship) {
+        IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
         if (draggable == null) return false;
 
         draggable.setLastTouchedShip(ship);
@@ -87,27 +88,18 @@ public class EntityDraggable {
     }
 
     /**
-     * Copies the active ship coordinate frame from a thrower entity to a newly spawned item entity.
+     * Copies the active ship coordinate frame from an entity to another entity it spawned.
      */
-    public static boolean copyShipTrackingFromItemThrower(@NotNull Entity thrower, @NotNull EntityItem thrownItem) {
-        IEntityShipDraggable sourceDraggable = thrower.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
-        if (sourceDraggable == null || sourceDraggable.getLastTouchedShip() == null
-                || sourceDraggable.getTicksSinceTouchedShip() >= VSConfig.ticksToStickToShip
-        ) {
-            return false;
-        }
+    public static void copyShipTracking(@NotNull Entity source, @NotNull Entity spawnedEntity) {
+        ShipData sourceShip = getActiveShip(source);
+        if (sourceShip == null || !startTrackingShip(spawnedEntity, sourceShip)) return;
 
-        IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(thrower.world);
-        ShipData sourceShip = sourceDraggable.getLastTouchedShip();
-        if (physObjectWorld == null || physObjectWorld.getPhysObjectFromUUID(sourceShip.getUuid()) == null) return false;
-        if (!startTrackingShip(thrownItem, sourceShip)) return false;
-
-        IEntityShipDraggable spawnedDraggable = thrownItem.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
-        if (spawnedDraggable == null) return false;
+        IEntityShipDraggable sourceDraggable = source.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
+        IEntityShipDraggable spawnedDraggable = spawnedEntity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
+        if (sourceDraggable == null || spawnedDraggable == null) return;
 
         spawnedDraggable.setTicksSinceTouchedShip(sourceDraggable.getTicksSinceTouchedShip());
         spawnedDraggable.setAddedLinearVelocity(new Vector3d(sourceDraggable.getAddedLinearVelocity()));
-        return true;
     }
 
     /**
@@ -343,7 +335,7 @@ public class EntityDraggable {
         int oldTicksSinceTouchedShip = draggable.getTicksSinceTouchedShip();
         Vector3dc oldVelocityAdded = draggable.getAddedLinearVelocity();
         double oldYawVelocityAdded = draggable.getAddedYawVelocity();
-        boolean transferCarrierVelocityToItem = false;
+        boolean transferCarrierVelocityToDroppedEntity = false;
 
         if (lastShipTouchedPlayer == null || oldTicksSinceTouchedShip >= VSConfig.ticksToStickToShip) {
             if (entity.onGround) {
@@ -351,9 +343,9 @@ public class EntityDraggable {
                 draggable.setAddedLinearVelocity(new Vector3d());
                 draggable.setAddedYawVelocity(0);
             }
-            else if (entity instanceof EntityItem && lastShipTouchedPlayer != null) {
+            else if ((entity instanceof EntityItem || entity instanceof EntityXPOrb) && lastShipTouchedPlayer != null) {
                 draggable.setLastTouchedShip(null);
-                transferCarrierVelocityToItem = true;
+                transferCarrierVelocityToDroppedEntity = true;
             }
             else if (entity instanceof EntityPlayer player) {
                 if (player.isCreative() && player.capabilities.isFlying) {
@@ -459,7 +451,7 @@ public class EntityDraggable {
             entity.setSneaking(originallySneaking);
         }
 
-        if (transferCarrierVelocityToItem) {
+        if (transferCarrierVelocityToDroppedEntity) {
             Vector3dc transferredVelocity = draggable.getAddedLinearVelocity();
             entity.motionX += transferredVelocity.x();
             entity.motionY += transferredVelocity.y();

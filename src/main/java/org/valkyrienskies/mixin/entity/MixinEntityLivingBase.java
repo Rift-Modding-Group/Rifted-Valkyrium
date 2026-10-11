@@ -1,8 +1,12 @@
 package org.valkyrienskies.mixin.entity;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.item.EntityXPOrb;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
@@ -31,6 +35,27 @@ public class MixinEntityLivingBase {
 
     private Entity clientShipAnchoredDismountEntity;
     private Vector3d clientShipAnchoredDismountPos;
+
+    /**
+     * Gives death experience the same moving frame as the entity before the orb enters the world.
+     */
+    @WrapOperation(
+            method = "onDeathUpdate",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/world/World;spawnEntity(Lnet/minecraft/entity/Entity;)Z"
+            )
+    )
+    private boolean spawnDeathExperienceOnShip(
+            World world,
+            Entity spawnedEntity,
+            Operation<Boolean> original
+    ) {
+        if (!world.isRemote && spawnedEntity instanceof EntityXPOrb) {
+            EntityDraggable.copyShipTracking((EntityLivingBase) (Object) this, spawnedEntity);
+        }
+        return original.call(world, spawnedEntity);
+    }
 
     @Inject(method = "onLivingUpdate", at = @At("HEAD"))
     private void suppressVanillaLerpDuringShipLocalMovement(CallbackInfo callbackInfo) {

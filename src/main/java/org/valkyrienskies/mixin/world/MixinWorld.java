@@ -113,15 +113,15 @@ public abstract class MixinWorld {
         World thisWorld = (World) ((Object) this);
         Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(thisWorld, pos);
 
-        if (physicsObject.isPresent()) {
+        //the client particle pipeline needs the original
+        //ship-space position so it can retain
+        //ownership through creation and range checks
+        //server listeners still expect world space.
+        if (physicsObject.isPresent() && !thisWorld.isRemote) {
             Vector3d newPosVec = new Vector3d(x, y, z);
-            // RotationMatrices.applyTransform(wrapper.wrapping.coordTransform.lToWTransform,
-            // newPosVec);
-            physicsObject.get()
-                .getShipTransformationManager()
+            physicsObject.get().getShipTransformationManager()
                 .getCurrentTickTransform()
-                .transformPosition(newPosVec,
-                    TransformType.SUBSPACE_TO_GLOBAL);
+                .transformPosition(newPosVec, TransformType.SUBSPACE_TO_GLOBAL);
             x = newPosVec.x;
             y = newPosVec.y;
             z = newPosVec.z;
