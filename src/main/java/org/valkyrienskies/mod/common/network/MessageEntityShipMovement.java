@@ -4,6 +4,7 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityList;
+import net.minecraft.entity.item.EntityItem;
 import net.minecraft.network.PacketBuffer;
 import net.minecraft.util.IThreadListener;
 import net.minecraft.util.ResourceLocation;
@@ -340,55 +341,90 @@ public class MessageEntityShipMovement implements IMessage {
                             shipTransform.transformDirection(worldVelocity, TransformType.SUBSPACE_TO_GLOBAL);
                             entity.setVelocity(worldVelocity.x, worldVelocity.y, worldVelocity.z);
                         }
-                        return;
                     }
+                    else if (entity instanceof EntityItem item) {
+                        if (movementData != null) movementData.clear();
+                        if (shipTransform == null) return;
 
-                    movementData = draggable.getOrCreateShipLocalMovementData();
-                    movementData.useShip(message.shipUuid);
+                        if (message.hasComponent(POSITION)) {
+                            Vector3d worldPosition = new Vector3d(
+                                    message.localX,
+                                    message.localY,
+                                    message.localZ
+                            );
+                            shipTransform.transformPosition(worldPosition, TransformType.SUBSPACE_TO_GLOBAL);
+                            item.setPosition(worldPosition.x, worldPosition.y, worldPosition.z);
+                            item.serverPosX = message.serverPosX;
+                            item.serverPosY = message.serverPosY;
+                            item.serverPosZ = message.serverPosZ;
+                        }
+                        if (message.hasComponent(VELOCITY)) {
+                            Vector3d worldVelocity = new Vector3d(
+                                    message.localVelocityX,
+                                    message.localVelocityY,
+                                    message.localVelocityZ
+                            );
+                            shipTransform.transformDirection(worldVelocity, TransformType.SUBSPACE_TO_GLOBAL);
+                            item.setVelocity(worldVelocity.x, worldVelocity.y, worldVelocity.z);
+                        }
+                        if (message.hasComponent(POSITION) || message.hasComponent(ROTATION)) {
+                            item.onGround = message.onGround;
+                        }
 
-                    if (shipTransform != null) {
-                        movementData.initializeIfNeeded(
-                                shipTransform,
-                                new Vector3d(entity.posX, entity.posY, entity.posZ),
-                                entity.rotationYaw,
-                                entity.rotationPitch,
-                                entity.getRotationYawHead()
-                        );
+                        if (physicsObject != null) {
+                            draggable.setLastTouchedShip(physicsObject.getShipData());
+                            draggable.setTicksSinceTouchedShip(0);
+                            draggable.setTicksPartOfGround(0);
+                        }
                     }
-                    if (message.hasComponent(POSITION)) {
-                        movementData.setPositionTarget(
-                                new Vector3d(message.localX, message.localY, message.localZ),
-                                ShipLocalEntityMovementData.DEFAULT_LERP_STEPS
-                        );
-                        entity.serverPosX = message.serverPosX;
-                        entity.serverPosY = message.serverPosY;
-                        entity.serverPosZ = message.serverPosZ;
-                    }
-                    if (message.hasComponent(VELOCITY)) {
-                        movementData.setVelocity(new Vector3d(
-                                message.localVelocityX,
-                                message.localVelocityY,
-                                message.localVelocityZ
-                        ));
-                    }
-                    if (message.hasComponent(ROTATION)) {
-                        movementData.setRotationTarget(
-                                message.localYaw,
-                                message.pitch,
-                                ShipLocalEntityMovementData.DEFAULT_LERP_STEPS
-                        );
-                    }
-                    if (message.hasComponent(HEAD_ROTATION)) {
-                        movementData.setHeadRotationTarget(
-                                message.localHeadYaw,
-                                ShipLocalEntityMovementData.DEFAULT_LERP_STEPS
-                        );
-                    }
-                    movementData.setOnGround(message.onGround);
+                    else {
+                        movementData = draggable.getOrCreateShipLocalMovementData();
+                        movementData.useShip(message.shipUuid);
 
-                    if (physicsObject != null) {
-                        draggable.setLastTouchedShip(physicsObject.getShipData());
-                        draggable.setTicksSinceTouchedShip(0);
+                        if (shipTransform != null) {
+                            movementData.initializeIfNeeded(
+                                    shipTransform,
+                                    new Vector3d(entity.posX, entity.posY, entity.posZ),
+                                    entity.rotationYaw,
+                                    entity.rotationPitch,
+                                    entity.getRotationYawHead()
+                            );
+                        }
+                        if (message.hasComponent(POSITION)) {
+                            movementData.setPositionTarget(
+                                    new Vector3d(message.localX, message.localY, message.localZ),
+                                    ShipLocalEntityMovementData.DEFAULT_LERP_STEPS
+                            );
+                            entity.serverPosX = message.serverPosX;
+                            entity.serverPosY = message.serverPosY;
+                            entity.serverPosZ = message.serverPosZ;
+                        }
+                        if (message.hasComponent(VELOCITY)) {
+                            movementData.setVelocity(new Vector3d(
+                                    message.localVelocityX,
+                                    message.localVelocityY,
+                                    message.localVelocityZ
+                            ));
+                        }
+                        if (message.hasComponent(ROTATION)) {
+                            movementData.setRotationTarget(
+                                    message.localYaw,
+                                    message.pitch,
+                                    ShipLocalEntityMovementData.DEFAULT_LERP_STEPS
+                            );
+                        }
+                        if (message.hasComponent(HEAD_ROTATION)) {
+                            movementData.setHeadRotationTarget(
+                                    message.localHeadYaw,
+                                    ShipLocalEntityMovementData.DEFAULT_LERP_STEPS
+                            );
+                        }
+                        movementData.setOnGround(message.onGround);
+
+                        if (physicsObject != null) {
+                            draggable.setLastTouchedShip(physicsObject.getShipData());
+                            draggable.setTicksSinceTouchedShip(0);
+                        }
                     }
                 }
             });

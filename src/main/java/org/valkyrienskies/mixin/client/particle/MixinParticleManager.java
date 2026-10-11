@@ -52,6 +52,17 @@ public abstract class MixinParticleManager {
         this.shipParticles.clear();
     }
 
+    /**
+     * Layer-three particles render before vanilla refreshes the shared particle camera position.
+     * Refresh it here so entity particles, including item pickup effects, use this render frame.
+     */
+    @Inject(method = "renderLitParticles", at = @At("HEAD"))
+    private void updateLitParticleCameraPosition(Entity camera, float partialTicks, CallbackInfo callbackInfo) {
+        Particle.interpPosX = camera.lastTickPosX + (camera.posX - camera.lastTickPosX) * partialTicks;
+        Particle.interpPosY = camera.lastTickPosY + (camera.posY - camera.lastTickPosY) * partialTicks;
+        Particle.interpPosZ = camera.lastTickPosZ + (camera.posZ - camera.lastTickPosZ) * partialTicks;
+    }
+
     @Redirect(
         method = {"renderParticles", "renderLitParticles"},
         at = @At(

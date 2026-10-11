@@ -4,6 +4,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityList;
 import net.minecraft.entity.EntityTracker;
 import net.minecraft.entity.EntityTrackerEntry;
+import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.network.Packet;
@@ -106,7 +107,8 @@ public class MixinEntityTrackerEntry {
         if (!activeShipUuid.equals(this.lastMovementShipUuid)) {
             this.shipMovementComponentMask = MessageEntityShipMovement.ALL_COMPONENTS;
         }
-        else if (this.updateCounter % ShipLocalEntityMovementData.DEFAULT_LERP_STEPS == 0) {
+        else if (!(this.trackedEntity instanceof EntityItem)
+                && this.updateCounter % ShipLocalEntityMovementData.DEFAULT_LERP_STEPS == 0) {
             // Vanilla lets several entity types go 10-20 ticks between updates. Refresh every authoritative component
             // before its three-step interpolation expires, including projectile rotation and velocity.
             this.shipMovementComponentMask = MessageEntityShipMovement.ALL_COMPONENTS;

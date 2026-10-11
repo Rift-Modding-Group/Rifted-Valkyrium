@@ -6,6 +6,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.item.EntityArmorStand;
 import net.minecraft.entity.item.EntityBoat;
 import net.minecraft.entity.item.EntityFallingBlock;
+import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.util.MovementInput;
@@ -30,6 +31,7 @@ import net.minecraftforge.fml.common.gameevent.PlayerEvent.PlayerLoggedOutEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent.PlayerTickEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent.WorldTickEvent;
 import net.minecraftforge.fml.relauncher.Side;
+import org.jetbrains.annotations.NotNull;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
@@ -38,6 +40,7 @@ import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShi
 import org.valkyrienskies.mod.common.capability.ship_pilot.IShipPilot;
 import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
 import org.valkyrienskies.mod.common.entity.EntityMountable;
+import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
 import org.valkyrienskies.mod.common.ships.ship_transform.CoordinateSpaceType;
 import org.valkyrienskies.mod.common.ships.ship_world.*;
@@ -66,6 +69,7 @@ public class EventsCommon {
 
         Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(world, posAt);
         if (!event.getWorld().isRemote && physicsObject.isPresent() && !(entity instanceof EntityFallingBlock)) {
+            PhysicsObject spawningShip = physicsObject.get();
             if (entity instanceof EntityArmorStand || entity instanceof EntityBoat) {
                 EntityMountable entityMountable = new EntityMountable(
                         world, entity.getPositionVector(),
@@ -74,11 +78,29 @@ public class EventsCommon {
                 world.spawnEntity(entityMountable);
                 entity.startRiding(entityMountable);
             }
-            physicsObject.get()
-                .getShipTransformationManager()
-                .getCurrentTickTransform().transform(entity,
-                TransformType.SUBSPACE_TO_GLOBAL, false);
+            spawningShip.getShipTransformationManager().getCurrentTickTransform()
+                    .transform(entity, TransformType.SUBSPACE_TO_GLOBAL, false);
+
+            if (entity instanceof EntityItem entityItem) {
+                EntityDraggable.startTrackingShip(entityItem, spawningShip.getShipData());
+            }
+            return;
         }
+
+        if (!event.getWorld().isRemote && entity instanceof EntityItem entityItem) {
+            if (copyThrowerShipTracking(entityItem)) return;
+
+            ShipData shipBelow = EntityDraggable.getActiveShip(entityItem);
+            if (shipBelow != null) EntityDraggable.startTrackingShip(entityItem, shipBelow);
+        }
+    }
+
+    private static boolean copyThrowerShipTracking(@NotNull EntityItem item) {
+        String throwerName = item.getThrower();
+        if (throwerName == null) return false;
+
+        EntityPlayer thrower = item.world.getPlayerEntityByName(throwerName);
+        return thrower != null && EntityDraggable.copyShipTrackingFromItemThrower(thrower, item);
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)

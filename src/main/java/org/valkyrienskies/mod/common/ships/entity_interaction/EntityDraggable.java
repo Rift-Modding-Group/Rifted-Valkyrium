@@ -2,6 +2,7 @@ package org.valkyrienskies.mod.common.ships.entity_interaction;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.Tuple;
 import net.minecraft.util.math.AxisAlignedBB;
@@ -67,6 +68,46 @@ public class EntityDraggable {
 
         PhysicsObject physicsObject = physObjectWorld.getPhysObjectFromUUID(draggable.getLastTouchedShip().getUuid());
         return physicsObject == null ? null : physicsObject.getShipData();
+    }
+
+    /**
+     * Starts moving a newly spawned item entity in the coordinate frame of a ship. The entity's own
+     * motion remains relative to the ship, while the draggable capability supplies carrier motion.
+     */
+    public static boolean startTrackingShip(@NotNull EntityItem thrownItem, @NotNull ShipData ship) {
+        IEntityShipDraggable draggable = thrownItem.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
+        if (draggable == null) return false;
+
+        draggable.setLastTouchedShip(ship);
+        draggable.setTicksSinceTouchedShip(0);
+        draggable.setTicksPartOfGround(0);
+        draggable.setAddedLinearVelocity(new Vector3d());
+        draggable.setAddedYawVelocity(0D);
+        return true;
+    }
+
+    /**
+     * Copies the active ship coordinate frame from a thrower entity to a newly spawned item entity.
+     */
+    public static boolean copyShipTrackingFromItemThrower(@NotNull Entity thrower, @NotNull EntityItem thrownItem) {
+        IEntityShipDraggable sourceDraggable = thrower.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
+        if (sourceDraggable == null || sourceDraggable.getLastTouchedShip() == null
+                || sourceDraggable.getTicksSinceTouchedShip() >= VSConfig.ticksToStickToShip
+        ) {
+            return false;
+        }
+
+        IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(thrower.world);
+        ShipData sourceShip = sourceDraggable.getLastTouchedShip();
+        if (physObjectWorld == null || physObjectWorld.getPhysObjectFromUUID(sourceShip.getUuid()) == null) return false;
+        if (!startTrackingShip(thrownItem, sourceShip)) return false;
+
+        IEntityShipDraggable spawnedDraggable = thrownItem.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
+        if (spawnedDraggable == null) return false;
+
+        spawnedDraggable.setTicksSinceTouchedShip(sourceDraggable.getTicksSinceTouchedShip());
+        spawnedDraggable.setAddedLinearVelocity(new Vector3d(sourceDraggable.getAddedLinearVelocity()));
+        return true;
     }
 
     /**
@@ -302,12 +343,17 @@ public class EntityDraggable {
         int oldTicksSinceTouchedShip = draggable.getTicksSinceTouchedShip();
         Vector3dc oldVelocityAdded = draggable.getAddedLinearVelocity();
         double oldYawVelocityAdded = draggable.getAddedYawVelocity();
+        boolean transferCarrierVelocityToItem = false;
 
         if (lastShipTouchedPlayer == null || oldTicksSinceTouchedShip >= VSConfig.ticksToStickToShip) {
             if (entity.onGround) {
                 // Player is on ground and not on a ship, therefore set their added velocity to 0.
                 draggable.setAddedLinearVelocity(new Vector3d());
                 draggable.setAddedYawVelocity(0);
+            }
+            else if (entity instanceof EntityItem && lastShipTouchedPlayer != null) {
+                draggable.setLastTouchedShip(null);
+                transferCarrierVelocityToItem = true;
             }
             else if (entity instanceof EntityPlayer player) {
                 if (player.isCreative() && player.capabilities.isFlying) {
@@ -411,6 +457,16 @@ public class EntityDraggable {
             draggable.setAddedLinearVelocity(addedVelocityNoNoClip);
 
             entity.setSneaking(originallySneaking);
+        }
+
+        if (transferCarrierVelocityToItem) {
+            Vector3dc transferredVelocity = draggable.getAddedLinearVelocity();
+            entity.motionX += transferredVelocity.x();
+            entity.motionY += transferredVelocity.y();
+            entity.motionZ += transferredVelocity.z();
+            entity.velocityChanged = true;
+            draggable.setAddedLinearVelocity(new Vector3d());
+            draggable.setAddedYawVelocity(0D);
         }
 
         // Add the yaw velocity to the player as well, because its possible for addedVelocity=0 and yawVel != 0

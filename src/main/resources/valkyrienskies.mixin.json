@@ -11,6 +11,7 @@
     "client.entity.MixinEntityPlayerSP",
     "client.entity.MixinEntityRunningParticles",
     "client.network.MixinNetHandlerPlayClient",
+    "client.particle.MixinParticleItemPickup",
     "client.particle.MixinParticleManager",
     "client.renderer.MixinEntityRenderer",
     "client.renderer.MixinRenderGlobal",
