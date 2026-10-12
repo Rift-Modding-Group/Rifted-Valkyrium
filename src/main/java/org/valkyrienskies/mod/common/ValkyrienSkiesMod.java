@@ -46,6 +46,7 @@ import org.valkyrienskies.mod.common.command.config.VSConfigCommand;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.item.ItemShipTracker;
 import org.valkyrienskies.mod.common.network.MessageEntityShipMovement;
+import org.valkyrienskies.mod.common.network.MessageMalisisChunkBlockRegistrations;
 import org.valkyrienskies.mod.common.network.MessageOarShip;
 import org.valkyrienskies.mod.common.network.MessagePlayerStoppedPiloting;
 import org.valkyrienskies.mod.common.network.MessageShipParticles;
@@ -214,6 +215,13 @@ public class ValkyrienSkiesMod {
                 MessageShipParticles.class,
                 3, Side.CLIENT
         );
+        //malisis doors exclusive compat
+        physWrapperNetwork.registerMessage(
+                MessageMalisisChunkBlockRegistrations.Handler.class,
+                MessageMalisisChunkBlockRegistrations.class,
+                4, Side.CLIENT
+        );
+
         controlNetwork = NetworkRegistry.INSTANCE.newSimpleChannel("valkyrien_piloting");
         controlNetwork.registerMessage(
                 PilotControlsMessage.Handler.class,

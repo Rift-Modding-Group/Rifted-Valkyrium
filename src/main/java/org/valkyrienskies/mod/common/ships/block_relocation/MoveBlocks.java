@@ -7,6 +7,8 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
+import net.minecraftforge.fml.common.Loader;
+import org.valkyrienskies.mod.common.compat.MalisisCoreCompat;
 import org.valkyrienskies.mod.common.physics.BlockPhysicsDetails;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
@@ -39,6 +41,9 @@ public class MoveBlocks {
         }
         chunkToSet.getBlockStorageArray()[storageIndex]
             .set(newPos.getX() & 15, newPos.getY() & 15, newPos.getZ() & 15, newState);
+        if (Loader.isModLoaded("malisiscore")) {
+            MalisisCoreCompat.updateChunkBlockRegistration(world, newPos, oldState, newState);
+        }
         // Only want to send the update to clients and nothing else, so we use flag 2.
         world.notifyBlockUpdate(newPos, oldState, newState, 2);
 

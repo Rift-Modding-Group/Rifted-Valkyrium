@@ -6,7 +6,9 @@ import net.minecraft.network.play.server.SPacketChunkData;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
+import net.minecraftforge.fml.common.Loader;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
+import org.valkyrienskies.mod.common.compat.MalisisCoreCompat;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.network.ShipIndexDataMessage;
 import org.valkyrienskies.mod.common.ships.QueryableShipData;
@@ -152,7 +154,10 @@ class WorldShipLoadingController {
                     SPacketChunkData data = new SPacketChunkData(chunk, 65535);
                     for (EntityPlayerMP player : newWatchers) {
                         player.connection.sendPacket(data);
-                        shipManager.getWorld().getEntityTracker().sendLeashedEntitiesInChunk(player, chunk);
+                        if (Loader.isModLoaded("malisiscore")) {
+                            MalisisCoreCompat.sendChunkBlockRegistrations(chunk, player);
+                        }
+                        this.shipManager.getWorld().getEntityTracker().sendLeashedEntitiesInChunk(player, chunk);
                     }
                 }
 
@@ -171,7 +176,7 @@ class WorldShipLoadingController {
                 // BetterPortals.
                 if (!playerPacketMap.containsKey(player)) {
                     playerPacketMap.put(player, new ShipIndexDataMessage());
-                    playerPacketMap.get(player).setDimensionID(shipManager.getWorld().provider.getDimension());
+                    playerPacketMap.get(player).setDimensionID(this.shipManager.getWorld().provider.getDimension());
                 }
                 playerPacketMap.get(player).addUnloadUUID(shipData.getUuid());
             }

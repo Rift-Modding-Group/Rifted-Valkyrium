@@ -16,9 +16,11 @@ import net.minecraft.world.WorldServer;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 import net.minecraft.world.gen.ChunkProviderServer;
+import net.minecraftforge.fml.common.Loader;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.jspecify.annotations.NonNull;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
+import org.valkyrienskies.mod.common.compat.MalisisCoreCompat;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.physics.BlockPhysicsDetails;
 import org.valkyrienskies.mod.common.ships.QueryableShipData;
@@ -327,6 +329,10 @@ public class WorldServerShipManager implements IPhysObjectWorld {
                 // Finally, delete the old IBlockState and TileEntity from the old Chunk
                 chunkToSet.getBlockStorageArray()[storageIndex]
                         .set(srcLocationPos.getX() & 15, srcLocationPos.getY() & 15, srcLocationPos.getZ() & 15, Blocks.AIR.getDefaultState());
+                if (Loader.isModLoaded("malisiscore")) {
+                    MalisisCoreCompat.updateChunkBlockRegistration(
+                        world, srcLocationPos, srcState, Blocks.AIR.getDefaultState());
+                }
 
                 // Delete the TileEntity at this pos (if there is one)
                 world.removeTileEntity(srcLocationPos);
@@ -417,7 +423,7 @@ public class WorldServerShipManager implements IPhysObjectWorld {
         // Load the ships that are required immediately.
         for (final UUID toLoadID : loadQueue) {
             Optional<ShipData> toLoadOptional = queryableShipData.getShip(toLoadID);
-            if (!toLoadOptional.isPresent()) {
+            if (toLoadOptional.isEmpty()) {
                 throw new IllegalStateException("No ship found for ID:\n" + toLoadID);
             }
             ShipData toLoad = toLoadOptional.get();
@@ -454,7 +460,7 @@ public class WorldServerShipManager implements IPhysObjectWorld {
             }
             // Then try getting the ShipData for this UUID.
             Optional<ShipData> toLoadOptional = queryableShipData.getShip(toLoadID);
-            if (!toLoadOptional.isPresent()) {
+            if (toLoadOptional.isEmpty()) {
                 throw new IllegalStateException("No ship found for ID:\n" + toLoadID);
             }
 

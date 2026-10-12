@@ -15,6 +15,7 @@ import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.gen.ChunkProviderServer;
+import net.minecraftforge.fml.common.Loader;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import org.joml.Quaterniondc;
@@ -23,6 +24,7 @@ import org.joml.Vector3dc;
 import org.valkyrienskies.mod.client.render.PhysObjectRenderManager;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
+import org.valkyrienskies.mod.common.compat.MalisisCoreCompat;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.physics.PhysicsCalculations;
 import org.valkyrienskies.mod.common.physics.BlockSectionList;
@@ -136,6 +138,10 @@ public class PhysicsObject implements IPhysicsEntity {
         this.physicsControllers = ConcurrentHashMap.newKeySet();
         this.physicsControllersImmutable = Collections.unmodifiableSet(this.physicsControllers);
         this.claimedChunkCache = new ClaimedChunkCacheController(this);
+        //malisis doors compat, malisisdoors can suck my fucking cock
+        if (Loader.isModLoaded("malisiscore")) {
+            MalisisCoreCompat.rebuildChunkBlockRegistrations(this);
+        }
         this.shipTransformationManager = new ShipTransformationManager(this, this.getShipData().getShipTransform());
         this.physicsCalculations = new PhysicsCalculations(this);
         this.physicsCollideWith = new BlockSectionList();
@@ -252,6 +258,7 @@ public class PhysicsObject implements IPhysicsEntity {
         if (!this.getBlockPositions().isEmpty()) {
             if (this.deconstructState.copyBlocks) {
                 MutableBlockPos newPos = new MutableBlockPos();
+                List<BlockPos> relocatedPositions = new ArrayList<>(); //for malisiscore
 
                 ShipTransform currentTransform = this.getShipTransformationManager().getCurrentTickTransform();
                 Vector3dc position = new Vector3d(currentTransform.getPosX(), currentTransform.getPosY(), currentTransform.getPosZ());
@@ -268,7 +275,12 @@ public class PhysicsObject implements IPhysicsEntity {
                             oldPos.getY() - centerDifference.getY(),
                             oldPos.getZ() - centerDifference.getZ()
                     );
-                    MoveBlocks.copyBlockToPos(getWorld(), oldPos, newPos, null);
+                    MoveBlocks.copyBlockToPos(this.getWorld(), oldPos, newPos, null);
+                    relocatedPositions.add(newPos.toImmutable());
+                }
+
+                if (Loader.isModLoaded("malisiscore")) {
+                    MalisisCoreCompat.sendRelocatedChunkBlockRegistrations(this.getWorld(), relocatedPositions);
                 }
 
                 // Then relight the chunks we just copied the blocks to
@@ -430,6 +442,9 @@ public class PhysicsObject implements IPhysicsEntity {
             throw new IllegalStateException("Ship renderer was null for ship " + getShipData());
         }
         claimedChunkCache.updateChunk(chunk);
+        if (Loader.isModLoaded("malisiscore")) {
+            MalisisCoreCompat.rebuildChunkBlockRegistrations(this, chunk);
+        }
         shipRenderer.updateChunk(chunk);
     }
 
