@@ -30,7 +30,9 @@
     "client.renderer.MixinActiveRenderInfo",
     "client.multiplayer.MixinWorldClient",
     "mod.effortlessbuilding.MixinBlockPlacedMessage",
-    "mod.effortlessbuilding.MixinRenderHandler"
+    "mod.effortlessbuilding.MixinRenderHandler",
+    "mod.malisiscore.MixinMalisisRenderer",
+    "mod.malisiscore.MixinAnimatedRenderer"
   ],
   "mixins": [
     "entity.MixinEntity",
