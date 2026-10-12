@@ -106,11 +106,10 @@ public final class ValkyrienUtils {
             // in global space, and then return the bounding box that encloses all the points.
             TransformedAABB bbAsPoly = new TransformedAABB(axisAlignedBB, physicsObject.get()
                     .getShipTransformationManager()
-                    .getCurrentTickTransform(), TransformType.SUBSPACE_TO_GLOBAL);
+                    .getRenderTransform(), TransformType.SUBSPACE_TO_GLOBAL);
             return bbAsPoly.getEnclosedAABB();
-        } else {
-            return axisAlignedBB;
         }
+        else return axisAlignedBB;
     }
 
     @NotNull
@@ -311,8 +310,7 @@ public final class ValkyrienUtils {
         Vector3d entityLook = new Vector3d(entityLookMc.x, entityLookMc.y, entityLookMc.z);
         Vector3d entityMotion = new Vector3d(entity.motionX, entity.motionY, entity.motionZ);
 
-        if (entity instanceof EntityFireball) {
-            EntityFireball ball = (EntityFireball) entity;
+        if (entity instanceof EntityFireball ball) {
             entityMotion.x = ball.accelerationX;
             entityMotion.y = ball.accelerationY;
             entityMotion.z = ball.accelerationZ;
