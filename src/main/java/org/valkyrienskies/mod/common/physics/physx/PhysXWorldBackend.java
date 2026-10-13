@@ -134,7 +134,6 @@ public class PhysXWorldBackend {
                             this.scene,
                             blockSection.world(),
                             this.getMaterial(PhysXActor.SOLID),
-                            this.getMaterial(PhysXActor.LIQUID),
                             blockSection.blocks()
                     );
                     this.addCollisionObject(sectionCollider);

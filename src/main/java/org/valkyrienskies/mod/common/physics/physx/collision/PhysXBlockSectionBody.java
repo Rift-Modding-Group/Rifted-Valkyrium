@@ -9,15 +9,12 @@ import org.valkyrienskies.mod.common.physics.BlockSection;
 import org.valkyrienskies.mod.common.physics.GreedyBlockMerger;
 import org.valkyrienskies.mod.common.physics.physx.PhysXActor;
 import org.valkyrienskies.mod.common.physics.physx.PhysXActorUtil;
-import org.valkyrienskies.mod.common.physics.physx.PhysXCollisionFilters;
 import physx.common.PxTransform;
 import physx.physics.PxMaterial;
 import physx.physics.PxPhysics;
-import physx.physics.PxRigidActor;
 import physx.physics.PxRigidStatic;
 import physx.physics.PxScene;
 import physx.physics.PxShape;
-import physx.physics.PxShapeFlagEnum;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -30,13 +27,11 @@ public class PhysXBlockSectionBody extends AbstractPhysXCollisionObject<PhysXBlo
     @NotNull
     private final PxMaterial blockMaterial;
     @NotNull
-    private final PxMaterial liquidMaterial;
-    @NotNull
-    private final List<AxisAlignedBB> liquidBoxes = new ArrayList<>();;
+    private final List<AxisAlignedBB> liquidBoxes = new ArrayList<>();
 
     public PhysXBlockSectionBody(
             @NotNull PhysXBlockSectionBody.Identifier identifier, @NotNull PxPhysics physics, @NotNull PxScene scene,
-            @NotNull World world, @NotNull PxMaterial blockMaterial, @NotNull PxMaterial liquidMaterial,
+            @NotNull World world, @NotNull PxMaterial blockMaterial,
             @NotNull List<BlockSection.BlockData> blocks
     ) {
         super(identifier, physics, scene, () -> {
@@ -47,15 +42,16 @@ public class PhysXBlockSectionBody extends AbstractPhysXCollisionObject<PhysXBlo
             return toReturn;
         });
         this.blockMaterial = blockMaterial;
-        this.liquidMaterial = liquidMaterial;
 
-        //split full cubes for GreedyBlockMerger so adjacent blocks become fewer PhysX shapes.
+        // Merge liquids for the broad water-presence check, but do not attach them to PhysX.
+        // Buoyancy and water drag sample Minecraft blocks directly, so liquid trigger shapes only
+        // made section changes much more expensive without contributing to the simulation.
+        GreedyBlockMerger mergeableLiquidBlocks = new GreedyBlockMerger();
         GreedyBlockMerger mergeableSolidBlocks = new GreedyBlockMerger();
         List<BlockSection.BlockData> separateBlocks = new ArrayList<>();
         for (BlockSection.BlockData block : blocks) {
             if (block.liquid()) {
-                this.liquidBoxes.add(new AxisAlignedBB(block.pos()));
-                separateBlocks.add(block);
+                mergeableLiquidBlocks.add(block.pos());
             }
             else if (mergeableSolidBlocks.isMergeableFullBlock(block.state())) {
                 mergeableSolidBlocks.add(block.pos());
@@ -63,13 +59,15 @@ public class PhysXBlockSectionBody extends AbstractPhysXCollisionObject<PhysXBlo
             else separateBlocks.add(block);
         }
 
-        //attach merged full-block boxes as solid collision shapes.
-        mergeableSolidBlocks.forEachMergedBlockBox((box, mergedBlocks) -> this.attachBoxShape(box, false));
+        mergeableLiquidBlocks.forEachMergedBlockBox((box, mergedBlocks) -> this.liquidBoxes.add(box));
 
-        //attach liquids and non-full-block shapes individually to preserve exact collision bounds.
+        //attach merged full-block boxes as solid collision shapes.
+        mergeableSolidBlocks.forEachMergedBlockBox((box, mergedBlocks) -> this.attachBoxShape(box));
+
+        //attach non-full-block solid shapes individually to preserve exact collision bounds.
         for (BlockSection.BlockData block : separateBlocks) {
-            for (AxisAlignedBB box : getCollisionBoxes(world, block.pos(), block.state(), block.liquid())) {
-                this.attachBoxShape(box, block.liquid());
+            for (AxisAlignedBB box : getCollisionBoxes(world, block.pos(), block.state(), false)) {
+                this.attachBoxShape(box);
             }
         }
     }
@@ -85,16 +83,11 @@ public class PhysXBlockSectionBody extends AbstractPhysXCollisionObject<PhysXBlo
         return !this.liquidBoxes.isEmpty();
     }
 
-    private void attachBoxShape(AxisAlignedBB worldBox, boolean isLiquid) {
-        PxShape shape = this.createBoxShape(worldBox, isLiquid ? this.liquidMaterial : this.blockMaterial);
+    private void attachBoxShape(@NotNull AxisAlignedBB worldBox) {
+        PxShape shape = this.createBoxShape(worldBox, this.blockMaterial);
         if (shape == null) return;
 
-        if (isLiquid) {
-            shape.setFlag(PxShapeFlagEnum.eSIMULATION_SHAPE, false);
-            shape.setFlag(PxShapeFlagEnum.eTRIGGER_SHAPE, true);
-            PhysXActor.LIQUID.setFilter(shape);
-        }
-        else PhysXActor.SOLID.setFilter(shape);
+        PhysXActor.SOLID.setFilter(shape);
 
         double centerX = (worldBox.minX + worldBox.maxX) * 0.5D - this.identifier.getOriginX();
         double centerY = (worldBox.minY + worldBox.maxY) * 0.5D - this.identifier.getOriginY();

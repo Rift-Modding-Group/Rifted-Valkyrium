@@ -5,8 +5,7 @@ import physx.physics.*;
 
 public enum PhysXActor {
     SHIP(0.55f, 0.55f, 0.05f, PxCombineModeEnum.eAVERAGE),
-    SOLID(0.8f, 0.8f, 0.02f, PxCombineModeEnum.eAVERAGE),
-    LIQUID(0.8f, 0.8f, 0.02f, PxCombineModeEnum.eAVERAGE);
+    SOLID(0.8f, 0.8f, 0.02f, PxCombineModeEnum.eAVERAGE);
 
     private final float staticFriction;
     private final float dynamicFriction;
@@ -41,8 +40,8 @@ public enum PhysXActor {
 
     private int mask() {
         return switch (this) {
-            case SHIP -> mask(SHIP, SOLID, LIQUID);
-            case SOLID, LIQUID -> mask(SHIP);
+            case SHIP -> mask(SHIP, SOLID);
+            case SOLID -> mask(SHIP);
         };
     }
 
