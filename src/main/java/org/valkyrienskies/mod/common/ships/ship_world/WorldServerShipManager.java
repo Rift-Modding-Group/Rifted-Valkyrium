@@ -297,10 +297,6 @@ public class WorldServerShipManager implements IPhysObjectWorld {
                 }
             }
 
-            for (final Chunk chunk : copiedChunksMap.values()) {
-                chunk.generateSkylightMap();
-            }
-
             preserveInfuserPlacementAfterCenterOfMassChange(toSpawn);
 
             // Then delete the copied blocks from the old chunks
@@ -374,6 +370,14 @@ public class WorldServerShipManager implements IPhysObjectWorld {
                 }
             });
 
+            // relight only after the whole claim, including its one-chunk margin, has been installed in the world.
+            for (ChunkPos chunkPos : toSpawn.getChunkClaim()) {
+                Chunk chunk = world.getChunk(chunkPos.x, chunkPos.z);
+                chunk.generateSkylightMap();
+                chunk.checkLight();
+                chunk.markDirty();
+            }
+
             //transfer lighting properly when creating ship
             if (toSpawn.blockPositions != null) {
                 for (BlockPos blockPos : toSpawn.blockPositions) {
@@ -415,7 +419,6 @@ public class WorldServerShipManager implements IPhysObjectWorld {
         ChunkProviderServer provider = this.world.getChunkProvider();
         provider.loadedChunks.put(ChunkPos.asLong(x, z), chunk);
         chunk.onLoad();
-        chunk.checkLight();
         chunk.markDirty();
     }
 
