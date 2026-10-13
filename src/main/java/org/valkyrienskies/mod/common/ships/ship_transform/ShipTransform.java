@@ -50,8 +50,10 @@ public class ShipTransform {
         this.centerCoord = null;
     }
 
-    public ShipTransform(Matrix4dc subspaceToGlobal, Matrix4dc globalToSubspace, double posX,
-        double posY, double posZ, Vector3dc centerCoord) {
+    public ShipTransform(
+            Matrix4dc subspaceToGlobal, Matrix4dc globalToSubspace, double posX,
+            double posY, double posZ, Vector3dc centerCoord
+    ) {
         this.subspaceToGlobal = Objects.requireNonNull(subspaceToGlobal, "subspaceToGlobal");
         this.globalToSubspace = Objects.requireNonNull(globalToSubspace, "globalToSubspace");
         this.posX = posX;

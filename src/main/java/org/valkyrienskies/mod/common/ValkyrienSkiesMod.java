@@ -59,11 +59,11 @@ import org.valkyrienskies.mod.common.tileentity.TileEntityBoatChair;
 import org.valkyrienskies.mod.common.tileentity.TileEntityCaptainsChair;
 import org.valkyrienskies.mod.common.tileentity.TileEntityPassengerChair;
 import org.valkyrienskies.mod.common.tileentity.TileEntityWaterPump;
-import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import org.valkyrienskies.mod.fixes.darkness_lib_fix.VSDarknessLibAPILightProvider;
 import org.valkyrienskies.mod.proxy.CommonProxy;
 import valkyrienwarfare.api.IPhysicsEntity;
 import valkyrienwarfare.api.IPhysicsEntityManager;
+import valkyrienwarfare.api.RiftedValkyriumAPI;
 
 import javax.annotation.Nullable;
 import java.lang.reflect.Field;
@@ -135,13 +135,14 @@ public class ValkyrienSkiesMod {
         proxy.preInit(event);
 
         LOGGER.debug("Initializing the Rifted Valkyrium API.");
+        RiftedValkyriumAPI.registerProvider(new RiftedValkyriumAPIProvider());
         try {
             Field instanceField = IPhysicsEntityManager.class.getDeclaredField("INSTANCE");
             ReflectionHackery.setField(instanceField, null, new IPhysicsEntityManager() {
                 @Nullable
                 @Override
                 public IPhysicsEntity getPhysicsEntityFromShipSpace(World world, BlockPos pos) {
-                    return ValkyrienUtils.getPhysoManagingBlock(world, pos).orElse(null);
+                    return RiftedValkyriumAPI.getPhysoManagingBlock(world, pos).orElse(null);
                 }
             });
         }

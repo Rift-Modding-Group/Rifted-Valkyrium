@@ -138,6 +138,20 @@ sourceSets {
     }
 }
 
+tasks.register('apiJar', Jar) {
+    group = 'build'
+    description = 'Assembles the standalone Rifted Valkyrium API JAR.'
+    dependsOn tasks.named('classes')
+    archiveClassifier = 'api'
+    from(sourceSets.main.output) {
+        include 'valkyrienwarfare/api/**'
+    }
+}
+
+tasks.named('assemble') {
+    dependsOn tasks.named('apiJar')
+}
+
 idea {
     module {
         inheritOutputDirs = true

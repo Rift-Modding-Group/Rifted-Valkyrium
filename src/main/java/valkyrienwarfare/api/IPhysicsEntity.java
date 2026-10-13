@@ -1,10 +1,10 @@
 package valkyrienwarfare.api;
 
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.World;
 
 /**
- * This interface is a boiled down version of the PhysicsWrapperEntity used in
- * the Valkyrien Warfare mod.
+ * This interface is a boiled down version of PhysicsObject used in Rifted Valkyrium.
  * 
  * @author thebest108
  *
@@ -29,4 +29,24 @@ public interface IPhysicsEntity {
 	 * @return
 	 */
 	Vec3d transformVector(Vec3d vector, TransformType transformType);
+
+	/**
+	 * Get the {@link World} that a physics entity is currently in
+	 * */
+	World getWorld();
+
+	/**
+	 * Get the {@link IShipData} of a physics entity
+	 * */
+	IShipData getShipData();
+
+	/**
+	 * Enable or disable aligning to world grid on the {@link IPhysicsEntity}
+	 * */
+	void setShipAligningToGrid(boolean shipAligningToGrid);
+
+	/**
+	 * @return If the {@link IPhysicsEntity} is aligning to the world grid
+	 * */
+	boolean isShipAligningToGrid();
 }

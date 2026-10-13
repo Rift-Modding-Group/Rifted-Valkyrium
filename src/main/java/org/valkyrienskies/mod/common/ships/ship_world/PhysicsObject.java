@@ -18,6 +18,7 @@ import net.minecraft.world.gen.ChunkProviderServer;
 import net.minecraftforge.fml.common.Loader;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
+import org.jetbrains.annotations.NotNull;
 import org.joml.Quaterniondc;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
@@ -547,7 +548,7 @@ public class PhysicsObject implements IPhysicsEntity {
     }
 
     public ShipData getShipData() {
-        return shipData;
+        return this.shipData;
     }
 
     public ITransformInterpolator getTransformInterpolator() {
@@ -555,7 +556,7 @@ public class PhysicsObject implements IPhysicsEntity {
     }
 
     public boolean isShipAligningToGrid() {
-        return shipAligningToGrid;
+        return this.shipAligningToGrid;
     }
 
     public void setShipAligningToGrid(boolean shipAligningToGrid) {
@@ -616,14 +617,15 @@ public class PhysicsObject implements IPhysicsEntity {
     }
 
     public boolean isPhysicsEnabled() {
-        return shipData.isPhysicsEnabled();
+        return this.shipData.isPhysicsEnabled();
     }
 
     public void setPhysicsEnabled(boolean value) {
-        shipData.setPhysicsEnabled(value);
+        this.shipData.setPhysicsEnabled(value);
     }
 
+    @NotNull
     public String getName() {
-        return shipData.getName();
+        return this.shipData.getName();
     }
 }

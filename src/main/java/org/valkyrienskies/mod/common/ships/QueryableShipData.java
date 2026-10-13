@@ -32,7 +32,6 @@ import static com.googlecode.cqengine.query.QueryFactory.equal;
  */
 @SuppressWarnings("WeakerAccess")
 public record QueryableShipData(ConcurrentUpdatableIndexedCollection<ShipData> allShips) implements Iterable<ShipData> {
-
     public QueryableShipData() {
         this(new ConcurrentUpdatableIndexedCollection<>());
     }

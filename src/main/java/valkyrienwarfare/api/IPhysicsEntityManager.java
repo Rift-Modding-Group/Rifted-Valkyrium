@@ -14,11 +14,10 @@ import javax.annotation.Nullable;
  *
  */
 public interface IPhysicsEntityManager {
-
 	/**
 	 * This gets replaced at runtime if VW is installed.
 	 */
-	public static final IPhysicsEntityManager INSTANCE = new DummyPhysicsEntityManager();
+	IPhysicsEntityManager INSTANCE = new DummyPhysicsEntityManager();
 
 	/**
 	 * If the given BlockPos is in ship space then this returns the IPhysicsEntity

@@ -34,15 +34,14 @@ import org.valkyrienskies.mod.common.ships.QueryableShipData;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.block_relocation.BlockFinder;
 import org.valkyrienskies.mod.common.ships.chunk_claims.ShipChunkAllocator;
-import org.valkyrienskies.mod.common.ships.chunk_claims.VSChunkClaim;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityShipMountData;
 import org.valkyrienskies.mod.common.ships.ship_transform.CoordinateSpaceType;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.ships.ship_world.WorldServerShipManager;
-import org.valkyrienskies.mod.common.util.names.NounListNameGenerator;
 import org.valkyrienskies.mod.common.config.VSConfig;
+import valkyrienwarfare.api.RiftedValkyriumAPI;
 import valkyrienwarfare.api.TransformType;
 
 import javax.annotation.Nullable;
@@ -51,7 +50,6 @@ import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.UUID;
 
 /**
  * This class contains various helper functions for Valkyrien Skies.
@@ -69,29 +67,23 @@ public final class ValkyrienUtils {
      * @param world The World we are in
      * @param pos   A BlockPos within the physics object space.
      * @return The PhysicsObject that owns the chunk at pos within the given world.
+     * @deprecated use {@link RiftedValkyriumAPI#getPhysoManagingBlock(World, BlockPos)}
      */
-    @SuppressWarnings("ConstantConditions")
+    @Deprecated
     @NotNull
     public static Optional<PhysicsObject> getPhysoManagingBlock(@Nullable World world, @Nullable BlockPos pos) {
-        Optional<ShipData> shipData = getShipManagingBlock(world, pos);
-        if (shipData.isEmpty()) return Optional.empty();
-
-        IPhysObjectWorld physObjectWorld = getPhysObjWorld(world);
-        if (physObjectWorld == null) throw new IllegalStateException("Could not get ship manager from world!");
-
-        return shipData.map(data -> physObjectWorld.getPhysObjectFromUUID(data.getUuid()));
+        return RiftedValkyriumAPI.getPhysoManagingBlock(world, pos).map(PhysicsObject.class::cast);
     }
 
     /**
      * Get ship data from a given position as an Optional.
+     *
+     * @deprecated use {@link RiftedValkyriumAPI#getShipManagingBlock(World, BlockPos)}
      * */
+    @Deprecated
     @NotNull
     public static Optional<ShipData> getShipManagingBlock(@Nullable World world, @Nullable BlockPos pos) {
-        if (world == null || pos == null || !ShipChunkAllocator.isChunkInShipyard(pos.getX() >> 4, pos.getZ() >> 4)) {
-            return Optional.empty();
-        }
-
-        return QueryableShipData.get(world).getShipFromChunk(pos.getX() >> 4, pos.getZ() >> 4);
+        return RiftedValkyriumAPI.getShipManagingBlock(world, pos).map(ShipData.class::cast);
     }
 
     /**
@@ -244,21 +236,34 @@ public final class ValkyrienUtils {
     }
 
     /**
-     * Creates a new ShipIndexedData based on the inputs provided by the physics infuser block.
+     * Creates new ship data at a block-aligned world position.
+     *
+     * @deprecated use {@link RiftedValkyriumAPI#createNewShip(WorldServer, BlockPos)}
      */
+    @Deprecated
     @NotNull
-    public static ShipData createNewShip(World world, BlockPos physInfuserPos) {
-        String name = NounListNameGenerator.getInstance().generateName();
-        UUID shipID = UUID.randomUUID();
-        // Create ship chunk claims
-        VSChunkClaim chunkClaim = ValkyrienUtils.getShipChunkAllocator(world).allocateNextChunkClaim();
-        Vector3dc centerOfMassInitial = VSMath.toVector3d(chunkClaim.getRegionCenter());
-        Vector3dc shipPosInitial = VSMath.toVector3d(physInfuserPos);
-        ShipTransform initial = new ShipTransform(shipPosInitial, centerOfMassInitial);
-        AxisAlignedBB axisAlignedBB = new AxisAlignedBB(shipPosInitial.x(), shipPosInitial.y(),
-            shipPosInitial.z(), shipPosInitial.x(), shipPosInitial.y(), shipPosInitial.z());
-        return ShipData.createData(QueryableShipData.get(world).allShips(),
-            name, chunkClaim, shipID, initial, axisAlignedBB);
+    public static ShipData createNewShip(World world, BlockPos initialPosition) {
+        if (!(world instanceof WorldServer serverWorld)) {
+            throw new IllegalStateException("Cannot create a ship outside a server world: " + world);
+        }
+
+        return (ShipData) RiftedValkyriumAPI.createNewShip(serverWorld, initialPosition);
+    }
+
+    /**
+     * Creates new ship data at an arbitrary world position without requiring a controller block.
+     *
+     * @deprecated use {@link RiftedValkyriumAPI#createNewShip(WorldServer, Vec3d)}
+     */
+    @Deprecated
+    @NotNull
+    public static ShipData createNewShip(World world, Vector3dc initialPosition) {
+        if (!(world instanceof WorldServer serverWorld)) {
+            throw new IllegalStateException("Cannot create a ship outside a server world: " + world);
+        }
+
+        Vec3d position = new Vec3d(initialPosition.x(), initialPosition.y(), initialPosition.z());
+        return (ShipData) RiftedValkyriumAPI.createNewShip(serverWorld, position);
     }
 
     @NotNull
@@ -411,34 +416,5 @@ public final class ValkyrienUtils {
         int metadata = Integer.parseInt(string.substring(secondColonIndex + 1));
 
         return new ImmutablePair<>(itemId, metadata);
-    }
-
-    /**
-     * Formats a force magnitude using the next SI unit whenever its absolute value reaches four digits
-     */
-    @NotNull
-    public static String formatMagnitude(double magnitude) {
-        return formatMagnitude(magnitude, 0);
-    }
-
-    @NotNull
-    private static String formatMagnitude(double magnitude, int unitIndex) {
-        if ((magnitude <= -1000D || magnitude >= 1000D) && unitIndex < 8) {
-            return formatMagnitude(magnitude / 1000D, unitIndex + 1);
-        }
-
-        String unit = switch (unitIndex) {
-            case 1 -> "kN";
-            case 2 -> "MN";
-            case 3 -> "GN";
-            case 4 -> "TN";
-            case 5 -> "PN";
-            case 6 -> "EN";
-            case 7 -> "ZN";
-            case 8 -> "YN";
-            default -> "N";
-        };
-        DecimalFormat magnitudeFormat = new DecimalFormat("0.##", DecimalFormatSymbols.getInstance(Locale.ROOT));
-        return magnitudeFormat.format(magnitude) + " " + unit;
     }
 }

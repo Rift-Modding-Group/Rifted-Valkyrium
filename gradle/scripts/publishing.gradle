@@ -16,6 +16,7 @@ if (propertyBool('publish_to_maven')) {
         publications {
             mavenJava(MavenPublication) {
                 from components.java // Publish with standard artifacts
+                artifact tasks.named('apiJar')
                 setGroupId(propertyString('root_package'))// Publish with root package as maven group
                 setArtifactId(propertyString('mod_id')) // Publish artifacts with mod id as the artifact id
 

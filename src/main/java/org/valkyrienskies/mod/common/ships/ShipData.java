@@ -6,7 +6,9 @@ import com.googlecode.cqengine.attribute.Attribute;
 import com.googlecode.cqengine.attribute.MultiValueAttribute;
 import com.googlecode.cqengine.query.option.QueryOptions;
 import net.minecraft.util.math.AxisAlignedBB;
+import org.jetbrains.annotations.NotNull;
 import org.joml.Vector3d;
+import org.joml.Vector3dc;
 import org.valkyrienskies.mod.common.ships.chunk_claims.VSChunkClaim;
 import org.valkyrienskies.mod.common.ships.physics_data.ShipInertiaData;
 import org.valkyrienskies.mod.common.ships.physics_data.ShipPhysicsData;
@@ -18,6 +20,7 @@ import org.valkyrienskies.mod.common.util.datastructures.IBlockPosSetAABB;
 import org.valkyrienskies.mod.common.util.datastructures.SmallBlockPosSet;
 import org.valkyrienskies.mod.common.util.datastructures.SmallBlockPosSetAABB;
 import org.valkyrienskies.mod.common.util.jackson.annotations.PacketIgnore;
+import valkyrienwarfare.api.IShipData;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -25,14 +28,13 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
-import static com.googlecode.cqengine.query.QueryFactory.attribute;
-import static com.googlecode.cqengine.query.QueryFactory.nullableAttribute;
+import static com.googlecode.cqengine.query.QueryFactory.*;
 
 /**
  * One of these objects will represent a ship. You can obtain a physics object for that ship (if one
  * is available), by calling {@link IPhysObjectWorld#getPhysObjectFromUUID(UUID)}.
  */
-public class ShipData {
+public class ShipData implements IShipData {
     /**
      * The {@link QueryableShipData} that manages this
      */
@@ -180,8 +182,10 @@ public class ShipData {
         this.prevTickShipTransform = prevTickShipTransform;
     }
 
+    @NotNull
     public AxisAlignedBB getShipBB() {
-        return shipBB;
+        if (this.shipBB == null) return new AxisAlignedBB(0, 0, 0, 0, 0, 0);
+        return this.shipBB;
     }
 
     public void setShipBB(AxisAlignedBB shipBB) {
@@ -200,12 +204,16 @@ public class ShipData {
         return chunkClaim;
     }
 
+    @NotNull
     public UUID getUuid() {
-        return uuid;
+        if (this.uuid == null) return new UUID(0, 0);
+        return this.uuid;
     }
 
+    @NotNull
     public String getName() {
-        return name;
+        if (this.name == null) return "";
+        return this.name;
     }
 
     // endregion
@@ -224,4 +232,28 @@ public class ShipData {
     };
 
     // endregion
+
+    //-----extra IShipData boilerplate-----
+    @NotNull
+    public Vector3dc getLinearVelocity() {
+        if (this.physicsData == null) return new Vector3d();
+        return new Vector3d(this.physicsData.getLinearVelocity());
+    }
+
+    @NotNull
+    public Vector3dc getAngularVelocity() {
+        if (this.physicsData == null) return new Vector3d(0, 0, 0);
+        return new Vector3d(this.physicsData.getAngularVelocity());
+    }
+
+    @NotNull
+    public Vector3dc getCenterOfMass() {
+        if (this.inertiaData == null) return new Vector3d(0, 0, 0);
+        return new Vector3d(this.inertiaData.getGameTickCenterOfMass());
+    }
+
+    public double getMass() {
+        if (this.inertiaData == null) return 0D;
+        return this.inertiaData.getGameTickMass();
+    }
 }

@@ -4,7 +4,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 
 /**
- * A dummy implementation of IPhysicsEntityManager thats used when VS isn't
+ * A dummy implementation of IPhysicsEntityManager thats used when RV isn't
  * installed. This class is explicitly made package protected, no external code
  * should ever use this.
  * 
@@ -12,10 +12,8 @@ import net.minecraft.world.World;
  *
  */
 class DummyPhysicsEntityManager implements IPhysicsEntityManager {
-
 	@Override
 	public IPhysicsEntity getPhysicsEntityFromShipSpace(World world, BlockPos pos) {
 		return null;
 	}
-
 }
