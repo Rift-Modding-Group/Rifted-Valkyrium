@@ -31,6 +31,7 @@
     "client.multiplayer.MixinWorldClient",
     "mod.effortlessbuilding.MixinBlockPlacedMessage",
     "mod.effortlessbuilding.MixinRenderHandler",
+    "mod.renderlib.MixinRenderLibValkyrienSkies",
     "mod.malisiscore.MixinMalisisRenderer",
     "mod.malisiscore.MixinAnimatedRenderer"
   ],
@@ -63,6 +64,7 @@
     "mod.effortlessbuilding.MixinThreeClicksBuildMode",
     "mod.effortlessbuilding.MixinWall",
     "mod.fairylights.MixinBlockEntityFastener",
+    "mod.fairylights.MixinConnectionHangingLights",
     "mod.rustic.MixinRusticEntityChair"
   ],
   "server": [],

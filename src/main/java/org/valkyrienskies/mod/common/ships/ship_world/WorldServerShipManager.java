@@ -22,6 +22,7 @@ import net.minecraftforge.fml.common.Loader;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.jspecify.annotations.NonNull;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
+import org.valkyrienskies.mod.common.compat.FairyLightsCompat;
 import org.valkyrienskies.mod.common.compat.MalisisCoreCompat;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.physics.BlockPhysicsDetails;
@@ -393,6 +394,12 @@ public class WorldServerShipManager implements IPhysObjectWorld {
             // Finally, instantiate the PhysicsObject representation of this ShipData
             PhysicsObject physicsObject = new PhysicsObject(this.world, toSpawn);
             this.loadedShips.put(toSpawn.getUuid(), physicsObject);
+
+            // Fairy Lights initially builds connections before the ship can be resolved. Rebuild
+            // them now so their artificial block light is written into the installed ship chunks.
+            if (Loader.isModLoaded("fairylights")) {
+                FairyLightsCompat.rebuildShipLighting(physicsObject);
+            }
         }
         this.spawnQueue.clear();
     }

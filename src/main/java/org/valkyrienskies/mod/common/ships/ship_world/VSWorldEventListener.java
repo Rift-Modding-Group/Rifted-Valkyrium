@@ -56,7 +56,21 @@ public class VSWorldEventListener implements IWorldEventListener {
     }
 
     @Override
-    public void notifyLightSet(BlockPos pos) {}
+    public void notifyLightSet(BlockPos pos) {
+        if (!this.worldObj.isRemote) return;
+        //is here as part of initiative to ensure that upon restarting world or
+        //turning off and on, hanging lights still glow on assembled ships
+        Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(this.worldObj, pos);
+        physicsObject.ifPresent(ship -> ship.getShipRenderer().updateRange(
+                pos.getX() - 1,
+                pos.getY() - 1,
+                pos.getZ() - 1,
+                pos.getX() + 1,
+                pos.getY() + 1,
+                pos.getZ() + 1,
+                false
+        ));
+    }
 
     @Override
     public void markBlockRangeForRenderUpdate(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {}

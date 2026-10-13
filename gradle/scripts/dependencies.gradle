@@ -97,6 +97,9 @@ dependencies {
     modCompileOnly "curse.maven:malisiscore-223896:2680892"
     modCompileOnly "curse.maven:malisisdoors-223891:2526674"
 
+    // Fairy Lights maven for compatibility
+    modCompileOnly "curse.maven:fairy-lights-233342:3068499"
+
     // junit tests
     testImplementation 'org.junit.jupiter:junit-jupiter:5.6.2'
     testImplementation 'org.hamcrest:hamcrest:2.2'
