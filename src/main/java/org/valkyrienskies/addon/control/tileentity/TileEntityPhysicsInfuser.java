@@ -19,12 +19,12 @@ import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import net.minecraftforge.items.CapabilityItemHandler;
 import net.minecraftforge.items.ItemStackHandler;
+import org.jspecify.annotations.NonNull;
 import org.valkyrienskies.addon.control.ValkyrienSkiesControl;
 import org.valkyrienskies.addon.control.block.BlockPhysicsInfuser;
 import org.valkyrienskies.addon.control.container.EnumInfuserButton;
 import org.valkyrienskies.addon.control.gui.IVSTileGui;
 import org.valkyrienskies.addon.control.network.VSGuiButtonMessage;
-import org.valkyrienskies.mod.common.network.VSNetwork;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.block_relocation.BlockFinder;
 import org.valkyrienskies.mod.common.ships.block_relocation.IRelocationAwareTile;
@@ -38,38 +38,40 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-public class TileEntityPhysicsInfuser extends TileEntity implements ITickable, ICapabilityProvider,
-    IVSTileGui, IRelocationAwareTile {
-
+public class TileEntityPhysicsInfuser extends TileEntity implements ITickable, ICapabilityProvider, IVSTileGui, IRelocationAwareTile {
+    private static final String ACTION_STATE_NBT_KEY = "action_state";
     private final ItemStackHandler handler;
     private volatile boolean sendUpdateToClients;
     private volatile boolean isTryingToAssembleShip;
     private volatile boolean isTryingToDisassembleShip;
+    private EnumInfuserAction actionState;
     private boolean isPhysicsEnabled;
     private boolean isTryingToAlignShip;
     // Used by the client to store the vertical offset of each core
-    private Map<EnumInfuserCore, Double> coreOffsets, coreOffsetsPrevTick;
+    private final Map<EnumInfuserCore, Double> coreOffsets;
+    private final Map<EnumInfuserCore, Double> coreOffsetsPrevTick;
     private int disassembleCounter; // # of ticks to wait before resetting isTryingToDisassembleShip
 
     public TileEntityPhysicsInfuser() {
-        handler = new ItemStackHandler(EnumInfuserCore.values().length) {
+        this.handler = new ItemStackHandler(EnumInfuserCore.values().length) {
             @Override
             protected void onContentsChanged(int slot) {
-                sendUpdateToClients = true;
+                TileEntityPhysicsInfuser.this.sendUpdateToClients = true;
             }
         };
-        sendUpdateToClients = false;
-        isTryingToAssembleShip = false;
-        isTryingToDisassembleShip = false;
-        isPhysicsEnabled = false;
-        isTryingToAlignShip = false;
-        coreOffsets = new HashMap<>();
-        coreOffsetsPrevTick = new HashMap<>();
+        this.sendUpdateToClients = false;
+        this.isTryingToAssembleShip = false;
+        this.isTryingToDisassembleShip = false;
+        this.actionState = EnumInfuserAction.IDLE;
+        this.isPhysicsEnabled = false;
+        this.isTryingToAlignShip = false;
+        this.coreOffsets = new HashMap<>();
+        this.coreOffsetsPrevTick = new HashMap<>();
         for (EnumInfuserCore enumInfuserCore : EnumInfuserCore.values()) {
-            coreOffsets.put(enumInfuserCore, 0D);
-            coreOffsetsPrevTick.put(enumInfuserCore, 0D);
+            this.coreOffsets.put(enumInfuserCore, 0D);
+            this.coreOffsetsPrevTick.put(enumInfuserCore, 0D);
         }
-        disassembleCounter = 0;
+        this.disassembleCounter = 0;
     }
 
     @Override
@@ -94,27 +96,33 @@ public class TileEntityPhysicsInfuser extends TileEntity implements ITickable, I
                             .withProperty(BlockPhysicsInfuser.INFUSER_LIGHT_ON, true);
                         getWorld().setBlockState(getPos(), newState);
                     }
-                } else {
+                }
+                else {
                     if (infuserState.getValue(BlockPhysicsInfuser.INFUSER_LIGHT_ON)) {
-                        IBlockState newState = infuserState
-                            .withProperty(BlockPhysicsInfuser.INFUSER_LIGHT_ON, false);
-                        getWorld().setBlockState(getPos(), newState);
+                        IBlockState newState = infuserState.withProperty(BlockPhysicsInfuser.INFUSER_LIGHT_ON, false);
+                        this.getWorld().setBlockState(getPos(), newState);
                     }
                 }
             }
             // Check the status of the item slots
-            if (!parentShip.isPresent() && canMaintainShip() && isTryingToAssembleShip) {
+            if (parentShip.isEmpty() && canMaintainShip() && this.isTryingToAssembleShip) {
                 // Create a ship with this physics infuser
                 // Make sure we don't try to create a ship when we're already in ship space.
                 if (!ShipChunkAllocator.isBlockInShipyard(getPos())) {
                     try {
                         ValkyrienUtils.assembleShipAsOrderedByPlayer(getWorld(), null, getPos(), blockFinderType);
-                    } catch (Exception e) {
+                    }
+                    catch (Exception e) {
                         e.printStackTrace();
                     }
                     // Also tell the watching players to open the new guy
                     // BlockPos newInfuserPos = ship.getPhysicsObject().getPhysicsInfuserPos();
                 }
+            }
+            else if (actionState == EnumInfuserAction.ASSEMBLING && !isTryingToAssembleShip) {
+                // A successful assembly removes this tile before its next tick. If it still exists,
+                // the queued assembly was rejected, so allow the player to try again.
+                setActionState(EnumInfuserAction.IDLE);
             }
 
             // Once the middle core is removed, automatically deconstruct the ship if possible.
@@ -126,7 +134,8 @@ public class TileEntityPhysicsInfuser extends TileEntity implements ITickable, I
                 physicsObject.setShipAligningToGrid(this.isTryingToAlignShip);
                 if (this.isTryingToDisassembleShip) {
                     physicsObject.setDeconstructState(PhysicsObject.DeconstructState.DECONSTRUCT_NORMAL);
-                } else {
+                }
+                else {
                     physicsObject.setDeconstructState(PhysicsObject.DeconstructState.NOT_DECONSTRUCTING);
                 }
             }
@@ -149,53 +158,53 @@ public class TileEntityPhysicsInfuser extends TileEntity implements ITickable, I
                         double sinAngle = ((worldTime % 50) * 2 * Math.PI / 50)
                             + (2 * Math.PI / EnumInfuserCore.values().length)
                             * enumInfuserCore.coreSlotIndex;
-                        double idealOffset = .025 * (Math.sin(sinAngle) + 1);
-                        double lerpedOffset =
-                            .9 * coreOffsets.get(enumInfuserCore) + .1 * idealOffset;
+                        double idealOffset = 0.025D * (Math.sin(sinAngle) + 1);
+                        double lerpedOffset = 0.9D * this.coreOffsets.get(enumInfuserCore) + .1 * idealOffset;
                         coreOffsets.put(enumInfuserCore, lerpedOffset);
-                    } else {
-                        coreOffsets.put(enumInfuserCore, 0D);
+                    }
+                    else {
+                        this.coreOffsets.put(enumInfuserCore, 0D);
                     }
                 }
-            } else {
+            }
+            else {
                 for (EnumInfuserCore enumInfuserCore : EnumInfuserCore.values()) {
-                    coreOffsetsPrevTick.put(enumInfuserCore, coreOffsets.get(enumInfuserCore));
-                    double lerpedOffset = .95 * coreOffsets.get(enumInfuserCore);
-                    coreOffsets.put(enumInfuserCore, lerpedOffset);
+                    this.coreOffsetsPrevTick.put(enumInfuserCore, this.coreOffsets.get(enumInfuserCore));
+                    double lerpedOffset = 0.95D * this.coreOffsets.get(enumInfuserCore);
+                    this.coreOffsets.put(enumInfuserCore, lerpedOffset);
                 }
             }
         }
 
         // Always set tryToAssembleShip and tryToDisassembleShip to false, they only have 1 tick to try to act.
-        isTryingToAssembleShip = false;
-        if (disassembleCounter == 0) {
-            isTryingToDisassembleShip = false;
-        }
+        this.isTryingToAssembleShip = false;
+        if (this.disassembleCounter == 0) this.isTryingToDisassembleShip = false;
     }
 
     public boolean canMaintainShip() {
-        ItemStack mainStack = handler.getStackInSlot(EnumInfuserCore.MAIN.coreSlotIndex);
+        ItemStack mainStack = this.handler.getStackInSlot(EnumInfuserCore.MAIN.coreSlotIndex);
         return !mainStack.isEmpty();
     }
 
     @Override
     public NBTTagCompound writeToNBT(NBTTagCompound compound) {
-        compound.setTag("item_stack_handler", handler.serializeNBT());
-        compound.setBoolean("physics_enabled", isPhysicsEnabled);
-        compound.setBoolean("try_to_align_ship", isTryingToAlignShip);
+        compound.setTag("item_stack_handler", this.handler.serializeNBT());
+        compound.setBoolean("physics_enabled", this.isPhysicsEnabled);
+        compound.setBoolean("try_to_align_ship", this.isTryingToAlignShip);
         return super.writeToNBT(compound);
     }
 
     @Override
     public void readFromNBT(NBTTagCompound compound) {
-        handler.deserializeNBT(compound.getCompoundTag("item_stack_handler"));
-        isPhysicsEnabled = compound.getBoolean("physics_enabled");
-        isTryingToAlignShip = compound.getBoolean("try_to_align_ship");
+        this.handler.deserializeNBT(compound.getCompoundTag("item_stack_handler"));
+        this.isPhysicsEnabled = compound.getBoolean("physics_enabled");
+        this.isTryingToAlignShip = compound.getBoolean("try_to_align_ship");
         super.readFromNBT(compound);
     }
 
     @Override
-    public <T> T getCapability(Capability<T> capability, EnumFacing facing) {
+    @SuppressWarnings("unchecked")
+    public <T> T getCapability(@NonNull Capability<T> capability, EnumFacing facing) {
         if (capability == CapabilityItemHandler.ITEM_HANDLER_CAPABILITY) {
             return (T) handler;
         }
@@ -203,7 +212,7 @@ public class TileEntityPhysicsInfuser extends TileEntity implements ITickable, I
     }
 
     @Override
-    public boolean hasCapability(Capability<?> capability, @Nullable EnumFacing facing) {
+    public boolean hasCapability(@NonNull Capability<?> capability, @Nullable EnumFacing facing) {
         if (capability == CapabilityItemHandler.ITEM_HANDLER_CAPABILITY) {
             return true;
         }
@@ -211,19 +220,23 @@ public class TileEntityPhysicsInfuser extends TileEntity implements ITickable, I
     }
 
     public boolean isUsableByPlayer(EntityPlayer player) {
-        if (this.world.getTileEntity(this.pos) != this) {
-            return false;
-        } else {
-            return player
-                .getDistanceSq((double) this.pos.getX() + 0.5D, (double) this.pos.getY() + 0.5D,
-                    (double) this.pos.getZ() + 0.5D) <= 64.0D;
+        if (this.world.getTileEntity(this.pos) != this) return false;
+        else {
+            double distFromPlayer = player.getDistanceSq(
+                    (double) this.pos.getX() + 0.5D,
+                    (double) this.pos.getY() + 0.5D,
+                    (double) this.pos.getZ() + 0.5D
+            );
+            return distFromPlayer <= 64D;
         }
     }
 
     @Override
     @Nonnull
     public NBTTagCompound getUpdateTag() {
-        return this.writeToNBT(new NBTTagCompound());
+        NBTTagCompound updateTag = this.writeToNBT(new NBTTagCompound());
+        updateTag.setInteger(ACTION_STATE_NBT_KEY, this.actionState.ordinal());
+        return updateTag;
     }
 
     @Override
@@ -236,39 +249,49 @@ public class TileEntityPhysicsInfuser extends TileEntity implements ITickable, I
         this.handleUpdateTag(pkt.getNbtCompound());
     }
 
+    @Override
+    public void handleUpdateTag(NBTTagCompound tag) {
+        super.handleUpdateTag(tag);
+        EnumInfuserAction[] actionStates = EnumInfuserAction.values();
+        int actionStateIndex = Math.clamp(tag.getInteger(ACTION_STATE_NBT_KEY), 0, actionStates.length - 1);
+        this.actionState = actionStates[actionStateIndex];
+    }
+
     @SideOnly(Side.CLIENT)
     public AxisAlignedBB getRenderBoundingBox() {
         // Use the tile entity specific methods here instead of World for consistency with other tile entities.
-        Block blockType = getBlockType();
-        int blockMeta = getBlockMetadata();
+        Block blockType = this.getBlockType();
+        int blockMeta = this.getBlockMetadata();
         // Only check this after we've gotten the block meta to avoid a data race.
-        if (blockType instanceof BlockPhysicsInfuser) {
+        if (blockType instanceof BlockPhysicsInfuser blockPhysicsInfuser) {
             IBlockState blockState = blockType.getStateFromMeta(blockMeta);
-            EnumFacing sideFacing = ((BlockPhysicsInfuser) blockType)
-                .getDummyStateFacing(blockState);
+            EnumFacing sideFacing = blockPhysicsInfuser.getDummyStateFacing(blockState);
             // First make the aabb for the main block, then include the dummy block, then include the bits coming out the top.
-            return new AxisAlignedBB(getPos())
-                .expand(-sideFacing.getXOffset(), -sideFacing.getYOffset(),
-                    -sideFacing.getZOffset())
-                .expand(0, .3, 0);
+            return new AxisAlignedBB(this.getPos()).expand(-sideFacing.getXOffset(), -sideFacing.getYOffset(), -sideFacing.getZOffset())
+                .expand(0, 0.3D, 0);
         }
         // Default in case broken.
         return super.getRenderBoundingBox();
     }
 
     public boolean isCurrentlyInShip() {
-        Optional<PhysicsObject> physicsObject = ValkyrienUtils
-            .getPhysoManagingBlock(getWorld(), getPos());
+        Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(this.getWorld(), getPos());
         return physicsObject.isPresent();
     }
 
     @Override
     public void onButtonPress(int buttonId, EntityPlayer presser) {
-        if (buttonId >= EnumInfuserButton.values().length) {
+        if (buttonId < 0 || buttonId >= EnumInfuserButton.values().length) {
             // Button not part of the gui, skip it.
             return;
         }
         EnumInfuserButton button = EnumInfuserButton.values()[buttonId];
+        if (!button.buttonEnabled(this)) {
+            // Correct an optimistic client if the server has newer tile or ship state.
+            if (!this.getWorld().isRemote) this.sendUpdateToClients = true;
+            return;
+        }
+
         this.sendUpdateToClients = true;
         // TODO: Check if presser is allowed to press this button first
         /*
@@ -277,37 +300,38 @@ public class TileEntityPhysicsInfuser extends TileEntity implements ITickable, I
         }
          */
         switch (button) {
-            case ASSEMBLE_SHIP:
+            case ASSEMBLE_SHIP -> {
                 if (!this.isCurrentlyInShip()) {
                     // Create a ship
                     this.isTryingToAssembleShip = true;
-                } else {
+                    setActionState(EnumInfuserAction.ASSEMBLING);
+                }
+                else {
                     // Destroy the ship if possible
                     this.isTryingToDisassembleShip = true;
                     this.disassembleCounter = 5;
+                    setActionState(EnumInfuserAction.DISASSEMBLING);
                 }
-                break;
-            case ENABLE_PHYSICS:
-                this.isPhysicsEnabled = !isPhysicsEnabled();
-                break;
-            case ALIGN_SHIP:
-                this.isTryingToAlignShip = !isTryingToAlignShip();
-                break;
+            }
+            case ENABLE_PHYSICS -> this.isPhysicsEnabled = !this.isPhysicsEnabled();
+            case ALIGN_SHIP -> this.isTryingToAlignShip = !this.isTryingToAlignShip();
         }
 
-        if (getWorld().isRemote) {
+        if (this.getWorld().isRemote) {
             // If client, then send a packet telling the server we pressed this button.
             ValkyrienSkiesControl.controlGuiNetwork
                 .sendToServer(new VSGuiButtonMessage(this, button.ordinal()));
-        } else {
-            Optional<PhysicsObject> optionalPhysicsObject = ValkyrienUtils.getPhysoManagingBlock(getWorld(), getPos());
+        }
+        else {
+            Optional<PhysicsObject> optionalPhysicsObject = ValkyrienUtils.getPhysoManagingBlock(this.getWorld(), getPos());
             if (optionalPhysicsObject.isPresent()) {
                 PhysicsObject physicsObject = optionalPhysicsObject.get();
                 physicsObject.setPhysicsEnabled(this.isPhysicsEnabled);
                 physicsObject.setShipAligningToGrid(this.isTryingToAlignShip);
                 if (this.isTryingToDisassembleShip) {
                     physicsObject.setDeconstructState(PhysicsObject.DeconstructState.DECONSTRUCT_NORMAL);
-                } else {
+                }
+                else {
                     physicsObject.setDeconstructState(PhysicsObject.DeconstructState.NOT_DECONSTRUCTING);
                 }
             }
@@ -319,15 +343,12 @@ public class TileEntityPhysicsInfuser extends TileEntity implements ITickable, I
      * deconstructed or not, otherwise this returns true.
      */
     public boolean canShipBeDeconstructed() {
-        Optional<PhysicsObject> physicsObject = ValkyrienUtils
-            .getPhysoManagingBlock(getWorld(), getPos());
-        return !physicsObject.isPresent() || physicsObject.get()
-            .isShipAlignedToWorld();
+        Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(getWorld(), getPos());
+        return physicsObject.isEmpty() || physicsObject.get().isShipAlignedToWorld();
     }
 
     @Override
-    public boolean shouldRefresh(World world, BlockPos pos, IBlockState oldState,
-        IBlockState newSate) {
+    public boolean shouldRefresh(World world, BlockPos pos, IBlockState oldState, IBlockState newSate) {
         return oldState.getBlock() != newSate.getBlock();
     }
 
@@ -343,28 +364,42 @@ public class TileEntityPhysicsInfuser extends TileEntity implements ITickable, I
 
     @SideOnly(Side.CLIENT)
     public double getCoreVerticalOffset(EnumInfuserCore enumInfuserCore, float partialTicks) {
-        return (1 - partialTicks) * coreOffsetsPrevTick.get(enumInfuserCore)
-            + partialTicks * coreOffsets.get(enumInfuserCore);
+        return (1 - partialTicks) * this.coreOffsetsPrevTick.get(enumInfuserCore) + partialTicks * this.coreOffsets.get(enumInfuserCore);
     }
 
     public boolean isTryingToAssembleShip() {
-        return isTryingToAssembleShip;
+        return this.isTryingToAssembleShip;
     }
 
     public boolean isTryingToDisassembleShip() {
-        return isTryingToDisassembleShip;
+        return this.isTryingToDisassembleShip;
+    }
+
+    public EnumInfuserAction getActionState() {
+        return this.actionState;
+    }
+
+    public boolean isActionInProgress() {
+        return this.actionState != EnumInfuserAction.IDLE;
+    }
+
+    private void setActionState(EnumInfuserAction actionState) {
+        if (this.actionState == actionState) return;
+        this.actionState = actionState;
+        this.sendUpdateToClients = true;
     }
 
     public boolean isPhysicsEnabled() {
-        return isPhysicsEnabled;
+        return this.isPhysicsEnabled;
     }
 
     public void setPhysicsEnabled(boolean physicsEnabled) {
-        isPhysicsEnabled = physicsEnabled;
+        this.isPhysicsEnabled = physicsEnabled;
     }
 
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     public boolean isTryingToAlignShip() {
-        return isTryingToAlignShip;
+        return this.isTryingToAlignShip;
     }
 
     @Nullable
@@ -390,7 +425,6 @@ public class TileEntityPhysicsInfuser extends TileEntity implements ITickable, I
      * An enum representation of the different core slots for the physics infuser.
      */
     public enum EnumInfuserCore {
-
         ONE("physics_core_small1_geo", 0, 45, 22),
         TWO("physics_core_small2_geo", 1, 45, 54),
         MAIN("physics_core_main_geo", 2, 79, 54),
@@ -408,5 +442,11 @@ public class TileEntityPhysicsInfuser extends TileEntity implements ITickable, I
             this.guiXPos = guiXPos;
             this.guiYPos = guiYPos;
         }
+    }
+
+    public enum EnumInfuserAction {
+        IDLE,
+        ASSEMBLING,
+        DISASSEMBLING
     }
 }
