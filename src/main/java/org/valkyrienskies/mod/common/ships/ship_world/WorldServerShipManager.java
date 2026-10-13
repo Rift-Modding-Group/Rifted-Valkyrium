@@ -1,7 +1,9 @@
 package org.valkyrienskies.mod.common.ships.ship_world;
 
 import com.google.common.collect.ImmutableList;
-import gnu.trove.iterator.TIntIterator;
+import gnu.trove.iterator.TLongIterator;
+import gnu.trove.map.hash.TLongObjectHashMap;
+import gnu.trove.set.hash.TLongHashSet;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.init.Blocks;
 import net.minecraft.nbt.NBTTagCompound;
@@ -196,35 +198,48 @@ public class WorldServerShipManager implements IPhysObjectWorld {
 
             MutableBlockPos pasteLocationPos = new MutableBlockPos();
 
-            Map<Long, Chunk> copiedChunksMap = new HashMap<>();
-            Set<ChunkPos> occupiedShipChunks = new HashSet<>();
+            TLongObjectHashMap<Chunk> copiedChunksMap = new TLongObjectHashMap<>();
+            TLongObjectHashMap<Chunk> sourceChunksMap = new TLongObjectHashMap<>();
+            TLongHashSet occupiedShipChunks = new TLongHashSet();
+            IBlockState airState = Blocks.AIR.getDefaultState();
+            int[] detectedBlocks = detector.foundSet.toArray();
 
             // Relocation-aware tiles need the complete destination set before any tile is copied.
-            TIntIterator blocksIterator = detector.foundSet.iterator();
-            while (blocksIterator.hasNext()) {
-                int hashedPos = blocksIterator.next();
+            for (int hashedPos : detectedBlocks) {
                 SpatialDetector.setPosWithRespectTo(hashedPos, detector.firstBlock, srcLocationPos);
                 pasteLocationPos.setPos(srcLocationPos.getX() + centerDifference.getX(), srcLocationPos.getY() + centerDifference.getY(), srcLocationPos.getZ() + centerDifference.getZ());
                 if (toSpawn.blockPositions != null) toSpawn.blockPositions.add(pasteLocationPos.getX(), pasteLocationPos.getY(), pasteLocationPos.getZ());
-                occupiedShipChunks.add(new ChunkPos(pasteLocationPos));
+                occupiedShipChunks.add(ChunkPos.asLong(
+                    pasteLocationPos.getX() >> 4,
+                    pasteLocationPos.getZ() >> 4
+                ));
+
+                int sourceChunkX = srcLocationPos.getX() >> 4;
+                int sourceChunkZ = srcLocationPos.getZ() >> 4;
+                long sourceChunkPos = ChunkPos.asLong(sourceChunkX, sourceChunkZ);
+                Chunk sourceChunk = sourceChunksMap.get(sourceChunkPos);
+                if (sourceChunk != null) continue;
+                sourceChunksMap.put(sourceChunkPos, world.getChunk(sourceChunkX, sourceChunkZ));
             }
 
             //claim only chunks the ship occupies and a one-chunk margin for collision checks and construction
-            for (ChunkPos occupiedChunk : occupiedShipChunks) {
+            TLongIterator occupiedChunksIterator = occupiedShipChunks.iterator();
+            while (occupiedChunksIterator.hasNext()) {
+                long occupiedChunk = occupiedChunksIterator.next();
+                int occupiedChunkX = ChunkPos.getX(occupiedChunk);
+                int occupiedChunkZ = ChunkPos.getZ(occupiedChunk);
                 for (int chunkOffsetX = -1; chunkOffsetX <= 1; chunkOffsetX++) {
                     for (int chunkOffsetZ = -1; chunkOffsetZ <= 1; chunkOffsetZ++) {
                         toSpawn.getChunkClaim().addChunkClaim(
-                            occupiedChunk.x + chunkOffsetX,
-                            occupiedChunk.z + chunkOffsetZ
+                            occupiedChunkX + chunkOffsetX,
+                            occupiedChunkZ + chunkOffsetZ
                         );
                     }
                 }
             }
 
             // First, copy the blocks and tiles to the new chunks
-            blocksIterator = detector.foundSet.iterator();
-            while (blocksIterator.hasNext()) {
-                int hashedPos = blocksIterator.next();
+            for (int hashedPos : detectedBlocks) {
                 SpatialDetector.setPosWithRespectTo(hashedPos, detector.firstBlock, srcLocationPos);
                 // Get the BlockPos from the hashedPos
                 pasteLocationPos.setPos(srcLocationPos.getX() + centerDifference.getX(), srcLocationPos.getY() + centerDifference.getY(), srcLocationPos.getZ() + centerDifference.getZ());
@@ -235,17 +250,19 @@ public class WorldServerShipManager implements IPhysObjectWorld {
 
                 long newChunkPosLong = ChunkPos.asLong(newChunkX, newChunkZ);
 
-                if (!copiedChunksMap.containsKey(newChunkPosLong)) {
-                    Chunk chunk = new Chunk(this.world, newChunkX, newChunkZ);
-                    copiedChunksMap.put(newChunkPosLong, chunk);
+                Chunk newChunk = copiedChunksMap.get(newChunkPosLong);
+                if (newChunk == null) {
+                    newChunk = new Chunk(this.world, newChunkX, newChunkZ);
+                    copiedChunksMap.put(newChunkPosLong, newChunk);
                 }
 
                 // Then copy the IBlockState & TileEntity to the new Chunk
                 // Get the old world Chunk
-                Chunk chunkToSet = this.world.getChunk(srcLocationPos);
-
-                // Get the new Chunk
-                Chunk newChunk = copiedChunksMap.get(newChunkPosLong);
+                long sourceChunkPos = ChunkPos.asLong(
+                        srcLocationPos.getX() >> 4,
+                        srcLocationPos.getZ() >> 4
+                );
+                Chunk chunkToSet = sourceChunksMap.get(sourceChunkPos);
 
                 // Then get the old IBlockState, as efficiently as possible
                 int storageIndex = srcLocationPos.getY() >> 4;
@@ -262,8 +279,7 @@ public class WorldServerShipManager implements IPhysObjectWorld {
                 int newChunkStorageIndex = pasteLocationPos.getY() >> 4;
 
                 if (newChunk.getBlockStorageArray()[newChunkStorageIndex] == Chunk.NULL_BLOCK_STORAGE) {
-                    newChunk.getBlockStorageArray()[newChunkStorageIndex] = new ExtendedBlockStorage(newChunkStorageIndex << 4,
-                            true);
+                    newChunk.getBlockStorageArray()[newChunkStorageIndex] = new ExtendedBlockStorage(newChunkStorageIndex << 4, true);
                 }
                 newChunk.getBlockStorageArray()[newChunkStorageIndex]
                         .set(pasteLocationPos.getX() & 15, pasteLocationPos.getY() & 15, pasteLocationPos.getZ() & 15, srcState);
@@ -274,10 +290,11 @@ public class WorldServerShipManager implements IPhysObjectWorld {
                 }
 
                 // Also update the center of mass and inertia provider
-                centerOfMassProvider.onSetBlockState(toSpawn.getInertiaData(), pasteLocationPos, Blocks.AIR.getDefaultState(), srcState);
+                centerOfMassProvider.onSetBlockState(toSpawn.getInertiaData(), pasteLocationPos,
+                        airState, srcState);
 
                 // Then copy the TileEntity (if there is one)
-                TileEntity srcTile = world.getTileEntity(srcLocationPos);
+                TileEntity srcTile = this.world.getTileEntity(srcLocationPos);
                 if (srcTile != null) {
                     TileEntity pasteTile;
                     if (srcTile instanceof IRelocationAwareTile relocationAwareTile) {
@@ -289,7 +306,7 @@ public class WorldServerShipManager implements IPhysObjectWorld {
                         tileEntNBT.setInteger("x", pasteLocationPos.getX());
                         tileEntNBT.setInteger("y", pasteLocationPos.getY());
                         tileEntNBT.setInteger("z", pasteLocationPos.getZ());
-                        pasteTile = TileEntity.create(world, tileEntNBT);
+                        pasteTile = TileEntity.create(this.world, tileEntNBT);
                     }
 
                     // Finally, add the new TileEntity to the new ship chunk.
@@ -300,12 +317,14 @@ public class WorldServerShipManager implements IPhysObjectWorld {
             preserveInfuserPlacementAfterCenterOfMassChange(toSpawn);
 
             // Then delete the copied blocks from the old chunks
-            blocksIterator = detector.foundSet.iterator();
-            while (blocksIterator.hasNext()) {
-                int hashedPos = blocksIterator.next();
+            for (int hashedPos : detectedBlocks) {
                 SpatialDetector.setPosWithRespectTo(hashedPos, detector.firstBlock, srcLocationPos);
 
-                Chunk chunkToSet = world.getChunk(srcLocationPos);
+                long sourceChunkPos = ChunkPos.asLong(
+                        srcLocationPos.getX() >> 4,
+                        srcLocationPos.getZ() >> 4
+                );
+                Chunk chunkToSet = sourceChunksMap.get(sourceChunkPos);
 
                 // Then get the old IBlockState, as efficiently as possible
                 int storageIndex = srcLocationPos.getY() >> 4;
@@ -316,63 +335,43 @@ public class WorldServerShipManager implements IPhysObjectWorld {
                 }
 
                 IBlockState srcState = chunkToSet.getBlockStorageArray()[storageIndex]
-                        .get(srcLocationPos.getX() & 15, srcLocationPos.getY() & 15, srcLocationPos.getZ() & 15);
+                        .get(srcLocationPos.getX() & 15, srcLocationPos.getY() & 15,
+                                srcLocationPos.getZ() & 15);
 
                 // THIS IS TEMP because its extremely inefficient.
                 // Come up with a clever way to let clients figure this out in the future.
-                world.notifyBlockUpdate(srcLocationPos, srcState, Blocks.AIR.getDefaultState(), 3);
-                world.notifyNeighborsOfStateChange(srcLocationPos, Blocks.AIR, false);
+                this.world.notifyBlockUpdate(srcLocationPos, srcState, airState, 3);
+                this.world.notifyNeighborsOfStateChange(srcLocationPos, Blocks.AIR, false);
 
                 // Finally, delete the old IBlockState and TileEntity from the old Chunk
                 chunkToSet.getBlockStorageArray()[storageIndex]
-                        .set(srcLocationPos.getX() & 15, srcLocationPos.getY() & 15, srcLocationPos.getZ() & 15, Blocks.AIR.getDefaultState());
+                        .set(srcLocationPos.getX() & 15, srcLocationPos.getY() & 15, srcLocationPos.getZ() & 15, airState);
                 if (Loader.isModLoaded("malisiscore")) {
-                    MalisisCoreCompat.updateChunkBlockRegistration(
-                        world, srcLocationPos, srcState, Blocks.AIR.getDefaultState());
+                    MalisisCoreCompat.updateChunkBlockRegistration(this.world, srcLocationPos, srcState, airState);
                 }
 
                 // Delete the TileEntity at this pos (if there is one)
-                world.removeTileEntity(srcLocationPos);
-
-                chunkToSet.markDirty();
+                this.world.removeTileEntity(srcLocationPos);
             }
 
             // Then relight the original chunks
-            {
-                Set<Long> chunksRelit = new HashSet<>();
-                blocksIterator = detector.foundSet.iterator();
-                while (blocksIterator.hasNext()) {
-                    int hashedPos = blocksIterator.next();
-                    SpatialDetector.setPosWithRespectTo(hashedPos, detector.firstBlock, srcLocationPos);
-
-                    int changedChunkX = srcLocationPos.getX() >> 4;
-                    int changedChunkZ = srcLocationPos.getZ() >> 4;
-                    long changedChunkPos = ChunkPos.asLong(changedChunkX, changedChunkZ);
-
-                    if (chunksRelit.contains(changedChunkPos)) {
-                        continue;
-                    }
-                    final Chunk chunk = world.getChunk(changedChunkX, changedChunkZ);
-                    chunk.generateSkylightMap();
-                    chunk.checkLight();
-                    chunk.markDirty();
-                    chunksRelit.add(changedChunkPos);
-                }
+            for (Chunk sourceChunk : sourceChunksMap.valueCollection()) {
+                sourceChunk.generateSkylightMap();
+                sourceChunk.checkLight();
+                sourceChunk.markDirty();
             }
 
             // Then inject the ship chunks into the world
             toSpawn.getChunkClaim().forEach((x, z) -> {
                 long chunkLong = ChunkPos.asLong(x, z);
-                if (copiedChunksMap.containsKey(chunkLong)) {
-                    injectChunkIntoWorldServer(copiedChunksMap.get(chunkLong), x, z);
-                } else {
-                    injectChunkIntoWorldServer(new Chunk(world, x, z), x, z);
-                }
+                Chunk copiedChunk = copiedChunksMap.get(chunkLong);
+                if (copiedChunk == null) copiedChunk = new Chunk(this.world, x, z);
+                injectChunkIntoWorldServer(copiedChunk, x, z);
             });
 
             // relight only after the whole claim, including its one-chunk margin, has been installed in the world.
             for (ChunkPos chunkPos : toSpawn.getChunkClaim()) {
-                Chunk chunk = world.getChunk(chunkPos.x, chunkPos.z);
+                Chunk chunk = this.world.getChunk(chunkPos.x, chunkPos.z);
                 chunk.generateSkylightMap();
                 chunk.checkLight();
                 chunk.markDirty();
@@ -381,21 +380,21 @@ public class WorldServerShipManager implements IPhysObjectWorld {
             //transfer lighting properly when creating ship
             if (toSpawn.blockPositions != null) {
                 for (BlockPos blockPos : toSpawn.blockPositions) {
-                    IBlockState blockState = world.getBlockState(blockPos);
-                    if (blockState.getLightValue(world, blockPos) > 0) {
-                        world.checkLightFor(EnumSkyBlock.BLOCK, blockPos);
+                    IBlockState blockState = this.world.getBlockState(blockPos);
+                    if (blockState.getLightValue(this.world, blockPos) > 0) {
+                        this.world.checkLightFor(EnumSkyBlock.BLOCK, blockPos);
                     }
                 }
             }
 
             // Add shipData to the ShipData storage
-            QueryableShipData.get(world).addShip(toSpawn);
+            QueryableShipData.get(this.world).addShip(toSpawn);
 
             // Finally, instantiate the PhysicsObject representation of this ShipData
-            PhysicsObject physicsObject = new PhysicsObject(world, toSpawn);
-            loadedShips.put(toSpawn.getUuid(), physicsObject);
+            PhysicsObject physicsObject = new PhysicsObject(this.world, toSpawn);
+            this.loadedShips.put(toSpawn.getUuid(), physicsObject);
         }
-        spawnQueue.clear();
+        this.spawnQueue.clear();
     }
 
     private static void preserveInfuserPlacementAfterCenterOfMassChange(ShipData shipData) {

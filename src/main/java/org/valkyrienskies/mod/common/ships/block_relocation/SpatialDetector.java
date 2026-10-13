@@ -1,6 +1,7 @@
 package org.valkyrienskies.mod.common.ships.block_relocation;
 
 import gnu.trove.iterator.TIntIterator;
+import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.set.hash.TIntHashSet;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,18 +28,19 @@ public abstract class SpatialDetector {
     public final World worldObj;
     public final int maxSize;
     public final boolean corners;
-    public TIntHashSet nextQueue = new TIntHashSet();
+    private final TIntArrayList detectionQueue = new TIntArrayList(250);
+    private final TIntHashSet checkedPositions = new TIntHashSet(250);
     // public int totalCalls = 0;
     public boolean cleanHouse = false;
 
     public SpatialDetector(BlockPos start, World worldIn, int maximum, boolean checkCorners) {
-        firstBlock = start;
-        worldObj = worldIn;
-        maxSize = maximum;
-        corners = checkCorners;
+        this.firstBlock = start;
+        this.worldObj = worldIn;
+        this.maxSize = maximum;
+        this.corners = checkCorners;
         BlockPos minPos = new BlockPos(start.getX() - 128, 0, start.getZ() - 128);
         BlockPos maxPos = new BlockPos(start.getX() + 128, 255, start.getZ() + 128);
-        cache = new ChunkCache(worldIn, minPos, maxPos, 0);
+        this.cache = new ChunkCache(worldIn, minPos, maxPos, 0);
     }
 
     public static int getHashWithRespectTo(int realX, int realY, int realZ, BlockPos start) {
@@ -66,10 +68,8 @@ public abstract class SpatialDetector {
     }
 
     public final void startDetection() {
-        calculateSpatialOccupation();
-        if (cleanHouse) {
-            foundSet.clear();
-        }
+        this.calculateSpatialOccupation();
+        if (this.cleanHouse) this.foundSet.clear();
     }
 
     public List<BlockPos> getBlockPosArrayList() {
@@ -88,105 +88,49 @@ public abstract class SpatialDetector {
     }
 
     protected void calculateSpatialOccupation() {
-        nextQueue
-            .add(firstBlock.getY() + maxRange * maxRangeHalved + maxRangeSquared * maxRangeHalved);
+        int firstHash = this.firstBlock.getY() + maxRange * maxRangeHalved + maxRangeSquared * maxRangeHalved;
+        this.foundSet.add(firstHash);
+        this.checkedPositions.add(firstHash);
+        this.detectionQueue.add(firstHash);
+
         MutableBlockPos inRealWorld = new MutableBlockPos();
-        int hash;
-        while (!nextQueue.isEmpty() && !cleanHouse) {
-            TIntIterator queueIter = nextQueue.iterator();
-            foundSet.addAll(nextQueue);
-            nextQueue = new TIntHashSet();
-            while (queueIter.hasNext()) {
-                hash = queueIter.next();
-                setPosWithRespectTo(hash, firstBlock, inRealWorld);
-                if (corners) {
-                    tryExpanding(inRealWorld.getX() - 1, inRealWorld.getY() - 1,
-                        inRealWorld.getZ() - 1,
-                        hash - maxRange - 1 - maxRangeSquared);
-                    tryExpanding(inRealWorld.getX() - 1, inRealWorld.getY() - 1, inRealWorld.getZ(),
-                        hash - maxRange - 1);
-                    tryExpanding(inRealWorld.getX() - 1, inRealWorld.getY() - 1,
-                        inRealWorld.getZ() + 1,
-                        hash - maxRange - 1 + maxRangeSquared);
-                    tryExpanding(inRealWorld.getX() - 1, inRealWorld.getY(), inRealWorld.getZ() - 1,
-                        hash - maxRange - maxRangeSquared);
-                    tryExpanding(inRealWorld.getX() - 1, inRealWorld.getY(), inRealWorld.getZ(),
-                        hash - maxRange);
-                    tryExpanding(inRealWorld.getX() - 1, inRealWorld.getY(), inRealWorld.getZ() + 1,
-                        hash - maxRange + maxRangeSquared);
-                    tryExpanding(inRealWorld.getX() - 1, inRealWorld.getY() + 1,
-                        inRealWorld.getZ() - 1,
-                        hash - maxRange + 1 - maxRangeSquared);
-                    tryExpanding(inRealWorld.getX() - 1, inRealWorld.getY() + 1, inRealWorld.getZ(),
-                        hash - maxRange + 1);
-                    tryExpanding(inRealWorld.getX() - 1, inRealWorld.getY() + 1,
-                        inRealWorld.getZ() + 1,
-                        hash - maxRange + 1 + maxRangeSquared);
-
-                    tryExpanding(inRealWorld.getX(), inRealWorld.getY() - 1, inRealWorld.getZ() - 1,
-                        hash - 1 - maxRangeSquared);
-                    tryExpanding(inRealWorld.getX(), inRealWorld.getY() - 1, inRealWorld.getZ(),
-                        hash - 1);
-                    tryExpanding(inRealWorld.getX(), inRealWorld.getY() - 1, inRealWorld.getZ() + 1,
-                        hash - 1 + maxRangeSquared);
-                    tryExpanding(inRealWorld.getX(), inRealWorld.getY(), inRealWorld.getZ() - 1,
-                        hash - maxRangeSquared);
-                    tryExpanding(inRealWorld.getX(), inRealWorld.getY(), inRealWorld.getZ() + 1,
-                        hash + maxRangeSquared);
-                    tryExpanding(inRealWorld.getX(), inRealWorld.getY() + 1, inRealWorld.getZ() - 1,
-                        hash + 1 - maxRangeSquared);
-                    tryExpanding(inRealWorld.getX(), inRealWorld.getY() + 1, inRealWorld.getZ(),
-                        hash + 1);
-                    tryExpanding(inRealWorld.getX(), inRealWorld.getY() + 1, inRealWorld.getZ() + 1,
-                        hash + 1 + maxRangeSquared);
-
-                    tryExpanding(inRealWorld.getX() + 1, inRealWorld.getY() - 1,
-                        inRealWorld.getZ() - 1,
-                        hash + maxRange - 1 - maxRangeSquared);
-                    tryExpanding(inRealWorld.getX() + 1, inRealWorld.getY() - 1, inRealWorld.getZ(),
-                        hash + maxRange - 1);
-                    tryExpanding(inRealWorld.getX() + 1, inRealWorld.getY() - 1,
-                        inRealWorld.getZ() + 1,
-                        hash + maxRange - 1 + maxRangeSquared);
-                    tryExpanding(inRealWorld.getX() + 1, inRealWorld.getY(), inRealWorld.getZ() - 1,
-                        hash + maxRange - maxRangeSquared);
-                    tryExpanding(inRealWorld.getX() + 1, inRealWorld.getY(), inRealWorld.getZ(),
-                        hash + maxRange);
-                    tryExpanding(inRealWorld.getX() + 1, inRealWorld.getY(), inRealWorld.getZ() + 1,
-                        hash + maxRange + maxRangeSquared);
-                    tryExpanding(inRealWorld.getX() + 1, inRealWorld.getY() + 1,
-                        inRealWorld.getZ() - 1,
-                        hash + maxRange + 1 - maxRangeSquared);
-                    tryExpanding(inRealWorld.getX() + 1, inRealWorld.getY() + 1, inRealWorld.getZ(),
-                        hash + maxRange + 1);
-                    tryExpanding(inRealWorld.getX() + 1, inRealWorld.getY() + 1,
-                        inRealWorld.getZ() + 1,
-                        hash + maxRange + 1 + maxRangeSquared);
-                } else {
-                    tryExpanding(inRealWorld.getX() + 1, inRealWorld.getY(), inRealWorld.getZ(),
-                        hash + maxRange);
-                    tryExpanding(inRealWorld.getX() - 1, inRealWorld.getY(), inRealWorld.getZ(),
-                        hash - maxRange);
-                    tryExpanding(inRealWorld.getX(), inRealWorld.getY() + 1, inRealWorld.getZ(),
-                        hash + 1);
-                    tryExpanding(inRealWorld.getX(), inRealWorld.getY() - 1, inRealWorld.getZ(),
-                        hash - 1);
-                    tryExpanding(inRealWorld.getX(), inRealWorld.getY(), inRealWorld.getZ() + 1,
-                        hash + maxRangeSquared);
-                    tryExpanding(inRealWorld.getX(), inRealWorld.getY(), inRealWorld.getZ() - 1,
-                        hash - maxRangeSquared);
+        int queueIndex = 0;
+        while (queueIndex < this.detectionQueue.size() && !this.cleanHouse) {
+            int hash = this.detectionQueue.get(queueIndex++);
+            setPosWithRespectTo(hash, this.firstBlock, inRealWorld);
+            if (this.corners) {
+                for (int xOffset = -1; xOffset <= 1; xOffset++) {
+                    for (int yOffset = -1; yOffset <= 1; yOffset++) {
+                        for (int zOffset = -1; zOffset <= 1; zOffset++) {
+                            if (xOffset == 0 && yOffset == 0 && zOffset == 0) continue;
+                            int neighborHash = hash + xOffset * maxRange + yOffset + zOffset * maxRangeSquared;
+                            this.tryExpanding(
+                                inRealWorld.getX() + xOffset,
+                                inRealWorld.getY() + yOffset,
+                                inRealWorld.getZ() + zOffset,
+                                neighborHash
+                            );
+                        }
+                    }
                 }
+            }
+            else {
+                this.tryExpanding(inRealWorld.getX() + 1, inRealWorld.getY(), inRealWorld.getZ(), hash + maxRange);
+                this.tryExpanding(inRealWorld.getX() - 1, inRealWorld.getY(), inRealWorld.getZ(), hash - maxRange);
+                this.tryExpanding(inRealWorld.getX(), inRealWorld.getY() + 1, inRealWorld.getZ(), hash + 1);
+                this.tryExpanding(inRealWorld.getX(), inRealWorld.getY() - 1, inRealWorld.getZ(), hash - 1);
+                this.tryExpanding(inRealWorld.getX(), inRealWorld.getY(), inRealWorld.getZ() + 1, hash + maxRangeSquared);
+                this.tryExpanding(inRealWorld.getX(), inRealWorld.getY(), inRealWorld.getZ() - 1, hash - maxRangeSquared);
             }
         }
     }
 
     protected void tryExpanding(int x, int y, int z, int hash) {
-        if (isValidExpansion(x, y, z)) {
-            // totalCalls++;
-            if (!foundSet.contains(hash) && (foundSet.size() + nextQueue.size() < maxSize)) {
-                nextQueue.add(hash);
-            }
-        }
+        if (foundSet.size() >= maxSize || !checkedPositions.add(hash)) return;
+        if (!isValidExpansion(x, y, z)) return;
+
+        foundSet.add(hash);
+        detectionQueue.add(hash);
     }
 
     public abstract boolean isValidExpansion(int x, int y, int z);
