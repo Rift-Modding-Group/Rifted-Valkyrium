@@ -5,6 +5,7 @@ import net.minecraft.client.renderer.BufferBuilder;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.IBlockAccess;
+import net.minecraft.world.World;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.Shadow;
@@ -13,7 +14,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-import org.valkyrienskies.mod.client.compat.MalisisCoreClientCompat;
+import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
+import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 
 /**
  * Corrects Malisis block-model coordinates while ship chunks are being built.
@@ -40,7 +42,7 @@ public abstract class MixinMalisisRenderer {
             BufferBuilder buffer, IBlockAccess blockAccess, BlockPos blockPos,
             IBlockState blockState, CallbackInfoReturnable<Boolean> callbackInfo
     ) {
-        this.posOffset = MalisisCoreClientCompat.getBlockRenderOffset(blockAccess, blockPos, this.posOffset);
+        this.posOffset = valkyrienskies$getBlockRenderOffset(blockAccess, blockPos, this.posOffset);
     }
 
     @Inject(
@@ -49,7 +51,7 @@ public abstract class MixinMalisisRenderer {
     )
     private void rememberAnimatedShipOffset(IBlockAccess blockAccess, BlockPos blockPos, CallbackInfo callbackInfo) {
         Vec3d worldOffset = new Vec3d(blockPos.getX(), blockPos.getY(), blockPos.getZ());
-        Vec3d renderOffset = MalisisCoreClientCompat.getBlockRenderOffset(blockAccess, blockPos, worldOffset);
+        Vec3d renderOffset = valkyrienskies$getBlockRenderOffset(blockAccess, blockPos, worldOffset);
         this.valkyrienskies$animatedShipOffset = renderOffset == worldOffset ? null : renderOffset;
     }
 
@@ -63,5 +65,22 @@ public abstract class MixinMalisisRenderer {
     @Inject(method = "reset", at = @At("HEAD"))
     private void forgetAnimatedShipOffset(CallbackInfo callbackInfo) {
         this.valkyrienskies$animatedShipOffset = null;
+    }
+
+    @Unique
+    private static Vec3d valkyrienskies$getBlockRenderOffset(
+            IBlockAccess blockAccess, BlockPos blockPos, Vec3d originalOffset
+    ) {
+        if (!(blockAccess instanceof World world)) return originalOffset;
+
+        PhysicsObject physicsObject = ValkyrienUtils.getPhysoManagingBlock(world, blockPos).orElse(null);
+        if (physicsObject == null || physicsObject.getShipRenderer() == null) return originalOffset;
+
+        BlockPos rendererOffset = physicsObject.getShipRenderer().offsetPos;
+        return new Vec3d(
+            blockPos.getX() - rendererOffset.getX(),
+            blockPos.getY() - rendererOffset.getY(),
+            blockPos.getZ() - rendererOffset.getZ()
+        );
     }
 }
