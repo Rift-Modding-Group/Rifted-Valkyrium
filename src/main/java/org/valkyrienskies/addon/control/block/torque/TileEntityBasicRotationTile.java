@@ -111,7 +111,7 @@ public class TileEntityBasicRotationTile extends TileEntity implements IRotation
             }
             rotation = this.rotationNode.getAngularRotationUnsynchronized();
             IBlockState blockState = this.getWorld().getBlockState(this.getPos());
-            this.getWorld().notifyBlockUpdate(this.getPos(), blockState, blockState, 0);
+            this.getWorld().notifyBlockUpdate(this.getPos(), blockState, blockState, 2);
             this.markDirty();
         }
     }

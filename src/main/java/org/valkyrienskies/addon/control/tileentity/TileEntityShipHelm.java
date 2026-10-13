@@ -88,7 +88,7 @@ public class TileEntityShipHelm extends TileEntityControlNodeImpl implements ITi
             }
 
             IBlockState blockState = this.getWorld().getBlockState(this.getPos());
-            this.getWorld().notifyBlockUpdate(this.getPos(), blockState, blockState, 0);
+            this.getWorld().notifyBlockUpdate(this.getPos(), blockState, blockState, 2);
         }
     }
 

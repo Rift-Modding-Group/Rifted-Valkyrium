@@ -168,7 +168,7 @@ public class TileEntityRudderPart extends TileEntityMultiblockPartForce<RudderAx
     public void setRudderAngle(double forcedValue) {
         this.rudderAngle = forcedValue;
         IBlockState blockState = this.getWorld().getBlockState(this.getPos());
-        this.getWorld().notifyBlockUpdate(this.getPos(), blockState, blockState, 0);
+        this.getWorld().notifyBlockUpdate(this.getPos(), blockState, blockState, 2);
     }
 
     public double getRenderRudderAngle(double partialTicks) {

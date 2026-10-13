@@ -79,8 +79,10 @@ public class TileEntityValkyriumEnginePart extends TileEntityMultiblockPart<Valk
                         this.currentKeyframe = this.currentKeyframe % 99;
                     }
                 }
-                IBlockState blockState = this.getWorld().getBlockState(this.getPos());
-                this.getWorld().notifyBlockUpdate(this.getPos(), blockState, blockState, 0);
+                if (this.isMaster()) {
+                    IBlockState blockState = this.getWorld().getBlockState(this.getPos());
+                    this.getWorld().notifyBlockUpdate(this.getPos(), blockState, blockState, 2);
+                }
             }
             this.markDirty();
         }

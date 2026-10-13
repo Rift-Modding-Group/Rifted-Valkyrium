@@ -83,7 +83,7 @@ public class TileEntityBasicRotationNodeTile extends BasicNodeTileEntity impleme
             }
             rotation = this.rotationNode.getAngularRotationUnsynchronized();
             IBlockState blockState = this.getWorld().getBlockState(this.getPos());
-            this.getWorld().notifyBlockUpdate(this.getPos(), blockState, blockState, 0);
+            this.getWorld().notifyBlockUpdate(this.getPos(), blockState, blockState, 2);
             this.markDirty();
         }
     }

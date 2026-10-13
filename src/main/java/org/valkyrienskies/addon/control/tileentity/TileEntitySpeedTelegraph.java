@@ -20,7 +20,6 @@ import org.valkyrienskies.addon.control.network.VSNodeControlMessage;
 import org.valkyrienskies.addon.control.nodecontrols.NodeControl;
 import org.valkyrienskies.addon.control.nodecontrols.NodeKeyHandler;
 import org.valkyrienskies.addon.control.nodenetwork.VSNode_TileEntity;
-import org.valkyrienskies.mod.common.network.VSNetwork;
 
 import java.util.Collection;
 import java.util.Locale;
@@ -79,11 +78,16 @@ public class TileEntitySpeedTelegraph extends TileEntityControlNodeImpl implemen
                 deltaOrdinal *= -1;
             }
         }
-        int newTelegraphOrdinal = this.telegraphState.ordinal();
+        ShipChadburnState previousTelegraphState = this.telegraphState;
+        int newTelegraphOrdinal = previousTelegraphState.ordinal();
         newTelegraphOrdinal += deltaOrdinal;
         newTelegraphOrdinal = Math.clamp(newTelegraphOrdinal, 0, ShipChadburnState.values().length - 1);
         this.telegraphState = ShipChadburnState.values()[newTelegraphOrdinal];
+        if (this.telegraphState == previousTelegraphState) return;
+
         this.markDirty();
+        IBlockState updatedState = this.getWorld().getBlockState(this.getPos());
+        this.getWorld().notifyBlockUpdate(this.getPos(), updatedState, updatedState, 2);
     }
 
     @Override
@@ -112,16 +116,15 @@ public class TileEntitySpeedTelegraph extends TileEntityControlNodeImpl implemen
 
     @Override
     public void update() {
-        if (this.getNode() == null || this.getNode()
-            .getGraph() == null) {
-            this.tileEntityInvalid = true;
-        }
+        super.update();
         if (getWorld().isRemote) {
             this.prevHandleRotation = this.handleRotation;
             this.handleRotation = this.handleRotation + (this.nextTelegraphState.renderRotation - this.handleRotation) * 0.5D;
             this.telegraphState = nextTelegraphState;
         }
         else {
+            if (this.getNode().getGraph() == null) return;
+
             Collection<GraphObject> connectedGraphObjects = getNode().getGraph().getObjects();
             if (connectedGraphObjects == null) {
                 new IllegalStateException("Graph object neighbors are null! Skipping ship telegraph update.").printStackTrace();
@@ -138,8 +141,6 @@ public class TileEntitySpeedTelegraph extends TileEntityControlNodeImpl implemen
                     else masterTile.setOutputRatio(Optional.of(this.telegraphState.gearboxOutputRatio));
                 }
             }
-            IBlockState blockState = this.getWorld().getBlockState(this.getPos());
-            this.getWorld().notifyBlockUpdate(this.getPos(), blockState, blockState, 0);
         }
     }
 
@@ -152,6 +153,7 @@ public class TileEntitySpeedTelegraph extends TileEntityControlNodeImpl implemen
     public void readFromNBT(NBTTagCompound compound) {
         super.readFromNBT(compound);
         this.telegraphState = ShipChadburnState.valueOf(compound.getString("TelegraphState"));
+        this.nextTelegraphState = this.telegraphState;
     }
 
     @Override

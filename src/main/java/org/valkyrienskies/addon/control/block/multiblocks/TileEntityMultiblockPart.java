@@ -82,7 +82,7 @@ public abstract class TileEntityMultiblockPart<E extends IMultiblockSchematic, F
         this.isMaster = false;
         this.multiblockSchematic = null;
         IBlockState blockState = this.getWorld().getBlockState(this.getPos());
-        this.getWorld().notifyBlockUpdate(this.getPos(), blockState, blockState, 0);
+        this.getWorld().notifyBlockUpdate(this.getPos(), blockState, blockState, 2);
         this.markDirty();
     }
 
@@ -93,7 +93,7 @@ public abstract class TileEntityMultiblockPart<E extends IMultiblockSchematic, F
         this.offsetPos = relativePos;
         this.multiblockSchematic = schematic;
         IBlockState blockState = this.getWorld().getBlockState(this.getPos());
-        this.getWorld().notifyBlockUpdate(this.getPos(), blockState, blockState, 0);
+        this.getWorld().notifyBlockUpdate(this.getPos(), blockState, blockState, 2);
         this.markDirty();
     }
 

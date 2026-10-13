@@ -110,18 +110,18 @@ public class TileEntityGiantPropellerPart extends
                         this.rotationNode.queueTask(() -> this.rotationNode.setRotationalInertia(propellerRadius * propellerRadius));
                     }
                     this.prevPropellerAngle = this.propellerAngle;
-                    // May need to convert to degrees from radians.
-                    this.propellerAngle = Math.toDegrees(rotationNode.getAngularRotationUnsynchronized());
+                    this.propellerAngle = MathHelper.wrapDegrees(
+                        Math.toDegrees(rotationNode.getAngularRotationUnsynchronized())
+                    );
+                    IBlockState blockState = this.getWorld().getBlockState(this.getPos());
+                    this.getWorld().notifyBlockUpdate(this.getPos(), blockState, blockState, 2);
                 }
-                IBlockState blockState = this.getWorld().getBlockState(this.getPos());
-                this.getWorld().notifyBlockUpdate(this.getPos(), blockState, blockState, 0);
             }
         }
         else {
             this.prevPropellerAngle = this.propellerAngle;
-            double increment = this.nextPropellerAngle - this.propellerAngle;
-            if (increment < 0) increment = MathHelper.wrapDegrees(increment);
-            this.propellerAngle = this.propellerAngle + increment * .75;
+            double increment = MathHelper.wrapDegrees(this.nextPropellerAngle - this.propellerAngle);
+            this.propellerAngle = MathHelper.wrapDegrees(this.propellerAngle + increment * .75D);
         }
     }
 
@@ -162,20 +162,32 @@ public class TileEntityGiantPropellerPart extends
     }
 
     public float getPropellerAngle(float partialTick) {
-        return (float) (this.prevPropellerAngle + (this.propellerAngle - this.prevPropellerAngle) * partialTick);
+        double increment = MathHelper.wrapDegrees(this.propellerAngle - this.prevPropellerAngle);
+        return (float) (this.prevPropellerAngle + increment * partialTick);
     }
 
     @Override
     public void readFromNBT(NBTTagCompound compound) {
         super.readFromNBT(compound);
         this.rotationNode.readFromNBT(compound);
+        double loadedAngle;
+        if (compound.hasKey("propeller_angle")) {
+            loadedAngle = compound.getDouble("propeller_angle");
+        }
+        else {
+            loadedAngle = Math.toDegrees(this.rotationNode.getAngularRotationUnsynchronized());
+        }
+        this.prevPropellerAngle = loadedAngle;
+        this.propellerAngle = loadedAngle;
+        this.nextPropellerAngle = loadedAngle;
     }
 
     @Override
     public NBTTagCompound writeToNBT(NBTTagCompound compound) {
-        super.writeToNBT(compound);
-        this.rotationNode.writeToNBT(compound);
-        return compound;
+        NBTTagCompound toReturn = super.writeToNBT(compound);
+        this.rotationNode.writeToNBT(toReturn);
+        toReturn.setDouble("propeller_angle", this.propellerAngle);
+        return toReturn;
     }
 
     @Override
@@ -188,7 +200,7 @@ public class TileEntityGiantPropellerPart extends
 
     @Override
     public void onDataPacket(NetworkManager net, SPacketUpdateTileEntity pkt) {
-        super.onDataPacket(net, pkt);
+        super.readFromNBT(pkt.getNbtCompound());
         this.nextPropellerAngle = pkt.getNbtCompound().getDouble("propeller_angle");
     }
 }

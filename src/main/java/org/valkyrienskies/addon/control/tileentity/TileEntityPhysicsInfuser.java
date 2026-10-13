@@ -132,12 +132,13 @@ public class TileEntityPhysicsInfuser extends TileEntity implements ITickable, I
             }
 
             // Send any updates to clients
-            if (sendUpdateToClients) {
+            if (this.sendUpdateToClients) {
                 IBlockState blockState = this.getWorld().getBlockState(this.getPos());
-                this.getWorld().notifyBlockUpdate(this.getPos(), blockState, blockState, 0);
-                sendUpdateToClients = false;
+                this.getWorld().notifyBlockUpdate(this.getPos(), blockState, blockState, 2);
+                this.sendUpdateToClients = false;
             }
-        } else {
+        }
+        else {
             // Client code to produce the physics infuser core wave effect
             if (this.isPhysicsEnabled()) {
                 long worldTime = getWorld().getWorldTime();

@@ -174,7 +174,7 @@ public class VSNode_TileEntity implements IVSNode {
             if (!this.parentTile.isInvalid()) {
                 //VSNetwork.sendTileToAllNearby(this.parentTile);
                 IBlockState blockState = this.getNodeWorld().getBlockState(this.getNodePos());
-                this.getNodeWorld().notifyBlockUpdate(this.getNodePos(), blockState, blockState, 0);
+                this.getNodeWorld().notifyBlockUpdate(this.getNodePos(), blockState, blockState, 2);
             }
         }
     }
