@@ -60,6 +60,11 @@ unimined.minecraft {
         loader "0.6.10-alpha"
         runs.all {
             systemProperty("crl.dev.mixin", "${mod_id}.mixin.json")
+            jvmArgs += [
+                    "-Dmixin.env.remapRefMap=true",
+                    "-Dmixin.env.refMapRemappingFile=${file('.gradle/unimined/local/mappings/srg2mcp.tsrg').absolutePath}"
+            ]
+
             args += ['--username', minecraft_username]
             def extraArgs = extra_jvm_args
             if (extraArgs != null && !extraArgs.trim().isEmpty()) {

@@ -32,6 +32,8 @@
     "mod.effortlessbuilding.MixinBlockPlacedMessage",
     "mod.effortlessbuilding.MixinRenderHandler",
     "mod.renderlib.MixinRenderLibValkyrienSkies",
+    "mod.riftlib.MixinGeoBlockRendererTicker",
+    "mod.riftlib.MixinRiftLibParticle",
     "mod.malisiscore.MixinMalisisRenderer",
     "mod.malisiscore.MixinAnimatedRenderer"
   ],
