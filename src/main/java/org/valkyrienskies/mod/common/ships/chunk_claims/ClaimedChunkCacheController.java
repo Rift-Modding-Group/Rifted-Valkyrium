@@ -1,7 +1,9 @@
 package org.valkyrienskies.mod.common.ships.chunk_claims;
+
 import net.minecraft.server.management.PlayerChunkMap;
 import net.minecraft.server.management.PlayerChunkMapEntry;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 import net.minecraft.world.chunk.Chunk;
@@ -25,10 +27,7 @@ public class ClaimedChunkCacheController implements Iterable<Chunk> {
     private final PhysicsObject parent;
     private final World world;
 
-    // private final Map<Long, Chunk> claimedChunks;
-    private final Chunk[][] claimedChunks;
-    private final int chunkBottomX, chunkBottomZ;
-    private final int radius;
+    private final Map<Long, Chunk> claimedChunks;
 
     /**
      * This constructor is expensive; it loads all the chunks when it's called. Be warned.
@@ -38,11 +37,7 @@ public class ClaimedChunkCacheController implements Iterable<Chunk> {
     public ClaimedChunkCacheController(PhysicsObject parent) {
         this.world = parent.getWorld();
         this.parent = parent;
-        // TODO: Bad :(
-        this.radius = 7;
-        this.claimedChunks = new Chunk[radius * 2 + 1][radius * 2 + 1];
-        this.chunkBottomX = parent.getChunkClaim().getCenterPos().x - radius;
-        this.chunkBottomZ = parent.getChunkClaim().getCenterPos().z - radius;
+        this.claimedChunks = new HashMap<>();
         loadChunksIntoCache();
     }
 
@@ -54,9 +49,9 @@ public class ClaimedChunkCacheController implements Iterable<Chunk> {
      * @return The chunk from the cache
      */
     public Chunk getChunkAt(int chunkX, int chunkZ) {
-        throwIfOutOfBounds(chunkX, chunkZ);
+        this.throwIfOutOfBounds(chunkX, chunkZ);
 
-        return claimedChunks[chunkX - chunkBottomX][chunkZ - chunkBottomZ];
+        return this.claimedChunks.get(ChunkPos.asLong(chunkX, chunkZ));
     }
 
     /**
@@ -67,25 +62,16 @@ public class ClaimedChunkCacheController implements Iterable<Chunk> {
      * @param chunk  The chunk to cache.
      */
     private void setChunkAt(int chunkX, int chunkZ, Chunk chunk) {
-        throwIfOutOfBounds(chunkX, chunkZ);
+        this.throwIfOutOfBounds(chunkX, chunkZ);
 
-        final int relativeChunkX = chunkX - chunkBottomX;
-        final int relativeChunkZ = chunkZ - chunkBottomZ;
-
-        claimedChunks[relativeChunkX][relativeChunkZ] = chunk;
+        this.claimedChunks.put(ChunkPos.asLong(chunkX, chunkZ), chunk);
     }
 
     /**
      * Throws a ChunkNotInClaimException if (chunkX, chunkZ) isn't a part of the given VSChunkClaim.
      */
     private void throwIfOutOfBounds(int chunkX, int chunkZ) {
-        // if (!claim.containsChunk(chunkX, chunkZ)) {
-        //     throw new ChunkNotInClaimException(chunkX, chunkZ);
-        // }
-        final int relativeChunkX = chunkX - chunkBottomX;
-        final int relativeChunkZ = chunkZ - chunkBottomZ;
-
-        if (relativeChunkX < 0 || relativeChunkX >= radius * 2 + 1 || relativeChunkZ < 0 || relativeChunkZ >= radius * 2 + 1) {
+        if (!this.parent.getChunkClaim().containsChunk(chunkX, chunkZ)) {
             throw new ChunkNotInClaimException(chunkX, chunkZ);
         }
     }
@@ -95,14 +81,14 @@ public class ClaimedChunkCacheController implements Iterable<Chunk> {
      */
     private void loadChunksIntoCache() {
         if (VSConfig.showAnnoyingDebugOutput) {
-            System.out.println("Loading chunks for " + parent.getShipData());
+            System.out.println("Loading chunks for " + this.parent.getShipData());
         }
-        VSChunkClaim claim = parent.getShipData().getChunkClaim();
+        VSChunkClaim claim = this.parent.getShipData().getChunkClaim();
 
         claim.forEach((x, z) -> {
             // Added try catch to prevent ships deleting themselves because of a failed tile entity load.
             try {
-                Chunk chunk = world.getChunk(x, z);
+                Chunk chunk = this.world.getChunk(x, z);
                 if (chunk.isEmpty()) { // if (chunk instanceof EmptyChunk) { [Changed because EmptyChunk is a 'client' class]
                     if (VSConfig.showAnnoyingDebugOutput) {
                         System.out.println("Why did we put an empty chunk at (" + x + "," + z + ")?");
@@ -110,22 +96,23 @@ public class ClaimedChunkCacheController implements Iterable<Chunk> {
                 }
 
                 // Do this to get it re-integrated into the world
-                if (!world.isRemote) {
+                if (!this.world.isRemote) {
                     // Inject the entry into the player chunk map.
-                    PlayerChunkMap map = ((WorldServer) world).getPlayerChunkMap();
+                    PlayerChunkMap map = ((WorldServer) this.world).getPlayerChunkMap();
                     PlayerChunkMapEntry entry = map.getOrCreateEntry(x, z);
                     // Very important! We must update the chunk field of the entry to prevent old chunk objects from living on.
                     // If this entry already existed and we forget, then we will corrupt the entry by having different chunks
                     // in the world vs in the entries!
                     entry.chunk = chunk;
                     entry.sentToPlayers = true;
-                    entry.players = parent.getWatchingPlayers();
+                    entry.players = this.parent.getWatchingPlayers();
                 }
 
-                chunk.getTileEntityMap().forEach(parent::onSetTileEntity);
+                chunk.getTileEntityMap().forEach(this.parent::onSetTileEntity);
 
-                setChunkAt(x, z, chunk);
-            } catch (Exception e) {
+                this.setChunkAt(x, z, chunk);
+            }
+            catch (Exception e) {
                 e.printStackTrace();
             }
         });
@@ -162,13 +149,7 @@ public class ClaimedChunkCacheController implements Iterable<Chunk> {
     @Nonnull
     @Override
     public Iterator<Chunk> iterator() {
-        final List<Chunk> chunksList = new ArrayList<>();
-        for (Chunk[] chunks : claimedChunks) {
-            for (Chunk chunk : chunks) {
-                if (chunk != null) chunksList.add(chunk);
-            }
-        }
-        return chunksList.iterator();
+        return new ArrayList<>(this.claimedChunks.values()).iterator();
     }
 
     /**
@@ -176,7 +157,6 @@ public class ClaimedChunkCacheController implements Iterable<Chunk> {
      */
     @SideOnly(Side.CLIENT)
     public void updateChunk(@Nonnull Chunk chunk) {
-        setChunkAt(chunk.x, chunk.z, chunk);
+        this.setChunkAt(chunk.x, chunk.z, chunk);
     }
-
 }

@@ -1,11 +1,11 @@
 package org.valkyrienskies.mod.common.ships.chunk_claims;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Streams;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
+import org.jspecify.annotations.NonNull;
 
 import javax.annotation.concurrent.Immutable;
 import java.beans.ConstructorProperties;
@@ -22,9 +22,7 @@ import java.util.stream.Stream;
  * @author tri0de
  */
 @Immutable
-
 public final class VSChunkClaim implements Iterable<ChunkPos> {
-
     private final ChunkPos centerPos;
     private final Set<Long> claimedChunks;
 
@@ -44,9 +42,9 @@ public final class VSChunkClaim implements Iterable<ChunkPos> {
     public void writeToNBT(NBTTagCompound toSave) {
         toSave.setLong("centerPos", getChunkPos(centerPos.x, centerPos.z));
         // Using an int array instead of a long array because there is no nbt.setLongArray().
-        int[] chunkPositions = new int[claimedChunks.size() * 2];
+        int[] chunkPositions = new int[this.claimedChunks.size() * 2];
         int i = 0;
-        for (Long chunkPos : claimedChunks) {
+        for (Long chunkPos : this.claimedChunks) {
             chunkPositions[i] = getChunkX(chunkPos);
             chunkPositions[i + 1] = getChunkZ(chunkPos);
             i += 2;
@@ -62,18 +60,7 @@ public final class VSChunkClaim implements Iterable<ChunkPos> {
      * @return True if the specified chunk is contained within this {@link VSChunkClaim}
      */
     public boolean containsChunk(int chunkX, int chunkZ) {
-        // long chunkLong = getChunkPos(chunkX, chunkZ);
-        // return claimedChunks.contains(chunkLong);
-        // Bad :(
-        final int radius = 7;
-
-        final int relativeChunkX = chunkX - centerPos.x + radius;
-        final int relativeChunkZ = chunkZ - centerPos.z + radius;
-
-        if (relativeChunkX < 0 || relativeChunkX >= radius * 2 + 1 || relativeChunkZ < 0 || relativeChunkZ >= radius * 2 + 1) {
-            return false;
-        }
-        return true;
+        return this.claimedChunks.contains(getChunkPos(chunkX, chunkZ));
     }
 
     public boolean containsChunk(ChunkPos pos) {
@@ -89,28 +76,23 @@ public final class VSChunkClaim implements Iterable<ChunkPos> {
         return containsChunk(pos.getX() >> 4, pos.getZ() >> 4);
     }
 
-    public boolean addChunkClaim(int chunkX, int chunkZ) {
+    public void addChunkClaim(int chunkX, int chunkZ) {
         long chunkPos = getChunkPos(chunkX, chunkZ);
-        return claimedChunks.add(chunkPos);
+        this.claimedChunks.add(chunkPos);
     }
 
     public boolean removeChunkClaim(int chunkX, int chunkZ) {
         long chunkPos = getChunkPos(chunkX, chunkZ);
-        return claimedChunks.remove(chunkPos);
+        return this.claimedChunks.remove(chunkPos);
     }
 
     @Override
     public String toString() {
-        return centerPos + ":" + "claim size " + claimedChunks.size();
+        return this.centerPos + ":" + "claim size " + this.claimedChunks.size();
     }
 
     public BlockPos getRegionCenter() {
-        return new BlockPos(centerPos.getXStart(), 128, centerPos.getZStart());
-    }
-
-    private ImmutableSet<Long> calculateChunkLongs() {
-        return claimedChunks.stream()
-            .collect(ImmutableSet.toImmutableSet());
+        return new BlockPos(this.centerPos.getXStart(), 128, this.centerPos.getZStart());
     }
 
     /**
@@ -129,23 +111,24 @@ public final class VSChunkClaim implements Iterable<ChunkPos> {
     }
 
     @Override
+    @NonNull
     public Iterator<ChunkPos> iterator() {
         return new ChunkPosIterator();
     }
 
     class ChunkPosIterator implements Iterator<ChunkPos> {
-        Iterator<Long> chunkLongsIterator = claimedChunks.iterator();
+        Iterator<Long> chunkLongsIterator = VSChunkClaim.this.claimedChunks.iterator();
 
         @Override
         public boolean hasNext() {
-            return chunkLongsIterator.hasNext();
+            return this.chunkLongsIterator.hasNext();
         }
 
         @Override
         public ChunkPos next() {
-            if (!hasNext()) throw new NoSuchElementException();
+            if (!this.hasNext()) throw new NoSuchElementException();
 
-            long next = chunkLongsIterator.next();
+            long next = this.chunkLongsIterator.next();
 
             int x = getChunkX(next);
             int z = getChunkZ(next);
@@ -167,10 +150,10 @@ public final class VSChunkClaim implements Iterable<ChunkPos> {
     }
 
     public ChunkPos getCenterPos() {
-        return centerPos;
+        return this.centerPos;
     }
 
     public Set<Long> getClaimedChunks() {
-        return claimedChunks;
+        return this.claimedChunks;
     }
 }

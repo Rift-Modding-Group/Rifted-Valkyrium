@@ -187,19 +187,6 @@ public class WorldServerShipManager implements IPhysObjectWorld {
                 continue; // Skip ship construction
             }
 
-            // Fill the chunk claims
-            int radius = 7;
-
-            // TEMP CODE
-            // Eventually want to create mechanisms that control how many chunks are allocated to a ship
-            // But for now, lets just give them a bunch of chunks.
-            ChunkPos centerPos = toSpawn.getChunkClaim().getCenterPos();
-            for (int chunkX = -radius; chunkX <= radius; chunkX++) {
-                for (int chunkZ = -radius; chunkZ <= radius; chunkZ++) {
-                    toSpawn.getChunkClaim().addChunkClaim(centerPos.x + chunkX, centerPos.z + chunkZ);
-                }
-            }
-
             // When copying the ship chunks we want to keep track of the inertia and center of mass.
             IPhysicsObjectCenterOfMassProvider centerOfMassProvider = new BasicCenterOfMassProvider();
 
@@ -210,6 +197,7 @@ public class WorldServerShipManager implements IPhysObjectWorld {
             MutableBlockPos pasteLocationPos = new MutableBlockPos();
 
             Map<Long, Chunk> copiedChunksMap = new HashMap<>();
+            Set<ChunkPos> occupiedShipChunks = new HashSet<>();
 
             // Relocation-aware tiles need the complete destination set before any tile is copied.
             TIntIterator blocksIterator = detector.foundSet.iterator();
@@ -218,6 +206,19 @@ public class WorldServerShipManager implements IPhysObjectWorld {
                 SpatialDetector.setPosWithRespectTo(hashedPos, detector.firstBlock, srcLocationPos);
                 pasteLocationPos.setPos(srcLocationPos.getX() + centerDifference.getX(), srcLocationPos.getY() + centerDifference.getY(), srcLocationPos.getZ() + centerDifference.getZ());
                 if (toSpawn.blockPositions != null) toSpawn.blockPositions.add(pasteLocationPos.getX(), pasteLocationPos.getY(), pasteLocationPos.getZ());
+                occupiedShipChunks.add(new ChunkPos(pasteLocationPos));
+            }
+
+            //claim only chunks the ship occupies and a one-chunk margin for collision checks and construction
+            for (ChunkPos occupiedChunk : occupiedShipChunks) {
+                for (int chunkOffsetX = -1; chunkOffsetX <= 1; chunkOffsetX++) {
+                    for (int chunkOffsetZ = -1; chunkOffsetZ <= 1; chunkOffsetZ++) {
+                        toSpawn.getChunkClaim().addChunkClaim(
+                            occupiedChunk.x + chunkOffsetX,
+                            occupiedChunk.z + chunkOffsetZ
+                        );
+                    }
+                }
             }
 
             // First, copy the blocks and tiles to the new chunks
@@ -235,13 +236,13 @@ public class WorldServerShipManager implements IPhysObjectWorld {
                 long newChunkPosLong = ChunkPos.asLong(newChunkX, newChunkZ);
 
                 if (!copiedChunksMap.containsKey(newChunkPosLong)) {
-                    Chunk chunk = new Chunk(world, newChunkX, newChunkZ);
+                    Chunk chunk = new Chunk(this.world, newChunkX, newChunkZ);
                     copiedChunksMap.put(newChunkPosLong, chunk);
                 }
 
                 // Then copy the IBlockState & TileEntity to the new Chunk
                 // Get the old world Chunk
-                Chunk chunkToSet = world.getChunk(srcLocationPos);
+                Chunk chunkToSet = this.world.getChunk(srcLocationPos);
 
                 // Get the new Chunk
                 Chunk newChunk = copiedChunksMap.get(newChunkPosLong);
