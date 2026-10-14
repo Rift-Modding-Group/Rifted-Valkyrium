@@ -12,7 +12,6 @@ import java.util.UUID;
 public interface IShipData {
     /**
      * An immutable representation of the linear velocity that a {@link IPhysicsEntity} object travels at
-     *
      */
     @NotNull Vector3dc getLinearVelocity();
 

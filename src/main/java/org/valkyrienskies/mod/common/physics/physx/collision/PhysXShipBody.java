@@ -167,6 +167,9 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
         calculations.getPhysMOITensor().set(finalInertia);
         calculations.getPhysInvMOITensor().set(finalInertia).invert();
 
+        // Let addons add forces after the accumulator reset and transform update.
+        this.ship.applyForceInducers();
+
         //apply normal block forces or grid-alignment forces.
         if (!this.ship.isShipAligningToGrid()) {
             this.applyAirDrag(calculations);

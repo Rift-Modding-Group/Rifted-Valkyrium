@@ -1,19 +1,24 @@
 package org.valkyrienskies.mod.common.physics;
 
+import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix3d;
 import org.joml.Quaterniond;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
+import org.jspecify.annotations.NonNull;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
+import valkyrienwarfare.api.IPhysicsEntity;
+import valkyrienwarfare.api.TransformType;
+import valkyrienwarfare.api.forces.IShipForces;
 
 /**
  * Addon-facing ship physics API.
  * The ship blocks still live in shipyard chunks. This class tracks the shared rigid-body
  * state and per-tick force/torque accumulators that are consumed by the active physics backend.
  */
-public class PhysicsCalculations {
+public class PhysicsCalculations implements IShipForces {
     public static final double DRAG_CONSTANT = 0.99D;
     public static final double EPSILON = 0.00000001;
 
@@ -56,6 +61,84 @@ public class PhysicsCalculations {
         this.generatePhysicsTransform();
     }
 
+    //-----to be exposed in IShipForces-----
+    @Override
+    @NotNull
+    public IPhysicsEntity getShip() {
+        return this.parent;
+    }
+
+    @Override
+    public double getTimeStepSeconds() {
+        return this.physTickTimeDelta;
+    }
+
+    @Override
+    public void applyWorldForce(@NonNull Vec3d force) {
+        this.addForce(toVector(force));
+    }
+
+    @Override
+    public void applyWorldTorque(@NonNull Vec3d torque) {
+        this.addTorque(toVector(torque));
+    }
+
+    @Override
+    public void applyWorldForceAtWorldPosition(@NonNull Vec3d force, @NonNull Vec3d worldPosition) {
+        ShipTransform transform = this.parent.getShipTransformationManager().getCurrentPhysicsTransform();
+        Vector3d relativePosition = new Vector3d(
+                worldPosition.x - transform.getPosX(),
+                worldPosition.y - transform.getPosY(),
+                worldPosition.z - transform.getPosZ()
+        );
+        this.addForceAtPoint(relativePosition, toVector(force), new Vector3d());
+    }
+
+    @Override
+    public void applyShipForce(@NonNull Vec3d force) {
+        this.addForce(this.toWorldDirection(force));
+    }
+
+    @Override
+    public void applyShipTorque(@NonNull Vec3d torque) {
+        this.addTorque(this.toWorldDirection(torque));
+    }
+
+    @Override
+    public void applyWorldForceAtShipPosition(@NonNull Vec3d force, @NonNull Vec3d shipPosition) {
+        Vector3d relativePosition = this.shipPositionRelativeToCenter(shipPosition);
+        this.addForceAtPoint(relativePosition, toVector(force), new Vector3d());
+    }
+
+    @Override
+    public void applyShipForceAtShipPosition(@NonNull Vec3d force, @NonNull Vec3d shipPosition) {
+        Vector3d relativePosition = this.shipPositionRelativeToCenter(shipPosition);
+        this.addForceAtPoint(relativePosition, toWorldDirection(force), new Vector3d());
+    }
+
+    @NotNull
+    private Vector3d toWorldDirection(Vec3d direction) {
+        Vector3d worldDirection = toVector(direction);
+        this.parent.getShipTransformationManager().getCurrentPhysicsTransform()
+                .transformDirection(worldDirection, TransformType.SUBSPACE_TO_GLOBAL);
+        return worldDirection;
+    }
+
+    @NotNull
+    private Vector3d shipPositionRelativeToCenter(Vec3d shipPosition) {
+        Vector3d relativePosition = new Vector3d(shipPosition.x, shipPosition.y, shipPosition.z);
+        relativePosition.sub(this.physCenterOfMass);
+        this.parent.getShipTransformationManager().getCurrentPhysicsTransform()
+                .transformDirection(relativePosition, TransformType.SUBSPACE_TO_GLOBAL);
+        return relativePosition;
+    }
+
+    @NotNull
+    private static Vector3d toVector(Vec3d vector) {
+        return new Vector3d(vector.x, vector.y, vector.z);
+    }
+
+    //-----other methods-----
     public void generatePhysicsTransform() {
         ShipTransform parentTransform = this.getParent().getShipData().getShipTransform();
         Quaterniond physicsRotation = parentTransform.getSubspaceToGlobal().getNormalizedRotation(new Quaterniond());

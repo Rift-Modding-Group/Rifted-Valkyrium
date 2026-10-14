@@ -168,7 +168,8 @@ public class WorldServerShipManager implements IPhysObjectWorld {
                     physicsInfuserPos,
                     this.world,
                     VSConfig.maxDetectedShipSize + 1,
-                    true
+                    true,
+                    toSpawn.takeBlockBlacklist()
             );
 
             if (VSConfig.showAnnoyingDebugOutput) {

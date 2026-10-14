@@ -246,8 +246,11 @@ public class VSConfig extends VSConfigTemplate {
 
     }
 
-    @Name("Ship Spawn Detector Blacklist")
-    @Comment("Blocks to not be included when assembling a ship.")
+    @Name("(LEGACY) Ship Spawn Detector Blacklist")
+    @Comment({
+            "Blocks to not be included when assembling a ship using the legacy Physics Infuser.",
+            "NOTE THAT ADDONS MAY HAVE THEIR OWN SHIP ASSEMBLY BLACKLISTS/WHITELISTS."
+    })
     public static String[] shipSpawnDetectorBlacklist = {
         "minecraft:air", "minecraft:dirt", "minecraft:grass", "minecraft:stone",
         "minecraft:tallgrass", "minecraft:water", "minecraft:flowing_water", "minecraft:sand",

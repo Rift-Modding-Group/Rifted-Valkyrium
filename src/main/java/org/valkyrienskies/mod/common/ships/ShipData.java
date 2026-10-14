@@ -21,6 +21,7 @@ import org.valkyrienskies.mod.common.util.datastructures.SmallBlockPosSet;
 import org.valkyrienskies.mod.common.util.datastructures.SmallBlockPosSetAABB;
 import org.valkyrienskies.mod.common.util.jackson.annotations.PacketIgnore;
 import valkyrienwarfare.api.IShipData;
+import valkyrienwarfare.api.ShipBlockBlacklist;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -95,6 +96,13 @@ public class ShipData implements IShipData {
      */
     private String name;
 
+    /**
+     * Assembly-time policy supplied by the creator. Predicates can capture addon state and must
+     * never be persisted or sent to clients.
+     */
+    @PacketIgnore
+    private transient ShipBlockBlacklist blockBlacklist;
+
     // endregion
 
     private ShipData() {
@@ -110,11 +118,13 @@ public class ShipData implements IShipData {
         this.name = null;
         this.blockPositions = null;
         this.activeForcePositions = null;
+        this.blockBlacklist = null;
     }
 
     private ShipData(ConcurrentUpdatableIndexedCollection<ShipData> owner,
                     ShipPhysicsData physicsData, @Nonnull ShipInertiaData inertiaData, ShipTransform shipTransform, ShipTransform prevTickShipTransform, AxisAlignedBB shipBB,
-                    boolean physicsEnabled, VSChunkClaim chunkClaim, UUID uuid, String name) {
+                    boolean physicsEnabled, VSChunkClaim chunkClaim, UUID uuid, String name,
+                    ShipBlockBlacklist blockBlacklist) {
         this.owner = owner;
         this.physicsData = physicsData;
         this.inertiaData = Objects.requireNonNull(inertiaData, "inertiaData");
@@ -125,6 +135,7 @@ public class ShipData implements IShipData {
         this.chunkClaim = Objects.requireNonNull(chunkClaim, "chunkClaim");
         this.uuid = Objects.requireNonNull(uuid, "uuid");
         this.name = Objects.requireNonNull(name, "name");
+        this.blockBlacklist = Objects.requireNonNull(blockBlacklist, "blockBlacklist");
 
         this.blockPositions = new SmallBlockPosSetAABB(chunkClaim.getCenterPos().getXStart(), 0,
                 chunkClaim.getCenterPos().getZStart(), 1024, 1024, 1024);
@@ -136,8 +147,19 @@ public class ShipData implements IShipData {
         ShipTransform shipTransform,
         AxisAlignedBB aabb) {
 
+        return createData(
+                owner, name, chunkClaim, shipID, shipTransform, aabb,
+                ShipBlockBlacklist.airOnly()
+        );
+    }
+
+    public static ShipData createData(ConcurrentUpdatableIndexedCollection<ShipData> owner,
+        String name, VSChunkClaim chunkClaim, UUID shipID,
+        ShipTransform shipTransform,
+        AxisAlignedBB aabb, ShipBlockBlacklist blockBlacklist) {
+
         return new ShipData(owner, new ShipPhysicsData(new Vector3d(), new Vector3d()), new ShipInertiaData(), shipTransform, shipTransform, aabb,
-            false, chunkClaim, shipID, name);
+            false, chunkClaim, shipID, name, blockBlacklist);
     }
 
     // region Setters
@@ -214,6 +236,14 @@ public class ShipData implements IShipData {
     public String getName() {
         if (this.name == null) return "";
         return this.name;
+    }
+
+    @NotNull
+    public ShipBlockBlacklist takeBlockBlacklist() {
+        ShipBlockBlacklist blacklist = this.blockBlacklist;
+        this.blockBlacklist = null;
+        if (blacklist == null) return ShipBlockBlacklist.airOnly();
+        return blacklist;
     }
 
     // endregion

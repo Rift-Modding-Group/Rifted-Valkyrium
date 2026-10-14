@@ -1,5 +1,6 @@
 package org.valkyrienskies.mod.common.util;
 
+import net.minecraft.block.Block;
 import net.minecraft.block.BlockHorizontal;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
@@ -30,6 +31,7 @@ import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMoun
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
 import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
 import org.valkyrienskies.mod.common.entity.EntityMountable;
+import org.valkyrienskies.mod.common.physics.BlockPhysicsDetails;
 import org.valkyrienskies.mod.common.ships.QueryableShipData;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.block_relocation.BlockFinder;
@@ -42,14 +44,14 @@ import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.ships.ship_world.WorldServerShipManager;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import valkyrienwarfare.api.RiftedValkyriumAPI;
+import valkyrienwarfare.api.ShipBlockBlacklist;
 import valkyrienwarfare.api.TransformType;
 
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
-import java.util.Locale;
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * This class contains various helper functions for Valkyrien Skies.
@@ -236,7 +238,7 @@ public final class ValkyrienUtils {
     }
 
     /**
-     * Creates new ship data at a block-aligned world position.
+     * Queues a new ship for assembly at a block-aligned world position.
      *
      * @deprecated use {@link RiftedValkyriumAPI#createNewShip(WorldServer, BlockPos)}
      */
@@ -251,7 +253,7 @@ public final class ValkyrienUtils {
     }
 
     /**
-     * Creates new ship data at an arbitrary world position without requiring a controller block.
+     * Queues a new ship at an arbitrary world position without requiring a controller block.
      *
      * @deprecated use {@link RiftedValkyriumAPI#createNewShip(WorldServer, Vec3d)}
      */
@@ -275,6 +277,7 @@ public final class ValkyrienUtils {
         return shipWorld.getManager().getAllLoadedPhysObj();
     }
 
+    @Deprecated
     public static void assembleShipAsOrderedByPlayer(
             World world, @Nullable EntityPlayerMP creator,
             BlockPos physicsInfuserPos, BlockFinder.BlockFinderType blockFinderType
@@ -286,13 +289,25 @@ public final class ValkyrienUtils {
             throw new IllegalStateException("The world " + world + " wasn't an instance of WorldServer");
         }
 
-        // Create the ship data that we will use to make the ship with later.
-        ShipData shipData = createNewShip(world, physicsInfuserPos);
+        ShipBlockBlacklist blockBlacklist = switch (blockFinderType) {
+            case FIND_ALLOWED_BLOCKS -> createLegacyInfuserBlacklist();
+            case FIND_ALL_BLOCKS -> (candidateWorld, position, state) ->
+                    BlockPhysicsDetails.blocksToNotPhysicsInfuse.contains(state.getBlock());
+            case FIND_SINGLE_BLOCK -> (candidateWorld, position, state) -> true;
+        };
+        RiftedValkyriumAPI.createNewShip(
+                (WorldServer) world, physicsInfuserPos, blockBlacklist
+        );
+    }
 
-        // Queue the ship spawn operation
-        IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(world);
-        if (!(physObjectWorld instanceof WorldServerShipManager serverShipManager)) return;
-        serverShipManager.queueShipSpawn(shipData, physicsInfuserPos, blockFinderType);
+    @NotNull
+    private static ShipBlockBlacklist createLegacyInfuserBlacklist() {
+        Set<Block> blacklist = new HashSet<>();
+        for (String blockId : VSConfig.shipSpawnDetectorBlacklist) {
+            Block block = Block.getBlockFromName(blockId);
+            if (block != null) blacklist.add(block);
+        }
+        return (world, position, state) -> blacklist.contains(state.getBlock());
     }
 
     @Nullable

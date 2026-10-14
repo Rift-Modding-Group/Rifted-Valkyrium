@@ -2,11 +2,17 @@ package org.valkyrienskies.mod.common.ships.block_relocation;
 
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
+import valkyrienwarfare.api.ShipBlockBlacklist;
 
 public class BlockFinder {
-    public static SpatialDetector getBlockFinderFor(BlockFinderType id, BlockPos start, World worldIn, int maximum, boolean checkCorners) {
+    public static SpatialDetector getBlockFinderFor(
+            BlockFinderType id, BlockPos start, World worldIn, int maximum, boolean checkCorners,
+            ShipBlockBlacklist blockBlacklist
+    ) {
         return switch (id) {
-            case FIND_ALLOWED_BLOCKS -> new ShipSpawnDetector(start, worldIn, maximum, checkCorners);
+            case FIND_ALLOWED_BLOCKS -> new ShipSpawnDetector(
+                    start, worldIn, maximum, checkCorners, blockBlacklist
+            );
             case FIND_ALL_BLOCKS -> new ShipBlockPosFinder(start, worldIn, maximum, checkCorners);
             case FIND_SINGLE_BLOCK -> new SingleBlockPosDetector(start, worldIn, maximum, checkCorners);
             default -> throw new IllegalArgumentException("Unrecognized detector");

@@ -23,6 +23,7 @@ import org.joml.Quaterniondc;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.valkyrienskies.mod.client.render.PhysObjectRenderManager;
+import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
 import org.valkyrienskies.mod.common.compat.MalisisCoreCompat;
@@ -44,6 +45,7 @@ import org.valkyrienskies.mod.common.util.TransformedAABB;
 import org.valkyrienskies.mod.common.util.datastructures.IBlockPosSetAABB;
 import valkyrienwarfare.api.IPhysicsEntity;
 import valkyrienwarfare.api.TransformType;
+import valkyrienwarfare.api.forces.ShipForcesInducer;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -68,6 +70,7 @@ public class PhysicsObject implements IPhysicsEntity {
     private final List<EntityPlayerMP> watchingPlayers;
     private final Set<IPhysicsBlockController> physicsControllers;
     private final Set<IPhysicsBlockController> physicsControllersImmutable;
+    private Set<ShipForcesInducer> forceInducers;
     private final PhysObjectRenderManager shipRenderer;
     /**
      * Just a random block position in the ship. Used to correct floating point errors and keep
@@ -138,6 +141,7 @@ public class PhysicsObject implements IPhysicsEntity {
         this.watchingPlayers = new ArrayList<>();
         this.physicsControllers = ConcurrentHashMap.newKeySet();
         this.physicsControllersImmutable = Collections.unmodifiableSet(this.physicsControllers);
+        this.forceInducers = ConcurrentHashMap.newKeySet();
         this.claimedChunkCache = new ClaimedChunkCacheController(this);
         //malisis doors compat, malisisdoors can suck my fucking cock
         if (Loader.isModLoaded("malisiscore")) {
@@ -226,6 +230,41 @@ public class PhysicsObject implements IPhysicsEntity {
     // Do not allow anything external to modify the physics controllers Set.
     public Set<IPhysicsBlockController> getPhysicsControllersInShip() {
         return physicsControllersImmutable;
+    }
+
+    @Override
+    public boolean addForceInducer(ShipForcesInducer forceInducer) {
+        if (this.world.isRemote) {
+            throw new IllegalStateException("Force inducers can only be registered on server-side ships");
+        }
+        return this.forceInducers.add(forceInducer);
+    }
+
+    @Override
+    public boolean removeForceInducer(ShipForcesInducer forceInducer) {
+        return this.forceInducers.remove(forceInducer);
+    }
+
+    @Override
+    public void clearForceInducers() {
+        this.forceInducers.clear();
+    }
+
+    /**
+     * Invokes addon force callbacks on the physics thread.
+     */
+    public void applyForceInducers() {
+        for (ShipForcesInducer forceInducer : this.forceInducers) {
+            try {
+                forceInducer.applyForces(this.physicsCalculations);
+            }
+            catch (RuntimeException exception) {
+                this.forceInducers.remove(forceInducer);
+                ValkyrienSkiesMod.LOGGER.error(
+                        "Removing force inducer that failed for ship " + this.getUuid(), exception
+                );
+            }
+        }
     }
 
     /**
@@ -627,5 +666,14 @@ public class PhysicsObject implements IPhysicsEntity {
     @NotNull
     public String getName() {
         return this.shipData.getName();
+    }
+
+    //-----misc IShipData boilerplate-----
+    public void setDeconstruct(boolean value) {
+        this.deconstructState = value ? DeconstructState.DECONSTRUCT_NORMAL : DeconstructState.NOT_DECONSTRUCTING;
+    }
+
+    public boolean isDeconstructing() {
+        return this.deconstructState == DeconstructState.DECONSTRUCT_NORMAL;
     }
 }

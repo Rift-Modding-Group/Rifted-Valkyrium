@@ -12,15 +12,18 @@ import org.valkyrienskies.mod.common.capability.VSWorldDataCapability;
 import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
 import org.valkyrienskies.mod.common.ships.QueryableShipData;
 import org.valkyrienskies.mod.common.ships.ShipData;
+import org.valkyrienskies.mod.common.ships.block_relocation.BlockFinder;
 import org.valkyrienskies.mod.common.ships.chunk_claims.ShipChunkAllocator;
 import org.valkyrienskies.mod.common.ships.chunk_claims.VSChunkClaim;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
+import org.valkyrienskies.mod.common.ships.ship_world.WorldServerShipManager;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import org.valkyrienskies.mod.common.util.names.NounListNameGenerator;
 import valkyrienwarfare.api.IPhysicsEntity;
 import valkyrienwarfare.api.IShipData;
 import valkyrienwarfare.api.RiftedValkyriumAPI;
+import valkyrienwarfare.api.ShipBlockBlacklist;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.List;
@@ -58,7 +61,15 @@ public class RiftedValkyriumAPIProvider implements RiftedValkyriumAPI.Provider {
     @Override
     @NotNull
     @SuppressWarnings("deprecation")
-    public IShipData createNewShip(WorldServer world, Vec3d initialPosition, AxisAlignedBB initialBounds) {
+    public IShipData createNewShip(
+            WorldServer world, Vec3d initialPosition, AxisAlignedBB initialBounds,
+            ShipBlockBlacklist blockBlacklist
+    ) {
+        IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(world);
+        if (!(physObjectWorld instanceof WorldServerShipManager serverShipManager)) {
+            throw new IllegalStateException("Could not get server ship manager from world!");
+        }
+
         Vector3d position = new Vector3d(initialPosition.x, initialPosition.y, initialPosition.z);
         VSWorldDataCapability worldData = this.getWorldDataCapability(world);
         QueryableShipData queryableShipData = worldData.get().getQueryableShipData();
@@ -66,10 +77,14 @@ public class RiftedValkyriumAPIProvider implements RiftedValkyriumAPI.Provider {
         BlockPos regionCenter = chunkClaim.getRegionCenter();
         Vector3d centerOfMass = new Vector3d(regionCenter.getX(), regionCenter.getY(), regionCenter.getZ());
         ShipTransform initialTransform = new ShipTransform(position, centerOfMass);
-        return ShipData.createData(
+        ShipData shipData = ShipData.createData(
                 queryableShipData.allShips(), NounListNameGenerator.getInstance().generateName(),
-                chunkClaim, UUID.randomUUID(), initialTransform, initialBounds
+                chunkClaim, UUID.randomUUID(), initialTransform, initialBounds, blockBlacklist
         );
+
+        BlockPos assemblyPosition = new BlockPos(initialPosition.x, initialPosition.y, initialPosition.z);
+        serverShipManager.queueShipSpawn(shipData, assemblyPosition, BlockFinder.BlockFinderType.FIND_ALLOWED_BLOCKS);
+        return shipData;
     }
 
     @Override

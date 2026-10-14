@@ -18,7 +18,7 @@ import java.util.*;
  * Entry point for common ship operations used by addons.
  */
 @ParametersAreNonnullByDefault
-public final class RiftedValkyriumAPI {
+public class RiftedValkyriumAPI {
     private static Provider provider = new UnavailableProvider();
 
     private RiftedValkyriumAPI() {
@@ -79,72 +79,135 @@ public final class RiftedValkyriumAPI {
     }
 
     /**
-     * Creates the data for a new ship at a block-aligned world position.
+     * Queues a new ship for assembly at a block-aligned world position.
      * <p>
-     * This only allocates and initializes the ship data. It does not discover blocks, register the
-     * ship with the world, or create its physics object.
+     * Eligible blocks connected to {@code initialPosition} are moved into ship space and the
+     * physics object is created during the next server-world tick.
      *
      * @param world the server world that will own the ship
      * @param initialPosition the initial world position of the ship as a {@link BlockPos}
-     * @return the newly allocated ship data
+     * @return the data for the queued ship
      */
     @NotNull
     public static IShipData createNewShip(WorldServer world, BlockPos initialPosition) {
+        return createNewShip(world, initialPosition, ShipBlockBlacklist.airOnly());
+    }
+
+    /**
+     * Queues a ship at a block-aligned position with an assembly-specific block blacklist.
+     *
+     * @param world the server world that will own the ship
+     * @param initialPosition the initial world position of the ship
+     * @param blockBlacklist policy returning {@code true} for blocks excluded from assembly
+     * @return the data for the queued ship
+     */
+    @NotNull
+    public static IShipData createNewShip(WorldServer world, BlockPos initialPosition, ShipBlockBlacklist blockBlacklist) {
         return createNewShip(
                 world,
                 new Vec3d(initialPosition.getX(), initialPosition.getY(), initialPosition.getZ()),
-                new AxisAlignedBB(initialPosition)
+                new AxisAlignedBB(initialPosition),
+                blockBlacklist
         );
     }
 
     /**
-     * Creates the data for a new ship at an arbitrary world position. The position is independent
+     * Queues a new ship at an arbitrary world position. The position is independent
      * of any controller, infuser, or other setter block, allowing an item or another addon-defined
-     * assembly system to choose it directly.
+     * assembly system to choose it directly. The containing block position is used as the assembly
+     * seed.
      * <p>
-     * This only allocates and initializes the ship data. It does not discover blocks, register the
-     * ship with the world, or create its physics object.
+     * Eligible connected blocks are moved into ship space and the physics object is created during
+     * the next server-world tick.
      *
      * @param world the server world that will own the ship
      * @param initialPosition the initial world position of the ship as a {@link Vec3d}
-     * @return the newly allocated ship data
+     * @return the data for the queued ship
      */
     @NotNull
     public static IShipData createNewShip(WorldServer world, Vec3d initialPosition) {
+        return createNewShip(world, initialPosition, ShipBlockBlacklist.airOnly());
+    }
+
+    /**
+     * Queues a ship at an arbitrary position with an assembly-specific block blacklist.
+     *
+     * @param world the server world that will own the ship
+     * @param initialPosition the initial world position of the ship
+     * @param blockBlacklist policy returning {@code true} for blocks excluded from assembly
+     * @return the data for the queued ship
+     */
+    @NotNull
+    public static IShipData createNewShip(WorldServer world, Vec3d initialPosition, ShipBlockBlacklist blockBlacklist) {
         AxisAlignedBB initialBounds = new AxisAlignedBB(
                 initialPosition.x, initialPosition.y, initialPosition.z,
                 initialPosition.x + 1.0D, initialPosition.y + 1.0D, initialPosition.z + 1.0D
         );
-        return createNewShip(world, initialPosition, initialBounds);
+        return createNewShip(world, initialPosition, initialBounds, blockBlacklist);
     }
 
     /**
-     * Creates the data for a new ship with caller-defined initial bounds.
+     * Queues a new ship with caller-defined initial bounds.
      *
      * @param world the server world that will own the ship
      * @param initialPosition the initial world position of the ship as a {@link BlockPos}
      * @param initialBounds the initial world-space bounds of the ship
-     * @return the newly allocated ship data
+     * @return the data for the queued ship
      */
     @NotNull
     public static IShipData createNewShip(WorldServer world, BlockPos initialPosition, AxisAlignedBB initialBounds) {
-        Vec3d position = new Vec3d(initialPosition.getX(), initialPosition.getY(), initialPosition.getZ());
-        return createNewShip(world, position, initialBounds);
+        return createNewShip(world, initialPosition, initialBounds, ShipBlockBlacklist.airOnly());
     }
 
     /**
-     * Creates the data for a new ship at an arbitrary position with caller-defined initial bounds.
+     * Queues a ship with caller-defined bounds and an assembly-specific block blacklist.
+     *
+     * @param world the server world that will own the ship
+     * @param initialPosition the initial world position of the ship
+     * @param initialBounds the initial world-space bounds of the ship
+     * @param blockBlacklist policy returning {@code true} for blocks excluded from assembly
+     * @return the data for the queued ship
+     */
+    @NotNull
+    public static IShipData createNewShip(
+            WorldServer world, BlockPos initialPosition, AxisAlignedBB initialBounds,
+            ShipBlockBlacklist blockBlacklist
+    ) {
+        Vec3d position = new Vec3d(initialPosition.getX(), initialPosition.getY(), initialPosition.getZ());
+        return createNewShip(world, position, initialBounds, blockBlacklist);
+    }
+
+    /**
+     * Queues a new ship at an arbitrary position with caller-defined initial bounds.
      * Connected-block assembly recalculates these bounds from the assembled blocks. The supplied
      * bounds allow other assembly systems to describe ships of any size before that happens.
      *
      * @param world the server world that will own the ship
      * @param initialPosition the initial world position of the ship as a {@link Vec3d}
      * @param initialBounds the initial world-space bounds of the ship
-     * @return the newly allocated ship data
+     * @return the data for the queued ship
      */
     @NotNull
     public static IShipData createNewShip(WorldServer world, Vec3d initialPosition, AxisAlignedBB initialBounds) {
-        return provider.createNewShip(world, initialPosition, initialBounds);
+        return createNewShip(world, initialPosition, initialBounds, ShipBlockBlacklist.airOnly());
+    }
+
+    /**
+     * Queues a ship with caller-defined bounds and an assembly-specific block blacklist.
+     * The predicate is retained only until assembly and is not serialized with the ship.
+     *
+     * @param world the server world that will own the ship
+     * @param initialPosition the initial world position of the ship
+     * @param initialBounds the initial world-space bounds of the ship
+     * @param blockBlacklist policy returning {@code true} for blocks excluded from assembly
+     * @return the data for the queued ship
+     */
+    @NotNull
+    public static IShipData createNewShip(
+            WorldServer world, Vec3d initialPosition, AxisAlignedBB initialBounds,
+            ShipBlockBlacklist blockBlacklist
+    ) {
+        return provider.createNewShip(world, initialPosition, initialBounds, blockBlacklist);
     }
 
     /**
@@ -233,7 +296,10 @@ public final class RiftedValkyriumAPI {
         boolean isPosInShipyard(BlockPos pos);
 
         @NotNull
-        IShipData createNewShip(WorldServer world, Vec3d initialPosition, AxisAlignedBB initialBounds);
+        IShipData createNewShip(
+                WorldServer world, Vec3d initialPosition, AxisAlignedBB initialBounds,
+                ShipBlockBlacklist blockBlacklist
+        );
 
         @NotNull
         List<IShipData> getAllShips(World world);
@@ -268,7 +334,10 @@ public final class RiftedValkyriumAPI {
 
         @Override
         @NotNull
-        public IShipData createNewShip(WorldServer world, Vec3d initialPosition, AxisAlignedBB initialBounds) {
+        public IShipData createNewShip(
+                WorldServer world, Vec3d initialPosition, AxisAlignedBB initialBounds,
+                ShipBlockBlacklist blockBlacklist
+        ) {
             throw new IllegalStateException("Rifted Valkyrium has not initialized its API provider");
         }
 
