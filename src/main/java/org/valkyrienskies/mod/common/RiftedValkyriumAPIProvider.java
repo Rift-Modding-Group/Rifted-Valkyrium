@@ -1,32 +1,42 @@
 package org.valkyrienskies.mod.common;
 
+import net.minecraft.block.Block;
+import net.minecraft.block.state.IBlockState;
+import net.minecraft.entity.Entity;
+import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
+import net.minecraftforge.fml.common.Loader;
+import net.minecraftforge.fml.common.LoaderState;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Vector3d;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.VSWorldDataCapability;
-import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
+import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.ships.QueryableShipData;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.block_relocation.BlockFinder;
 import org.valkyrienskies.mod.common.ships.chunk_claims.ShipChunkAllocator;
 import org.valkyrienskies.mod.common.ships.chunk_claims.VSChunkClaim;
+import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
 import org.valkyrienskies.mod.common.ships.ship_world.WorldServerShipManager;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import org.valkyrienskies.mod.common.util.names.NounListNameGenerator;
+import valkyrienwarfare.api.BlockMass;
 import valkyrienwarfare.api.IPhysicsEntity;
 import valkyrienwarfare.api.IShipData;
 import valkyrienwarfare.api.RiftedValkyriumAPI;
 import valkyrienwarfare.api.ShipBlockBlacklist;
 
 import javax.annotation.ParametersAreNonnullByDefault;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -56,6 +66,74 @@ public class RiftedValkyriumAPIProvider implements RiftedValkyriumAPI.Provider {
     @Override
     public boolean isPosInShipyard(BlockPos pos) {
         return ShipChunkAllocator.isBlockInShipyard(pos);
+    }
+
+    @Override
+    @NotNull
+    public Optional<IShipData> getActiveShipOfEntity(Entity entity) {
+        ShipData lastTouchedShip = EntityDraggable.getActiveShip(entity);
+        return Optional.ofNullable(lastTouchedShip);
+    }
+
+    @Override
+    public void setBlockMass(IBlockState blockState, BlockMass blockMass) {
+        Block block = blockState.getBlock();
+        ResourceLocation registryName = requireRegistryName(block);
+        addBlockMass(registryName + ":" + block.getMetaFromState(blockState), blockMass);
+    }
+
+    @Override
+    public void setBlockMass(Block block, BlockMass blockMass) {
+        addBlockMass(requireRegistryName(block).toString(), blockMass);
+    }
+
+    private void addBlockMass(String blockSelector, BlockMass blockMass) {
+        if (VSConfig.blockMass != null) {
+            for (String entry : VSConfig.blockMass) {
+                if (entry == null) continue;
+                String[] split = entry.split("=", 2);
+                if (split.length != 2) continue;
+                try {
+                    BlockMass.valueOf(split[1].trim().toUpperCase(Locale.ROOT));
+                    if (normalizeBlockSelector(split[0]).equals(normalizeBlockSelector(blockSelector))) return;
+                }
+                catch (IllegalArgumentException ex) {
+                    continue;
+                }
+            }
+        }
+
+        String newEntry = blockSelector + "=" + blockMass.name();
+        if (VSConfig.blockMass == null) {
+            VSConfig.blockMass = new String[]{newEntry};
+        }
+        else {
+            VSConfig.blockMass = Arrays.copyOf(VSConfig.blockMass, VSConfig.blockMass.length + 1);
+            VSConfig.blockMass[VSConfig.blockMass.length - 1] = newEntry;
+        }
+
+        if (Loader.instance().hasReachedState(LoaderState.AVAILABLE)) {
+            VSConfig.sync();
+        }
+    }
+
+    private String normalizeBlockSelector(String blockSelector) {
+        String normalized = blockSelector.trim().toLowerCase(Locale.ROOT);
+        int namespaceSeparator = normalized.indexOf(':');
+        if (namespaceSeparator < 0) return "minecraft:" + normalized;
+        int metadataSeparator = normalized.indexOf(':', namespaceSeparator + 1);
+        if (metadataSeparator < 0) return normalized;
+
+        String blockName = normalized.substring(0, metadataSeparator);
+        int metadata = Integer.parseInt(normalized.substring(metadataSeparator + 1));
+        return blockName + ":" + metadata;
+    }
+
+    @NotNull
+    private ResourceLocation requireRegistryName(Block block) {
+        ResourceLocation registryName = block.getRegistryName();
+        if (registryName == null) throw new IllegalArgumentException("Block must have a registry name");
+        return registryName;
     }
 
     @Override

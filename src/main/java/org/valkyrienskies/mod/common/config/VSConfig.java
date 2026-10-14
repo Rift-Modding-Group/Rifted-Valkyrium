@@ -263,7 +263,8 @@ public class VSConfig extends VSConfigTemplate {
     @Name("Block Mass")
     @Comment({
             "Override the auto generated mass value of blocks.",
-            "Mass values must be one of four enum values: NONE, VERY_LIGHT, HEAVY, and VERY_HEAVY."
+            "Entries use namespace:block=MASS for every state or namespace:block:metadata=MASS for one state.",
+            "Mass values must be one of: NONE, VERY_LIGHT, LIGHT, HEAVY, and VERY_HEAVY."
     })
     public static String[] blockMass = {"minecraft:grass=VERY_LIGHT", "minecraft:obsidian=VERY_HEAVY"};
 

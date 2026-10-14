@@ -32,8 +32,6 @@ import valkyrienwarfare.api.TransformType;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.valkyrienskies.mod.common.util.ValkyrienUtils.getLastShipTouchedByEntity;
-
 @Mixin(Entity.class)
 public abstract class MixinEntity {
     @Shadow
@@ -177,7 +175,7 @@ public abstract class MixinEntity {
     @Redirect(method = "createRunningParticles", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/math/MathHelper;floor(D)I", ordinal = 0))
     private int runningParticlesFirstFloor(double d) {
         Entity thisEntity = (Entity) ((Object) this);
-        final ShipData lastTouchedShip = getLastShipTouchedByEntity(thisEntity);
+        final ShipData lastTouchedShip = ValkyrienUtils.getLastShipTouchedByEntity(thisEntity);
         if (lastTouchedShip == null) {
             searchVector = null;
             return MathHelper.floor(d);

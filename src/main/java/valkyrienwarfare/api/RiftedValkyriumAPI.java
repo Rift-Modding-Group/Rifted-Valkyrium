@@ -1,5 +1,8 @@
 package valkyrienwarfare.api;
 
+import net.minecraft.block.Block;
+import net.minecraft.block.state.IBlockState;
+import net.minecraft.entity.Entity;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
@@ -62,6 +65,15 @@ public class RiftedValkyriumAPI {
     public static boolean isPosInShipyard(@Nullable World world, @Nullable BlockPos pos) {
         if (world == null || pos == null) return false;
         return provider.isPosInShipyard(pos);
+    }
+
+    /**
+     * Determine the current ship that a given entity is making contact with
+     * */
+    @NotNull
+    public static Optional<IShipData> getActiveShipOfEntity(@Nullable Entity entity) {
+        if (entity == null) return Optional.empty();
+        return provider.getActiveShipOfEntity(entity);
     }
 
     /**
@@ -283,6 +295,30 @@ public class RiftedValkyriumAPI {
     }
 
     /**
+     * Adds a metadata-specific default mass for an addon block to the Rifted Valkyrium block-mass
+     * config. An existing config entry for the same state is preserved so users can override the
+     * addon's default.
+     *
+     * @param blockState the block state whose metadata should receive the default mass
+     * @param blockMass the default mass category
+     */
+    public static void setBlockMass(IBlockState blockState, BlockMass blockMass) {
+        provider.setBlockMass(blockState, blockMass);
+    }
+
+    /**
+     * Adds a default mass for every state of an addon block to the Rifted Valkyrium block-mass
+     * config. An existing config entry for the same block is preserved so users can override the
+     * addon's default.
+     *
+     * @param block the block whose states should receive the default mass
+     * @param blockMass the default mass category
+     */
+    public static void setBlockMass(Block block, BlockMass blockMass) {
+        provider.setBlockMass(block, blockMass);
+    }
+
+    /**
      * Internal service contract implemented by Rifted Valkyrium at runtime.
      */
     @ApiStatus.Internal
@@ -294,6 +330,13 @@ public class RiftedValkyriumAPI {
         Optional<IShipData> getShipManagingBlock(World world, BlockPos pos);
 
         boolean isPosInShipyard(BlockPos pos);
+
+        @NotNull
+        Optional<IShipData> getActiveShipOfEntity(Entity entity);
+
+        void setBlockMass(IBlockState blockState, BlockMass blockMass);
+
+        void setBlockMass(Block block, BlockMass blockMass);
 
         @NotNull
         IShipData createNewShip(
@@ -330,6 +373,22 @@ public class RiftedValkyriumAPI {
         @Override
         public boolean isPosInShipyard(BlockPos pos) {
             return false;
+        }
+
+        @Override
+        @NotNull
+        public Optional<IShipData> getActiveShipOfEntity(Entity entity) {
+            return Optional.empty();
+        }
+
+        @Override
+        public void setBlockMass(IBlockState blockState, BlockMass blockMass) {
+            throw new IllegalStateException("Rifted Valkyrium has not initialized its API provider");
+        }
+
+        @Override
+        public void setBlockMass(Block block, BlockMass blockMass) {
+            throw new IllegalStateException("Rifted Valkyrium has not initialized its API provider");
         }
 
         @Override

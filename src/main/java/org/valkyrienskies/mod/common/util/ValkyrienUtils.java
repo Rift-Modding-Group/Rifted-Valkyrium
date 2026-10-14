@@ -43,9 +43,7 @@ import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.ships.ship_world.WorldServerShipManager;
 import org.valkyrienskies.mod.common.config.VSConfig;
-import valkyrienwarfare.api.RiftedValkyriumAPI;
-import valkyrienwarfare.api.ShipBlockBlacklist;
-import valkyrienwarfare.api.TransformType;
+import valkyrienwarfare.api.*;
 
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -411,7 +409,7 @@ public final class ValkyrienUtils {
         ResourceLocation itemResource = Item.REGISTRY.getNameForObject(itemStack.getItem());
         if (itemResource == null) return false;
 
-        ImmutablePair<String, Integer> stackNameAndMeta = getItemStackNameAndMeta(string);
+        ImmutablePair<String, Integer> stackNameAndMeta = getRegistryNameAndMeta(string, 0);
         String testedStackName = itemResource.toString();
 
         //if metadata is negative, presume wildcard
@@ -419,13 +417,36 @@ public final class ValkyrienUtils {
         else return testedStackName.equals(stackNameAndMeta.getLeft()) && itemStack.getMetadata() == stackNameAndMeta.getRight();
     }
 
+    /**
+     * Checks whether a block registry name matches a block selector. Metadata in the selector is
+     * ignored because a {@link Block} does not represent a particular state.
+     */
+    public static boolean blockMatchesString(Block block, String string) {
+        ResourceLocation blockResource = Block.REGISTRY.getNameForObject(block);
+        if (blockResource == null) return false;
+
+        ImmutablePair<String, Integer> blockNameAndMeta = getRegistryNameAndMeta(string, -1);
+        return blockResource.toString().equals(blockNameAndMeta.getLeft());
+    }
+
+    /**
+     * Checks whether a block state matches a {@code namespace:block[:metadata]} selector. Omitting
+     * metadata, or using a negative value, matches every state of the block.
+     */
+    public static boolean blockMatchesString(IBlockState blockState, String string) {
+        Block block = blockState.getBlock();
+        if (!blockMatchesString(block, string)) return false;
+
+        ImmutablePair<String, Integer> blockNameAndMeta = getRegistryNameAndMeta(string, -1);
+        return blockNameAndMeta.getRight() < 0 || block.getMetaFromState(blockState) == blockNameAndMeta.getRight();
+    }
+
     @NotNull
-    private static ImmutablePair<String, Integer> getItemStackNameAndMeta(String string) {
+    private static ImmutablePair<String, Integer> getRegistryNameAndMeta(String string, int defaultMetadata) {
         int firstColonIndex = string.indexOf(":");
         int secondColonIndex = string.indexOf(":", firstColonIndex + 1);
 
-        //no metadata provided, presume its 0 then
-        if (secondColonIndex < 0) return new ImmutablePair<>(string, 0);
+        if (secondColonIndex < 0) return new ImmutablePair<>(string, defaultMetadata);
 
         String itemId = string.substring(0, secondColonIndex);
         int metadata = Integer.parseInt(string.substring(secondColonIndex + 1));
