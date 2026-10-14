@@ -167,11 +167,14 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
         calculations.getPhysMOITensor().set(finalInertia);
         calculations.getPhysInvMOITensor().set(finalInertia).invert();
 
-        // Let addons add forces after the accumulator reset and transform update.
+        //let addons add forces after the accumulator reset and transform update.
         this.ship.applyForceInducers();
 
+        //get aligning
+        boolean aligningToGrid = this.ship.isShipAligningToGrid();
+
         //apply normal block forces or grid-alignment forces.
-        if (!this.ship.isShipAligningToGrid()) {
+        if (!aligningToGrid) {
             this.applyAirDrag(calculations);
             if (!calculations.actAsArchimedes) this.calculateForces(calculations);
         }
@@ -179,7 +182,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
 
         //apply buoyancy and water drag only when touching liquid actors
         AxisAlignedBB shipAabb = this.ship.getPhysicsTransformAABB();
-        if (shipAabb != null && this.isTouchingLiquidActor(shipAabb, blockSectionsWithLiquids)) {
+        if (!aligningToGrid && shipAabb != null && this.isTouchingLiquidActor(shipAabb, blockSectionsWithLiquids)) {
             //sample each ship block against nearby water and apply submerged force.
             ShipTransform transform = this.ship.getShipTransformationManager().getCurrentPhysicsTransform();
             AxisAlignedBB localShipAabb = this.ship.getBlockPositions().makeAABB();
@@ -276,7 +279,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
         }
 
         //push gravity, mass, and velocity-limit settings into the PhysX actor.
-        boolean disableGravity = !VSConfig.doGravity || this.ship.isShipAligningToGrid() || calculations.actAsArchimedes;
+        boolean disableGravity = !VSConfig.doGravity || aligningToGrid || calculations.actAsArchimedes;
         this.actor.setActorFlag(PxActorFlagEnum.eDISABLE_GRAVITY, disableGravity);
         this.updateMassPropertiesIfNeeded(calculations);
         shipActor.setMaxLinearVelocity((float) VSConfig.shipMaxSpeed);

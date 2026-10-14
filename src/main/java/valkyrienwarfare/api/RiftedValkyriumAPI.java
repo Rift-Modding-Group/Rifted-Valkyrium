@@ -102,7 +102,22 @@ public class RiftedValkyriumAPI {
      */
     @NotNull
     public static IShipData createNewShip(WorldServer world, BlockPos initialPosition) {
-        return createNewShip(world, initialPosition, ShipBlockBlacklist.airOnly());
+        return createNewShip(world, initialPosition, false);
+    }
+
+    /**
+     * Queues a new ship for assembly at a block-aligned world position.
+     *
+     * @param world the server world that will own the ship
+     * @param initialPosition the initial world position of the ship
+     * @param enablePhysics whether physics should be enabled when the ship is created
+     * @return the data for the queued ship
+     */
+    @NotNull
+    public static IShipData createNewShip(
+            WorldServer world, BlockPos initialPosition, boolean enablePhysics
+    ) {
+        return createNewShip(world, initialPosition, ShipBlockBlacklist.airOnly(), enablePhysics);
     }
 
     /**
@@ -115,11 +130,29 @@ public class RiftedValkyriumAPI {
      */
     @NotNull
     public static IShipData createNewShip(WorldServer world, BlockPos initialPosition, ShipBlockBlacklist blockBlacklist) {
+        return createNewShip(world, initialPosition, blockBlacklist, false);
+    }
+
+    /**
+     * Queues a ship at a block-aligned position with an assembly-specific block blacklist.
+     *
+     * @param world the server world that will own the ship
+     * @param initialPosition the initial world position of the ship
+     * @param blockBlacklist policy returning {@code true} for blocks excluded from assembly
+     * @param enablePhysics whether physics should be enabled when the ship is created
+     * @return the data for the queued ship
+     */
+    @NotNull
+    public static IShipData createNewShip(
+            WorldServer world, BlockPos initialPosition, ShipBlockBlacklist blockBlacklist,
+            boolean enablePhysics
+    ) {
         return createNewShip(
                 world,
                 new Vec3d(initialPosition.getX(), initialPosition.getY(), initialPosition.getZ()),
                 new AxisAlignedBB(initialPosition),
-                blockBlacklist
+                blockBlacklist,
+                enablePhysics
         );
     }
 
@@ -138,7 +171,22 @@ public class RiftedValkyriumAPI {
      */
     @NotNull
     public static IShipData createNewShip(WorldServer world, Vec3d initialPosition) {
-        return createNewShip(world, initialPosition, ShipBlockBlacklist.airOnly());
+        return createNewShip(world, initialPosition, false);
+    }
+
+    /**
+     * Queues a new ship at an arbitrary world position.
+     *
+     * @param world the server world that will own the ship
+     * @param initialPosition the initial world position of the ship
+     * @param enablePhysics whether physics should be enabled when the ship is created
+     * @return the data for the queued ship
+     */
+    @NotNull
+    public static IShipData createNewShip(
+            WorldServer world, Vec3d initialPosition, boolean enablePhysics
+    ) {
+        return createNewShip(world, initialPosition, ShipBlockBlacklist.airOnly(), enablePhysics);
     }
 
     /**
@@ -151,11 +199,28 @@ public class RiftedValkyriumAPI {
      */
     @NotNull
     public static IShipData createNewShip(WorldServer world, Vec3d initialPosition, ShipBlockBlacklist blockBlacklist) {
+        return createNewShip(world, initialPosition, blockBlacklist, false);
+    }
+
+    /**
+     * Queues a ship at an arbitrary position with an assembly-specific block blacklist.
+     *
+     * @param world the server world that will own the ship
+     * @param initialPosition the initial world position of the ship
+     * @param blockBlacklist policy returning {@code true} for blocks excluded from assembly
+     * @param enablePhysics whether physics should be enabled when the ship is created
+     * @return the data for the queued ship
+     */
+    @NotNull
+    public static IShipData createNewShip(
+            WorldServer world, Vec3d initialPosition, ShipBlockBlacklist blockBlacklist,
+            boolean enablePhysics
+    ) {
         AxisAlignedBB initialBounds = new AxisAlignedBB(
                 initialPosition.x, initialPosition.y, initialPosition.z,
                 initialPosition.x + 1.0D, initialPosition.y + 1.0D, initialPosition.z + 1.0D
         );
-        return createNewShip(world, initialPosition, initialBounds, blockBlacklist);
+        return createNewShip(world, initialPosition, initialBounds, blockBlacklist, enablePhysics);
     }
 
     /**
@@ -168,7 +233,26 @@ public class RiftedValkyriumAPI {
      */
     @NotNull
     public static IShipData createNewShip(WorldServer world, BlockPos initialPosition, AxisAlignedBB initialBounds) {
-        return createNewShip(world, initialPosition, initialBounds, ShipBlockBlacklist.airOnly());
+        return createNewShip(world, initialPosition, initialBounds, false);
+    }
+
+    /**
+     * Queues a new ship with caller-defined initial bounds.
+     *
+     * @param world the server world that will own the ship
+     * @param initialPosition the initial world position of the ship
+     * @param initialBounds the initial world-space bounds of the ship
+     * @param enablePhysics whether physics should be enabled when the ship is created
+     * @return the data for the queued ship
+     */
+    @NotNull
+    public static IShipData createNewShip(
+            WorldServer world, BlockPos initialPosition, AxisAlignedBB initialBounds,
+            boolean enablePhysics
+    ) {
+        return createNewShip(
+                world, initialPosition, initialBounds, ShipBlockBlacklist.airOnly(), enablePhysics
+        );
     }
 
     /**
@@ -185,8 +269,26 @@ public class RiftedValkyriumAPI {
             WorldServer world, BlockPos initialPosition, AxisAlignedBB initialBounds,
             ShipBlockBlacklist blockBlacklist
     ) {
+        return createNewShip(world, initialPosition, initialBounds, blockBlacklist, false);
+    }
+
+    /**
+     * Queues a ship with caller-defined bounds and an assembly-specific block blacklist.
+     *
+     * @param world the server world that will own the ship
+     * @param initialPosition the initial world position of the ship
+     * @param initialBounds the initial world-space bounds of the ship
+     * @param blockBlacklist policy returning {@code true} for blocks excluded from assembly
+     * @param enablePhysics whether physics should be enabled when the ship is created
+     * @return the data for the queued ship
+     */
+    @NotNull
+    public static IShipData createNewShip(
+            WorldServer world, BlockPos initialPosition, AxisAlignedBB initialBounds,
+            ShipBlockBlacklist blockBlacklist, boolean enablePhysics
+    ) {
         Vec3d position = new Vec3d(initialPosition.getX(), initialPosition.getY(), initialPosition.getZ());
-        return createNewShip(world, position, initialBounds, blockBlacklist);
+        return createNewShip(world, position, initialBounds, blockBlacklist, enablePhysics);
     }
 
     /**
@@ -201,7 +303,26 @@ public class RiftedValkyriumAPI {
      */
     @NotNull
     public static IShipData createNewShip(WorldServer world, Vec3d initialPosition, AxisAlignedBB initialBounds) {
-        return createNewShip(world, initialPosition, initialBounds, ShipBlockBlacklist.airOnly());
+        return createNewShip(world, initialPosition, initialBounds, false);
+    }
+
+    /**
+     * Queues a new ship at an arbitrary position with caller-defined initial bounds.
+     *
+     * @param world the server world that will own the ship
+     * @param initialPosition the initial world position of the ship
+     * @param initialBounds the initial world-space bounds of the ship
+     * @param enablePhysics whether physics should be enabled when the ship is created
+     * @return the data for the queued ship
+     */
+    @NotNull
+    public static IShipData createNewShip(
+            WorldServer world, Vec3d initialPosition, AxisAlignedBB initialBounds,
+            boolean enablePhysics
+    ) {
+        return createNewShip(
+                world, initialPosition, initialBounds, ShipBlockBlacklist.airOnly(), enablePhysics
+        );
     }
 
     /**
@@ -219,7 +340,28 @@ public class RiftedValkyriumAPI {
             WorldServer world, Vec3d initialPosition, AxisAlignedBB initialBounds,
             ShipBlockBlacklist blockBlacklist
     ) {
-        return provider.createNewShip(world, initialPosition, initialBounds, blockBlacklist);
+        return createNewShip(world, initialPosition, initialBounds, blockBlacklist, false);
+    }
+
+    /**
+     * Queues a ship with caller-defined bounds and an assembly-specific block blacklist.
+     * The predicate is retained only until assembly and is not serialized with the ship.
+     *
+     * @param world the server world that will own the ship
+     * @param initialPosition the initial world position of the ship
+     * @param initialBounds the initial world-space bounds of the ship
+     * @param blockBlacklist policy returning {@code true} for blocks excluded from assembly
+     * @param enablePhysics whether physics should be enabled when the ship is created
+     * @return the data for the queued ship
+     */
+    @NotNull
+    public static IShipData createNewShip(
+            WorldServer world, Vec3d initialPosition, AxisAlignedBB initialBounds,
+            ShipBlockBlacklist blockBlacklist, boolean enablePhysics
+    ) {
+        return provider.createNewShip(
+                world, initialPosition, initialBounds, blockBlacklist, enablePhysics
+        );
     }
 
     /**
@@ -341,7 +483,7 @@ public class RiftedValkyriumAPI {
         @NotNull
         IShipData createNewShip(
                 WorldServer world, Vec3d initialPosition, AxisAlignedBB initialBounds,
-                ShipBlockBlacklist blockBlacklist
+                ShipBlockBlacklist blockBlacklist, boolean enablePhysics
         );
 
         @NotNull
@@ -395,7 +537,7 @@ public class RiftedValkyriumAPI {
         @NotNull
         public IShipData createNewShip(
                 WorldServer world, Vec3d initialPosition, AxisAlignedBB initialBounds,
-                ShipBlockBlacklist blockBlacklist
+                ShipBlockBlacklist blockBlacklist, boolean enablePhysics
         ) {
             throw new IllegalStateException("Rifted Valkyrium has not initialized its API provider");
         }

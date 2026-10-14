@@ -141,7 +141,7 @@ public class RiftedValkyriumAPIProvider implements RiftedValkyriumAPI.Provider {
     @SuppressWarnings("deprecation")
     public IShipData createNewShip(
             WorldServer world, Vec3d initialPosition, AxisAlignedBB initialBounds,
-            ShipBlockBlacklist blockBlacklist
+            ShipBlockBlacklist blockBlacklist, boolean enablePhysics
     ) {
         IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(world);
         if (!(physObjectWorld instanceof WorldServerShipManager serverShipManager)) {
@@ -159,6 +159,7 @@ public class RiftedValkyriumAPIProvider implements RiftedValkyriumAPI.Provider {
                 queryableShipData.allShips(), NounListNameGenerator.getInstance().generateName(),
                 chunkClaim, UUID.randomUUID(), initialTransform, initialBounds, blockBlacklist
         );
+        shipData.setPhysicsEnabled(enablePhysics);
 
         BlockPos assemblyPosition = new BlockPos(initialPosition.x, initialPosition.y, initialPosition.z);
         serverShipManager.queueShipSpawn(shipData, assemblyPosition, BlockFinder.BlockFinderType.FIND_ALLOWED_BLOCKS);
