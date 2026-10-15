@@ -3,7 +3,7 @@ package valkyrienwarfare.api;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.NotNull;
-import valkyrienwarfare.api.forces.ShipForcesInducer;
+import valkyrienwarfare.api.forces.IShipForcesInducer;
 
 /**
  * This interface is a boiled down version of PhysicsObject used in Rifted Valkyrium.
@@ -69,7 +69,7 @@ public interface IPhysicsEntity {
 	 * @param forceInducer callback to register
 	 * @return {@code true} when the callback was newly registered
 	 */
-	default boolean addForceInducer(ShipForcesInducer forceInducer) {
+	default boolean addForceInducer(IShipForcesInducer forceInducer) {
 		throw new UnsupportedOperationException("This physics entity does not support force inducers");
 	}
 
@@ -79,7 +79,7 @@ public interface IPhysicsEntity {
 	 * @param forceInducer callback to remove
 	 * @return {@code true} when the callback was registered
 	 */
-	default boolean removeForceInducer(ShipForcesInducer forceInducer) {
+	default boolean removeForceInducer(IShipForcesInducer forceInducer) {
 		return false;
 	}
 

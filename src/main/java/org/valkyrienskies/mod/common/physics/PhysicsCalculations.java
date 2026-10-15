@@ -69,6 +69,18 @@ public class PhysicsCalculations implements IShipForces {
     }
 
     @Override
+    @NotNull
+    public Vector3dc getWorldForce() {
+        return new Vector3d(this.force);
+    }
+
+    @Override
+    @NotNull
+    public Vector3dc getWorldTorque() {
+        return new Vector3d(this.torque);
+    }
+
+    @Override
     public double getTimeStepSeconds() {
         return this.physTickTimeDelta;
     }
@@ -214,14 +226,12 @@ public class PhysicsCalculations implements IShipForces {
         return this.parent;
     }
 
-    public void addForce(final Vector3dc addedForce) {
-        final double timeStep = this.getPhysicsTimeDeltaPerPhysTick();
-        this.force.add(addedForce.x() * timeStep, addedForce.y() * timeStep, addedForce.z() * timeStep);
+    public void addForce(Vector3dc addedForce) {
+        this.force.add(addedForce);
     }
 
-    public void addTorque(final Vector3dc addedTorque) {
-        final double timeStep = this.getPhysicsTimeDeltaPerPhysTick();
-        this.torque.add(addedTorque.x() * timeStep, addedTorque.y() * timeStep, addedTorque.z() * timeStep);
+    public void addTorque(Vector3dc addedTorque) {
+        this.torque.add(addedTorque);
     }
 
     public void resetForceAndTorque() {
@@ -230,8 +240,12 @@ public class PhysicsCalculations implements IShipForces {
     }
 
     public void drainForceAndTorque(@NotNull Vector3d forceDest, @NotNull Vector3d torqueDest) {
-        forceDest.set(this.force);
-        torqueDest.set(this.torque);
+        forceDest.set(this.force)
+                .mul(this.physTickTimeDelta)
+                .add(this.pendingImpulse);
+        torqueDest.set(this.torque)
+                .mul(this.physTickTimeDelta)
+                .add(this.pendingAngularImpulse);
         this.resetForceAndTorque();
     }
 

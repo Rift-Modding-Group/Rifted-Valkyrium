@@ -11,11 +11,19 @@ import javax.annotation.ParametersAreNonnullByDefault;
  */
 @FunctionalInterface
 @ParametersAreNonnullByDefault
-public interface ShipForcesInducer {
+public interface IShipForcesInducer {
     /**
      * Adds forces for the current physics step.
      *
      * @param forces the current ship and its force accumulator
      */
     void applyForces(IShipForces forces);
+
+    /**
+     * Lower values -> higher priority and will run first.
+     * Inducers that need to know the total accumulated forces must have a lower priority.
+     */
+    default int getForceApplicationPriority() {
+        return 0;
+    }
 }

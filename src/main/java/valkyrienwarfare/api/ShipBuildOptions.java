@@ -3,9 +3,12 @@ package valkyrienwarfare.api;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import javax.annotation.ParametersAreNonnullByDefault;
+
 /**
  * This builder-like class stores additional options for ship-building
  * */
+@ParametersAreNonnullByDefault
 public final class ShipBuildOptions {
     @NotNull
     private ShipBlockBlacklist shipBlockBlacklist = ShipBlockBlacklist.airOnly();
@@ -17,7 +20,7 @@ public final class ShipBuildOptions {
      * Set a blacklist for the blocks that Rifted Valkyrium will ignore when building a {@link IPhysicsEntity}.
      * By default, it will use a simple blacklist that just blocks air blocks.
      * */
-    public ShipBuildOptions setShipBlockBlacklist(@NotNull ShipBlockBlacklist shipBlockBlacklist) {
+    public ShipBuildOptions setShipBlockBlacklist(ShipBlockBlacklist shipBlockBlacklist) {
         this.shipBlockBlacklist = shipBlockBlacklist;
         return this;
     }
@@ -31,7 +34,7 @@ public final class ShipBuildOptions {
      * This will assign a name to your ship.
      * By default, a random name will be generated.
      * */
-    public ShipBuildOptions setShipName(@NotNull String shipName) {
+    public ShipBuildOptions setShipName(String shipName) {
         this.shipName = shipName;
         return this;
     }

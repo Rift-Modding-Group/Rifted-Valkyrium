@@ -2,6 +2,7 @@ package valkyrienwarfare.api.forces;
 
 import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.NotNull;
+import org.joml.Vector3dc;
 import valkyrienwarfare.api.IPhysicsEntity;
 
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -20,6 +21,18 @@ public interface IShipForces {
      */
     @NotNull
     IPhysicsEntity getShip();
+
+    /**
+     * @return the force acting on the ship
+     * */
+    @NotNull
+    Vector3dc getWorldForce();
+
+    /**
+     * @return the torque acting on the ship
+     * */
+    @NotNull
+    Vector3dc getWorldTorque();
 
     /**
      * @return the duration of the current physics step in seconds

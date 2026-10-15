@@ -46,17 +46,13 @@ import org.valkyrienskies.mod.common.util.datastructures.IBlockPosSetAABB;
 import valkyrienwarfare.api.IPhysicsEntity;
 import valkyrienwarfare.api.IShipMaintenanceProvider;
 import valkyrienwarfare.api.TransformType;
-import valkyrienwarfare.api.forces.ShipForcesInducer;
+import valkyrienwarfare.api.forces.IShipForcesInducer;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * The heart and soul of this mod.
@@ -71,7 +67,7 @@ public class PhysicsObject implements IPhysicsEntity {
     private final List<EntityPlayerMP> watchingPlayers;
     private final Set<IPhysicsBlockController> physicsControllers;
     private final Set<IPhysicsBlockController> physicsControllersImmutable;
-    private final Set<ShipForcesInducer> forceInducers;
+    private volatile List<IShipForcesInducer> forceInducers;
     private final Set<IShipMaintenanceProvider> maintenanceProviders;
     private final PhysObjectRenderManager shipRenderer;
     /**
@@ -143,7 +139,7 @@ public class PhysicsObject implements IPhysicsEntity {
         this.watchingPlayers = new ArrayList<>();
         this.physicsControllers = ConcurrentHashMap.newKeySet();
         this.physicsControllersImmutable = Collections.unmodifiableSet(this.physicsControllers);
-        this.forceInducers = ConcurrentHashMap.newKeySet();
+        this.forceInducers = List.of();
         this.maintenanceProviders = ConcurrentHashMap.newKeySet();
         this.claimedChunkCache = new ClaimedChunkCacheController(this);
         //malisis doors compat, malisisdoors can suck my fucking cock
@@ -236,15 +232,21 @@ public class PhysicsObject implements IPhysicsEntity {
     }
 
     @Override
-    public boolean addForceInducer(ShipForcesInducer forceInducer) {
+    public boolean addForceInducer(IShipForcesInducer forceInducer) {
         if (this.world.isRemote) {
             throw new IllegalStateException("Force inducers can only be registered on server-side ships");
         }
-        return this.forceInducers.add(forceInducer);
+        if (this.forceInducers.contains(forceInducer)) return false;
+
+        List<IShipForcesInducer> updatedInducers = new ArrayList<>(this.forceInducers);
+        updatedInducers.add(forceInducer);
+        updatedInducers.sort(Comparator.comparingInt(IShipForcesInducer::getForceApplicationPriority));
+        this.forceInducers = List.copyOf(updatedInducers);
+        return true;
     }
 
     @Override
-    public boolean removeForceInducer(ShipForcesInducer forceInducer) {
+    public boolean removeForceInducer(IShipForcesInducer forceInducer) {
         return this.forceInducers.remove(forceInducer);
     }
 
@@ -286,7 +288,7 @@ public class PhysicsObject implements IPhysicsEntity {
      * Invokes addon force callbacks on the physics thread.
      */
     public void applyForceInducers() {
-        for (ShipForcesInducer forceInducer : this.forceInducers) {
+        for (IShipForcesInducer forceInducer : this.forceInducers) {
             try {
                 forceInducer.applyForces(this.physicsCalculations);
             }
