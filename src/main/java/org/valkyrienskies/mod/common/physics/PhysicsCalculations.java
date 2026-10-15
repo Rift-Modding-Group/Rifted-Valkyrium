@@ -1,12 +1,15 @@
 package org.valkyrienskies.mod.common.physics;
 
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix3d;
 import org.joml.Quaterniond;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.jspecify.annotations.NonNull;
+import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import valkyrienwarfare.api.IPhysicsEntity;
@@ -128,6 +131,24 @@ public class PhysicsCalculations implements IShipForces {
         this.addForceAtPoint(relativePosition, toWorldDirection(force), new Vector3d());
     }
 
+    @Override
+    public void applyBuoyancy(double force) {
+        this.applyBuoyancy(force, new Vec3d(this.physCenterOfMass.x, this.physCenterOfMass.y, this.physCenterOfMass.z));
+    }
+
+    @Override
+    public void applyBuoyancy(double force, @NonNull Vec3d shipPosition) {
+        Vector3d worldPosition = toVector(shipPosition);
+        this.parent.getShipTransformationManager().getCurrentPhysicsTransform().transformPosition(worldPosition, TransformType.SUBSPACE_TO_GLOBAL);
+
+        double submergedFraction = this.getSubmergedFraction(worldPosition);
+        if (submergedFraction <= 0D) return;
+
+        Vector3d relativePosition = this.shipPositionRelativeToCenter(shipPosition);
+        Vector3d buoyancyForce = new Vector3d(0D, force * submergedFraction, 0D);
+        this.addForceAtPoint(relativePosition, buoyancyForce, new Vector3d());
+    }
+
     @NotNull
     private Vector3d toWorldDirection(Vec3d direction) {
         Vector3d worldDirection = toVector(direction);
@@ -143,6 +164,22 @@ public class PhysicsCalculations implements IShipForces {
         this.parent.getShipTransformationManager().getCurrentPhysicsTransform()
                 .transformDirection(relativePosition, TransformType.SUBSPACE_TO_GLOBAL);
         return relativePosition;
+    }
+
+    private double getSubmergedFraction(@NotNull Vector3dc worldPosition) {
+        World world = this.parent.getWorld();
+        int x = (int) Math.floor(worldPosition.x());
+        int z = (int) Math.floor(worldPosition.z());
+        int minY = Math.max(0, (int) Math.floor(worldPosition.y() - 0.75D));
+        int maxY = Math.min(world.getHeight() - 1, (int) Math.floor(worldPosition.y() + 0.5D));
+        BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
+        for (int y = maxY; y >= minY; y--) {
+            mutablePos.setPos(x, y, z);
+            if (PhysicsUtils.isLiquid(world.getBlockState(mutablePos))) {
+                return Math.clamp(y + 1D - (worldPosition.y() - 0.5D), 0D, 1D);
+            }
+        }
+        return 0D;
     }
 
     @NotNull

@@ -10,6 +10,9 @@ import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
+import org.joml.Vector3d;
+import org.joml.Vector3dc;
+import org.valkyrienskies.mod.common.config.VSConfig;
 
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -65,6 +68,15 @@ public class RiftedValkyriumAPI {
     public static boolean isPosInShipyard(@Nullable World world, @Nullable BlockPos pos) {
         if (world == null || pos == null) return false;
         return provider.isPosInShipyard(pos);
+    }
+
+    /**
+     * @return gravitational acceleration in blocks per second squared from {@link VSConfig#doGravity} as a vector
+     * */
+    @NotNull
+    public static Vector3dc getWorldGravity() {
+        double gravityY = VSConfig.doGravity ? VSConfig.gravityVecY : 0D;
+        return new Vector3d(0D, gravityY, 0D);
     }
 
     /**

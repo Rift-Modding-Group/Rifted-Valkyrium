@@ -94,21 +94,19 @@ public interface IShipForces {
     void applyShipForceAtShipPosition(Vec3d force, Vec3d shipPosition);
 
     /**
-     * Applies upward buoyancy through the ship's center of mass.
+     * Applies water-dependent buoyancy through the ship's center of mass. The force is zero above
+     * the liquid surface and reaches the supplied value when the center of mass is fully submerged.
      *
-     * @param force upward force in newtons
+     * @param force upward force in newtons when fully submerged
      */
-    default void applyBuoyancy(double force) {
-        this.applyWorldForce(new Vec3d(0D, force, 0D));
-    }
+    void applyBuoyancy(double force);
 
     /**
-     * Applies upward buoyancy at a position in the ship's block coordinates.
+     * Applies water-dependent buoyancy at a position in the ship's block coordinates. The force is
+     * scaled by how much of the block-sized volume centered at that position is submerged.
      *
-     * @param force upward force in newtons
+     * @param force upward force in newtons when fully submerged
      * @param shipPosition position in the ship's block coordinate system
      */
-    default void applyBuoyancy(double force, Vec3d shipPosition) {
-        this.applyWorldForceAtShipPosition(new Vec3d(0D, force, 0D), shipPosition);
-    }
+    void applyBuoyancy(double force, Vec3d shipPosition);
 }
