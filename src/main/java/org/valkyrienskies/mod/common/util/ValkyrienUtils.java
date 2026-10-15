@@ -294,7 +294,8 @@ public final class ValkyrienUtils {
             case FIND_SINGLE_BLOCK -> (candidateWorld, position, state) -> true;
         };
         RiftedValkyriumAPI.createNewShip(
-                (WorldServer) world, physicsInfuserPos, blockBlacklist
+                (WorldServer) world, physicsInfuserPos,
+                new ShipBuildOptions().setShipBlockBlacklist(blockBlacklist)
         );
     }
 

@@ -31,6 +31,8 @@ import org.valkyrienskies.mod.common.ships.block_relocation.IRelocationAwareTile
 import org.valkyrienskies.mod.common.ships.chunk_claims.ShipChunkAllocator;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
+import valkyrienwarfare.api.IPhysicsEntity;
+import valkyrienwarfare.api.IShipMaintenanceProvider;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -38,8 +40,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-public class TileEntityPhysicsInfuser extends TileEntity implements ITickable, ICapabilityProvider, IVSTileGui, IRelocationAwareTile {
+public class TileEntityPhysicsInfuser extends TileEntity implements ITickable, ICapabilityProvider, IVSTileGui, IRelocationAwareTile, IShipMaintenanceProvider {
     private static final String ACTION_STATE_NBT_KEY = "action_state";
+    private static final int UNMAINTAINED_TICKS_BEFORE_DISASSEMBLY = 20;
     private final ItemStackHandler handler;
     private volatile boolean sendUpdateToClients;
     private volatile boolean isTryingToAssembleShip;
@@ -51,6 +54,9 @@ public class TileEntityPhysicsInfuser extends TileEntity implements ITickable, I
     private final Map<EnumInfuserCore, Double> coreOffsets;
     private final Map<EnumInfuserCore, Double> coreOffsetsPrevTick;
     private int disassembleCounter; // # of ticks to wait before resetting isTryingToDisassembleShip
+    private int unmaintainedTicks;
+    @Nullable
+    private IPhysicsEntity maintenanceShip;
 
     public TileEntityPhysicsInfuser() {
         this.handler = new ItemStackHandler(EnumInfuserCore.values().length) {
@@ -72,22 +78,25 @@ public class TileEntityPhysicsInfuser extends TileEntity implements ITickable, I
             this.coreOffsetsPrevTick.put(enumInfuserCore, 0D);
         }
         this.disassembleCounter = 0;
+        this.unmaintainedTicks = 0;
+        this.maintenanceShip = null;
     }
 
     @Override
     public void update() {
         // Check if we have to create a ship
         if (!getWorld().isRemote) {
-            final Optional<PhysicsObject> parentShip = ValkyrienUtils
-                .getPhysoManagingBlock(getWorld(), getPos());
+            final Optional<PhysicsObject> parentShip = ValkyrienUtils.getPhysoManagingBlock(getWorld(), getPos());
 
             // Update the blockstate lighting
             final IBlockState infuserState = getWorld().getBlockState(getPos());
             final Block infuserBlock = infuserState.getBlock();
             if (!(infuserBlock instanceof BlockPhysicsInfuser)) {
+                updateMaintenanceRegistration(null);
                 System.err.println("Infuser block wasn't a physics infuser block?");
                 return;
             }
+            updateMaintenanceRegistration(parentShip.orElse(null));
             final BlockFinder.BlockFinderType blockFinderType = ((BlockPhysicsInfuser) infuserBlock).getBlockFinderType();
             if (infuserState.getBlock() == ValkyrienSkiesControl.INSTANCE.vsControlBlocks.physicsInfuser) {
                 if (isPhysicsEnabled() && canMaintainShip()) {
@@ -125,8 +134,16 @@ public class TileEntityPhysicsInfuser extends TileEntity implements ITickable, I
                 setActionState(EnumInfuserAction.IDLE);
             }
 
-            // Once the middle core is removed, automatically deconstruct the ship if possible.
-            if (parentShip.isPresent() && !canMaintainShip()) {
+            boolean shipIsMaintained = canMaintainShip() || parentShip.map(PhysicsObject::hasActiveMaintenanceProvider).orElse(false);
+            if (parentShip.isPresent() && !shipIsMaintained) {
+                this.unmaintainedTicks = Math.min(this.unmaintainedTicks + 1, UNMAINTAINED_TICKS_BEFORE_DISASSEMBLY);
+            }
+            else {
+                this.unmaintainedTicks = 0;
+            }
+
+            // Preserve legacy automatic disassembly, but give relocated providers time to register.
+            if (parentShip.isPresent() && this.unmaintainedTicks >= UNMAINTAINED_TICKS_BEFORE_DISASSEMBLY) {
                 PhysicsObject physicsObject = parentShip.get();
                 this.isTryingToAlignShip = true;
                 this.isTryingToDisassembleShip = true;
@@ -181,9 +198,39 @@ public class TileEntityPhysicsInfuser extends TileEntity implements ITickable, I
         if (this.disassembleCounter == 0) this.isTryingToDisassembleShip = false;
     }
 
+    @Override
     public boolean canMaintainShip() {
         ItemStack mainStack = this.handler.getStackInSlot(EnumInfuserCore.MAIN.coreSlotIndex);
         return !mainStack.isEmpty();
+    }
+
+    private void updateMaintenanceRegistration(@Nullable IPhysicsEntity currentShip) {
+        if (this.maintenanceShip == currentShip) return;
+        this.unregisterMaintenanceProvider();
+        if (currentShip != null) {
+            currentShip.addMaintenanceProvider(this);
+            this.maintenanceShip = currentShip;
+        }
+        this.unmaintainedTicks = 0;
+    }
+
+    private void unregisterMaintenanceProvider() {
+        if (this.maintenanceShip == null) return;
+        this.maintenanceShip.removeMaintenanceProvider(this);
+        this.maintenanceShip = null;
+        this.unmaintainedTicks = 0;
+    }
+
+    @Override
+    public void invalidate() {
+        this.unregisterMaintenanceProvider();
+        super.invalidate();
+    }
+
+    @Override
+    public void onChunkUnload() {
+        unregisterMaintenanceProvider();
+        super.onChunkUnload();
     }
 
     @Override

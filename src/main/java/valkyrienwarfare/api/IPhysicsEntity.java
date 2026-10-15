@@ -2,6 +2,7 @@ package valkyrienwarfare.api;
 
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
+import org.jetbrains.annotations.NotNull;
 import valkyrienwarfare.api.forces.ShipForcesInducer;
 
 /**
@@ -86,4 +87,36 @@ public interface IPhysicsEntity {
 	 * Remove all force callbacks invoked on a ship
 	 * */
 	default void clearForceInducers() {}
+
+	/**
+	 * Registers a component that can keep this physics entity assembled.
+	 * Providers are transient and must be registered again after the ship is loaded.
+	 *
+	 * @param provider provider to register
+	 * @return {@code true} when the provider was newly registered
+	 * */
+	default boolean addMaintenanceProvider(@NotNull IShipMaintenanceProvider provider) {
+		throw new UnsupportedOperationException(
+				"This physics entity does not support maintenance providers"
+		);
+	}
+
+	/**
+	 * Unregisters a component that was maintaining this physics entity.
+	 *
+	 * @param provider provider to unregister
+	 * @return {@code true} when the provider was registered
+	 * */
+	default boolean removeMaintenanceProvider(@NotNull IShipMaintenanceProvider provider) {
+		return false;
+	}
+
+	/**
+	 * Checks whether at least one registered provider can currently maintain this physics entity.
+	 *
+	 * @return {@code true} when a registered provider reports that it is active
+	 * */
+	default boolean hasActiveMaintenanceProvider() {
+		return false;
+	}
 }

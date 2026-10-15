@@ -44,6 +44,7 @@ import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransformationMana
 import org.valkyrienskies.mod.common.util.TransformedAABB;
 import org.valkyrienskies.mod.common.util.datastructures.IBlockPosSetAABB;
 import valkyrienwarfare.api.IPhysicsEntity;
+import valkyrienwarfare.api.IShipMaintenanceProvider;
 import valkyrienwarfare.api.TransformType;
 import valkyrienwarfare.api.forces.ShipForcesInducer;
 
@@ -70,7 +71,8 @@ public class PhysicsObject implements IPhysicsEntity {
     private final List<EntityPlayerMP> watchingPlayers;
     private final Set<IPhysicsBlockController> physicsControllers;
     private final Set<IPhysicsBlockController> physicsControllersImmutable;
-    private Set<ShipForcesInducer> forceInducers;
+    private final Set<ShipForcesInducer> forceInducers;
+    private final Set<IShipMaintenanceProvider> maintenanceProviders;
     private final PhysObjectRenderManager shipRenderer;
     /**
      * Just a random block position in the ship. Used to correct floating point errors and keep
@@ -142,6 +144,7 @@ public class PhysicsObject implements IPhysicsEntity {
         this.physicsControllers = ConcurrentHashMap.newKeySet();
         this.physicsControllersImmutable = Collections.unmodifiableSet(this.physicsControllers);
         this.forceInducers = ConcurrentHashMap.newKeySet();
+        this.maintenanceProviders = ConcurrentHashMap.newKeySet();
         this.claimedChunkCache = new ClaimedChunkCacheController(this);
         //malisis doors compat, malisisdoors can suck my fucking cock
         if (Loader.isModLoaded("malisiscore")) {
@@ -250,6 +253,35 @@ public class PhysicsObject implements IPhysicsEntity {
         this.forceInducers.clear();
     }
 
+    @Override
+    public boolean addMaintenanceProvider(@NotNull IShipMaintenanceProvider provider) {
+        if (this.world.isRemote) {
+            throw new IllegalStateException("Maintenance providers can only be registered on server-side ships");
+        }
+        return this.maintenanceProviders.add(provider);
+    }
+
+    @Override
+    public boolean removeMaintenanceProvider(@NotNull IShipMaintenanceProvider provider) {
+        return this.maintenanceProviders.remove(provider);
+    }
+
+    @Override
+    public boolean hasActiveMaintenanceProvider() {
+        for (IShipMaintenanceProvider provider : this.maintenanceProviders) {
+            try {
+                if (provider.canMaintainShip()) return true;
+            }
+            catch (RuntimeException exception) {
+                this.maintenanceProviders.remove(provider);
+                ValkyrienSkiesMod.LOGGER.error(
+                        "Removing maintenance provider that failed for ship " + this.getUuid(), exception
+                );
+            }
+        }
+        return false;
+    }
+
     /**
      * Invokes addon force callbacks on the physics thread.
      */
@@ -294,6 +326,7 @@ public class PhysicsObject implements IPhysicsEntity {
     }
 
     public void destroyShip() {
+        this.maintenanceProviders.clear();
         //copy all the blocks from the ship to the world
         if (!this.getBlockPositions().isEmpty()) {
             if (this.deconstructState.copyBlocks) {
@@ -450,6 +483,7 @@ public class PhysicsObject implements IPhysicsEntity {
     }
 
     void unload() {
+        this.maintenanceProviders.clear();
         watchingPlayers.clear();
         this.physicsCollideWith.close();
         if (!getWorld().isRemote) {

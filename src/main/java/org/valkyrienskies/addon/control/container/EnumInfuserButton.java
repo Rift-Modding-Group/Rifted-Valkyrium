@@ -10,7 +10,8 @@ public enum EnumInfuserButton {
             "gui.assemble_ship", "gui.disassemble_ship",
             tileEntity -> !tileEntity.isCurrentlyInShip(),
             tileEntity -> {
-                return !tileEntity.isActionInProgress() && tileEntity.canMaintainShip()
+                boolean canInitiateAction = tileEntity.isCurrentlyInShip() || tileEntity.canMaintainShip();
+                return !tileEntity.isActionInProgress() && canInitiateAction
                         && tileEntity.canShipBeDeconstructed() && tileEntity.isCenterOfShip();
             }
     ),

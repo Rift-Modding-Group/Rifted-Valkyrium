@@ -27,11 +27,7 @@ import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
 import org.valkyrienskies.mod.common.ships.ship_world.WorldServerShipManager;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import org.valkyrienskies.mod.common.util.names.NounListNameGenerator;
-import valkyrienwarfare.api.BlockMass;
-import valkyrienwarfare.api.IPhysicsEntity;
-import valkyrienwarfare.api.IShipData;
-import valkyrienwarfare.api.RiftedValkyriumAPI;
-import valkyrienwarfare.api.ShipBlockBlacklist;
+import valkyrienwarfare.api.*;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Arrays;
@@ -139,10 +135,7 @@ public class RiftedValkyriumAPIProvider implements RiftedValkyriumAPI.Provider {
     @Override
     @NotNull
     @SuppressWarnings("deprecation")
-    public IShipData createNewShip(
-            WorldServer world, Vec3d initialPosition, AxisAlignedBB initialBounds,
-            ShipBlockBlacklist blockBlacklist, boolean enablePhysics
-    ) {
+    public IShipData createNewShip(WorldServer world, Vec3d initialPosition, AxisAlignedBB initialBounds, ShipBuildOptions shipBuildOptions) {
         IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(world);
         if (!(physObjectWorld instanceof WorldServerShipManager serverShipManager)) {
             throw new IllegalStateException("Could not get server ship manager from world!");
@@ -155,11 +148,17 @@ public class RiftedValkyriumAPIProvider implements RiftedValkyriumAPI.Provider {
         BlockPos regionCenter = chunkClaim.getRegionCenter();
         Vector3d centerOfMass = new Vector3d(regionCenter.getX(), regionCenter.getY(), regionCenter.getZ());
         ShipTransform initialTransform = new ShipTransform(position, centerOfMass);
+
+        String shipName;
+        if (shipBuildOptions.getShipName() != null) shipName = shipBuildOptions.getShipName();
+        else shipName = NounListNameGenerator.getInstance().generateName();
+
         ShipData shipData = ShipData.createData(
-                queryableShipData.allShips(), NounListNameGenerator.getInstance().generateName(),
-                chunkClaim, UUID.randomUUID(), initialTransform, initialBounds, blockBlacklist
+                queryableShipData.allShips(), shipName,
+                chunkClaim, UUID.randomUUID(), initialTransform,
+                initialBounds, shipBuildOptions.getShipBlockBlacklist()
         );
-        shipData.setPhysicsEnabled(enablePhysics);
+        shipData.setPhysicsEnabled(shipBuildOptions.getPhysicsEnabled());
 
         BlockPos assemblyPosition = new BlockPos(initialPosition.x, initialPosition.y, initialPosition.z);
         serverShipManager.queueShipSpawn(shipData, assemblyPosition, BlockFinder.BlockFinderType.FIND_ALLOWED_BLOCKS);
