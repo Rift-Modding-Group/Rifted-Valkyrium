@@ -174,21 +174,12 @@ public class PhysicsCalculations implements IShipForces {
 
     /**
      * Queues an instantaneous impulse and its resulting angular impulse for the next physics tick.
+     * For now, it's for the built-in boat oaring feature only, but I might expose this to the API...
      */
     public void addImpulseAtPoint(Vector3dc posRelToShipCenter, Vector3dc impulseToApply, Vector3d crossVector) {
         posRelToShipCenter.cross(impulseToApply, crossVector);
         this.pendingAngularImpulse.add(crossVector);
         this.pendingImpulse.add(impulseToApply);
-    }
-
-    /**
-     * Moves queued impulses into the active accumulators after their per-tick reset.
-     */
-    public void applyPendingImpulses() {
-        this.force.add(this.pendingImpulse);
-        this.torque.add(this.pendingAngularImpulse);
-        this.pendingImpulse.zero();
-        this.pendingAngularImpulse.zero();
     }
 
     public Vector3d getVelocityAtPoint(Vector3dc posRelativeToShipCenter) {
@@ -240,12 +231,10 @@ public class PhysicsCalculations implements IShipForces {
     }
 
     public void drainForceAndTorque(@NotNull Vector3d forceDest, @NotNull Vector3d torqueDest) {
-        forceDest.set(this.force)
-                .mul(this.physTickTimeDelta)
-                .add(this.pendingImpulse);
-        torqueDest.set(this.torque)
-                .mul(this.physTickTimeDelta)
-                .add(this.pendingAngularImpulse);
+        forceDest.set(this.force).mul(this.physTickTimeDelta).add(this.pendingImpulse);
+        torqueDest.set(this.torque).mul(this.physTickTimeDelta).add(this.pendingAngularImpulse);
+        this.pendingImpulse.zero();
+        this.pendingAngularImpulse.zero();
         this.resetForceAndTorque();
     }
 

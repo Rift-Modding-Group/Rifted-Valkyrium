@@ -52,7 +52,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * The heart and soul of this mod.
@@ -232,7 +231,7 @@ public class PhysicsObject implements IPhysicsEntity {
     }
 
     @Override
-    public boolean addForceInducer(IShipForcesInducer forceInducer) {
+    public synchronized boolean addForceInducer(IShipForcesInducer forceInducer) {
         if (this.world.isRemote) {
             throw new IllegalStateException("Force inducers can only be registered on server-side ships");
         }
@@ -246,13 +245,18 @@ public class PhysicsObject implements IPhysicsEntity {
     }
 
     @Override
-    public boolean removeForceInducer(IShipForcesInducer forceInducer) {
-        return this.forceInducers.remove(forceInducer);
+    public synchronized boolean removeForceInducer(IShipForcesInducer forceInducer) {
+        if (!this.forceInducers.contains(forceInducer)) return false;
+
+        List<IShipForcesInducer> updatedInducers = new ArrayList<>(this.forceInducers);
+        boolean removed = updatedInducers.remove(forceInducer);
+        this.forceInducers = List.copyOf(updatedInducers);
+        return removed;
     }
 
     @Override
-    public void clearForceInducers() {
-        this.forceInducers.clear();
+    public synchronized void clearForceInducers() {
+        this.forceInducers = List.of();
     }
 
     @Override
@@ -276,9 +280,7 @@ public class PhysicsObject implements IPhysicsEntity {
             }
             catch (RuntimeException exception) {
                 this.maintenanceProviders.remove(provider);
-                ValkyrienSkiesMod.LOGGER.error(
-                        "Removing maintenance provider that failed for ship " + this.getUuid(), exception
-                );
+                ValkyrienSkiesMod.LOGGER.error("Removing maintenance provider that failed for ship " + this.getUuid(), exception);
             }
         }
         return false;
@@ -293,7 +295,7 @@ public class PhysicsObject implements IPhysicsEntity {
                 forceInducer.applyForces(this.physicsCalculations);
             }
             catch (RuntimeException exception) {
-                this.forceInducers.remove(forceInducer);
+                this.removeForceInducer(forceInducer);
                 ValkyrienSkiesMod.LOGGER.error(
                         "Removing force inducer that failed for ship " + this.getUuid(), exception
                 );

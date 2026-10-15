@@ -130,6 +130,7 @@ class WorldShipLoadingController {
         }
 
         Map<EntityPlayerMP, ShipIndexDataMessage> playerPacketMap = new HashMap<>();
+        Map<EntityPlayerMP, List<Chunk>> playerChunkLoads = new HashMap<>();
 
         // Then send those updates
         updatesMap.forEach((player, updates) -> {
@@ -139,6 +140,7 @@ class WorldShipLoadingController {
                 indexDataMessage.addData(updates);
             }
             playerPacketMap.put(player, indexDataMessage);
+            playerChunkLoads.put(player, new ArrayList<>());
         });
 
         // Then send ship loads to the packets
@@ -149,19 +151,12 @@ class WorldShipLoadingController {
                 newWatchers.removeAll(oldWatching.get(shipData));
             }
             if (!newWatchers.isEmpty()) {
-                // First send the ship chunks to the new watchers
+                newWatchers.forEach(player -> playerPacketMap.get(player).addLoadUUID(shipData.getUuid()));
                 for (Chunk chunk : ship.getClaimedChunkCache()) {
-                    SPacketChunkData data = new SPacketChunkData(chunk, 65535);
                     for (EntityPlayerMP player : newWatchers) {
-                        player.connection.sendPacket(data);
-                        if (Loader.isModLoaded("malisiscore")) {
-                            MalisisCoreCompat.sendChunkBlockRegistrations(chunk, player);
-                        }
-                        this.shipManager.getWorld().getEntityTracker().sendLeashedEntitiesInChunk(player, chunk);
+                        playerChunkLoads.get(player).add(chunk);
                     }
                 }
-
-                newWatchers.forEach(player -> playerPacketMap.get(player).addLoadUUID(shipData.getUuid()));
             }
         }
 
@@ -182,10 +177,21 @@ class WorldShipLoadingController {
             }
         }
 
-        // Finally, send each player their update packet
+        // Tell clients which ships to load before sending the distant shipyard chunks.
         playerPacketMap.forEach((player, packet) -> {
             if (!player.hasDisconnected()) {
                 ValkyrienSkiesMod.physWrapperNetwork.sendTo(packet, player);
+            }
+        });
+
+        playerChunkLoads.forEach((player, chunks) -> {
+            if (player.hasDisconnected()) return;
+            for (Chunk chunk : chunks) {
+                player.connection.sendPacket(new SPacketChunkData(chunk, 65535));
+                if (Loader.isModLoaded("malisiscore")) {
+                    MalisisCoreCompat.sendChunkBlockRegistrations(chunk, player);
+                }
+                this.shipManager.getWorld().getEntityTracker().sendLeashedEntitiesInChunk(player, chunk);
             }
         });
     }

@@ -23,6 +23,7 @@ import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.ships.ship_world.WorldServerShipManager;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
+import valkyrienwarfare.api.RiftedValkyriumAPI;
 import valkyrienwarfare.api.TransformType;
 
 public class MessageOarShip implements IMessage {
@@ -129,7 +130,7 @@ public class MessageOarShip implements IMessage {
                     RayTraceResult trueLiquidHit = player.getServerWorld().rayTraceBlocks(eyePosition, traceEnd, true, false, false);
                     if (trueLiquidHit == null || trueLiquidHit.typeOfHit != RayTraceResult.Type.BLOCK
                             || player.getServerWorld().getBlockState(trueLiquidHit.getBlockPos()).getMaterial() != Material.WATER
-                            || ValkyrienUtils.getShipManagingBlock(player.world, trueLiquidHit.getBlockPos()).isPresent()
+                            || RiftedValkyriumAPI.isPosInShipyard(player.world, trueLiquidHit.getBlockPos())
                     ) {
                         return;
                     }

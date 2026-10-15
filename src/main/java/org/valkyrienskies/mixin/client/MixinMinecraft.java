@@ -25,6 +25,7 @@ import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.util.JOML;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
+import valkyrienwarfare.api.RiftedValkyriumAPI;
 import valkyrienwarfare.api.TransformType;
 
 import java.util.Optional;
@@ -66,7 +67,7 @@ public class MixinMinecraft {
         RayTraceResult liquidHit = minecraft.world.rayTraceBlocks(eyePosition, traceEnd, true, false, false);
         if (liquidHit == null || liquidHit.typeOfHit != RayTraceResult.Type.BLOCK
                 || minecraft.world.getBlockState(liquidHit.getBlockPos()).getMaterial() != Material.WATER
-                || ValkyrienUtils.getShipManagingBlock(minecraft.world, liquidHit.getBlockPos()).isPresent()
+                || RiftedValkyriumAPI.isPosInShipyard(minecraft.world, liquidHit.getBlockPos())
         ) {
             return;
         }

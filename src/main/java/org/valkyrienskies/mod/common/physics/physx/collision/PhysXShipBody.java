@@ -128,9 +128,8 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
         PhysicsCalculations calculations = this.ship.getPhysicsCalculations();
         PxRigidDynamic shipActor = (PxRigidDynamic) this.actor;
 
-        //reset force state and record this simulation step length.
+        //reset continuous force state and record this simulation step length.
         calculations.resetForceAndTorque();
-        calculations.applyPendingImpulses();
         calculations.setPhysicsTimeDeltaPerPhysTick(timeStep);
         this.centerOfMassPoseDirty = false;
 
