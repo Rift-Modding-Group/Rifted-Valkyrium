@@ -15,7 +15,7 @@ import javax.annotation.Nullable;
  */
 public interface IPhysicsEntityManager {
 	/**
-	 * This gets replaced at runtime if VW is installed.
+	 * This gets replaced at runtime if RV is installed.
 	 */
 	IPhysicsEntityManager INSTANCE = new DummyPhysicsEntityManager();
 

@@ -70,14 +70,6 @@ public class EventsCommon {
         Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(world, posAt);
         if (!event.getWorld().isRemote && physicsObject.isPresent() && !(entity instanceof EntityFallingBlock)) {
             PhysicsObject spawningShip = physicsObject.get();
-            if (entity instanceof EntityArmorStand || entity instanceof EntityBoat) {
-                EntityMountable entityMountable = new EntityMountable(
-                        world, entity.getPositionVector(),
-                        CoordinateSpaceType.SUBSPACE_COORDINATES, posAt
-                );
-                world.spawnEntity(entityMountable);
-                entity.startRiding(entityMountable);
-            }
             spawningShip.getShipTransformationManager().getCurrentTickTransform()
                     .transform(entity, TransformType.SUBSPACE_TO_GLOBAL, false);
 

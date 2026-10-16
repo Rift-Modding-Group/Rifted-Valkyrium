@@ -104,13 +104,6 @@ public class VSWorldEventListener implements IWorldEventListener {
 
         Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(world, posAt);
         if (!this.worldObj.isRemote && physicsObject.isPresent() && !(entity instanceof EntityFallingBlock)) {
-            if (entity instanceof EntityArmorStand || entity instanceof EntityBoat) {
-                EntityMountable entityMountable = new EntityMountable(world,
-                    entity.getPositionVector(), CoordinateSpaceType.SUBSPACE_COORDINATES,
-                    posAt);
-                world.spawnEntity(entityMountable);
-                entity.startRiding(entityMountable);
-            }
             BlockPos rawPosBeforeTransform = new BlockPos(entity.posX, entity.posY, entity.posZ);
             world.getChunk(rawPosBeforeTransform.getX() >> 4, rawPosBeforeTransform.getZ() >> 4)
                 .removeEntity(entity);
