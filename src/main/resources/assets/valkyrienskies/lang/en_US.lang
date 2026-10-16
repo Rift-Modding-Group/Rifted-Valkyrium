@@ -33,6 +33,12 @@ commands.vs.gc.success=Successfully garbage collected!
 commands.vs.rename.success=Successfully renamed %s to %s!
 
 
+# Debug
+debug.valkyrienskies.ship_name=Ship Name: %s
+debug.valkyrienskies.center_of_mass=Center of Mass: %s
+debug.valkyrienskies.mass=Mass: %.2f kg
+
+
 # Config (Remember to update VSConfig after any changes are made here)
 valkyrienskies.general.shiplowerlimit=Ship Y Position Minimum
 valkyrienskies.general.shiplowerlimit.tooltip=

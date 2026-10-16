@@ -5,6 +5,7 @@ import net.minecraft.client.renderer.EntityRenderer;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.RenderGlobal;
 import net.minecraft.client.renderer.culling.ICamera;
+import net.minecraft.client.resources.I18n;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.BlockRenderLayer;
 import net.minecraft.util.math.AxisAlignedBB;
@@ -112,7 +113,7 @@ public class PhysObjectRenderManager {
     }
 
     public boolean shouldRender(ICamera camera) {
-        return camera == null || camera.isBoundingBoxInFrustum(parent.getShipBoundingBox());
+        return camera.isBoundingBoxInFrustum(parent.getShipBoundingBox());
     }
 
     public void applyRenderTransform(double partialTicks) {
@@ -230,15 +231,29 @@ public class PhysObjectRenderManager {
         GlStateManager.disableBlend();
         GlStateManager.depthMask(true);
 
-        // Draw a text box that shows the numerical value of the center of mass.
-        String centerOfMassStr = "Center of Mass: " + (new Vector3d(centerOfMass)).toString(new DecimalFormat("############.##"));
-        renderTextBox(centerOfMassStr, renderTransform.getPosX(), renderTransform.getPosY() + .5,
-            renderTransform.getPosZ(), offsetX, offsetY, offsetZ);
+        //show ship name
+        String shipNameStr = I18n.format("debug.valkyrienskies.ship_name", this.parent.getShipData().getName());
+        this.renderTextBox(
+                shipNameStr, renderTransform.getPosX(), renderTransform.getPosY() + 1.5D, renderTransform.getPosZ(),
+                offsetX, offsetY, offsetZ
+        );
 
-        String massStr = String.format("Mass: %.2f", parent.getShipData().getInertiaData().getGameTickMass());
+        //show the numerical value of the center of mass
+        String centerOfMassStr = I18n.format(
+                "debug.valkyrienskies.center_of_mass",
+                centerOfMassPos.toString(new DecimalFormat("############.##"))
+        );
+        this.renderTextBox(
+                centerOfMassStr, renderTransform.getPosX(), renderTransform.getPosY() + 1D, renderTransform.getPosZ(),
+                offsetX, offsetY, offsetZ
+        );
 
-        renderTextBox(massStr, renderTransform.getPosX(), renderTransform.getPosY() + 1,
-            renderTransform.getPosZ(), offsetX, offsetY, offsetZ);
+        //show mass
+        String massStr = I18n.format("debug.valkyrienskies.mass", this.parent.getShipData().getInertiaData().getGameTickMass());
+        this.renderTextBox(
+                massStr, renderTransform.getPosX(), renderTransform.getPosY() + 0.5D, renderTransform.getPosZ(),
+                offsetX, offsetY, offsetZ
+        );
 
         GlStateManager.popMatrix();
     }

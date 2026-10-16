@@ -33,6 +33,12 @@ commands.vs.gc.success=The bilge be thrown abaft!
 commands.vs.rename.success=%s be rechristened as %s!
 
 
+# Debug
+debug.valkyrienskies.ship_name=Ship's Name: %s
+debug.valkyrienskies.center_of_mass=Center o' Mass: %s
+debug.valkyrienskies.mass=Mass: %.2f kg
+
+
 # Config (Remember to update VSConfig after any changes are made here)
 valkyrienskies.general.shiplowerlimit=The lowest she'll go!
 valkyrienskies.general.shiplowerlimit.tooltip=

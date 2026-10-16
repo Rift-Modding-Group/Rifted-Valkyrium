@@ -33,6 +33,12 @@ commands.vs.gc.success=成功收集垃圾!
 commands.vs.rename.success=已成功将%s重命名为%s！
 
 
+# Debug
+debug.valkyrienskies.ship_name=飞船名称：%s
+debug.valkyrienskies.center_of_mass=质心：%s
+debug.valkyrienskies.mass=质量：%.2f kg
+
+
 # Config (Remember to update VSConfig after any changes are made here)
 valkyrienskies.general.shiplowerlimit=飞船最低高度
 valkyrienskies.general.shiplowerlimit.tooltip=

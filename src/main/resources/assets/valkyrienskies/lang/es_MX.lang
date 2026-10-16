@@ -33,6 +33,12 @@ commands.vs.gc.success=¡La recolección de basura se completó correctamente!
 commands.vs.rename.success=¡Se cambió correctamente el nombre de %s a %s!
 
 
+# Debug
+debug.valkyrienskies.ship_name=Nombre de la nave: %s
+debug.valkyrienskies.center_of_mass=Centro de masa: %s
+debug.valkyrienskies.mass=Masa: %.2f kg
+
+
 # Config (Remember to update VSConfig after any changes are made here)
 valkyrienskies.general.shiplowerlimit=Posición Y mínima de las naves
 valkyrienskies.general.shiplowerlimit.tooltip=

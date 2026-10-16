@@ -20,8 +20,7 @@ import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import valkyrienwarfare.api.TransformType;
 
 /**
- * A simple entity whose only purpose is to allow mounting onto chairs, as well as fixing entities
- * onto ships.
+ * A simple entity whose only purpose is to allow mounting onto chairs.
  */
 @ParametersAreNonnullByDefault
 public class EntityMountable extends Entity implements IEntityAdditionalSpawnData {
