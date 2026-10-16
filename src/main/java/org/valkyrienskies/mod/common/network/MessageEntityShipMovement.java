@@ -380,6 +380,7 @@ public class MessageEntityShipMovement implements IMessage {
                     else {
                         movementData = draggable.getOrCreateShipLocalMovementData();
                         movementData.useShip(message.shipUuid);
+                        boolean initializeFromAuthoritativeState = !movementData.isInitialized();
 
                         if (shipTransform != null) {
                             movementData.initializeIfNeeded(
@@ -390,10 +391,12 @@ public class MessageEntityShipMovement implements IMessage {
                                     entity.getRotationYawHead()
                             );
                         }
+                        int interpolationSteps = initializeFromAuthoritativeState
+                                ? 0 : ShipLocalEntityMovementData.DEFAULT_LERP_STEPS;
                         if (message.hasComponent(POSITION)) {
                             movementData.setPositionTarget(
                                     new Vector3d(message.localX, message.localY, message.localZ),
-                                    ShipLocalEntityMovementData.DEFAULT_LERP_STEPS
+                                    interpolationSteps
                             );
                             entity.serverPosX = message.serverPosX;
                             entity.serverPosY = message.serverPosY;
@@ -410,13 +413,13 @@ public class MessageEntityShipMovement implements IMessage {
                             movementData.setRotationTarget(
                                     message.localYaw,
                                     message.pitch,
-                                    ShipLocalEntityMovementData.DEFAULT_LERP_STEPS
+                                    interpolationSteps
                             );
                         }
                         if (message.hasComponent(HEAD_ROTATION)) {
                             movementData.setHeadRotationTarget(
                                     message.localHeadYaw,
-                                    ShipLocalEntityMovementData.DEFAULT_LERP_STEPS
+                                    interpolationSteps
                             );
                         }
                         movementData.setOnGround(message.onGround);

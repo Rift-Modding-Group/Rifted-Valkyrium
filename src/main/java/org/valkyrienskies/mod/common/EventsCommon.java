@@ -3,8 +3,6 @@ package org.valkyrienskies.mod.common;
 import net.minecraft.block.BlockLiquid;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.item.EntityArmorStand;
-import net.minecraft.entity.item.EntityBoat;
 import net.minecraft.entity.item.EntityFallingBlock;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.player.EntityPlayer;
@@ -40,9 +38,7 @@ import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMoun
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
 import org.valkyrienskies.mod.common.capability.ship_pilot.IShipPilot;
 import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
-import org.valkyrienskies.mod.common.entity.EntityMountable;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
-import org.valkyrienskies.mod.common.ships.ship_transform.CoordinateSpaceType;
 import org.valkyrienskies.mod.common.ships.ship_world.*;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import valkyrienwarfare.api.TransformType;
@@ -68,28 +64,26 @@ public class EventsCommon {
         if (mount != null) mount.tryAnchorMount(entity);
 
         Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(world, posAt);
+        //peg anything thats not a falling block to ship movement
         if (!event.getWorld().isRemote && physicsObject.isPresent() && !(entity instanceof EntityFallingBlock)) {
             PhysicsObject spawningShip = physicsObject.get();
-            spawningShip.getShipTransformationManager().getCurrentTickTransform()
+
+            //turn entity position in world space to ship space
+            spawningShip.getShipTransformationManager()
+                    .getCurrentTickTransform()
                     .transform(entity, TransformType.SUBSPACE_TO_GLOBAL, false);
 
-            if (entity instanceof EntityItem entityItem) {
-                EntityDraggable.startTrackingShip(entityItem, spawningShip.getShipData());
-            }
-            return;
+            //now peg the entity to the ship to ensure it moves alongside it
+            EntityDraggable.startTrackingShip(entity, spawningShip.getShipData());
         }
+        //make sure that thrown items get pegged to the ship
+        else if (!event.getWorld().isRemote && entity instanceof EntityItem entityItem) {
+            String throwerName = entityItem.getThrower();
+            if (throwerName == null) return;
 
-        if (!event.getWorld().isRemote && entity instanceof EntityItem entityItem) {
-            copyThrowerShipTracking(entityItem);
+            EntityPlayer thrower = entityItem.world.getPlayerEntityByName(throwerName);
+            if (thrower != null) EntityDraggable.copyShipTracking(thrower, entityItem);
         }
-    }
-
-    private static void copyThrowerShipTracking(@NotNull EntityItem item) {
-        String throwerName = item.getThrower();
-        if (throwerName == null) return;
-
-        EntityPlayer thrower = item.world.getPlayerEntityByName(throwerName);
-        if (thrower != null) EntityDraggable.copyShipTracking(thrower, item);
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)

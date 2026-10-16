@@ -89,6 +89,7 @@ public class EntityDraggable {
 
     /**
      * Copies the active ship coordinate frame from an entity to another entity it spawned.
+     * Helps out with XP orbs from dead mobs and thrown/dropped items by other entities.
      */
     public static void copyShipTracking(@NotNull Entity source, @NotNull Entity spawnedEntity) {
         ShipData sourceShip = getActiveShip(source);
