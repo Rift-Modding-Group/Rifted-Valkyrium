@@ -3,6 +3,7 @@
 ### Valkyrien Skies Main
 
 tooltip.valkyrienskies.legacy=旧版
+message.valkyrienskies.shipyard_boundary=你不能越过 %s 格，因为那里用于存放飞船！
 
 # Blocks
 message.valkyrienskies.water_pump.size=水泵系列：%s x %s x %s

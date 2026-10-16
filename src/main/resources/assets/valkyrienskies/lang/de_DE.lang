@@ -3,6 +3,7 @@
 ### Valkyrien Skies Main
 
 tooltip.valkyrienskies.legacy=Veraltet
+message.valkyrienskies.shipyard_boundary=Du kannst nicht weiter als %s Blöcke hinausgehen, da dort Luftschiffe gespeichert werden!
 
 # Blocks
 tile.captains_chair.name=§6Veraltet§r - Kapitänssitz

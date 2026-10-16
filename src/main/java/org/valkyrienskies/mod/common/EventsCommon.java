@@ -10,7 +10,7 @@ import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.util.MovementInput;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.text.TextComponentString;
+import net.minecraft.util.text.TextComponentTranslation;
 import net.minecraft.world.Explosion;
 import net.minecraft.world.World;
 import net.minecraftforge.client.event.InputUpdateEvent;
@@ -25,8 +25,7 @@ import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 import net.minecraftforge.fml.common.eventhandler.Event.Result;
 import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
-import net.minecraftforge.fml.common.gameevent.PlayerEvent.PlayerLoggedInEvent;
-import net.minecraftforge.fml.common.gameevent.PlayerEvent.PlayerLoggedOutEvent;
+import net.minecraftforge.fml.common.gameevent.TickEvent.Phase;
 import net.minecraftforge.fml.common.gameevent.TickEvent.PlayerTickEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent.WorldTickEvent;
 import net.minecraftforge.fml.relauncher.Side;
@@ -43,15 +42,12 @@ import org.valkyrienskies.mod.common.ships.ship_world.*;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import valkyrienwarfare.api.TransformType;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 @EventBusSubscriber(modid = ValkyrienSkiesMod.MOD_ID)
 public class EventsCommon {
-    @Deprecated //im not sure why this is marked as deprecated... maybe remove the tag?
-    private static final Map<EntityPlayer, double[]> lastPositions = new HashMap<>();
+    private static final int PLAYER_WORLD_LIMIT = 27_000_000;
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onEntityJoinWorldEvent(EntityJoinWorldEvent event) {
@@ -123,30 +119,32 @@ public class EventsCommon {
         }
     }
 
+    //prevent players from somehow going to the shipyard
     @SubscribeEvent(priority = EventPriority.HIGHEST)
-    public static void onPlayerTickEvent(PlayerTickEvent event) {
-        if (event.player.world.isRemote) return;
-        EntityPlayerMP p = (EntityPlayerMP) event.player;
+    public static void onPlayerTickEvent(@NotNull PlayerTickEvent event) {
+        if (event.player.world.isRemote || event.phase != Phase.END) return;
 
-        double[] pos = lastPositions.computeIfAbsent(p, k -> new double[3]);
-        try {
-            if (pos[0] != p.posX || pos[2] != p.posZ) { // Player has moved
-                if (Math.abs(p.posX) > 27000000
-                        || Math.abs(p.posZ) > 27000000) { // Player is outside of world
-                    // border, tp them back
-                    p.attemptTeleport(pos[0], pos[1], pos[2]);
-                    p.sendMessage(new TextComponentString(
-                            "You can't go beyond 27000000 blocks because airships are stored there!"));
-                }
-            }
-        }
-        catch (NullPointerException e) {
-            ValkyrienSkiesMod.LOGGER.warn("Nullpointer EventsCommon.java:onPlayerTickEvent");
+        EntityPlayerMP player = (EntityPlayerMP) event.player;
+        if (!isOutsidePlayableWorld(player.posX, player.posZ)) return;
+
+        double returnX = player.lastTickPosX;
+        double returnY = player.lastTickPosY;
+        double returnZ = player.lastTickPosZ;
+        if (isOutsidePlayableWorld(returnX, returnZ)) {
+            BlockPos spawnPosition = player.getServerWorld().getSpawnPoint();
+            returnX = spawnPosition.getX() + 0.5D;
+            returnY = spawnPosition.getY();
+            returnZ = spawnPosition.getZ() + 0.5D;
         }
 
-        pos[0] = p.posX;
-        pos[1] = p.posY;
-        pos[2] = p.posZ;
+        player.attemptTeleport(returnX, returnY, returnZ);
+        player.sendMessage(new TextComponentTranslation(
+                "message.valkyrienskies.shipyard_boundary", PLAYER_WORLD_LIMIT
+        ));
+    }
+
+    private static boolean isOutsidePlayableWorld(double x, double z) {
+        return Math.abs(x) > PLAYER_WORLD_LIMIT || Math.abs(z) > PLAYER_WORLD_LIMIT;
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
@@ -166,8 +164,6 @@ public class EventsCommon {
         IShipWorld shipWorld = world.getCapability(VSCapabilityRegistry.VS_SHIP_WORLD, null);
         if (shipWorld == null) return;
 
-        // Fixes memory leak; @DaPorkChop please don't leave static maps lying around D:
-        lastPositions.clear();
         shipWorld.getManager().onWorldUnload();
     }
 
@@ -197,21 +193,6 @@ public class EventsCommon {
 
         Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(event.getWorld(), pos);
         if (physicsObject.isPresent()) event.setResult(Result.ALLOW);
-    }
-
-    @SubscribeEvent
-    public static void onJoin(PlayerLoggedInEvent event) {
-        if (event.player.world.isRemote) return;
-
-        EntityPlayerMP player = (EntityPlayerMP) event.player;
-        lastPositions.put(player, new double[]{0D, 256D, 0D});
-    }
-
-    @SubscribeEvent
-    public static void onLeave(PlayerLoggedOutEvent event) {
-        if (!event.player.world.isRemote) {
-            lastPositions.remove(event.player);
-        }
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)

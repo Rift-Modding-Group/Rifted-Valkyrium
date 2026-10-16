@@ -3,6 +3,7 @@
 ### Valkyrien Skies Main
 
 tooltip.valkyrienskies.legacy=Obsoleto
+message.valkyrienskies.shipyard_boundary=¡No puedes ir más allá de %s bloques porque allí se almacenan las aeronaves!
 
 # Blocks
 tile.captains_chair.name=§6Obsoleto§r - Silla del capitán

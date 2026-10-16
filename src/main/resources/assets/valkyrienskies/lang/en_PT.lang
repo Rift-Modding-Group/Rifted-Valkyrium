@@ -3,6 +3,7 @@
 ### Valkyrien Skies Main
 
 tooltip.valkyrienskies.legacy=Legacy
+message.valkyrienskies.shipyard_boundary=Ye can't sail beyond %s blocks because that be where the airships are moored!
 
 # Blocks
 message.valkyrienskies.water_pump.size=Water pump range: %s x %s x %s

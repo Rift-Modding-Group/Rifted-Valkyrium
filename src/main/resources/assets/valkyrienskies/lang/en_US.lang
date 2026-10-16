@@ -3,6 +3,7 @@
 ### Valkyrien Skies Main
 
 tooltip.valkyrienskies.legacy=Legacy
+message.valkyrienskies.shipyard_boundary=You can't go beyond %s blocks because airships are stored there!
 
 # Blocks
 tile.captains_chair.name=§6Legacy§r - Captain's Chair
