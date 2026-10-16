@@ -142,9 +142,9 @@ public class VSConfig extends VSConfigTemplate {
 
     @Name("Minecarts on ships")
     @Comment({
-        "Enabled minecarts on ships. WARNING: This will derail normal minecarts within a ship's AABB",
+        "Enables minecarts, including modded minecart subclasses, on rails placed on ships.",
     })
-    public static boolean minecartsOnShips = false;
+    public static boolean minecartsOnShips = true;
 
     @Name("Chair Recipes")
     @Comment({
