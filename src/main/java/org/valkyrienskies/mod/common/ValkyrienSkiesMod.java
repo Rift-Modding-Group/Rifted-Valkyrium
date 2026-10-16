@@ -1,12 +1,10 @@
 package org.valkyrienskies.mod.common;
 
-import com.cleanroommc.hackery.ReflectionHackery;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.block.Block;
 import net.minecraft.command.ServerCommandManager;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.init.Blocks;
 import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemBlock;
@@ -15,8 +13,6 @@ import net.minecraft.item.crafting.IRecipe;
 import net.minecraft.item.crafting.ShapedRecipes;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
 import net.minecraftforge.common.crafting.CraftingHelper;
 import net.minecraftforge.event.RegistryEvent;
 import net.minecraftforge.fml.common.Loader;
@@ -62,8 +58,6 @@ import org.valkyrienskies.mod.common.tileentity.TileEntityPassengerChair;
 import org.valkyrienskies.mod.common.tileentity.TileEntityWaterPump;
 import org.valkyrienskies.mod.fixes.darkness_lib_fix.VSDarknessLibAPILightProvider;
 import org.valkyrienskies.mod.proxy.CommonProxy;
-import valkyrienwarfare.api.IPhysicsEntity;
-import valkyrienwarfare.api.IPhysicsEntityManager;
 import valkyrienwarfare.api.RiftedValkyriumAPI;
 
 import javax.annotation.Nullable;
@@ -137,19 +131,6 @@ public class ValkyrienSkiesMod {
 
         LOGGER.debug("Initializing the Rifted Valkyrium API.");
         RiftedValkyriumAPI.registerProvider(new RiftedValkyriumAPIProvider());
-        try {
-            Field instanceField = IPhysicsEntityManager.class.getDeclaredField("INSTANCE");
-            ReflectionHackery.setField(instanceField, null, new IPhysicsEntityManager() {
-                @Nullable
-                @Override
-                public IPhysicsEntity getPhysicsEntityFromShipSpace(World world, BlockPos pos) {
-                    return RiftedValkyriumAPI.getPhysoManagingBlock(world, pos).orElse(null);
-                }
-            });
-        }
-        catch (Exception exception) {
-            LOGGER.fatal("Failed to initialize the Rifted Valkyrium API", exception);
-        }
 
 		registerDarknessLib();
     }

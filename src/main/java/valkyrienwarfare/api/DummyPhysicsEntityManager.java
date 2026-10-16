@@ -14,6 +14,6 @@ import net.minecraft.world.World;
 class DummyPhysicsEntityManager implements IPhysicsEntityManager {
 	@Override
 	public IPhysicsEntity getPhysicsEntityFromShipSpace(World world, BlockPos pos) {
-		return null;
+		return RiftedValkyriumAPI.getPhysoManagingBlock(world, pos).orElse(null);
 	}
 }
