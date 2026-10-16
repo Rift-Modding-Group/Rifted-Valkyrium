@@ -4,15 +4,18 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityList;
 import net.minecraft.entity.MoverType;
 import net.minecraft.world.World;
+import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
 import org.valkyrienskies.mod.common.config.VSConfig;
+import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityCollisionInjector;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityCollisionInjector.IntermediateMovementVariableStorage;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
@@ -37,6 +40,10 @@ public abstract class MixinEntityIntrinsic {
     // We use this boolean to keep track of when we've called move() ourselves.
     private boolean didMinecraftInvokeMove = true;
 
+    @Unique
+    @Nullable
+    private ShipData boatSupportBeforeMove;
+
     @Shadow
     public abstract void move(MoverType type, double x, double y, double z);
 
@@ -49,7 +56,12 @@ public abstract class MixinEntityIntrinsic {
         Entity thisEntity = (Entity) ((Object) this);
         if (thisEntity.world.isRemote && EntityDraggable.isUsingShipLocalMovement(thisEntity)) {
             this.alteredMovement = null;
+            this.boatSupportBeforeMove = null;
             return;
+        }
+
+        if (this.didMinecraftInvokeMove) {
+            this.boatSupportBeforeMove = EntityDraggable.getShipFromBoatBelow(thisEntity);
         }
 
         // Only run this code if Minecraft invoked move().
@@ -88,22 +100,25 @@ public abstract class MixinEntityIntrinsic {
             EntityCollisionInjector.alterEntityMovementPost(thisEntity, this.alteredMovement);
         }
         else {
-            if (this.collided) {
-                //if collided and alteredMovement is null, then we're touching the ground.
+            //make sure that when on top of a boat on a ship, the game thinks
+            //entity is still standing on the ship
+            if (this.boatSupportBeforeMove != null) {
+                entityShipDraggable.setLastTouchedShip(this.boatSupportBeforeMove);
+                entityShipDraggable.setTicksSinceTouchedShip(0);
+                entityShipDraggable.setTicksPartOfGround(0);
+            }
+            else if (this.collided) {
                 entityShipDraggable.setLastTouchedShip(null);
                 entityShipDraggable.setTicksSinceTouchedShip(0);
                 entityShipDraggable.setTicksPartOfGround(entityShipDraggable.getTicksPartOfGround() + 1);
                 entityShipDraggable.setAddedLinearVelocity(new Vector3d());
-                entityShipDraggable.setAddedYawVelocity(0);
+                entityShipDraggable.setAddedYawVelocity(0D);
             }
             else {
-                //if not collided and alteredMovement is null, then we're in the air.
-                int newTicksPartOfGround;
-                if (entityShipDraggable.getLastTouchedShip() != null) newTicksPartOfGround = 0;
-                else newTicksPartOfGround = entityShipDraggable.getTicksPartOfGround() + 1;
-
+                int ticksPartOfGround = 0;
+                if (entityShipDraggable.getLastTouchedShip() == null) ticksPartOfGround = entityShipDraggable.getTicksPartOfGround() + 1;
                 entityShipDraggable.setTicksSinceTouchedShip(entityShipDraggable.getTicksSinceTouchedShip() + 1);
-                entityShipDraggable.setTicksPartOfGround(newTicksPartOfGround);
+                entityShipDraggable.setTicksPartOfGround(ticksPartOfGround);
             }
         }
     }

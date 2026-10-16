@@ -2,6 +2,7 @@ package org.valkyrienskies.mod.common.ships.entity_interaction;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.item.EntityBoat;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.item.EntityXPOrb;
 import net.minecraft.entity.player.EntityPlayer;
@@ -50,6 +51,33 @@ public class EntityDraggable {
         catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    /**
+     * Boats are weird.
+     * This finds the ship carrying a boat that an entity is on top of. This is sampled before
+     * ordinary movement as well as before carrier movement, since a move can walk off the boat.
+     */
+    @Nullable
+    public static ShipData getShipFromBoatBelow(@NotNull Entity entity) {
+        if (entity.isDead || entity.isRiding() || !entity.onGround) return null;
+
+        double supportEpsilon = 0.001D;
+        AxisAlignedBB entityBox = entity.getEntityBoundingBox();
+        AxisAlignedBB supportSearch = new AxisAlignedBB(
+                entityBox.minX, entityBox.minY - supportEpsilon, entityBox.minZ,
+                entityBox.maxX, entityBox.minY + supportEpsilon, entityBox.maxZ
+        );
+        for (EntityBoat boat : entity.world.getEntitiesWithinAABB(EntityBoat.class, supportSearch)) {
+            AxisAlignedBB boatBox = boat.getCollisionBoundingBox();
+            if (boatBox == null || Math.abs(entityBox.minY - boatBox.maxY) > supportEpsilon) continue;
+            if (entityBox.maxX <= boatBox.minX || entityBox.minX >= boatBox.maxX
+                    || entityBox.maxZ <= boatBox.minZ || entityBox.minZ >= boatBox.maxZ) continue;
+
+            ShipData boatShip = getActiveShip(boat);
+            if (boatShip != null) return boatShip;
+        }
+        return null;
     }
 
     /**
@@ -121,6 +149,15 @@ public class EntityDraggable {
         IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
         if (draggable == null) return;
 
+        //make sure entities on top of boats that r on top of ships get dragged along too
+        ShipData boatShip = getShipFromBoatBelow(entity);
+        if (boatShip != null) {
+            draggable.setLastTouchedShip(boatShip);
+            draggable.setTicksSinceTouchedShip(0);
+            draggable.setTicksPartOfGround(0);
+        }
+
+        //now drag the entity along ship
         UUID pendingShipId = draggable.getPendingShipId();
         Vector3dc pendingLocalPosition = draggable.getPendingShipLocalPosition();
         if (!entity.world.isRemote && pendingShipId != null && pendingLocalPosition != null) {
@@ -128,9 +165,7 @@ public class EntityDraggable {
             if (worldData == null) return;
 
             ShipData pendingShip = worldData.get().getQueryableShipData().getShip(pendingShipId).orElse(null);
-            if (pendingShip == null) {
-                draggable.clearPendingShipPosition();
-            }
+            if (pendingShip == null) draggable.clearPendingShipPosition();
             else {
                 Vector3d worldPosition = new Vector3d(pendingLocalPosition);
                 pendingShip.getShipTransform().transformPosition(worldPosition, TransformType.SUBSPACE_TO_GLOBAL);
@@ -603,8 +638,7 @@ public class EntityDraggable {
             return new Vector3d();
         }
 
-        List<AxisAlignedBB> list1 = entity.world
-                .getCollisionBoxes(entity, potentialCrashBB);
+        List<AxisAlignedBB> list1 = getCarrierCollisionBoxes(entity, potentialCrashBB);
         AxisAlignedBB axisalignedbb = entity.getEntityBoundingBox();
 
         if (y != 0.0D) {
@@ -651,10 +685,7 @@ public class EntityDraggable {
             AxisAlignedBB axisalignedbb1 = entity.getEntityBoundingBox();
             entity.setEntityBoundingBox(axisalignedbb);
             y = entity.stepHeight;
-            List<AxisAlignedBB> list = entity.world.getCollisionBoxes(
-                    entity,
-                    entity.getEntityBoundingBox().offset(d2, y, d4)
-            );
+            List<AxisAlignedBB> list = getCarrierCollisionBoxes(entity, entity.getEntityBoundingBox().offset(d2, y, d4));
             AxisAlignedBB axisalignedbb2 = entity.getEntityBoundingBox();
             AxisAlignedBB axisalignedbb3 = axisalignedbb2.offset(d2, 0.0D, d4);
             double d8 = y;
@@ -740,5 +771,39 @@ public class EntityDraggable {
 
         entity.resetPositionToBB();
         return new Vector3d(x, y, z);
+    }
+
+    /**
+     * Gets collision boxes for ship carrier movement without resolving against entities carried by
+     * the same ship. Their relative positions do not change during this movement; ordinary entity
+     * movement continues to use all vanilla entity collisions.
+     */
+    @NotNull
+    private static List<AxisAlignedBB> getCarrierCollisionBoxes(@NotNull Entity entity, @NotNull AxisAlignedBB movementArea) {
+        List<AxisAlignedBB> collisionBoxes = entity.world.getCollisionBoxes(entity, movementArea);
+        ShipData activeShip = getActiveShip(entity);
+        if (activeShip == null) return collisionBoxes;
+
+        List<Entity> nearbyEntities = entity.world.getEntitiesWithinAABBExcludingEntity(entity, movementArea.grow(0.25D));
+        for (Entity nearbyEntity : nearbyEntities) {
+            if (nearbyEntity.isDead) continue;
+
+            ShipData nearbyShip = getActiveShip(nearbyEntity);
+            if (nearbyShip == null || !activeShip.getUuid().equals(nearbyShip.getUuid())) continue;
+
+            AxisAlignedBB nearbyCollisionBox = nearbyEntity.getCollisionBoundingBox();
+            if (nearbyCollisionBox != null) {
+                collisionBoxes.removeIf(nearbyCollisionBox::equals);
+                //boars are dumb
+                if (nearbyEntity instanceof EntityBoat) {
+                    AxisAlignedBB boatCollisionBox = EntityCollisionInjector.getBoatCollisionBox(nearbyCollisionBox, entity.getEntityBoundingBox());
+                    collisionBoxes.removeIf(boatCollisionBox::equals);
+                }
+            }
+
+            AxisAlignedBB entityCollisionBox = entity.getCollisionBox(nearbyEntity);
+            if (entityCollisionBox != null) collisionBoxes.removeIf(entityCollisionBox::equals);
+        }
+        return collisionBoxes;
     }
 }

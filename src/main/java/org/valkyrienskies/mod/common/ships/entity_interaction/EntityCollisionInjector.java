@@ -22,6 +22,7 @@ import net.minecraft.world.chunk.Chunk;
 import org.apache.commons.lang3.tuple.Triple;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
+import org.jetbrains.annotations.NotNull;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
 import org.valkyrienskies.mod.common.entity.EntityMountable;
@@ -310,8 +311,7 @@ public class EntityCollisionInjector {
             oldFallDistance, worldBelow.getShipData());
     }
 
-    public static void alterEntityMovementPost(Entity entity,
-        IntermediateMovementVariableStorage storage) {
+    public static void alterEntityMovementPost(Entity entity, IntermediateMovementVariableStorage storage) {
         double dx = storage.dxyz.x();
         double dy = storage.dxyz.y();
         double dz = storage.dxyz.z();
@@ -320,28 +320,20 @@ public class EntityCollisionInjector {
         double origDy = storage.origDxyz.y();
         double origDz = storage.origDxyz.z();
 
-        double origPosX = storage.origPosXyz.x();
-        double origPosY = storage.origPosXyz.y();
-        double origPosZ = storage.origPosXyz.z();
-
         boolean alreadyOnGround = storage.alreadyOnGround;
         double motionYBefore = storage.motionYBefore;
         float oldFallDistance = storage.oldFallDistance;
 
         ShipData worldBelow = ValkyrienUtils.getLastShipTouchedByEntity(entity);
 
-        entity.collidedHorizontally =
-            (motionInterfering(dx, origDx)) || (motionInterfering(dz, origDz));
+        entity.collidedHorizontally = (motionInterfering(dx, origDx)) || (motionInterfering(dz, origDz));
         entity.collidedVertically = isDifSignificant(dy, origDy);
-        entity.onGround =
-            entity.collidedVertically && origDy < 0 || alreadyOnGround || entity.onGround;
+        entity.onGround = entity.collidedVertically && origDy < 0 || alreadyOnGround || entity.onGround;
         entity.collided = entity.collidedHorizontally || entity.collidedVertically;
 
-        Vector3d entityPosInShip = new Vector3d(entity.posX, entity.posY - 0.20000000298023224D,
-            entity.posZ);
+        Vector3d entityPosInShip = new Vector3d(entity.posX, entity.posY - 0.20000000298023224D, entity.posZ);
 
-        worldBelow.getShipTransform()
-            .transformPosition(entityPosInShip, TransformType.GLOBAL_TO_SUBSPACE);
+        worldBelow.getShipTransform().transformPosition(entityPosInShip, TransformType.GLOBAL_TO_SUBSPACE);
 
         int j4 = MathHelper.floor(entityPosInShip.x);
         int l4 = MathHelper.floor(entityPosInShip.y);
@@ -355,7 +347,6 @@ public class EntityCollisionInjector {
 
         entity.fallDistance = oldFallDistance;
         if (entity instanceof EntityLivingBase) {
-
             if (!entity.world.isRemote && entity.fallDistance > 3.0F && entity.onGround) {
                 // System.out.println("LAND DAMNIT!");
                 float f = MathHelper.ceil(entity.fallDistance - 3.0F);
@@ -533,6 +524,24 @@ public class EntityCollisionInjector {
         }
 
         return collisions;
+    }
+
+    /**
+     * Preserves a boat's top contact when transforming its position leaves the standing entity
+     * slightly inside it. Vanilla's offset calculations otherwise stop treating the boat as a floor.
+     * Only the queried collision box changes; neither entity is repositioned.
+     */
+    @NotNull
+    public static AxisAlignedBB getBoatCollisionBox(@NotNull AxisAlignedBB boatBox, @NotNull AxisAlignedBB entityBox) {
+        double penetration = boatBox.maxY - entityBox.minY;
+        if (penetration <= 0D || penetration > errorSignificance
+                || entityBox.maxX <= boatBox.minX || entityBox.minX >= boatBox.maxX
+                || entityBox.maxZ <= boatBox.minZ || entityBox.minZ >= boatBox.maxZ
+        ) {
+            return boatBox;
+        }
+
+        return new AxisAlignedBB(boatBox.minX, boatBox.minY, boatBox.minZ, boatBox.maxX, entityBox.minY, boatBox.maxZ);
     }
 
     public static void setEntityPositionAndUpdateBB(Entity entity, double x, double y, double z) {

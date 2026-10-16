@@ -40,6 +40,7 @@
   "mixins": [
     "entity.MixinEntity",
     "entity.MixinEntityArrow",
+    "entity.MixinEntityBoat",
     "entity.MixinEntityIntrinsic",
     "entity.MixinEntityLivingBase",
     "entity.MixinEntityMinecart",

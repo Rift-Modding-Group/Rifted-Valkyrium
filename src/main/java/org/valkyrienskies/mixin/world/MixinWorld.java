@@ -2,8 +2,12 @@ package org.valkyrienskies.mixin.world;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.sugar.Local;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.item.EntityBoat;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.*;
@@ -11,6 +15,7 @@ import net.minecraft.world.IWorldEventListener;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
 import org.joml.Vector3d;
+import org.jetbrains.annotations.NotNull;
 import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.Interface.Remap;
 import org.spongepowered.asm.mixin.injection.At;
@@ -21,6 +26,8 @@ import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.config.VSConfig.ExplosionMode;
+import org.valkyrienskies.mod.common.ships.entity_interaction.EntityCollisionInjector;
+import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.ship_world.IHasShipManager;
 import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
@@ -446,5 +453,23 @@ public abstract class MixinWorld {
                 return;
             }
         }
+    }
+
+    //boats r weird
+    @Nullable
+    @WrapOperation(
+            method = "getCollisionBoxes(Lnet/minecraft/entity/Entity;Lnet/minecraft/util/math/AxisAlignedBB;)Ljava/util/List;",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/Entity;getCollisionBoundingBox()Lnet/minecraft/util/math/AxisAlignedBB;")
+    )
+    private AxisAlignedBB keepShipBoatTopContact(
+            @NotNull Entity collisionEntity, @NotNull Operation<AxisAlignedBB> original,
+            @Local(argsOnly = true) @Nullable Entity movingEntity
+    ) {
+        AxisAlignedBB collisionBox = original.call(collisionEntity);
+        if (collisionBox == null || movingEntity == null || !(collisionEntity instanceof EntityBoat) || EntityDraggable.getActiveShip(collisionEntity) == null) {
+            return collisionBox;
+        }
+
+        return EntityCollisionInjector.getBoatCollisionBox(collisionBox, movingEntity.getEntityBoundingBox());
     }
 }
