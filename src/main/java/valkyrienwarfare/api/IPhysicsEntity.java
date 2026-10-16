@@ -3,7 +3,6 @@ package valkyrienwarfare.api;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.NotNull;
-import valkyrienwarfare.api.forces.IShipForcesInducer;
 
 /**
  * This interface is a boiled down version of PhysicsObject used in Rifted Valkyrium.

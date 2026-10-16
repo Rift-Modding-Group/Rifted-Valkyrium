@@ -46,7 +46,7 @@ import org.valkyrienskies.mod.common.util.datastructures.IBlockPosSetAABB;
 import valkyrienwarfare.api.IPhysicsEntity;
 import valkyrienwarfare.api.IShipMaintenanceProvider;
 import valkyrienwarfare.api.TransformType;
-import valkyrienwarfare.api.forces.IShipForcesInducer;
+import valkyrienwarfare.api.IShipForcesInducer;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;

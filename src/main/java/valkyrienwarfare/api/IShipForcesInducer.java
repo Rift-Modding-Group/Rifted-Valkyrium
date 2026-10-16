@@ -1,4 +1,4 @@
-package valkyrienwarfare.api.forces;
+package valkyrienwarfare.api;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 

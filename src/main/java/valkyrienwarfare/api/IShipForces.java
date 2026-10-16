@@ -1,9 +1,8 @@
-package valkyrienwarfare.api.forces;
+package valkyrienwarfare.api;
 
 import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Vector3dc;
-import valkyrienwarfare.api.IPhysicsEntity;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
