@@ -3,8 +3,10 @@ package org.valkyrienskies.mod.common.capability.ship_world;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
+import org.jetbrains.annotations.NotNull;
 import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
+import org.valkyrienskies.mod.common.ships.ship_world.ShipLighting;
 
 public interface IShipWorld {
     //-----originally from IWorldVS-----
@@ -42,4 +44,7 @@ public interface IShipWorld {
     IPhysObjectWorld getManager();
 
     void setManager(IPhysObjectWorld physObjectWorld);
+
+    @NotNull
+    ShipLighting getLighting();
 }

@@ -1,7 +1,10 @@
 package org.valkyrienskies.mod.client.render;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
+
+import javax.annotation.Nullable;
 
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
@@ -14,6 +17,7 @@ import net.minecraft.util.BlockRenderLayer;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.BlockPos.MutableBlockPos;
+import net.minecraft.world.ChunkCache;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 import net.minecraftforge.client.ForgeHooksClient;
@@ -24,11 +28,12 @@ import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import valkyrienwarfare.api.TransformType;
 
 public class PhysRenderChunk {
-
     public IVSRenderChunk[] renderChunks = new IVSRenderChunk[16];
     public PhysicsObject toRender;
     public Chunk chunk;
-    private List<TileEntity> tileEntitiesToRender;
+    private Set<TileEntity> tileEntitiesToRender;
+    private boolean tileEntitiesDirty;
+    private int lightingDirtySections;
 
     public PhysRenderChunk(PhysicsObject toRender, Chunk chunk) {
         this.toRender = toRender;
@@ -40,17 +45,43 @@ public class PhysRenderChunk {
                 // Support old graphics cards that can't use VBOs.
                 if (OpenGlHelper.useVbo()) {
                     renderChunk = new RenderLayerVBO(this.chunk, i * 16, i * 16 + 15, this);
-                } else {
+                }
+                else {
                     renderChunk = new RenderLayerDisplayList(this.chunk, i * 16, i * 16 + 15, this);
                 }
-                renderChunks[i] = renderChunk;
+                this.renderChunks[i] = renderChunk;
             }
         }
-        this.tileEntitiesToRender = new ArrayList<>(chunk.getTileEntityMap().values());
-        Minecraft.getMinecraft().renderGlobal.updateTileEntities(new ArrayList<>(), tileEntitiesToRender);
+        this.tileEntitiesToRender = new HashSet<>(chunk.getTileEntityMap().values());
+        if (!this.tileEntitiesToRender.isEmpty()) {
+            Minecraft.getMinecraft().renderGlobal.updateTileEntities(List.of(), tileEntitiesToRender);
+        }
     }
 
     public void renderBlockLayer(BlockRenderLayer layerToRender, double partialTicks, int pass, ICamera iCamera) {
+        // Thousands of light callbacks can target the same section during one block change.
+        // Consume each section once, without creating renderers for empty, light-only storage.
+        int lightingUpdates = this.lightingDirtySections;
+        this.lightingDirtySections = 0;
+        for (int section = 0; section < renderChunks.length; section++) {
+            if ((lightingUpdates & (1 << section)) != 0 && renderChunks[section] != null) {
+                renderChunks[section].markDirty();
+            }
+        }
+
+        if (this.tileEntitiesDirty) {
+            Set<TileEntity> newTilesToRender = new HashSet<>(chunk.getTileEntityMap().values());
+            if (!newTilesToRender.equals(this.tileEntitiesToRender)) {
+                Set<TileEntity> removedTiles = new HashSet<>(this.tileEntitiesToRender);
+                removedTiles.removeAll(newTilesToRender);
+                Set<TileEntity> addedTiles = new HashSet<>(newTilesToRender);
+                addedTiles.removeAll(this.tileEntitiesToRender);
+                Minecraft.getMinecraft().renderGlobal.updateTileEntities(removedTiles, addedTiles);
+            }
+            this.tileEntitiesToRender = newTilesToRender;
+            this.tileEntitiesDirty = false;
+        }
+
         for (int i = 0; i < 16; i++) {
             IVSRenderChunk renderChunk = renderChunks[i];
             if (renderChunk != null) {
@@ -66,25 +97,31 @@ public class PhysRenderChunk {
         }
     }
 
-    public void updateLayers(int minLayer, int maxLayer) {
-        // Update tile entities
-        final List<TileEntity> newTilesToRender = new ArrayList<>(chunk.getTileEntityMap().values());
-        Minecraft.getMinecraft().renderGlobal
-                .updateTileEntities(tileEntitiesToRender, newTilesToRender);
-        this.tileEntitiesToRender = newTilesToRender;
+    /**
+     * A null layer mask queues lighting only; block updates also refresh tile entity membership.
+     * */
+    public void updateLayers(int minLayer, int maxLayer, @Nullable boolean[] layersToUpdate) {
+        if (layersToUpdate != null) {
+            this.tileEntitiesDirty = true;
 
-        for (int layerY = minLayer; layerY <= maxLayer; layerY++) {
-            IVSRenderChunk renderChunk = renderChunks[layerY];
-            if (renderChunk != null) {
-                renderChunk.markDirty();
-            } else {
-                IVSRenderChunk renderLayer;
-                if (OpenGlHelper.useVbo()) {
-                    renderLayer= new RenderLayerVBO(this.chunk, layerY * 16, layerY * 16 + 15, this);
-                } else {
-                    renderLayer = new RenderLayerDisplayList(this.chunk, layerY * 16, layerY * 16 + 15, this);
+            for (int layerY = minLayer; layerY <= maxLayer; layerY++) {
+                IVSRenderChunk renderChunk = this.renderChunks[layerY];
+                if (renderChunk != null) renderChunk.markDirty(layersToUpdate);
+                else {
+                    IVSRenderChunk renderLayer;
+                    if (OpenGlHelper.useVbo()) {
+                        renderLayer = new RenderLayerVBO(this.chunk, layerY * 16, layerY * 16 + 15, this);
+                    }
+                    else {
+                        renderLayer = new RenderLayerDisplayList(this.chunk, layerY * 16, layerY * 16 + 15, this);
+                    }
+                    this.renderChunks[layerY] = renderLayer;
                 }
-                renderChunks[layerY] = renderLayer;
+            }
+        }
+        else {
+            for (int layerY = minLayer; layerY <= maxLayer; layerY++) {
+                this.lightingDirtySections |= 1 << layerY;
             }
         }
     }
@@ -98,10 +135,12 @@ public class PhysRenderChunk {
         }
     }
 
-    private interface IVSRenderChunk {
+    public interface IVSRenderChunk {
         void renderBlockLayer(BlockRenderLayer layerToRender, double partialTicks, int pass);
 
         void markDirty();
+
+        void markDirty(boolean[] layersToUpdate);
 
         void deleteRenderChunk();
 
@@ -110,8 +149,7 @@ public class PhysRenderChunk {
         int maxY();
     }
 
-    private class RenderLayerVBO implements IVSRenderChunk {
-
+    private static class RenderLayerVBO implements IVSRenderChunk {
         Chunk chunkToRender;
         int yMin, yMax;
         VertexBuffer cutoutBuffer, cutoutMippedBuffer, solidBuffer, translucentBuffer;
@@ -143,6 +181,20 @@ public class PhysRenderChunk {
             needsCutoutMippedUpdate = true;
             needsSolidUpdate = true;
             needsTranslucentUpdate = true;
+        }
+
+        @Override
+        public void markDirty(boolean[] layersToUpdate) {
+            for (BlockRenderLayer renderLayer : BlockRenderLayer.values()) {
+                if (!layersToUpdate[renderLayer.ordinal()]) continue;
+
+                switch (renderLayer) {
+                    case CUTOUT -> needsCutoutUpdate = true;
+                    case CUTOUT_MIPPED -> needsCutoutMippedUpdate = true;
+                    case SOLID -> needsSolidUpdate = true;
+                    case TRANSLUCENT -> needsTranslucentUpdate = true;
+                }
+            }
         }
 
         public void deleteRenderChunk() {
@@ -244,6 +296,14 @@ public class PhysRenderChunk {
             // Be careful with render layers
             BlockRenderLayer oldLayer = MinecraftForgeClient.getRenderLayer();
             ForgeHooksClient.setRenderLayer(layerToUpdate);
+            // Ship meshes already use local coordinates. Sample their own chunk lighting directly,
+            // rather than running world-space ship lighting searches for every model vertex.
+            ChunkCache renderAccess = new ChunkCache(
+                    chunkToRender.getWorld(),
+                    new BlockPos(chunkToRender.x << 4, yMin, chunkToRender.z << 4),
+                    new BlockPos((chunkToRender.x << 4) + 15, yMax, (chunkToRender.z << 4) + 15),
+                    1
+            );
             MutableBlockPos pos = new MutableBlockPos();
             for (int x = chunkToRender.x * 16; x < chunkToRender.x * 16 + 16; x++) {
                 for (int z = chunkToRender.z * 16; z < chunkToRender.z * 16 + 16; z++) {
@@ -254,7 +314,7 @@ public class PhysRenderChunk {
                             if (iblockstate.getBlock()
                                 .canRenderInLayer(iblockstate, layerToUpdate)) {
                                 Minecraft.getMinecraft().getBlockRendererDispatcher()
-                                    .renderBlock(iblockstate, pos, chunkToRender.getWorld(), vsChunkBuilder);
+                                    .renderBlock(iblockstate, pos, renderAccess, vsChunkBuilder);
                             }
                         } catch (NullPointerException e) {
                             System.out.println("Something was null!");
@@ -326,6 +386,20 @@ public class PhysRenderChunk {
             needsTranslucentUpdate = true;
         }
 
+        @Override
+        public void markDirty(boolean[] layersToUpdate) {
+            for (BlockRenderLayer renderLayer : BlockRenderLayer.values()) {
+                if (!layersToUpdate[renderLayer.ordinal()]) continue;
+
+                switch (renderLayer) {
+                    case CUTOUT -> needsCutoutUpdate = true;
+                    case CUTOUT_MIPPED -> needsCutoutMippedUpdate = true;
+                    case SOLID -> needsSolidUpdate = true;
+                    case TRANSLUCENT -> needsTranslucentUpdate = true;
+                }
+            }
+        }
+
         public void deleteRenderChunk() {
             clearRenderLists();
         }
@@ -337,8 +411,7 @@ public class PhysRenderChunk {
             GLAllocation.deleteDisplayLists(glCallListTranslucent);
         }
 
-        public void renderBlockLayer(BlockRenderLayer layerToRender, double partialTicks,
-                                     int pass) {
+        public void renderBlockLayer(BlockRenderLayer layerToRender, double partialTicks, int pass) {
             switch (layerToRender) {
                 case CUTOUT:
                     if (needsCutoutUpdate) {
@@ -409,22 +482,26 @@ public class PhysRenderChunk {
 
             BlockRenderLayer oldLayer = MinecraftForgeClient.getRenderLayer();
             ForgeHooksClient.setRenderLayer(layerToUpdate);
+            ChunkCache renderAccess = new ChunkCache(
+                    this.chunkToRender.getWorld(),
+                    new BlockPos(this.chunkToRender.x << 4, this.yMin, this.chunkToRender.z << 4),
+                    new BlockPos((this.chunkToRender.x << 4) + 15, this.yMax, (this.chunkToRender.z << 4) + 15),
+                    1
+            );
             MutableBlockPos pos = new MutableBlockPos();
-            for (int x = chunkToRender.x * 16; x < chunkToRender.x * 16 + 16; x++) {
-                for (int z = chunkToRender.z * 16; z < chunkToRender.z * 16 + 16; z++) {
-                    for (int y = yMin; y <= yMax; y++) {
+            for (int x = this.chunkToRender.x * 16; x < this.chunkToRender.x * 16 + 16; x++) {
+                for (int z = this.chunkToRender.z * 16; z < this.chunkToRender.z * 16 + 16; z++) {
+                    for (int y = this.yMin; y <= this.yMax; y++) {
                         pos.setPos(x, y, z);
-                        iblockstate = chunkToRender.getBlockState(pos);
+                        iblockstate = this.chunkToRender.getBlockState(pos);
                         try {
-                            if (iblockstate.getBlock()
-                                    .canRenderInLayer(iblockstate, layerToUpdate)) {
+                            if (iblockstate.getBlock().canRenderInLayer(iblockstate, layerToUpdate)) {
                                 Minecraft.getMinecraft().getBlockRendererDispatcher()
-                                        .renderBlock(iblockstate, pos, chunkToRender.getWorld(),
-                                                worldrenderer);
+                                        .renderBlock(iblockstate, pos, renderAccess, worldrenderer);
                             }
-                        } catch (NullPointerException e) {
-                            System.out.println(
-                                    "Something was null! LValkyrienSkiesBase/render/PhysRenderChunk#updateList");
+                        }
+                        catch (NullPointerException e) {
+                            System.out.println("Something was null! LValkyrienSkiesBase/render/PhysRenderChunk#updateList");
                         }
                     }
                 }

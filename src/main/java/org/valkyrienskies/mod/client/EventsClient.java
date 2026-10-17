@@ -12,6 +12,7 @@ import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.world.World;
+import net.minecraft.world.EnumSkyBlock;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraftforge.client.event.DrawBlockHighlightEvent;
 import net.minecraftforge.client.event.ModelBakeEvent;
@@ -79,6 +80,7 @@ public class EventsClient {
                 // Tick the IShipManager on the world client.
                 shipWorld.getManager().tick();
                 EntityDraggable.tickAddedVelocityForWorld(world);
+                shipWorld.getLighting().process(pos -> world.checkLightFor(EnumSkyBlock.SKY, pos), System::nanoTime);
             }
         }
     }

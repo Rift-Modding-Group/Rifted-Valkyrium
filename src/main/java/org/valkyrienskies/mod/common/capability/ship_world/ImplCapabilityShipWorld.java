@@ -4,9 +4,11 @@ import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
+import org.jetbrains.annotations.NotNull;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
+import org.valkyrienskies.mod.common.ships.ship_world.ShipLighting;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import valkyrienwarfare.api.TransformType;
 
@@ -20,6 +22,7 @@ public class ImplCapabilityShipWorld implements IShipWorld {
 
     //---ship manager stuff---
     private IPhysObjectWorld manager = null;
+    private ShipLighting lighting = new ShipLighting();
 
     //-----originally from IWorldVS-----
     @Override
@@ -165,5 +168,11 @@ public class ImplCapabilityShipWorld implements IShipWorld {
     @Override
     public void setManager(IPhysObjectWorld physObjectWorld) {
         this.manager = physObjectWorld;
+    }
+
+    @Override
+    @NotNull
+    public ShipLighting getLighting() {
+        return this.lighting;
     }
 }

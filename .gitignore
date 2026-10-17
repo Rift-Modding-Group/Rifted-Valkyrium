@@ -46,3 +46,6 @@ Thumbs.db
 
 # logs
 /logs/*
+
+# Generated wiki asset renders
+/wiki-renders/

@@ -13,16 +13,14 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.TextComponentTranslation;
 import net.minecraft.world.Explosion;
 import net.minecraft.world.World;
+import net.minecraft.world.EnumSkyBlock;
 import net.minecraftforge.client.event.InputUpdateEvent;
 import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.event.entity.living.LivingDropsEvent;
-import net.minecraftforge.event.entity.player.PlayerInteractEvent;
-import net.minecraftforge.event.world.BlockEvent;
 import net.minecraftforge.event.world.ChunkEvent;
 import net.minecraftforge.event.world.ExplosionEvent;
 import net.minecraftforge.event.world.WorldEvent;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
-import net.minecraftforge.fml.common.eventhandler.Event.Result;
 import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent.Phase;
@@ -115,6 +113,10 @@ public class EventsCommon {
             case END:
                 physObjectWorld.tick();
                 EntityDraggable.tickAddedVelocityForWorld(world);
+                IShipWorld shipWorld = world.getCapability(VSCapabilityRegistry.VS_SHIP_WORLD, null);
+                if (shipWorld != null) {
+                    shipWorld.getLighting().process(pos -> world.checkLightFor(EnumSkyBlock.SKY, pos), System::nanoTime);
+                }
                 break;
         }
     }
@@ -185,20 +187,6 @@ public class EventsCommon {
         if (shipWorld != null && shipWorld.getManager() != null) {
             shipWorld.getManager().invalidateBlockSectionsInChunk(event.getChunk().x, event.getChunk().z);
         }
-    }
-
-    @SubscribeEvent(priority = EventPriority.HIGHEST)
-    public static void onPlayerInteractEvent(PlayerInteractEvent event) {
-        BlockPos pos = event.getPos();
-
-        Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(event.getWorld(), pos);
-        if (physicsObject.isPresent()) event.setResult(Result.ALLOW);
-    }
-
-    @SubscribeEvent(priority = EventPriority.HIGHEST)
-    public static void onBlockBreakFirst(BlockEvent event) {
-        ValkyrienUtils.getPhysoManagingBlock(event.getWorld(), event.getPos())
-            .ifPresent(physicsObject -> event.setResult(Result.ALLOW));
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)

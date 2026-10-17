@@ -6,10 +6,12 @@ import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.RenderGlobal;
 import net.minecraft.client.renderer.culling.ICamera;
 import net.minecraft.client.resources.I18n;
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.BlockRenderLayer;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.BlockPos.MutableBlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.chunk.Chunk;
@@ -24,6 +26,7 @@ import org.valkyrienskies.mod.common.util.JOML;
 import valkyrienwarfare.api.TransformType;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.text.DecimalFormat;
 import java.util.HashMap;
@@ -37,7 +40,6 @@ import java.util.Objects;
  */
 @ParametersAreNonnullByDefault
 public class PhysObjectRenderManager {
-
     // This pos is used to prevent Z-Buffer Errors D:
     // It's actual value is completely irrelevant as long as it's close to the
     // Ship's centerBlockPos
@@ -82,17 +84,14 @@ public class PhysObjectRenderManager {
         }
     }
 
-    public void updateRange(int minX, int minY, int minZ, int maxX, int maxY, int maxZ,
-        boolean updateImmediately) {
-        if (renderChunks == null || parent == null || parent.getChunkClaim() == null) {
+    public void updateRange(int minX, int minY, int minZ, int maxX, int maxY, int maxZ, @Nullable IBlockState previousState) {
+        if (this.renderChunks == null || this.parent == null || this.parent.getChunkClaim() == null) {
             return;
         }
 
         int size = (maxX + 1 - minX) * (maxZ + 1 - minZ) * (maxY + 1 - minY);
 
-        if (size > 65535) {
-            return;
-        }
+        if (size > 65535) return;
 
         int minChunkX = minX >> 4;
         int maxChunkX = maxX >> 4;
@@ -101,13 +100,40 @@ public class PhysObjectRenderManager {
 
         int minBlockArrayY = Math.max(0, minY >> 4);
         int maxBlockArrayY = Math.min(15, maxY >> 4);
+        boolean[] layersToUpdate = null;
+
+        // Light propagation can notify every voxel in several new storage sections. It changes
+        // vertex lighting, not block geometry or tile entities, so queue those sections directly.
+        if (previousState != null) {
+            BlockRenderLayer[] renderLayers = BlockRenderLayer.values();
+            layersToUpdate = new boolean[renderLayers.length];
+            for (BlockRenderLayer renderLayer : renderLayers) {
+                if (previousState.getBlock().canRenderInLayer(previousState, renderLayer)) {
+                    layersToUpdate[renderLayer.ordinal()] = true;
+                }
+            }
+
+            MutableBlockPos blockPos = new MutableBlockPos();
+            for (int x = minX; x <= maxX; x++) {
+                for (int z = minZ; z <= maxZ; z++) {
+                    for (int y = Math.max(0, minY); y <= Math.min(255, maxY); y++) {
+                        blockPos.setPos(x, y, z);
+                        IBlockState state = this.parent.getWorld().getBlockState(blockPos);
+                        for (BlockRenderLayer renderLayer : renderLayers) {
+                            if (state.getBlock().canRenderInLayer(state, renderLayer)) {
+                                layersToUpdate[renderLayer.ordinal()] = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
             for (int chunkZ = minChunkZ; chunkZ <= maxChunkZ; chunkZ++) {
                 ChunkPos pos = new ChunkPos(chunkX, chunkZ);
-                if (renderChunks.containsKey(pos)) {
-                    renderChunks.get(pos).updateLayers(minBlockArrayY, maxBlockArrayY);
-                }
+                PhysRenderChunk renderChunk = this.renderChunks.get(pos);
+                if (renderChunk != null) renderChunk.updateLayers(minBlockArrayY, maxBlockArrayY, layersToUpdate);
             }
         }
     }

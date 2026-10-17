@@ -20,6 +20,10 @@ import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.valkyrienskies.mod.common.ships.chunk_claims.ShipChunkAllocator;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 
@@ -29,7 +33,6 @@ import java.util.Optional;
 
 @Mixin(RenderGlobal.class)
 public abstract class MixinRenderGlobal {
-
     @Shadow
     @Final
     public Map<Integer, DestroyBlockProgress> damagedBlocks;
@@ -220,4 +223,10 @@ public abstract class MixinRenderGlobal {
         }
     }
 
+    @Inject(method = "notifyLightSet", at = @At("HEAD"), cancellable = true)
+    private void skipShipTerrainLightUpdate(BlockPos pos, CallbackInfo callbackInfo) {
+        // VSWorldEventListener independently queues ship mesh updates. Sending these distant
+        // positions to the terrain renderer creates a second, unused per-voxel update set.
+        if (ShipChunkAllocator.isBlockInShipyard(pos)) callbackInfo.cancel();
+    }
 }

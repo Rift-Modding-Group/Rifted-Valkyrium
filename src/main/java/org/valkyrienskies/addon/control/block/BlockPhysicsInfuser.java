@@ -88,9 +88,7 @@ public class BlockPhysicsInfuser extends BlockVSDirectional implements ITileEnti
     @Override
     public void breakBlock(World worldIn, BlockPos pos, IBlockState state) {
         TileEntity tileEntity = worldIn.getTileEntity(pos);
-        if (!(tileEntity instanceof TileEntityPhysicsInfuser tilePhysicsInfuser)) return;
-        // If there's a valid TileEntity, try dropping the contents of it's inventory.
-        if (!tilePhysicsInfuser.isInvalid()) {
+        if (!worldIn.isRemote && tileEntity instanceof TileEntityPhysicsInfuser tilePhysicsInfuser && !tilePhysicsInfuser.isInvalid()) {
             IItemHandler handler = tilePhysicsInfuser.getCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, null);
             // Safety in case the capabilities system breaks. If we can't find the handler then
             // there isn't anything to drop anyways.
@@ -105,11 +103,9 @@ public class BlockPhysicsInfuser extends BlockVSDirectional implements ITileEnti
         // Remove the dummy block of this physics infuser, if there is one.
         BlockPos dummyBlockPos = getDummyStatePos(state, pos);
         super.breakBlock(worldIn, pos, state);
-        if (worldIn.getBlockState(dummyBlockPos).getBlock() == ValkyrienSkiesControl.INSTANCE.vsControlBlocks.physicsInfuserDummy) {
+        if (!worldIn.isRemote && worldIn.getBlockState(dummyBlockPos).getBlock() == ValkyrienSkiesControl.INSTANCE.vsControlBlocks.physicsInfuserDummy) {
             worldIn.setBlockToAir(dummyBlockPos);
         }
-        // Finally, delete the tile entity.
-        worldIn.removeTileEntity(pos);
     }
 
     @Override

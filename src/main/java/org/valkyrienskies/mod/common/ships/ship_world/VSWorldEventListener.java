@@ -46,7 +46,7 @@ public class VSWorldEventListener implements IWorldEventListener {
                     pos.getX() + 1,
                     pos.getY() + 1,
                     pos.getZ() + 1,
-                    (flags & 8) != 0
+                    oldState
             ));
             return;
         }
@@ -68,7 +68,7 @@ public class VSWorldEventListener implements IWorldEventListener {
                 pos.getX() + 1,
                 pos.getY() + 1,
                 pos.getZ() + 1,
-                false
+                null
         ));
     }
 

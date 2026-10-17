@@ -6,6 +6,7 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.World;
+import net.minecraft.world.EnumSkyBlock;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.IChunkProvider;
 import net.minecraft.world.gen.IChunkGenerator;
@@ -19,6 +20,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.valkyrienskies.mod.common.ships.QueryableShipData;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.ShipDataMethods;
+import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
+import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
+import org.valkyrienskies.mod.common.ships.ship_world.ShipLighting;
 import org.valkyrienskies.mod.common.ships.chunk_claims.ShipChunkAllocator;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 
@@ -26,7 +30,6 @@ import java.util.Optional;
 
 @Mixin(value = Chunk.class, priority = 1001)
 public abstract class MixinChunk {
-
     @Shadow
     @Final
     public int x;
@@ -41,6 +44,25 @@ public abstract class MixinChunk {
 
     @Shadow
     public abstract IBlockState getBlockState(BlockPos pos);
+
+    @Inject(method = "setLightFor", at = @At("HEAD"))
+    private void initializeShipLightStorage(EnumSkyBlock type, BlockPos pos, int light, CallbackInfo callbackInfo) {
+        if (!ShipChunkAllocator.isChunkInShipyard(this.x, this.z)) return;
+        ShipLighting.initializeLightStorage((Chunk) (Object) this, pos.getY() >> 4, this.world.provider.hasSkyLight());
+    }
+
+    @Inject(method = "updateSkylightNeighborHeight", at = @At("HEAD"), cancellable = true)
+    private void queueShipSkyColumn(int x, int z, int startY, int endY, CallbackInfo callbackInfo) {
+        if (!ShipChunkAllocator.isChunkInShipyard(this.x, this.z)) return;
+        IShipWorld shipWorld = this.world.getCapability(VSCapabilityRegistry.VS_SHIP_WORLD, null);
+        if (shipWorld == null) return;
+
+        if (endY > startY && this.world.isAreaLoaded(new BlockPos(x, 0, z), 16)) {
+            shipWorld.getLighting().enqueueColumn(x, z, startY, endY);
+            ((Chunk) (Object) this).markDirty();
+        }
+        callbackInfo.cancel();
+    }
 
     @Inject(method = "addTileEntity(Lnet/minecraft/util/math/BlockPos;Lnet/minecraft/tileentity/TileEntity;)V", at = @At("TAIL"))
     private void post_addTileEntity(BlockPos pos, TileEntity tileEntityIn,
