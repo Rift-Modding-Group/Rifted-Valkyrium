@@ -21,6 +21,7 @@ import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMoun
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.ShipLocalEntityMovementData;
 import org.valkyrienskies.mod.common.config.VSConfig;
+import org.valkyrienskies.mod.common.entity.EntityMountable;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
@@ -104,6 +105,10 @@ public class EntityDraggable {
      * motion remains relative to the ship, while the draggable capability supplies carrier motion.
      */
     public static boolean startTrackingShip(@NotNull Entity entity, @NotNull ShipData ship) {
+        // EntityMountable already derives its position from the ship every tick.
+        // Generic dragging would apply the ship transform a second time to it and its passengers.
+        if (entity instanceof EntityMountable) return false;
+
         IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
         if (draggable == null) return false;
 

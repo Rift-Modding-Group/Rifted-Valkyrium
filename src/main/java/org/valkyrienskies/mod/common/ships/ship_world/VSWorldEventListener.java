@@ -2,8 +2,6 @@ package org.valkyrienskies.mod.common.ships.ship_world;
 
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.item.EntityArmorStand;
-import net.minecraft.entity.item.EntityBoat;
 import net.minecraft.entity.item.EntityFallingBlock;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
@@ -17,8 +15,7 @@ import org.joml.Vector3d;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMount;
 import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
-import org.valkyrienskies.mod.common.ships.ship_transform.CoordinateSpaceType;
-import org.valkyrienskies.mod.common.entity.EntityMountable;
+import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import valkyrienwarfare.api.TransformType;
 
@@ -104,16 +101,18 @@ public class VSWorldEventListener implements IWorldEventListener {
 
         Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(world, posAt);
         if (!this.worldObj.isRemote && physicsObject.isPresent() && !(entity instanceof EntityFallingBlock)) {
+            PhysicsObject spawningShip = physicsObject.get();
             BlockPos rawPosBeforeTransform = new BlockPos(entity.posX, entity.posY, entity.posZ);
             world.getChunk(rawPosBeforeTransform.getX() >> 4, rawPosBeforeTransform.getZ() >> 4)
                 .removeEntity(entity);
-            physicsObject.get()
+            spawningShip
                 .getShipTransformationManager()
                 .getCurrentTickTransform().transform(entity,
                 TransformType.SUBSPACE_TO_GLOBAL, false);
             BlockPos rawPosAfterTransform = new BlockPos(entity.posX, entity.posY, entity.posZ);
             world.getChunk(rawPosAfterTransform.getX() >> 4, rawPosAfterTransform.getZ() >> 4)
                 .addEntity(entity);
+            EntityDraggable.startTrackingShip(entity, spawningShip.getShipData());
         }
     }
 
