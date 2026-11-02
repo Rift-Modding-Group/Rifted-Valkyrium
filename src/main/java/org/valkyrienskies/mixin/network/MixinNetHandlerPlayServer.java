@@ -1,10 +1,15 @@
 package org.valkyrienskies.mixin.network;
 
 import com.google.common.collect.ImmutableList;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.sugar.Local;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.MoverType;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.network.NetHandlerPlayServer;
 import net.minecraft.network.play.client.CPacketPlayer;
+import net.minecraft.network.play.client.CPacketVehicleMove;
 import net.minecraft.network.play.server.SPacketPlayerPosLook;
 import net.minecraft.util.Tuple;
 import net.minecraft.util.math.AxisAlignedBB;
@@ -25,6 +30,7 @@ import org.valkyrienskies.mod.common.network.PlayerMovementData;
 import org.valkyrienskies.mod.common.ships.QueryableShipData;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.chunk_claims.ShipChunkAllocator;
+import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.VSMath;
@@ -51,6 +57,26 @@ public abstract class MixinNetHandlerPlayServer {
     public double lastGoodY;
     @Shadow
     public double lastGoodZ;
+
+    /**
+     * A ship can move the vehicle after vanilla records its last accepted position. Resolve from
+     * the vehicle's actual position so that carrier movement is not applied again by validation.
+     */
+    @WrapOperation(
+            method = "processVehicleMove",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/Entity;move(Lnet/minecraft/entity/MoverType;DDD)V")
+    )
+    private void validateVehicleFromCurrentPosition(
+            Entity vehicle, MoverType moverType, double x, double y, double z, Operation<Void> original,
+            @Local(argsOnly = true) CPacketVehicleMove packet
+    ) {
+        if (EntityDraggable.getActiveShip(vehicle) != null) {
+            x = packet.getX() - vehicle.posX;
+            y = packet.getY() - vehicle.posY - 1.0E-6D;
+            z = packet.getZ() - vehicle.posZ;
+        }
+        original.call(vehicle, moverType, x, y, z);
+    }
 
     /**
      * Fixes things such that when mods try to teleport players into the ship space, VS will either
@@ -145,6 +171,11 @@ public abstract class MixinNetHandlerPlayServer {
     private void preProcessPlayer(final CPacketPlayer packetPlayer, final CallbackInfo info) {
         // Don't run any of this code on the network thread!
         if (this.player.getServerWorld().isCallingFromMinecraftThread()) {
+            // Riding packets already carry the driver's current yaw and pitch. Replacing them
+            // with getLook()-derived head angles feeds a delayed orientation back into mounts.
+            // Vehicle movement and the normal passenger tick own mounted positions.
+            if (this.player.isRiding()) return;
+
             // This fixes players dying of fall damage when changing dimensions
             if (this.player.isInvulnerableDimensionChange()) {
                 return;

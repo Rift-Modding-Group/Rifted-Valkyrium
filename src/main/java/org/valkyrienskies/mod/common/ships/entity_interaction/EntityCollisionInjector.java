@@ -466,14 +466,11 @@ public class EntityCollisionInjector {
                 List<AxisAlignedBB> collidingBBs = entity.world.getCollisionBoxes(entity, bb);
 
                 // TODO: Fix the performance of this!
-                if (entity.world.isRemote || entity instanceof EntityPlayer) {
-                    VSMath.mergeAABBList(collidingBBs);
-                }
+                VSMath.mergeAABBList(collidingBBs);
 
                 for (AxisAlignedBB inLocal : collidingBBs) {
                     ShipCollisionBox poly = new ShipCollisionBox(inLocal,
-                        wrapper.getShipTransformationManager()
-                            .getCurrentTickTransform(),
+                        wrapper.getShipTransformationManager().getCurrentTickTransform(),
                         TransformType.SUBSPACE_TO_GLOBAL,
                         wrapper.getShipTransformationManager().normals,
                         wrapper);

@@ -23,6 +23,8 @@ public class ImplCapabilityEntityShipDraggable implements IEntityShipDraggable {
     private int ticksInAirPocket;
     @Nullable
     private ShipLocalEntityMovementData shipLocalMovementData;
+    @Nullable
+    private Vector3dc renderRelativeMovement;
 
     //---ship contact info---
     @Override
@@ -116,6 +118,17 @@ public class ImplCapabilityEntityShipDraggable implements IEntityShipDraggable {
             this.shipLocalMovementData = new ShipLocalEntityMovementData();
         }
         return this.shipLocalMovementData;
+    }
+
+    @Override
+    @Nullable
+    public Vector3dc getRenderRelativeMovement() {
+        return this.renderRelativeMovement;
+    }
+
+    @Override
+    public void setRenderRelativeMovement(@Nullable Vector3dc movement) {
+        this.renderRelativeMovement = movement;
     }
 
     //---other stuff---

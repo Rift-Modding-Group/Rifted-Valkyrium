@@ -146,7 +146,8 @@ public class MixinEntityTrackerEntry {
                     componentMask = MessageEntityShipMovement.ROTATION;
             case SPacketEntityTeleport sPacketEntityTeleport ->
                     componentMask = MessageEntityShipMovement.POSITION | MessageEntityShipMovement.ROTATION;
-            case SPacketEntityVelocity sPacketEntityVelocity -> componentMask = MessageEntityShipMovement.VELOCITY;
+            case SPacketEntityVelocity sPacketEntityVelocity ->
+                    componentMask = MessageEntityShipMovement.VELOCITY | MessageEntityShipMovement.VELOCITY_UPDATE;
             case SPacketEntityHeadLook sPacketEntityHeadLook -> componentMask = MessageEntityShipMovement.HEAD_ROTATION;
             case null, default -> {
                 return;
@@ -175,9 +176,9 @@ public class MixinEntityTrackerEntry {
 
     @Inject(method = "updatePlayerEntity", at = @At("RETURN"))
     private void initializeNewTrackingPlayer(EntityPlayerMP player, CallbackInfo callbackInfo) {
-        if (this.playerWasAlreadyTracking
-                || !this.trackingPlayers.contains(player)
-                || this.shipMovementComponentMask == MessageEntityShipMovement.ALL_COMPONENTS) {
+        if (this.playerWasAlreadyTracking || !this.trackingPlayers.contains(player)
+                || (this.shipMovementComponentMask & MessageEntityShipMovement.ALL_COMPONENTS) == MessageEntityShipMovement.ALL_COMPONENTS
+        ) {
             return;
         }
 
@@ -185,8 +186,7 @@ public class MixinEntityTrackerEntry {
         if (activeShip == null) return;
 
         ValkyrienSkiesMod.physWrapperNetwork.sendTo(new MessageEntityShipMovement(
-                this.trackedEntity,
-                activeShip,
+                this.trackedEntity, activeShip,
                 MessageEntityShipMovement.ALL_COMPONENTS,
                 EntityTracker.getPositionLong(this.trackedEntity.posX),
                 EntityTracker.getPositionLong(this.trackedEntity.posY),

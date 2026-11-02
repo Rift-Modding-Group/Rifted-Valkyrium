@@ -6,6 +6,7 @@ import net.minecraft.entity.item.EntityBoat;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.item.EntityXPOrb;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.projectile.EntityFireball;
 import net.minecraft.util.Tuple;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.MathHelper;
@@ -148,13 +149,65 @@ public class EntityDraggable {
     }
 
     /**
+     * Returns movement across the deck, excluding the ship's own translation and rotation.
+     * Is here as part of RiftLibrary compat due to how its speed helper functions
+     * calculate the movement speed of an entity.
+     * */
+    @Nullable
+    public static Vector3dc getShipRelativeMovement(@NotNull Entity entity) {
+        IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
+        if (draggable == null) return null;
+        if (draggable.getRenderRelativeMovement() != null) return draggable.getRenderRelativeMovement();
+
+        ShipLocalEntityMovementData movementData = draggable.getShipLocalMovementData();
+        Vector3d movement;
+        if (movementData != null && movementData.isActive() && movementData.isInitialized()) {
+            movement = movementData.getRelativeMovement();
+        }
+        else {
+            ShipData ship = getActiveShip(entity);
+            if (ship == null) return null;
+
+            movement = new Vector3d(
+                    entity.posX - entity.prevPosX,
+                    entity.posY - entity.prevPosY,
+                    entity.posZ - entity.prevPosZ
+            ).sub(draggable.getAddedLinearVelocity());
+            ship.getPrevTickShipTransform().transformDirection(movement, TransformType.GLOBAL_TO_SUBSPACE);
+        }
+        // Transform roundoff must not make a stationary entity satisfy an animation's isMoving() > 0 check.
+        if (Math.abs(movement.x) < 1E-7D) movement.x = 0D;
+        if (Math.abs(movement.y) < 1E-7D) movement.y = 0D;
+        if (Math.abs(movement.z) < 1E-7D) movement.z = 0D;
+        return movement;
+    }
+
+    /**
      * Adds the ship below velocity to entity.
      */
     private static void addEntityVelocityFromShipBelow(@NotNull Entity entity) {
         IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
         if (draggable == null) return;
 
-        //make sure entities on top of boats that r on top of ships get dragged along too
+        //make sure entities ridin on another entity thats on a ship get dragged along too
+        if (entity.isRiding()) {
+            EntityShipMountData mountData = ValkyrienUtils.getMountedShipAndPos(entity);
+            ShipData ridingShip;
+            if (mountData.isMounted()) ridingShip = mountData.mountedShip().getShipData();
+            else ridingShip = getActiveShip(entity.getLowestRidingEntity());
+
+            draggable.setLastTouchedShip(ridingShip);
+            draggable.setTicksSinceTouchedShip(ridingShip == null ? VSConfig.ticksToStickToShip : 0);
+            draggable.setTicksPartOfGround(0);
+            draggable.setAddedLinearVelocity(new Vector3d());
+            draggable.setAddedYawVelocity(0D);
+            draggable.clearPendingShipPosition();
+            ShipLocalEntityMovementData movementData = draggable.getShipLocalMovementData();
+            if (movementData != null) movementData.clear();
+            return;
+        }
+
+        //make sure entities on top of boats (NOT RIDING JUST ON TOP OF AND COLLIDING) that r on top of ships get dragged along too
         ShipData boatShip = getShipFromBoatBelow(entity);
         if (boatShip != null) {
             draggable.setLastTouchedShip(boatShip);
@@ -251,7 +304,15 @@ public class EntityDraggable {
                     livingEntity.limbSwingAmount = correctedLimbSwingAmount;
                 }
 
-                updatePassengersAfterCarrierMovement(entity, yawMovement);
+                // The mount's interpolation can undo steering performed by updatePassenger earlier
+                // this tick. Sharing that correction with its riders feeds delayed server angles
+                // back into mouse input. Only the ship's own rotation should carry passengers along.
+                ShipTransform previousShipTransform = physicsObject.getPrevTickShipTransform();
+                float shipYawMovement = MathHelper.wrapDegrees((float) (
+                        shipLocalMovementData.getWorldYaw(currentShipTransform, 0D)
+                                - shipLocalMovementData.getWorldYaw(previousShipTransform, 0D)
+                ));
+                updatePassengersAfterCarrierMovement(entity, shipYawMovement);
 
                 if (shipLocalMovementData.hasVelocity()) {
                     Vector3d worldVelocity = shipLocalMovementData.getWorldVelocity(currentShipTransform);
@@ -261,7 +322,7 @@ public class EntityDraggable {
                 draggable.setLastTouchedShip(physicsObject.getShipData());
                 draggable.setTicksSinceTouchedShip(0);
                 draggable.setAddedLinearVelocity(worldPosition.sub(oldWorldPosition, new Vector3d()));
-                draggable.setAddedYawVelocity(yawMovement);
+                draggable.setAddedYawVelocity(shipYawMovement);
                 return;
             }
         }
@@ -350,28 +411,6 @@ public class EntityDraggable {
             return;
         }
 
-        //fix to ensure players sitting on modded chairs on ships stay in place
-        EntityShipMountData anchoredMountData = ValkyrienUtils.getAnchoredMountShipAndPos(entity);
-        if (anchoredMountData.isMounted()) {
-            draggable.setLastTouchedShip(anchoredMountData.mountedShip().getShipData());
-            draggable.setTicksSinceTouchedShip(0);
-            draggable.setTicksPartOfGround(0);
-            draggable.setAddedLinearVelocity(new Vector3d());
-            draggable.setAddedYawVelocity(0);
-            return;
-        }
-
-        //for the mod's own chairs
-        EntityShipMountData mountData = ValkyrienUtils.getMountedShipAndPos(entity);
-        if (entity.isRiding()) {
-            ShipData ridingShip = mountData.isMounted() ? mountData.mountedShip().getShipData() : null;
-            draggable.setLastTouchedShip(ridingShip);
-            draggable.setTicksSinceTouchedShip(ridingShip == null ? VSConfig.ticksToStickToShip : 0);
-            draggable.setAddedLinearVelocity(new Vector3d());
-            draggable.setAddedYawVelocity(0D);
-            return;
-        }
-
         ShipData lastShipTouchedPlayer = draggable.getLastTouchedShip();
         int oldTicksSinceTouchedShip = draggable.getTicksSinceTouchedShip();
         Vector3dc oldVelocityAdded = draggable.getAddedLinearVelocity();
@@ -408,26 +447,29 @@ public class EntityDraggable {
             }
         }
         else {
-            float rotationYaw = entity.rotationYaw;
-            float rotationPitch = entity.rotationPitch;
-            float previousRotationYaw = entity.prevRotationYaw;
-            float previousRotationPitch = entity.prevRotationPitch;
             Vector3dc oldPosition = new Vector3d(entity.posX, entity.posY, entity.posZ);
 
             Matrix4d betweenTransform = ShipTransform.createTransform(
                     lastShipTouchedPlayer.getPrevTickShipTransform(), lastShipTouchedPlayer.getShipTransform()
             );
-            ValkyrienUtils.transformEntity(betweenTransform, entity, false);
-            Vector3dc transformedPosition = new Vector3d(entity.posX, entity.posY, entity.posZ);
-
-            // Apply the carrier displacement through collision handling below. Evaluating it at the tick endpoint keeps
-            // the render-time curve continuous with the entity's actual current position.
-            entity.setPosition(oldPosition.x(), oldPosition.y(), oldPosition.z());
+            // Compute displacement without transformEntity's orientation side effects: resetting a
+            // living mount's head to its body yaw feeds the previous facing back into rider steering.
+            Vector3dc transformedPosition = betweenTransform.transformPosition(oldPosition, new Vector3d());
             Vector3dc addedVelocity = transformedPosition.sub(oldPosition, new Vector3d());
-            entity.rotationYaw = rotationYaw;
-            entity.rotationPitch = rotationPitch;
-            entity.prevRotationYaw = previousRotationYaw;
-            entity.prevRotationPitch = previousRotationPitch;
+            Vector3d transformedMotion = betweenTransform.transformDirection(
+                    new Vector3d(entity.motionX, entity.motionY, entity.motionZ)
+            );
+            entity.motionX = transformedMotion.x;
+            entity.motionY = transformedMotion.y;
+            entity.motionZ = transformedMotion.z;
+            if (entity instanceof EntityFireball fireball) {
+                Vector3d transformedAcceleration = betweenTransform.transformDirection(
+                        new Vector3d(fireball.accelerationX, fireball.accelerationY, fireball.accelerationZ)
+                );
+                fireball.accelerationX = transformedAcceleration.x;
+                fireball.accelerationY = transformedAcceleration.y;
+                fireball.accelerationZ = transformedAcceleration.z;
+            }
 
             // Ignore the pitch, calculate the look vector using only the yaw
             Vector3d newLookYawVec;
@@ -505,7 +547,7 @@ public class EntityDraggable {
         // Add the yaw velocity to the player as well, because its possible for addedVelocity=0 and yawVel != 0
         double addedYawVelocity = draggable.getAddedYawVelocity();
         float appliedYawMovement = 0F;
-        if (!mountData.isMounted() && addedYawVelocity != 0) {
+        if (addedYawVelocity != 0) {
             entity.setRotationYawHead((float) (entity.getRotationYawHead() + addedYawVelocity));
             entity.rotationYaw += (float) addedYawVelocity;
             appliedYawMovement = (float) addedYawVelocity;
@@ -529,7 +571,7 @@ public class EntityDraggable {
             if (passenger instanceof EntityLivingBase livingPassenger) {
                 livingPassenger.renderYawOffset += yawMovement;
             }
-            updatePassengerPosition(carrier, passenger);
+            updatePassengerPosition(carrier, passenger, true);
             updatePassengersAfterCarrierMovement(passenger, yawMovement);
         }
     }
@@ -560,15 +602,16 @@ public class EntityDraggable {
     }
 
     /**
-     * Updates a rider from its carrier's current position without applying a vehicle's orientation callback twice.
+     * Updates a rider's position while preserving its orientation. Tick-time repositioning also preserves the
+     * carrier's orientation; rendering may retain steering from the callback until the render backup is restored.
      */
-    public static void updatePassengerPosition(@NotNull Entity carrier, @NotNull Entity passenger) {
+    public static void updatePassengerPosition(@NotNull Entity carrier, @NotNull Entity passenger, boolean preserveCarrierRotation) {
         float carrierRotationYaw = carrier.rotationYaw;
         float carrierRotationPitch = carrier.rotationPitch;
         float carrierPreviousRotationYaw = carrier.prevRotationYaw;
         float carrierPreviousRotationPitch = carrier.prevRotationPitch;
         EntityLivingBase livingCarrier = carrier instanceof EntityLivingBase livingEntity ? livingEntity : null;
-        float carrierRenderYawOffset = livingCarrier == null ? 0F : livingCarrier.renderYawOffset;
+        float carrierRenderYawOffset = livingCarrier == null ? 0f : livingCarrier.renderYawOffset;
         float carrierPreviousRenderYawOffset = livingCarrier == null ? 0f : livingCarrier.prevRenderYawOffset;
         float carrierRotationYawHead = livingCarrier == null ? 0f : livingCarrier.rotationYawHead;
         float carrierPreviousRotationYawHead = livingCarrier == null ? 0f : livingCarrier.prevRotationYawHead;
@@ -585,15 +628,27 @@ public class EntityDraggable {
 
         carrier.updatePassenger(passenger);
 
-        carrier.rotationYaw = carrierRotationYaw;
-        carrier.rotationPitch = carrierRotationPitch;
-        carrier.prevRotationYaw = carrierPreviousRotationYaw;
-        carrier.prevRotationPitch = carrierPreviousRotationPitch;
-        if (livingCarrier != null) {
-            livingCarrier.renderYawOffset = carrierRenderYawOffset;
-            livingCarrier.prevRenderYawOffset = carrierPreviousRenderYawOffset;
-            livingCarrier.rotationYawHead = carrierRotationYawHead;
-            livingCarrier.prevRotationYawHead = carrierPreviousRotationYawHead;
+        if (preserveCarrierRotation) {
+            carrier.rotationYaw = carrierRotationYaw;
+            carrier.rotationPitch = carrierRotationPitch;
+            carrier.prevRotationYaw = carrierPreviousRotationYaw;
+            carrier.prevRotationPitch = carrierPreviousRotationPitch;
+            if (livingCarrier != null) {
+                livingCarrier.renderYawOffset = carrierRenderYawOffset;
+                livingCarrier.prevRenderYawOffset = carrierPreviousRenderYawOffset;
+                livingCarrier.rotationYawHead = carrierRotationYawHead;
+                livingCarrier.prevRotationYawHead = carrierPreviousRotationYawHead;
+            }
+        }
+        else {
+            // The rider already has its frame orientation. Interpolating from the mount's delayed
+            // server orientation a second time would reintroduce visual steering lag.
+            carrier.prevRotationYaw = carrier.rotationYaw;
+            carrier.prevRotationPitch = carrier.rotationPitch;
+            if (livingCarrier != null) {
+                livingCarrier.prevRenderYawOffset = livingCarrier.renderYawOffset;
+                livingCarrier.prevRotationYawHead = livingCarrier.rotationYawHead;
+            }
         }
 
         passenger.rotationYaw = rotationYaw;

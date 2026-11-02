@@ -42,6 +42,8 @@ public class MessageEntityShipMovement implements IMessage {
     public static final int ROTATION = 1 << 1;
     public static final int VELOCITY = 1 << 2;
     public static final int HEAD_ROTATION = 1 << 3;
+    //distinguish vanilla velocity updates (including impulses) from periodic interpolation snapshots
+    public static final int VELOCITY_UPDATE = 1 << 4;
     public static final int ALL_COMPONENTS = POSITION | ROTATION | VELOCITY | HEAD_ROTATION;
 
     private int entityId;
@@ -217,6 +219,10 @@ public class MessageEntityShipMovement implements IMessage {
         return this.componentMask;
     }
 
+    public boolean shouldApplyVelocity(boolean locallyControlled) {
+        return this.hasComponent(VELOCITY) && (!locallyControlled || this.hasComponent(VELOCITY_UPDATE));
+    }
+
     public UUID getShipUuid() {
         return this.shipUuid;
     }
@@ -332,7 +338,7 @@ public class MessageEntityShipMovement implements IMessage {
                     Minecraft minecraft = Minecraft.getMinecraft();
                     if (entity == minecraft.player || entity.canPassengerSteer()) {
                         if (movementData != null) movementData.clear();
-                        if (message.hasComponent(VELOCITY) && shipTransform != null) {
+                        if (message.shouldApplyVelocity(true) && shipTransform != null) {
                             Vector3d worldVelocity = new Vector3d(
                                     message.localVelocityX,
                                     message.localVelocityY,
@@ -358,7 +364,7 @@ public class MessageEntityShipMovement implements IMessage {
                             item.serverPosY = message.serverPosY;
                             item.serverPosZ = message.serverPosZ;
                         }
-                        if (message.hasComponent(VELOCITY)) {
+                        if (message.shouldApplyVelocity(false)) {
                             Vector3d worldVelocity = new Vector3d(
                                     message.localVelocityX,
                                     message.localVelocityY,
@@ -402,7 +408,7 @@ public class MessageEntityShipMovement implements IMessage {
                             entity.serverPosY = message.serverPosY;
                             entity.serverPosZ = message.serverPosZ;
                         }
-                        if (message.hasComponent(VELOCITY)) {
+                        if (message.shouldApplyVelocity(false)) {
                             movementData.setVelocity(new Vector3d(
                                     message.localVelocityX,
                                     message.localVelocityY,

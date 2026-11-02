@@ -23,6 +23,7 @@ import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMoun
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.ships.ShipData;
+import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityShipMountData;
 import org.valkyrienskies.mod.common.util.JOML;
@@ -52,6 +53,27 @@ public abstract class MixinEntity {
     public double posZ;
 
     private Vector3d searchVector = null;
+
+    /**
+     * Runs only after a successful dismount, including dismounts initiated by other mods.
+     * Vanilla and the vehicle retain control of placement; the rider keeps the carrier's ship frame.
+     */
+    @Inject(method = "removePassenger", at = @At("RETURN"))
+    private void retainShipOnDismount(Entity passenger, CallbackInfo callbackInfo) {
+        Entity carrier = (Entity) (Object) this;
+        ShipData ship = EntityDraggable.getActiveShip(carrier.getLowestRidingEntity());
+        if (ship == null || !EntityDraggable.startTrackingShip(passenger, ship)) return;
+
+        IEntityShipDraggable draggable = passenger.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
+        if (draggable != null && draggable.getShipLocalMovementData() != null) {
+            draggable.getShipLocalMovementData().clear();
+        }
+        // Riding movement packets may have left the carrier displacement in the rider's motion.
+        passenger.motionX = 0D;
+        passenger.motionY = 0D;
+        passenger.motionZ = 0D;
+        passenger.fallDistance = 0F;
+    }
 
     /**
      * This is easier to have as an overwrite because there's less laggy hackery to be done then :P

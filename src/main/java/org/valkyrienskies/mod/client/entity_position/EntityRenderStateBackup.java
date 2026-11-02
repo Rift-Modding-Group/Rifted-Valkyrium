@@ -8,6 +8,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
+import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
+import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
+import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
 
 /**
  * Captures an entity's persistent tick state and applies a precomputed state for one render pass.
@@ -17,6 +20,15 @@ public class EntityRenderStateBackup {
     private final Entity entity;
     @Nullable
     private final EntityLivingBase livingEntity;
+    @Nullable
+    private final IEntityShipDraggable draggable;
+
+    //these 2 exist for riftlibrary compat due to how its molang queries calculate entity speed
+    @Nullable
+    private final Vector3dc previousRenderRelativeMovement;
+    @Nullable
+    private final Vector3dc renderRelativeMovement;
+
     @NotNull
     private final AxisAlignedBB boundingBox;
     @NotNull
@@ -47,6 +59,9 @@ public class EntityRenderStateBackup {
     public EntityRenderStateBackup(@NotNull Entity entity, @NotNull Vector3dc renderPosition, double partialTicks) {
         this.entity = entity;
         this.livingEntity = entity instanceof EntityLivingBase entityLivingBase ? entityLivingBase : null;
+        this.draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
+        this.previousRenderRelativeMovement = this.draggable == null ? null : this.draggable.getRenderRelativeMovement();
+        this.renderRelativeMovement = EntityDraggable.getShipRelativeMovement(entity);
         this.boundingBox = entity.getEntityBoundingBox();
         this.renderPosition = new Vector3d(renderPosition);
         this.partialTicks = (float) Math.clamp(partialTicks, 0D, 1D);
@@ -80,6 +95,9 @@ public class EntityRenderStateBackup {
     }
 
     public void apply() {
+        //for riftlibrary compat
+        if (this.draggable != null) this.draggable.setRenderRelativeMovement(this.renderRelativeMovement);
+
         double offsetX = this.renderPosition.x - this.posX;
         double offsetY = this.renderPosition.y - this.posY;
         double offsetZ = this.renderPosition.z - this.posZ;
@@ -146,6 +164,9 @@ public class EntityRenderStateBackup {
      * Shifts a rider's interpolated orientation by its carrier's render-time yaw correction.
      */
     public void applyYawAdjustment(float yawAdjustment) {
+        //for riftlibrary compat
+        if (this.draggable != null) this.draggable.setRenderRelativeMovement(this.renderRelativeMovement);
+
         float adjustedYaw = this.interpolateRotation(this.prevRotationYaw, this.rotationYaw) + yawAdjustment;
         float interpolatedPitch = this.prevRotationPitch + (this.rotationPitch - this.prevRotationPitch) * this.partialTicks;
         this.entity.rotationYaw = adjustedYaw;
@@ -169,6 +190,9 @@ public class EntityRenderStateBackup {
     }
 
     public void restore() {
+        //for riftlibrary compat
+        if (this.draggable != null) this.draggable.setRenderRelativeMovement(this.previousRenderRelativeMovement);
+
         this.entity.posX = this.posX;
         this.entity.posY = this.posY;
         this.entity.posZ = this.posZ;

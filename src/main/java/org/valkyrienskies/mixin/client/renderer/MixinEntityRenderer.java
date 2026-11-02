@@ -115,6 +115,11 @@ public abstract class MixinEntityRenderer {
             ShipLocalEntityMovementData movementData = draggable.getShipLocalMovementData();
             ShipTransform shipLocalRenderTransform = null;
             EntityShipMountData mountData = ValkyrienUtils.getMountedShipAndPos(entity);
+
+            //skip anything thats riding another entity thats on le ship and not attached to it
+            //think horses and other normal vehicles
+            if (entity.isRiding() && !mountData.isMounted()) continue;
+
             if (mountData.isMounted()) {
                 if (mountData.mountPos() == null) continue;
 
@@ -266,7 +271,7 @@ public abstract class MixinEntityRenderer {
                 // Ordinary riders have no independent ship render state, so derive their exact frame position from the
                 // already-adjusted carrier. Apply yaw first because horse offsets depend on the rider's body orientation.
                 // Fixed mounts were precomputed above and must retain their rotated offset.
-                EntityDraggable.updatePassengerPosition(carrier, passenger);
+                EntityDraggable.updatePassengerPosition(carrier, passenger, false);
                 passengerBackup.snapPositionToCurrent();
             }
             this.updateRenderPassengers(passenger, positionedEntities, passengerYawAdjustment, partialTicks);

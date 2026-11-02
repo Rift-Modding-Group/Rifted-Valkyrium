@@ -33,6 +33,7 @@
     "mod.effortlessbuilding.MixinRenderHandler",
     "mod.renderlib.MixinRenderLibValkyrienSkies",
     "mod.riftlib.MixinGeoBlockRendererTicker",
+    "mod.riftlib.MixinMiscUtils",
     "mod.riftlib.MixinRiftLibParticle",
     "mod.malisiscore.MixinMalisisRenderer",
     "mod.malisiscore.MixinAnimatedRenderer"
@@ -48,6 +49,7 @@
     "entity.MixinEntityTrackerEntry",
     "network.MixinNetHandlerPlayServer",
     "network.play.client.MixinCPacketPlayer",
+    "network.play.client.MixinCPacketVehicleMove",
     "network.play.client.MixinCPacketPlayerDigging",
     "network.play.client.MixinCPacketPlayerTryUseItemOnBlock",
     "network.play.client.MixinCPacketUpdateSign",

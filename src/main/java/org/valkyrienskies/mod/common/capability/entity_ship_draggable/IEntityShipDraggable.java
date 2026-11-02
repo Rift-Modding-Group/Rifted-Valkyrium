@@ -52,6 +52,15 @@ public interface IEntityShipDraggable {
     @NotNull
     ShipLocalEntityMovementData getOrCreateShipLocalMovementData();
 
+    /**
+     * Full-tick movement in ship coordinates, retained while rendering replaces position histories.
+     * This is for RiftLibrary compat due to how its molang queries for getting entity movement speed operate.
+     * */
+    @Nullable
+    Vector3dc getRenderRelativeMovement();
+
+    void setRenderRelativeMovement(@Nullable Vector3dc movement);
+
     //---other stuff---
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     boolean getInAirPocket();
