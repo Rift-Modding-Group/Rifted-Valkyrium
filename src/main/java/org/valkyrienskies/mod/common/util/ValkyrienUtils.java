@@ -28,7 +28,6 @@ import org.joml.Vector3dc;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.VSWorldDataCapability;
 import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMount;
-import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
 import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
 import org.valkyrienskies.mod.common.entity.EntityMountable;
 import org.valkyrienskies.mod.common.physics.BlockPhysicsDetails;
@@ -38,7 +37,6 @@ import org.valkyrienskies.mod.common.ships.block_relocation.BlockFinder;
 import org.valkyrienskies.mod.common.ships.chunk_claims.ShipChunkAllocator;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityShipMountData;
 import org.valkyrienskies.mod.common.ships.ship_transform.CoordinateSpaceType;
-import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.ships.ship_world.WorldServerShipManager;
@@ -274,39 +272,38 @@ public final class ValkyrienUtils {
         }
         return shipWorld.getManager().getAllLoadedPhysObj();
     }
-
+    /**
+     * @deprecated use {@link RiftedValkyriumAPI#createNewShip(WorldServer, Vec3d)}
+     */
     @Deprecated
     public static void assembleShipAsOrderedByPlayer(
-            World world, @Nullable EntityPlayerMP creator,
+            World worldIn, @Nullable EntityPlayerMP creator,
             BlockPos physicsInfuserPos, BlockFinder.BlockFinderType blockFinderType
     ) {
-        if (world.isRemote) {
+        if (worldIn.isRemote) {
             throw new IllegalStateException("This method cannot be invoked on client side!");
         }
-        if (!(world instanceof WorldServer)) {
-            throw new IllegalStateException("The world " + world + " wasn't an instance of WorldServer");
+        if (!(worldIn instanceof WorldServer)) {
+            throw new IllegalStateException("The world " + worldIn + " wasn't an instance of WorldServer");
         }
 
         ShipBlockBlacklist blockBlacklist = switch (blockFinderType) {
-            case FIND_ALLOWED_BLOCKS -> createLegacyInfuserBlacklist();
+            case FIND_ALLOWED_BLOCKS -> {
+                Set<Block> blacklist = new HashSet<>();
+                for (String blockId : VSConfig.shipSpawnDetectorBlacklist) {
+                    Block block = Block.getBlockFromName(blockId);
+                    if (block != null) blacklist.add(block);
+                }
+                yield (world, position, state) -> blacklist.contains(state.getBlock());
+            }
             case FIND_ALL_BLOCKS -> (candidateWorld, position, state) ->
                     BlockPhysicsDetails.blocksToNotPhysicsInfuse.contains(state.getBlock());
             case FIND_SINGLE_BLOCK -> (candidateWorld, position, state) -> true;
         };
         RiftedValkyriumAPI.createNewShip(
-                (WorldServer) world, physicsInfuserPos,
+                (WorldServer) worldIn, physicsInfuserPos,
                 new ShipBuildOptions().setShipBlockBlacklist(blockBlacklist)
         );
-    }
-
-    @NotNull
-    private static ShipBlockBlacklist createLegacyInfuserBlacklist() {
-        Set<Block> blacklist = new HashSet<>();
-        for (String blockId : VSConfig.shipSpawnDetectorBlacklist) {
-            Block block = Block.getBlockFromName(blockId);
-            if (block != null) blacklist.add(block);
-        }
-        return (world, position, state) -> blacklist.contains(state.getBlock());
     }
 
     @Nullable
@@ -394,13 +391,6 @@ public final class ValkyrienUtils {
     @Nullable
     public static TileEntity getTileEntitySafe(World world, BlockPos pos) {
         return world.getChunk(pos).getTileEntity(pos, Chunk.EnumCreateEntityType.CHECK);
-    }
-
-    @Nullable
-    public static ShipData getLastShipTouchedByEntity(final Entity entity) {
-        IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
-        if (draggable == null) return null;
-        return draggable.getLastTouchedShip();
     }
 
     /**

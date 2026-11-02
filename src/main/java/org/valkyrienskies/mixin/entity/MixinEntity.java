@@ -197,15 +197,14 @@ public abstract class MixinEntity {
     @Redirect(method = "createRunningParticles", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/math/MathHelper;floor(D)I", ordinal = 0))
     private int runningParticlesFirstFloor(double d) {
         Entity thisEntity = (Entity) ((Object) this);
-        final ShipData lastTouchedShip = ValkyrienUtils.getLastShipTouchedByEntity(thisEntity);
+        ShipData lastTouchedShip = EntityDraggable.getActiveShip(thisEntity);
         if (lastTouchedShip == null) {
             searchVector = null;
             return MathHelper.floor(d);
         }
         else {
             searchVector = new Vector3d(this.posX, this.posY - 0.20000000298023224D, this.posZ);
-            lastTouchedShip.getShipTransform()
-                .transformPosition(searchVector, TransformType.GLOBAL_TO_SUBSPACE);
+            lastTouchedShip.getShipTransform().transformPosition(searchVector, TransformType.GLOBAL_TO_SUBSPACE);
             return MathHelper.floor(searchVector.x);
         }
     }

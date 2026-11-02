@@ -270,21 +270,14 @@ public class EntityCollisionInjector {
         entity.resetPositionToBB();
 
         // We are on the ship that we are riding
-        if (entity.getRidingEntity() instanceof EntityMountable) {
-            final EntityMountable entityMountable = (EntityMountable) entity.getRidingEntity();
-            if (entityMountable.getReferencePosOptional().isPresent()) {
-                final Optional<PhysicsObject> physicsObjectOptional = ValkyrienUtils.getPhysoManagingBlock(
-                        entity.world, entityMountable.getReferencePosOptional().get()
-                );
-                if (physicsObjectOptional.isPresent()) {
-                    worldBelow = physicsObjectOptional.get();
-                }
-            }
+        if (entity.getRidingEntity() instanceof EntityMountable entityMountable && entityMountable.getReferencePosOptional().isPresent()) {
+            final Optional<PhysicsObject> physicsObjectOptional = ValkyrienUtils.getPhysoManagingBlock(
+                    entity.world, entityMountable.getReferencePosOptional().get()
+            );
+            if (physicsObjectOptional.isPresent()) worldBelow = physicsObjectOptional.get();
         }
 
-        if (worldBelow == null) {
-            return null;
-        }
+        if (worldBelow == null) return null;
 
         dx += total.x;
         dy += total.y;
@@ -324,7 +317,7 @@ public class EntityCollisionInjector {
         double motionYBefore = storage.motionYBefore;
         float oldFallDistance = storage.oldFallDistance;
 
-        ShipData worldBelow = ValkyrienUtils.getLastShipTouchedByEntity(entity);
+        ShipData worldBelow = storage.shipTouched;
 
         entity.collidedHorizontally = (motionInterfering(dx, origDx)) || (motionInterfering(dz, origDz));
         entity.collidedVertically = isDifSignificant(dy, origDy);
