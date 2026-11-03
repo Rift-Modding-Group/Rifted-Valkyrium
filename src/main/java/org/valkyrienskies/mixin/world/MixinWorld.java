@@ -8,7 +8,6 @@ import com.llamalad7.mixinextras.sugar.Local;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.item.EntityBoat;
-import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.*;
 import net.minecraft.world.IWorldEventListener;
@@ -149,12 +148,8 @@ public abstract class MixinWorld {
     @Shadow
     public abstract Chunk getChunk(int chunkX, int chunkZ);
 
-    @Shadow
-    public abstract List<AxisAlignedBB> getCollisionBoxes(@Nullable Entity entityIn, AxisAlignedBB aabb);
-
     /**
-     * Used for two purposes. The first, is to prevent the game from freezing by limiting the size of aabb. The second
-     * is to fix player sneaking on ships.
+     * Prevents the game from freezing by limiting the size of collision queries.
      */
     @Inject(method = "getCollisionBoxes(Lnet/minecraft/entity/Entity;Lnet/minecraft/util/math/AxisAlignedBB;ZLjava/util/List;)Z", at = @At("HEAD"), cancellable = true)
     private void preGetCollisionBoxes(
@@ -169,52 +164,6 @@ public abstract class MixinWorld {
             new Exception().printStackTrace();
             callbackInfo.setReturnValue(Boolean.FALSE);
             callbackInfo.cancel();
-        }
-
-        // Fix player sneaking. I know its strange that the fix would be here of all places, but check
-        // Entity.moveEntity() to see for yourself. Minecraft checks if there's any colliding bounding boxes in a given
-        // direction, and uses that to determine if can you sneak.
-        if (!(entityIn instanceof EntityPlayer) || !entityIn.isSneaking()) return;
-
-        //get IShipWorld
-        World thisWorld = (World) ((Object) this);
-        IShipWorld shipWorld = thisWorld.getCapability(VSCapabilityRegistry.VS_SHIP_WORLD, null);
-        if (shipWorld == null) return;
-
-        // Add at most once ship block AABB that is colliding with the player. This is ONLY to properly allow
-        // players to sneak while on ships.
-        List<PhysicsObject> ships = shipWorld.getManager().getPhysObjectsInAABB(aabb);
-        for (PhysicsObject wrapper : ships) {
-            TransformedAABB playerInLocal = new TransformedAABB(
-                    aabb, wrapper.getShipTransformationManager().getCurrentTickTransform(),
-                    TransformType.GLOBAL_TO_SUBSPACE
-            );
-            AxisAlignedBB bb = playerInLocal.getEnclosedAABB();
-
-            if ((bb.maxX - bb.minX) * (bb.maxZ - bb.minZ) > 9898989) {
-                // This is too big, something went wrong here
-                System.err.println("Why did transforming a players bounding box result in a giant bounding box?");
-                System.err.println(bb + "\n" + wrapper.getShipData() + "\n" + entityIn.toString());
-                new Exception().printStackTrace();
-                return;
-            }
-
-            List<AxisAlignedBB> collidingBBs = getCollisionBoxes(null, bb);
-            AxisAlignedBB entityBB = aabb.grow(-.2, 0, -.2);
-            for (AxisAlignedBB inLocal : collidingBBs) {
-                AxisAlignedBB inWorld = new TransformedAABB(
-                        inLocal,
-                        wrapper.getShipTransformationManager().getCurrentTickTransform(),
-                        TransformType.SUBSPACE_TO_GLOBAL
-                ).getEnclosedAABB();
-
-                if (entityBB.intersects(inWorld)) {
-                    outList.add(inWorld);
-                    // We only want to add at most ONE aabb to the return value. Once we have at least one, the
-                    // vanilla sneak code will work correctly.
-                    return;
-                }
-            }
         }
     }
 

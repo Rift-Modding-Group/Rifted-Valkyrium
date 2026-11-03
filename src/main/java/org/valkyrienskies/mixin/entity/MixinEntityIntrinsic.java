@@ -1,9 +1,13 @@
 package org.valkyrienskies.mixin.entity;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityList;
 import net.minecraft.entity.MoverType;
+import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.world.World;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
 import org.spongepowered.asm.mixin.Mixin;
@@ -14,12 +18,19 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
+import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityCollisionInjector;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityCollisionInjector.IntermediateMovementVariableStorage;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityMoveInjectionMethods;
+import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
+import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
+import org.valkyrienskies.mod.common.util.TransformedAABB;
+import valkyrienwarfare.api.TransformType;
+
+import java.util.List;
 
 @Mixin(value = Entity.class, priority = 1)
 public abstract class MixinEntityIntrinsic {
@@ -46,6 +57,48 @@ public abstract class MixinEntityIntrinsic {
 
     @Shadow
     public abstract void move(MoverType type, double x, double y, double z);
+
+    /**
+     * fixes strange stuttering when sneaking while on top of a ship that's tilted
+     */
+    @NotNull
+    @WrapOperation(
+            method = "move",
+            at = {
+                    @At(value = "INVOKE", target = "Lnet/minecraft/world/World;getCollisionBoxes(Lnet/minecraft/entity/Entity;Lnet/minecraft/util/math/AxisAlignedBB;)Ljava/util/List;", ordinal = 0),
+                    @At(value = "INVOKE", target = "Lnet/minecraft/world/World;getCollisionBoxes(Lnet/minecraft/entity/Entity;Lnet/minecraft/util/math/AxisAlignedBB;)Ljava/util/List;", ordinal = 1),
+                    @At(value = "INVOKE", target = "Lnet/minecraft/world/World;getCollisionBoxes(Lnet/minecraft/entity/Entity;Lnet/minecraft/util/math/AxisAlignedBB;)Ljava/util/List;", ordinal = 2)
+            },
+            require = 3,
+            allow = 3
+    )
+    private List<AxisAlignedBB> getSneakingSupportBoxes(
+            @NotNull World world, @NotNull Entity entity, @NotNull AxisAlignedBB supportBox,
+            @NotNull Operation<List<AxisAlignedBB>> original
+    ) {
+        List<AxisAlignedBB> collisionBoxes = original.call(world, entity, supportBox);
+        if (!collisionBoxes.isEmpty()) return collisionBoxes;
+
+        IShipWorld shipWorld = world.getCapability(VSCapabilityRegistry.VS_SHIP_WORLD, null);
+        if (shipWorld == null) return collisionBoxes;
+
+        AxisAlignedBB insetSupportBox = supportBox.grow(-0.2D, 0D, -0.2D);
+        for (PhysicsObject ship : shipWorld.getManager().getPhysObjectsInAABB(supportBox)) {
+            ShipTransform transform = ship.getShipTransformationManager().getCurrentTickTransform();
+            AxisAlignedBB localSupportBox = new TransformedAABB(supportBox, transform, TransformType.GLOBAL_TO_SUBSPACE).getEnclosedAABB();
+            if ((localSupportBox.maxX - localSupportBox.minX) * (localSupportBox.maxZ - localSupportBox.minZ) > 9898989D) {
+                continue;
+            }
+
+            for (AxisAlignedBB localBlockBox : world.getCollisionBoxes(null, localSupportBox)) {
+                AxisAlignedBB worldBlockBox = new TransformedAABB(localBlockBox, transform, TransformType.SUBSPACE_TO_GLOBAL).getEnclosedAABB();
+                if (insetSupportBox.intersects(worldBlockBox)) {
+                    return List.of(worldBlockBox);
+                }
+            }
+        }
+        return collisionBoxes;
+    }
 
     /**
      * The goal of this injection is to adjust the arguments passed into move(). By adjusting the arguments we can add
