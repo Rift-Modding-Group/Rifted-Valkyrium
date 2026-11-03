@@ -5,6 +5,7 @@ import net.minecraft.block.BlockLiquid;
 import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.init.Blocks;
+import org.jspecify.annotations.NonNull;
 import org.valkyrienskies.mod.common.annotation.LegacyContent;
 import org.valkyrienskies.addon.control.ValkyrienSkiesControl;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
@@ -130,19 +131,18 @@ public class BlockPhysicsDetails {
     }
 
     private static void generateMaterialMasses() {
-        materialBlockMass.put(Material.AIR, BlockMass.NONE);
         materialBlockMass.put(Material.ANVIL, BlockMass.HEAVY);
-        materialBlockMass.put(Material.BARRIER, BlockMass.NONE);
+        materialBlockMass.put(Material.BARRIER, BlockMass.NEGLIGIBLE);
         materialBlockMass.put(Material.CACTUS, BlockMass.VERY_LIGHT);
-        materialBlockMass.put(Material.CAKE, BlockMass.NONE);
-        materialBlockMass.put(Material.CARPET, BlockMass.NONE);
-        materialBlockMass.put(Material.CIRCUITS, BlockMass.NONE);
+        materialBlockMass.put(Material.CAKE, BlockMass.NEGLIGIBLE);
+        materialBlockMass.put(Material.CARPET, BlockMass.NEGLIGIBLE);
+        materialBlockMass.put(Material.CIRCUITS, BlockMass.NEGLIGIBLE);
         materialBlockMass.put(Material.CLAY, BlockMass.HEAVY);
-        materialBlockMass.put(Material.CLOTH, BlockMass.NONE);
+        materialBlockMass.put(Material.CLOTH, BlockMass.NEGLIGIBLE);
         materialBlockMass.put(Material.CORAL, BlockMass.HEAVY);
         materialBlockMass.put(Material.CRAFTED_SNOW, BlockMass.VERY_LIGHT);
         materialBlockMass.put(Material.DRAGON_EGG, BlockMass.VERY_LIGHT);
-        materialBlockMass.put(Material.FIRE, BlockMass.NONE);
+        materialBlockMass.put(Material.FIRE, BlockMass.NEGLIGIBLE);
         materialBlockMass.put(Material.GLASS, BlockMass.VERY_LIGHT);
         materialBlockMass.put(Material.GOURD, BlockMass.VERY_LIGHT);
         materialBlockMass.put(Material.GRASS, BlockMass.VERY_LIGHT);
@@ -150,12 +150,12 @@ public class BlockPhysicsDetails {
         materialBlockMass.put(Material.ICE, BlockMass.LIGHT);
         materialBlockMass.put(Material.IRON, BlockMass.HEAVY);
         materialBlockMass.put(Material.LAVA, BlockMass.VERY_LIGHT);
-        materialBlockMass.put(Material.LEAVES, BlockMass.NONE);
+        materialBlockMass.put(Material.LEAVES, BlockMass.NEGLIGIBLE);
         materialBlockMass.put(Material.PACKED_ICE, BlockMass.VERY_LIGHT);
         materialBlockMass.put(Material.PISTON, BlockMass.VERY_LIGHT);
-        materialBlockMass.put(Material.PLANTS, BlockMass.NONE);
-        materialBlockMass.put(Material.PORTAL, BlockMass.NONE);
-        materialBlockMass.put(Material.REDSTONE_LIGHT, BlockMass.NONE);
+        materialBlockMass.put(Material.PLANTS, BlockMass.NEGLIGIBLE);
+        materialBlockMass.put(Material.PORTAL, BlockMass.NEGLIGIBLE);
+        materialBlockMass.put(Material.REDSTONE_LIGHT, BlockMass.NEGLIGIBLE);
         materialBlockMass.put(Material.ROCK, BlockMass.LIGHT);
         materialBlockMass.put(Material.SAND, BlockMass.VERY_LIGHT);
         materialBlockMass.put(Material.SNOW, BlockMass.VERY_LIGHT);
@@ -164,26 +164,25 @@ public class BlockPhysicsDetails {
         materialBlockMass.put(Material.TNT, BlockMass.VERY_LIGHT);
         materialBlockMass.put(Material.VINE, BlockMass.VERY_LIGHT);
         materialBlockMass.put(Material.WATER, BlockMass.VERY_LIGHT);
-        materialBlockMass.put(Material.WEB, BlockMass.NONE);
+        materialBlockMass.put(Material.WEB, BlockMass.NEGLIGIBLE);
         materialBlockMass.put(Material.WOOD, BlockMass.VERY_LIGHT);
     }
 
     private static void generateBlockMasses() {
-        blockToMass.put(Blocks.AIR, BlockMass.NONE);
-        blockToMass.put(Blocks.FIRE, BlockMass.NONE);
-        blockToMass.put(Blocks.FLOWING_WATER, BlockMass.NONE);
-        blockToMass.put(Blocks.FLOWING_LAVA, BlockMass.NONE);
-        blockToMass.put(Blocks.WATER, BlockMass.NONE);
-        blockToMass.put(Blocks.LAVA, BlockMass.NONE);
+        blockToMass.put(Blocks.FIRE, BlockMass.NEGLIGIBLE);
+        blockToMass.put(Blocks.FLOWING_WATER, BlockMass.NEGLIGIBLE);
+        blockToMass.put(Blocks.FLOWING_LAVA, BlockMass.NEGLIGIBLE);
+        blockToMass.put(Blocks.WATER, BlockMass.NEGLIGIBLE);
+        blockToMass.put(Blocks.LAVA, BlockMass.NEGLIGIBLE);
         blockToMass.put(Blocks.BEDROCK, BlockMass.VERY_HEAVY);
     }
 
     @LegacyContent
     private static void generateLegacyBlockMasses() {
-        blockToMass.put(ValkyrienSkiesControl.INSTANCE.vsControlBlocks.gyroscopeDampener, BlockMass.NONE);
-        blockToMass.put(ValkyrienSkiesControl.INSTANCE.vsControlBlocks.gyroscopeStabilizer, BlockMass.NONE);
+        blockToMass.put(ValkyrienSkiesControl.INSTANCE.vsControlBlocks.gyroscopeDampener, BlockMass.NEGLIGIBLE);
+        blockToMass.put(ValkyrienSkiesControl.INSTANCE.vsControlBlocks.gyroscopeStabilizer, BlockMass.NEGLIGIBLE);
         blockToMass.put(ValkyrienSkiesControl.INSTANCE.vsControlBlocks.buoyancyTank, BlockMass.VERY_LIGHT);
-        blockToMass.put(ValkyrienSkiesControl.INSTANCE.vsControlBlocks.networkRelay, BlockMass.NONE);
+        blockToMass.put(ValkyrienSkiesControl.INSTANCE.vsControlBlocks.networkRelay, BlockMass.NEGLIGIBLE);
     }
 
     private static void generateBlocksToNotPhysicsInfuse() {
@@ -197,7 +196,10 @@ public class BlockPhysicsDetails {
     /**
      * Get block mass, in kg.
      */
-    public static double getMassFromState(IBlockState state) {
+    public static double getMassFromState(@NonNull IBlockState state) {
+        //special case for air, it gets no mass at all
+        if (state.getMaterial() == Material.AIR) return 0;
+
         BlockMass stateMass = blockStateToMass.get(state);
         if (stateMass != null) return stateMass.mass;
         return getMassOfBlock(state.getBlock());
@@ -207,11 +209,11 @@ public class BlockPhysicsDetails {
         //prioritize block mass
         BlockMass blockMass = blockToMass.get(block);
         if (blockMass != null) return blockMass.mass;
-        if (block instanceof BlockLiquid) return BlockMass.NONE.mass;
+        if (block instanceof BlockLiquid) return BlockMass.NEGLIGIBLE.mass;
 
         //use material otherwise
         Material material = block.getDefaultState().getMaterial();
-        return materialBlockMass.getOrDefault(material, BlockMass.VERY_LIGHT).mass;
+        return materialBlockMass.getOrDefault(material, BlockMass.NEGLIGIBLE).mass;
     }
 
     /**
