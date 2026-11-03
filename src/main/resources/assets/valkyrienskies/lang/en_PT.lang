@@ -324,3 +324,7 @@ vs_world.general.valkyriumoreforce.tooltip=Arr, the standards be 4 knots. 0 knot
 
 vs_world.general.valkyriumoregenenabled=Does there be Upballast in these seas?
 vs_world.general.valkyriumoregenenabled.tooltip=Arr, the standards allow it. Let it be false to plunder it all.
+
+# Minimap integration
+valkyrienskies.general.showshipinminimapmods=Show Ships on Minimap Charts
+valkyrienskies.general.showshipinminimapmods.tooltip=Chart loaded ships on Xaero's Wee Chart, Xaero's World Chart, and JourneyChart's wee and full-deck charts. Only on surface charts, arr!

@@ -20,13 +20,16 @@ import net.minecraftforge.client.event.RenderWorldLastEvent;
 import net.minecraftforge.client.event.TextureStitchEvent;
 import net.minecraftforge.client.event.sound.PlaySoundEvent;
 import net.minecraftforge.event.world.ChunkEvent;
+import net.minecraftforge.event.world.WorldEvent;
 import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent.ClientTickEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent.Phase;
+import org.jetbrains.annotations.NotNull;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.lwjgl.opengl.GL11;
+import org.valkyrienskies.mod.client.compat.ShipMinimapRenderer;
 import org.valkyrienskies.mod.client.render.GibsModelRegistry;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
@@ -82,7 +85,13 @@ public class EventsClient {
                 EntityDraggable.tickAddedVelocityForWorld(world);
                 shipWorld.getLighting().process(pos -> world.checkLightFor(EnumSkyBlock.SKY, pos), System::nanoTime);
             }
+            ShipMinimapRenderer.INSTANCE.tick();
         }
+    }
+
+    @SubscribeEvent
+    public void onWorldUnload(@NotNull WorldEvent.Unload event) {
+        if (event.getWorld().isRemote) ShipMinimapRenderer.INSTANCE.clear();
     }
 
     @SubscribeEvent
@@ -110,8 +119,7 @@ public class EventsClient {
     public void onDrawBlockHighlightEventFirst(DrawBlockHighlightEvent event) {
         GL11.glPushMatrix();
         BlockPos pos = Minecraft.getMinecraft().objectMouseOver.getBlockPos();
-        Optional<PhysicsObject> physicsObject = ValkyrienUtils
-            .getPhysoManagingBlock(Minecraft.getMinecraft().world, pos);
+        Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(Minecraft.getMinecraft().world, pos);
         if (physicsObject.isPresent()) {
             RayTraceResult objectOver = Minecraft.getMinecraft().objectMouseOver;
             if (objectOver != null && objectOver.hitVec != null) {

@@ -9,6 +9,9 @@ plugins {
 }
 
 import org.jetbrains.gradle.ext.Gradle
+import org.objectweb.asm.Opcodes
+import org.objectweb.asm.commons.ClassRemapper
+import org.objectweb.asm.commons.Remapper
 
 ext {
     //noinspection GroovyAssignabilityCheck
@@ -41,6 +44,7 @@ configurations {
     compileOnly.extendsFrom(modCompileOnly)
     modRuntimeOnly
     runtimeOnly.extendsFrom(modRuntimeOnly)
+    mapMods
 }
 
 def remapTaskName = enable_shadow.toBoolean() ? "remapShadowJar" : "remapJar"
@@ -95,6 +99,37 @@ unimined.minecraft {
     mods {
         remap(configurations.modCompileOnly)
         remap(configurations.modRuntimeOnly)
+        remap(configurations.mapMods) {
+            //a special config for the minimap mods so that they can work in obf env
+            //without screaming a noclassdeffound error
+            remapper { builder ->
+                Map<String, String> methodNames = [:]
+                Map<String, String> fieldNames = [:]
+                file('.gradle/unimined/local/mappings/srg2mcp.tsrg').eachLine { line ->
+                    String[] parts = line.trim().split('\\s+')
+                    if (parts.length == 3 && parts[0].startsWith('func_')) {
+                        methodNames[parts[0]] = parts[2]
+                    }
+                    else if (parts.length == 2 && parts[0].startsWith('field_')) {
+                        fieldNames[parts[0]] = parts[1]
+                    }
+                }
+                assert !methodNames.isEmpty() && !fieldNames.isEmpty() : 'Missing Cleanroom SRG-to-MCP member mappings'
+                builder.extraPostApplyVisitor { type, visitor ->
+                    new ClassRemapper(visitor, new Remapper(Opcodes.ASM9) {
+                        @Override
+                        String mapMethodName(String owner, String name, String descriptor) {
+                            return methodNames.getOrDefault(name, name)
+                        }
+
+                        @Override
+                        String mapFieldName(String owner, String name, String descriptor) {
+                            return fieldNames.getOrDefault(name, name)
+                        }
+                    })
+                }
+            }
+        }
     }
 }
 
@@ -116,6 +151,8 @@ processResources {
 
 sourceSets {
     main {
+        compileClasspath += configurations.mapMods
+        runtimeClasspath += configurations.mapMods
         blossom {
             javaSources {
                 property('mod_id', mod_id)

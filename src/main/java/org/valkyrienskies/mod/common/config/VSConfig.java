@@ -1,6 +1,5 @@
 package org.valkyrienskies.mod.common.config;
 
-import com.google.common.collect.Sets;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.common.config.Config;
 import net.minecraftforge.common.config.Config.*;
@@ -8,8 +7,6 @@ import net.minecraftforge.common.config.ConfigManager;
 import net.minecraftforge.fml.client.event.ConfigChangedEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
-import org.joml.Vector3d;
-import org.joml.Vector3dc;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.command.config.ShortName;
 
@@ -279,6 +276,14 @@ public class VSConfig extends VSConfigTemplate {
             "sit:entity_sit",
             "bibliocraft:BiblioSeat"
     };
+
+    @Name("Show Ships in Minimap Mods")
+    @LangKey("valkyrienskies.general.showshipinminimapmods")
+    @Comment({
+            "Show loaded ships on supported map mods.",
+            "Supports Xaero's Minimap, Xaero's World Map, and JourneyMap. Only surface maps are supported."
+    })
+    public static boolean showShipInMinimapMods;
 
     @Ignore
     public static Set<ResourceLocation> sittableBlockEntityIDsSet;

@@ -33,6 +33,10 @@ repositories {
         name = "Dogforce Games"
         url = "https://dogforce-games.com/maven/"
     }
+    maven {
+        url "https://chocolateminecraft.com/maven"
+        name "Xaero's Maven"
+    }
     mavenCentral()
     mavenLocal() // Must be last for caching to work
 }
@@ -93,12 +97,24 @@ dependencies {
     //celeritas jar for compat
     implementation files("dependencies/celeritas-forge-mc12.2-2.4.0-dev.jar")
 
-    //MalisisDoors maven for compatibility
+    //MalisisDoors and core mavens for compatibility
     modCompileOnly "curse.maven:malisiscore-223896:2680892"
     modCompileOnly "curse.maven:malisisdoors-223891:2526674"
 
-    // Fairy Lights maven for compatibility
+    //Fairy Lights maven for compatibility
     modCompileOnly "curse.maven:fairy-lights-233342:3068499"
+
+    //xaero map mods for compat using a special config
+    mapMods "xaero.lib:xaerolib-forge-1.12.2:1.7.3"
+    mapMods("xaero.minimap:xaerominimap-forge-1.12.2:26.6.0") {
+        exclude group: 'xaero.lib', module: 'xaerolib-forge-1.12.2'
+    }
+    mapMods("xaero.map:xaeroworldmap-forge-1.12.2:1.47.0") {
+        exclude group: 'xaero.lib', module: 'xaerolib-forge-1.12.2'
+    }
+
+    //journeymap compat using a special config
+    mapMods "curse.maven:journeymap-32274:9049805"
 
     // junit tests
     testImplementation 'org.junit.jupiter:junit-jupiter:5.6.2'

@@ -319,3 +319,7 @@ vs_world.general.valkyriumoreforce.tooltip=Default is 4. Set to 0 to disable.
 
 vs_world.general.valkyriumoregenenabled=Valkyrium Ore Generation Enabled
 vs_world.general.valkyriumoregenenabled.tooltip=Default is true. Set to false to disable.
+
+# Minimap integration
+valkyrienskies.general.showshipinminimapmods=Show Ships in Minimap Mods
+valkyrienskies.general.showshipinminimapmods.tooltip=Show loaded ships on Xaero's Minimap, Xaero's World Map, and JourneyMap's minimap and fullscreen map. Surface maps only.

@@ -36,7 +36,10 @@
     "mod.riftlib.MixinMiscUtils",
     "mod.riftlib.MixinRiftLibParticle",
     "mod.malisiscore.MixinMalisisRenderer",
-    "mod.malisiscore.MixinAnimatedRenderer"
+    "mod.malisiscore.MixinAnimatedRenderer",
+    "mod.xaerominimap.MixinMinimapFBORenderer",
+    "mod.xaeroworldmap.MixinGuiMap",
+    "mod.journeymap.MixinMapRenderer"
   ],
   "mixins": [
     "entity.MixinEntity",

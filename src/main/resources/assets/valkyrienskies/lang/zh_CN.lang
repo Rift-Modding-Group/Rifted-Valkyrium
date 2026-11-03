@@ -324,3 +324,7 @@ vs_world.general.valkyriumoreforce.tooltip=默认是4, 设为0将取消反重力
 
 vs_world.general.valkyriumoregenenabled=启用瓦尔基里水晶世界生成
 vs_world.general.valkyriumoregenenabled.tooltip=默认启用。改为false停用
+
+# Minimap integration
+valkyrienskies.general.showshipinminimapmods=在小地图模组中显示船只
+valkyrienskies.general.showshipinminimapmods.tooltip=在 Xaero's Minimap、Xaero's World Map 和 JourneyMap 的小地图、全屏地图上显示已加载的船只。仅支持地表地图。
