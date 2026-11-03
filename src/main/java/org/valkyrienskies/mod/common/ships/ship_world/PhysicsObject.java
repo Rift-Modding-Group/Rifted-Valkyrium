@@ -239,7 +239,11 @@ public class PhysicsObject implements IPhysicsEntity {
 
         List<IShipForcesInducer> updatedInducers = new ArrayList<>(this.forceInducers);
         updatedInducers.add(forceInducer);
-        updatedInducers.sort(Comparator.comparingInt(IShipForcesInducer::getForceApplicationPriority));
+        updatedInducers.sort((forceInducerA, forceInducerB) -> {
+            if (forceInducerA.applyForceLate() == forceInducerB.applyForceLate()) return 0;
+            else if (forceInducerA.applyForceLate() && !forceInducerB.applyForceLate()) return 1;
+            else return -1;
+        });
         this.forceInducers = List.copyOf(updatedInducers);
         return true;
     }

@@ -46,6 +46,7 @@ public final class ShipBuildOptions {
 
     /**
      * This makes it so that physics is enabled the moment that a {@link IPhysicsEntity} is created.
+     * If not set, physics has to be enabled some other way.
      * */
     public ShipBuildOptions setPhysicsEnabled() {
         this.physicsEnabled = true;

@@ -20,10 +20,10 @@ public interface IShipForcesInducer {
     void applyForces(IShipForces forces);
 
     /**
-     * Lower values -> higher priority and will run first.
-     * Inducers that need to know the total accumulated forces must have a lower priority.
+     * Apply a force around after all other force inducers have applied their forces
+     * Inducers that need to know the total accumulated forces must use this.
      */
-    default int getForceApplicationPriority() {
-        return 0;
+    default boolean applyForceLate() {
+        return false;
     }
 }
