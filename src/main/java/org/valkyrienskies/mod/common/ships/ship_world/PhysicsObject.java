@@ -57,8 +57,6 @@ import java.util.concurrent.ConcurrentHashMap;
  * The heart and soul of this mod.
  */
 public class PhysicsObject implements IPhysicsEntity {
-    // The number of ticks we wait before enabling physics. I use 20 because I'm very paranoid of ships falling through the ground.
-    private static final int DISABLE_PHYSICS_FOR_X_INITIAL_TICKS = 20;
     // Before we start dragging entities with the ship, Wait this number of ticks after a ship has been teleported using "/vs tp-ship-to" commands.
     public static int TICKS_SINCE_TELEPORT_TO_START_DRAGGING = 50;
 
@@ -117,8 +115,8 @@ public class PhysicsObject implements IPhysicsEntity {
     // Used to prevent players from thinking they're on a ship if this ship just got teleported.
     private int ticksSinceShipTeleport;
 
-    // Counts the number of ticks this PhysicsObject (not ShipData) has existed. Used to disable physics for the first DISABLE_PHYSICS_FOR_X_INITIAL_TICKS ticks.
-    private int ticksExisted;
+    // Published after the first complete terrain collision scan.
+    private volatile boolean physicsReady;
 
     // endregion
 
@@ -152,7 +150,7 @@ public class PhysicsObject implements IPhysicsEntity {
         this.deconstructState = DeconstructState.NOT_DECONSTRUCTING;
         this.forceToUseShipDataTransform = false;
         this.ticksSinceShipTeleport = TICKS_SINCE_TELEPORT_TO_START_DRAGGING + 1; // Anything larger than TICKS_SINCE_TELEPORT_TO_START_DRAGGING works
-        this.ticksExisted = 0;
+        this.physicsReady = false;
 
         // Note how this is last.
         if (world.isRemote) {
@@ -191,7 +189,9 @@ public class PhysicsObject implements IPhysicsEntity {
             this.getShipData().setShipTransform(getShipTransformationManager().getCurrentTickTransform());
             this.getShipData().setPrevTickShipTransform(getShipTransformationManager().getPrevTickTransform());
 
-            this.physicsCollideWith.onUpdate(this);
+            if (this.physicsCollideWith.onUpdate(this.world, this.getPhysicsTransformAABB())) {
+                this.physicsReady = true;
+            }
         }
         else {
             this.transformInterpolator.tickTransformInterpolator();
@@ -204,7 +204,6 @@ public class PhysicsObject implements IPhysicsEntity {
 
             this.shipTransformationManager.updateShipTransform(newTransform);
         }
-        this.ticksExisted++;
     }
 
     // endregion
@@ -334,6 +333,7 @@ public class PhysicsObject implements IPhysicsEntity {
     }
 
     public void destroyShip() {
+        this.physicsReady = false;
         this.maintenanceProviders.clear();
         //copy all the blocks from the ship to the world
         if (!this.getBlockPositions().isEmpty()) {
@@ -491,6 +491,7 @@ public class PhysicsObject implements IPhysicsEntity {
     }
 
     void unload() {
+        this.physicsReady = false;
         this.maintenanceProviders.clear();
         watchingPlayers.clear();
         this.physicsCollideWith.close();
@@ -569,17 +570,16 @@ public class PhysicsObject implements IPhysicsEntity {
         // Now transform the subspaceBB to world coordinates
         TransformedAABB largerPoly = new TransformedAABB(subspaceBB, getShipTransformationManager().getCurrentPhysicsTransform(),
                 TransformType.SUBSPACE_TO_GLOBAL);
-        // Set the ship AABB to that of the polygon.
-        AxisAlignedBB worldBB = largerPoly.getEnclosedAABB();
-        return worldBB;
+        // Set the ship AABB to that of the polygon and return.
+        return largerPoly.getEnclosedAABB();
     }
 
     /**
-     * Not the same as "is physics enabled?", the idea here is to disable physics for the first few ticks this ship got
-     * loaded to prevent the ship from falling though the floor.
+     * Starts simulation once the initial terrain collision scan has completed. The physics
+     * backend installs those colliders before its first simulation step.
      */
     public boolean isPhysicsReady() {
-        return ticksExisted >= DISABLE_PHYSICS_FOR_X_INITIAL_TICKS;
+        return this.physicsReady;
     }
 
     /**

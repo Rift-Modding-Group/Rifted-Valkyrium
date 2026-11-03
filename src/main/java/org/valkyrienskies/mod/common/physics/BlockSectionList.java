@@ -2,9 +2,6 @@ package org.valkyrienskies.mod.common.physics;
 
 import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.item.EntityItem;
-import net.minecraft.entity.projectile.EntityFireball;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.ChunkCache;
@@ -12,8 +9,6 @@ import net.minecraft.world.World;
 import net.minecraft.world.gen.ChunkProviderServer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.valkyrienskies.mod.common.entity.EntityMountable;
-import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -35,19 +30,20 @@ public class BlockSectionList {
     private final Set<BlockSection.Key> cachedEmptyBlockSections = new HashSet<>();
     private final Queue<BlockSection.Key> dirtyBlockSections = new ConcurrentLinkedQueue<>();
     @NotNull
-    private List<BlockSection> blockSections = List.of();
+    private volatile List<BlockSection> blockSections = List.of();
 
-    public void onUpdate(@NotNull PhysicsObject physicsObject) {
-        AxisAlignedBB shipAabb = physicsObject.getPhysicsTransformAABB();
-        if (shipAabb != null) {
-            World world = physicsObject.getWorld();
-            List<BlockSection> blockSections = this.updateBlockSectionCache(world, shipAabb);
-            this.blockSections = List.copyOf(blockSections);
-        }
-        else  {
+    /**
+     * Publishes the current terrain colliders and reports whether the initial scan completed.
+     * An empty scan in loaded chunks is ready; an unavailable chunk is not.
+     */
+    public boolean onUpdate(@NotNull World world, @Nullable AxisAlignedBB shipAabb) {
+        if (shipAabb == null) {
             this.clearBlockSectionCache();
             this.blockSections = List.of();
+            return false;
         }
+        this.blockSections = List.copyOf(this.updateBlockSectionCache(world, shipAabb));
+        return this.cachedBlockSectionRange != null;
     }
 
     public void close() {

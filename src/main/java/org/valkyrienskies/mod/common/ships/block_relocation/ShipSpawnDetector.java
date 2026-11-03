@@ -7,8 +7,8 @@ import net.minecraft.world.World;
 import valkyrienwarfare.api.ShipBlockBlacklist;
 
 public class ShipSpawnDetector extends SpatialDetector {
-    private MutableBlockPos mutablePos = new MutableBlockPos();
-    private ShipBlockBlacklist blockBlacklist;
+    private final MutableBlockPos mutablePos = new MutableBlockPos();
+    private final ShipBlockBlacklist blockBlacklist;
 
     ShipSpawnDetector(
             BlockPos start, World worldIn, int maximum, boolean checkCorners,
@@ -21,11 +21,10 @@ public class ShipSpawnDetector extends SpatialDetector {
 
     @Override
     public boolean isValidExpansion(int x, int y, int z) {
-        mutablePos.setPos(x, y, z);
-        IBlockState state = cache.getBlockState(mutablePos);
+        this.mutablePos.setPos(x, y, z);
+        IBlockState state = this.getBlockState(this.mutablePos);
         return !this.blockBlacklist.isBlacklisted(
                 this.worldObj, this.mutablePos.toImmutable(), state
         );
     }
-
 }
