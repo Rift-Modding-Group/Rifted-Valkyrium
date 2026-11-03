@@ -281,7 +281,7 @@ public class VSConfig extends VSConfigTemplate {
     @LangKey("valkyrienskies.general.showshipinminimapmods")
     @Comment({
             "Show loaded ships on supported map mods.",
-            "Supports Xaero's Minimap, Xaero's World Map, and JourneyMap. Only surface maps are supported."
+            "Supports Xaero's Minimap, Xaero's World Map, and JourneyMap."
     })
     public static boolean showShipInMinimapMods;
 

@@ -322,4 +322,4 @@ vs_world.general.valkyriumoregenenabled.tooltip=El valor predeterminado es verda
 
 # Minimap integration
 valkyrienskies.general.showshipinminimapmods=Mostrar barcos en los mods de minimapa
-valkyrienskies.general.showshipinminimapmods.tooltip=Mostrar los barcos cargados en Xaero's Minimap, Xaero's World Map y en el minimapa y el mapa de pantalla completa de JourneyMap. Solo en mapas de superficie.
+valkyrienskies.general.showshipinminimapmods.tooltip=Mostrar los barcos cargados en los mods de mapa compatibles. Compatible con Xaero's Minimap, Xaero's World Map y JourneyMap.

@@ -327,4 +327,4 @@ vs_world.general.valkyriumoregenenabled.tooltip=Arr, the standards allow it. Let
 
 # Minimap integration
 valkyrienskies.general.showshipinminimapmods=Show Ships on Minimap Charts
-valkyrienskies.general.showshipinminimapmods.tooltip=Chart loaded ships on Xaero's Wee Chart, Xaero's World Chart, and JourneyChart's wee and full-deck charts. Only on surface charts, arr!
+valkyrienskies.general.showshipinminimapmods.tooltip=Chart loaded ships on supported chart mods. Supports Xaero's Wee Chart, Xaero's World Chart, and JourneyChart, arr!

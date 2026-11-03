@@ -33,18 +33,23 @@ public abstract class MixinGuiMap {
             int mouseX, int mouseY, float partialTicks, CallbackInfo callback,
             @Local(name = "flooredCameraX") int cameraX,
             @Local(name = "flooredCameraZ") int cameraZ,
-            @Local(name = "partialTicks") float mapPartialTicks
+            @Local(name = "partialTicks") float mapPartialTicks,
+            @Local(name = "globalCaveStart") int caveStart
     ) {
         Minecraft mc = Minecraft.getMinecraft();
         if (!VSConfig.showShipInMinimapMods || mc.world == null || this.mapProcessor.getMapWorld() == null
                 || this.mapProcessor.getMapWorld().getCurrentDimension().getDimId() != mc.world.provider.getDimension()
-                || this.mapProcessor.getCurrentCaveLayer() != Integer.MAX_VALUE
         ) {
             return;
         }
+        double maxVisibleY = Double.MAX_VALUE;
+        if (caveStart != Integer.MIN_VALUE && caveStart != Integer.MAX_VALUE) {
+            maxVisibleY = caveStart + 1D;
+        }
         ShipMinimapRenderer.INSTANCE.render(
                 cameraX, cameraZ, mapPartialTicks,
-                Math.max(mc.displayWidth, mc.displayHeight) / this.scale, MinimapMod.XAERO, null
+                Math.max(mc.displayWidth, mc.displayHeight) / this.scale,
+                caveStart != Integer.MAX_VALUE, maxVisibleY, MinimapMod.XAERO, null
         );
     }
 }

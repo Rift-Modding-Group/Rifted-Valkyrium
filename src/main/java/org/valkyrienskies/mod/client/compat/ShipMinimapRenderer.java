@@ -8,6 +8,8 @@ import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.RayTraceResult;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
@@ -69,12 +71,15 @@ public class ShipMinimapRenderer {
             Map.Entry<UUID, ShipImage> entry = iterator.next();
             if (loadedShips.contains(entry.getKey())) continue;
             entry.getValue().texture.deleteGlTexture();
+            entry.getValue().caveTexture.deleteGlTexture();
             iterator.remove();
         }
         if (ships.isEmpty() || mc.isGamePaused()) return;
 
         int boundTexture = GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
         long tick = mc.world.getTotalWorldTime();
+        Vec3d eyes = mc.player == null ? null : mc.player.getPositionEyes(1f);
+        boolean openToSky = eyes != null && currentWorld.canSeeSky(new BlockPos(eyes));
 
         for (PhysicsObject ship : ships) {
             ShipTransform transform = ship.getShipTransformationManager().getCurrentTickTransform();
@@ -84,6 +89,50 @@ public class ShipMinimapRenderer {
                 image = new ShipImage();
                 this.images.put(id, image);
             }
+
+            AxisAlignedBB bounds = ship.getShipBB();
+            boolean nearbyHeight = eyes != null && eyes.y >= bounds.minY - 16D && eyes.y <= bounds.maxY + 16D;
+            image.visibleAtHeight = eyes == null || bounds.contains(eyes) || (openToSky && nearbyHeight);
+            //for changing visibility in cave environments
+            if (!image.visibleAtHeight) {
+                for (int sample = 0; sample < 10; sample++) {
+                    Vec3d point = switch (sample) {
+                        case 0 -> new Vec3d(
+                                Math.clamp(eyes.x, bounds.minX, bounds.maxX),
+                                Math.clamp(eyes.y, bounds.minY, bounds.maxY),
+                                Math.clamp(eyes.z, bounds.minZ, bounds.maxZ)
+                        );
+                        case 1 -> bounds.getCenter();
+                        default -> {
+                            int corner = sample - 2;
+                            yield new Vec3d(
+                                    (corner & 1) == 0 ? bounds.minX : bounds.maxX,
+                                    (corner & 2) == 0 ? bounds.minY : bounds.maxY,
+                                    (corner & 4) == 0 ? bounds.minZ : bounds.maxZ
+                            );
+                        }
+                    };
+                    Vec3d direction = point.subtract(eyes);
+                    int segments = Math.max(1, (int) Math.ceil(direction.length() / 64D));
+                    Vec3d start = eyes;
+                    boolean clearSight = true;
+                    for (int segment = 1; segment <= segments; segment++) {
+                        Vec3d end = eyes.add(direction.scale((double)segment / segments));
+                        RayTraceResult hit = currentWorld.rayTraceBlocks(start, end, false, true, false);
+                        if (hit != null && hit.typeOfHit == RayTraceResult.Type.BLOCK) {
+                            BlockPos hitPos = hit.getBlockPos();
+                            clearSight = ship.getChunkClaim().containsChunk(hitPos.getX() >> 4, hitPos.getZ() >> 4);
+                            break;
+                        }
+                        start = end;
+                    }
+                    if (clearSight) {
+                        image.visibleAtHeight = true;
+                        break;
+                    }
+                }
+            }
+
             ShipMapRaster.Image previousRaster = image.raster;
             BlockPos reference = ship.getReferenceBlockPos();
             boolean scanBlocks = image.raster == null || tick < image.updatedAt || tick - image.updatedAt >= 5;
@@ -152,17 +201,26 @@ public class ShipMinimapRenderer {
             boolean textureChanged = image.texture == null || previousRaster == null
                     || previousRaster.width() != raster.width() || previousRaster.height() != raster.height();
             if (textureChanged) {
-                if (image.texture != null) image.texture.deleteGlTexture();
+                if (image.texture != null) {
+                    image.texture.deleteGlTexture();
+                    image.caveTexture.deleteGlTexture();
+                }
                 image.texture = new DynamicTexture(raster.width(), raster.height());
+                image.caveTexture = new DynamicTexture(raster.width(), raster.height());
             }
             int[] textureData = image.texture.getTextureData();
+            int[] caveTextureData = image.caveTexture.getTextureData();
+            boolean caveTextureChanged = textureChanged;
             Matrix4d snapshotToCurrent = new Matrix4d(transform.getSubspaceToGlobal()).mul(image.transform.getGlobalToSubspace());
             Vector3d worldPoint = new Vector3d();
-            // Keep the unmasked raster so movement can reveal pixels previously hidden by terrain.
             for (int z = 0; z < raster.height(); z++) {
                 for (int x = 0; x < raster.width(); x++) {
                     int index = z * raster.width() + x;
                     int color = raster.colors()[index];
+                    if (caveTextureData[index] != color) {
+                        caveTextureData[index] = color;
+                        caveTextureChanged = true;
+                    }
                     if (color != 0) {
                         worldPoint.set(image.transform.getPosX() + raster.minX() + (x + 0.5D) * raster.pixelSize(),
                                 image.transform.getPosY() + raster.heights()[index],
@@ -180,12 +238,16 @@ public class ShipMinimapRenderer {
                 }
             }
             if (textureChanged) image.texture.updateDynamicTexture();
+            if (caveTextureChanged) image.caveTexture.updateDynamicTexture();
         }
         GlStateManager.bindTexture(boundTexture);
     }
 
     public void clear() {
-        for (ShipImage image : this.images.values()) image.texture.deleteGlTexture();
+        for (ShipImage image : this.images.values()) {
+            image.texture.deleteGlTexture();
+            image.caveTexture.deleteGlTexture();
+        }
         this.images.clear();
         this.world = null;
     }
@@ -194,19 +256,25 @@ public class ShipMinimapRenderer {
      * Renders interpolated ships using the mod's drawing functions.
      * */
     public void render(
-            double cameraX, double cameraZ, float partialTicks, double radius,
+            double cameraX, double cameraZ, float partialTicks, double radius, boolean underground, double maxVisibleY,
             @NotNull MinimapMod mapMod, @Nullable MinimapMod.JourneyMapContext context
     ) {
         Minecraft mc = Minecraft.getMinecraft();
         if (mc.world == null || this.world != mc.world || !VSConfig.showShipInMinimapMods) return;
 
+        // Follow the map layer actually being drawn. Surface ships must remain
+        // on the surface map while its transition into cave mode is still pending.
+        boolean caveView = underground || mc.world.provider.isNether();
+
         //get renderable ships
         List<PhysicsObject> ships = new ArrayList<>();
         for (PhysicsObject ship : ValkyrienUtils.getPhysosLoadedInWorld(mc.world)) {
-            if (!this.images.containsKey(ship.getShipData().getUuid())) continue;
+            ShipImage image = this.images.get(ship.getShipData().getUuid());
+            if (image == null || (caveView && !image.visibleAtHeight)) continue;
             AxisAlignedBB bounds = ship.getShipBB();
             if (bounds.maxX < cameraX - radius || bounds.minX > cameraX + radius
                     || bounds.maxZ < cameraZ - radius || bounds.minZ > cameraZ + radius
+                    || bounds.minY >= maxVisibleY
             ) {
                 continue;
             }
@@ -225,7 +293,7 @@ public class ShipMinimapRenderer {
 
             ShipMapRaster.Image raster = image.raster;
             Vector3d[] vertices = ShipMapRaster.projectQuad(raster, image.transform, transform, cameraX, cameraZ);
-            drawImage.accept(image.texture, vertices);
+            drawImage.accept(caveView ? image.caveTexture : image.texture, vertices);
         }
         mapMod.getCleanup().accept(boundTexture);
     }
@@ -235,9 +303,11 @@ public class ShipMinimapRenderer {
      * */
     private static class ShipImage {
         private DynamicTexture texture;
+        private DynamicTexture caveTexture;
         private ShipMapRaster.Image raster;
         private ShipTransform transform;
         private List<ShipMapRaster.MapBlock> blocks = List.of();
         private long updatedAt;
+        private boolean visibleAtHeight = true;
     }
 }

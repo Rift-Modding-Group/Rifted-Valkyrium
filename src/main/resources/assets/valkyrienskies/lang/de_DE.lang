@@ -327,4 +327,4 @@ vs_world.general.valkyriumoregenenabled.tooltip=Default is true. Set to false to
 
 # Minimap integration
 valkyrienskies.general.showshipinminimapmods=Schiffe in Minikarten-Mods anzeigen
-valkyrienskies.general.showshipinminimapmods.tooltip=Geladene Schiffe in Xaero's Minimap und Xaero's World Map sowie auf der Minikarte und Vollbildkarte von JourneyMap anzeigen. Nur auf Oberflächenkarten.
+valkyrienskies.general.showshipinminimapmods.tooltip=Geladene Schiffe in unterstützten Karten-Mods anzeigen. Unterstützt Xaero's Minimap, Xaero's World Map und JourneyMap.

@@ -30,7 +30,7 @@ public abstract class MixinMapRenderer {
         Minecraft mc = Minecraft.getMinecraft();
         MapRenderer renderer = (MapRenderer) (Object) this;
         MapType mapType = renderer.getMapType();
-        if (!enabled || !VSConfig.showShipInMinimapMods || mc.world == null || mapType == null || mapType.isUnderground()
+        if (!enabled || !VSConfig.showShipInMinimapMods || mc.world == null || mapType == null
                 || mapType.dimension != mc.world.provider.getDimension()
         ) {
             return;
@@ -42,12 +42,16 @@ public abstract class MixinMapRenderer {
         double radius = (Math.hypot(mc.displayWidth, mc.displayHeight) / 2D + Math.hypot(offsetX, offsetZ)) / blockSize;
         float partialTicks = mc.isGamePaused() ? 1f : mc.getRenderPartialTicks();
         String filter = RegionTileShaders.from(mapType.getShader());
+        double maxVisibleY = Double.MAX_VALUE;
+        if (mapType.isUnderground() && mapType.vSlice != null) {
+            maxVisibleY = (mapType.vSlice + 1D) * 16D;
+        }
 
         // Flush terrain before the ships. Both maps draw their markers afterwards;
         // the minimap's depth mask and rotation are still active here.
         ctx.flushLayers();
         ShipMinimapRenderer.INSTANCE.render(
-                cameraX, cameraZ, partialTicks, radius, MinimapMod.JOURNEYMAP,
+                cameraX, cameraZ, partialTicks, radius, mapType.isUnderground(), maxVisibleY, MinimapMod.JOURNEYMAP,
                 new MinimapMod.JourneyMapContext(ctx, mc.displayWidth / 2D + offsetX, mc.displayHeight / 2D + offsetZ, blockSize, alpha, filter)
         );
         ctx.flushLayers();
