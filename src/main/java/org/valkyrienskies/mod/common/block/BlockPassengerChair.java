@@ -8,6 +8,7 @@ import javax.annotation.ParametersAreNonnullByDefault;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.world.IBlockAccess;
 import org.jetbrains.annotations.NotNull;
+import org.valkyrienskies.mod.common.annotation.LegacyContent;
 import org.valkyrienskies.mod.common.tileentity.TileEntityPassengerChair;
 
 import net.minecraft.block.BlockHorizontal;
@@ -31,6 +32,12 @@ import net.minecraft.world.World;
 import org.valkyrienskies.mod.common.util.BaseBlock;
 
 @ParametersAreNonnullByDefault
+@LegacyContent(resources = {
+        "assets/valkyrienskies/blockstates/passenger_chair.json",
+        "assets/valkyrienskies/models/block/passenger_chair.*",
+        "assets/valkyrienskies/textures/blocks/passenger_chair.png",
+        "assets/valkyrienskies/recipes/passenger_chair.json"
+})
 public class BlockPassengerChair extends BaseBlock {
     public static final PropertyDirection FACING = BlockHorizontal.FACING;
 

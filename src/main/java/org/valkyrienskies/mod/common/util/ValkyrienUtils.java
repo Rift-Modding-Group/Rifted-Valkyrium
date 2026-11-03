@@ -25,6 +25,7 @@ import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4dc;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
+import org.valkyrienskies.mod.common.annotation.LegacyContent;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.VSWorldDataCapability;
 import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMount;
@@ -272,10 +273,12 @@ public final class ValkyrienUtils {
         }
         return shipWorld.getManager().getAllLoadedPhysObj();
     }
+
     /**
      * @deprecated use {@link RiftedValkyriumAPI#createNewShip(WorldServer, Vec3d)}
      */
     @Deprecated
+    @LegacyContent
     public static void assembleShipAsOrderedByPlayer(
             World worldIn, @Nullable EntityPlayerMP creator,
             BlockPos physicsInfuserPos, BlockFinder.BlockFinderType blockFinderType

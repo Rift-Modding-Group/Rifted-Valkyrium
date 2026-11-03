@@ -29,6 +29,7 @@ import org.jetbrains.annotations.NotNull;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.lwjgl.opengl.GL11;
+import org.valkyrienskies.mod.common.annotation.LegacyContent;
 import org.valkyrienskies.mod.client.compat.ShipMinimapRenderer;
 import org.valkyrienskies.mod.client.render.GibsModelRegistry;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
@@ -192,6 +193,7 @@ public class EventsClient {
         }
     }
 
+    @LegacyContent
     private void renderWaterPumpRanges(World world, Vector3dc offset, float partialTicks) {
         boolean renderStateEnabled = false;
 

@@ -4,6 +4,7 @@ import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.player.EntityPlayerMP;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
+import org.valkyrienskies.mod.common.annotation.LegacyContent;
 import org.valkyrienskies.mod.common.block.BlockBoatChair;
 import org.valkyrienskies.mod.common.physics.PhysicsCalculations;
 import org.valkyrienskies.mod.common.piloting.PilotControls;
@@ -18,6 +19,7 @@ import javax.annotation.Nullable;
  * note to self: still not decided on if boat chairs should force ship to
  * balance like on captains chair
  * */
+@LegacyContent
 public class TileEntityBoatChair extends TileEntityPilotableImpl {
     private static final double MAX_LINEAR_VELOCITY = 12;
     private static final double MAX_ANGULAR_VELOCITY = Math.PI / 2;

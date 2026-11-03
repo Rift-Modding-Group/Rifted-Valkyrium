@@ -1,0 +1,204 @@
+import org.objectweb.asm.ClassReader
+import org.objectweb.asm.ClassWriter
+import org.objectweb.asm.Opcodes
+import org.objectweb.asm.Type
+import org.objectweb.asm.commons.ClassRemapper
+import org.objectweb.asm.commons.Remapper
+import org.objectweb.asm.tree.ClassNode
+import org.objectweb.asm.tree.FieldInsnNode
+import org.objectweb.asm.tree.InsnList
+import org.objectweb.asm.tree.InsnNode
+import org.objectweb.asm.tree.MethodInsnNode
+
+import java.util.zip.ZipFile
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'org.ow2.asm:asm-tree:9.10.1'
+        classpath 'org.ow2.asm:asm-commons:9.10.1'
+    }
+}
+
+//this task basically removes legacy content from an already built jar
+//it also runs as the final step of the main build script
+tasks.register('stripLegacyContent') {
+    group = 'build'
+    description = 'Removes @LegacyContent declarations and resources from a copy of the mod.'
+    outputs.dir(layout.buildDirectory.dir('withoutLegacy'))
+
+    doLast {
+        String marker = 'org/valkyrienskies/mod/common/annotation/LegacyContent'
+        String descriptor = "L${marker};"
+        Map<String, ClassNode> classes = [:]
+        Set<String> removedPackages = []
+        Set<String> removedClasses = [marker]
+        Set<String> removedMethods = []
+        Set<String> removedFields = []
+        Set<String> removedResources = []
+
+        new ZipFile(inputs.files.singleFile).withCloseable { archive ->
+            archive.entries().each { entry ->
+                if (entry.name.endsWith('.class')) {
+                    ClassNode node = new ClassNode(Opcodes.ASM9)
+                    archive.getInputStream(entry).withCloseable { stream ->
+                        new ClassReader(stream).accept(node, 0)
+                    }
+                    classes[entry.name] = node
+                }
+            }
+
+            classes.values().each { node ->
+                List declarations = [node] + node.methods + node.fields
+                declarations.each { declaration ->
+                    List annotations = (declaration.visibleAnnotations ?: []) + (declaration.invisibleAnnotations ?: [])
+                    annotations.findAll { it.desc == descriptor }.each { annotation ->
+                        List values = annotation.values ?: []
+                        for (int index = 0; index < values.size(); index += 2) {
+                            if (values[index] == 'resources') {
+                                removedResources.addAll(values[index + 1] as List<String>)
+                            }
+                        }
+                        if (declaration.is(node)) {
+                            if (node.name.endsWith('/package-info')) {
+                                removedPackages.add(node.name.substring(0, node.name.lastIndexOf('/') + 1))
+                            } else {
+                                removedClasses.add(node.name)
+                            }
+                        } else if (node.methods.contains(declaration)) {
+                            removedMethods.add("${node.name}#${declaration.name}${declaration.desc}".toString())
+                        } else {
+                            removedFields.add("${node.name}#${declaration.name}:${declaration.desc}".toString())
+                        }
+                    }
+                }
+            }
+
+            Set<String> annotatedTypes = new HashSet<>(removedClasses)
+            classes.values().each { node ->
+                if (removedPackages.any { node.name.startsWith(it) }
+                        || annotatedTypes.any { node.name.startsWith(it + '$') }) {
+                    removedClasses.add(node.name)
+                }
+            }
+
+            Map<String, ClassNode> types = classes.values().collectEntries { [(it.name): it] }
+            Map<String, Set<String>> methods = types.collectEntries { name, node ->
+                [(name): node.methods.collect { "${it.name}${it.desc}".toString() }.toSet()]
+            }
+            Map<String, Set<String>> fields = types.collectEntries { name, node ->
+                [(name): node.fields.collect { "${it.name}:${it.desc}".toString() }.toSet()]
+            }
+            // Bytecode can name a subclass as the owner of an inherited member.
+            Closure<Boolean> isRemovedMember = { String owner, String name, String desc, boolean method ->
+                String signature = method ? "${name}${desc}" : "${name}:${desc}"
+                Deque<String> owners = new ArrayDeque<>([owner])
+                Set<String> visited = []
+                while (!owners.isEmpty()) {
+                    String candidate = owners.removeFirst()
+                    if (!visited.add(candidate)) continue
+                    if ((method ? methods : fields)[candidate]?.contains(signature)) {
+                        return (method ? removedMethods : removedFields).contains("${candidate}#${signature}".toString())
+                    }
+                    ClassNode type = types[candidate]
+                    if (type?.superName != null) owners.addLast(type.superName)
+                    if (type != null) owners.addAll(type.interfaces)
+                }
+                return false
+            }
+
+            File destination = outputs.files.singleFile
+            project.delete(destination)
+            project.copy {
+                from(project.zipTree(inputs.files.singleFile))
+                into(destination)
+                includeEmptyDirs = false
+                exclude(removedResources)
+                exclude { entry ->
+                    ClassNode node = classes[entry.path]
+                    node != null && removedClasses.contains(node.name)
+                }
+            }
+
+            classes.each { path, node ->
+                if (removedClasses.contains(node.name)) return
+
+                boolean changed = node.methods.removeAll { removedMethods.contains("${node.name}#${it.name}${it.desc}".toString()) }
+                changed |= node.fields.removeAll { removedFields.contains("${node.name}#${it.name}:${it.desc}".toString()) }
+                changed |= node.innerClasses.removeAll { removedClasses.contains(it.name) || removedClasses.contains(it.outerName) }
+                if (node.nestMembers != null) {
+                    changed |= node.nestMembers.removeAll { removedClasses.contains(it) }
+                }
+
+                node.methods.each { method ->
+                    method.instructions.toArray().each { instruction ->
+                        InsnList discarded = new InsnList()
+                        if (instruction instanceof MethodInsnNode
+                                && isRemovedMember(instruction.owner, instruction.name, instruction.desc, true)) {
+                            if (Type.getReturnType(instruction.desc).sort != Type.VOID || instruction.name == '<init>') {
+                                throw new GradleException("Cannot discard call to legacy method ${instruction.owner}.${instruction.name}${instruction.desc} in ${node.name}.${method.name}")
+                            }
+                            Type.getArgumentTypes(instruction.desc).reverseEach { argument ->
+                                discarded.add(new InsnNode(argument.size == 2 ? Opcodes.POP2 : Opcodes.POP))
+                            }
+                            if (instruction.opcode != Opcodes.INVOKESTATIC) {
+                                discarded.add(new InsnNode(Opcodes.POP))
+                            }
+                        }
+                        else if (instruction instanceof FieldInsnNode
+                                && isRemovedMember(instruction.owner, instruction.name, instruction.desc, false)
+                                && instruction.opcode in [Opcodes.PUTFIELD, Opcodes.PUTSTATIC]
+                        ) {
+                            discarded.add(new InsnNode(Type.getType(instruction.desc).size == 2 ? Opcodes.POP2 : Opcodes.POP))
+                            if (instruction.opcode == Opcodes.PUTFIELD) {
+                                discarded.add(new InsnNode(Opcodes.POP))
+                            }
+                        }
+                        else {
+                            return
+                        }
+                        method.instructions.insertBefore(instruction, discarded)
+                        method.instructions.remove(instruction)
+                        changed = true
+                    }
+                }
+
+                //check descriptors, instructions, annotations, frames and method handles, not
+                //just direct calls. a new dependency on stripped content must fail the build.
+                ClassWriter writer = new ClassWriter(0)
+                node.accept(new ClassRemapper(writer, new Remapper(Opcodes.ASM9) {
+                    @Override
+                    String map(String name) {
+                        if (removedClasses.contains(name)) {
+                            throw new GradleException("${node.name} still references legacy class ${name}")
+                        }
+                        return name
+                    }
+
+                    @Override
+                    String mapMethodName(String owner, String name, String desc) {
+                        if (isRemovedMember(owner, name, desc, true)) {
+                            throw new GradleException("${node.name} still references legacy method ${owner}.${name}${desc}")
+                        }
+                        return name
+                    }
+
+                    @Override
+                    String mapFieldName(String owner, String name, String desc) {
+                        if (isRemovedMember(owner, name, desc, false)) {
+                            throw new GradleException("${node.name} still reads legacy field ${owner}.${name}")
+                        }
+                        return name
+                    }
+                }))
+                if (changed) {
+                    new File(destination, path).bytes = writer.toByteArray()
+                }
+            }
+        }
+        logger.lifecycle("Removed {} legacy classes, {} methods and {} fields.",
+                removedClasses.size(), removedMethods.size(), removedFields.size())
+    }
+}

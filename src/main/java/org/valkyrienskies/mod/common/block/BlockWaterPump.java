@@ -17,12 +17,19 @@ import net.minecraft.util.text.TextFormatting;
 import net.minecraft.world.World;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
+import org.valkyrienskies.mod.common.annotation.LegacyContent;
 import org.valkyrienskies.mod.common.tileentity.TileEntityWaterPump;
 import org.valkyrienskies.mod.common.util.BaseBlock;
 
 import javax.annotation.Nullable;
 import java.util.List;
 
+@LegacyContent(resources = {
+        "assets/valkyrienskies/blockstates/vs_water_pump.json",
+        "assets/valkyrienskies/models/block/vs_water_pump.*",
+        "assets/valkyrienskies/textures/blocks/vs_water_pump.png",
+        "assets/valkyrienskies/recipes/vs_water_pump.json"
+})
 public class BlockWaterPump extends BaseBlock implements ITileEntityProvider {
 
     public BlockWaterPump() {

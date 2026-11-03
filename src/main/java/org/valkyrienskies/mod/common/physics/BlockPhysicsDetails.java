@@ -5,6 +5,7 @@ import net.minecraft.block.BlockLiquid;
 import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.init.Blocks;
+import org.valkyrienskies.mod.common.annotation.LegacyContent;
 import org.valkyrienskies.addon.control.ValkyrienSkiesControl;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.block.IBlockForceProvider;
@@ -38,6 +39,7 @@ public class BlockPhysicsDetails {
 
     static {
         generateBlockMasses();
+        generateLegacyBlockMasses();
         generateMaterialMasses();
         generateBlocksToNotPhysicsInfuse();
 
@@ -49,6 +51,7 @@ public class BlockPhysicsDetails {
         blockToMass.clear();
         blockStateToMass.clear();
         generateBlockMasses();
+        generateLegacyBlockMasses();
         if (VSConfig.blockMass == null) return;
         for (String entry : VSConfig.blockMass) {
             applyConfiguredBlockMass(entry);
@@ -173,13 +176,14 @@ public class BlockPhysicsDetails {
         blockToMass.put(Blocks.WATER, BlockMass.NONE);
         blockToMass.put(Blocks.LAVA, BlockMass.NONE);
         blockToMass.put(Blocks.BEDROCK, BlockMass.VERY_HEAVY);
+    }
 
-        if (!VSConfig.disableLegacyContent) {
-            blockToMass.put(ValkyrienSkiesControl.INSTANCE.vsControlBlocks.gyroscopeDampener, BlockMass.NONE);
-            blockToMass.put(ValkyrienSkiesControl.INSTANCE.vsControlBlocks.gyroscopeStabilizer, BlockMass.NONE);
-            blockToMass.put(ValkyrienSkiesControl.INSTANCE.vsControlBlocks.buoyancyTank, BlockMass.VERY_LIGHT);
-            blockToMass.put(ValkyrienSkiesControl.INSTANCE.vsControlBlocks.networkRelay, BlockMass.NONE);
-        }
+    @LegacyContent
+    private static void generateLegacyBlockMasses() {
+        blockToMass.put(ValkyrienSkiesControl.INSTANCE.vsControlBlocks.gyroscopeDampener, BlockMass.NONE);
+        blockToMass.put(ValkyrienSkiesControl.INSTANCE.vsControlBlocks.gyroscopeStabilizer, BlockMass.NONE);
+        blockToMass.put(ValkyrienSkiesControl.INSTANCE.vsControlBlocks.buoyancyTank, BlockMass.VERY_LIGHT);
+        blockToMass.put(ValkyrienSkiesControl.INSTANCE.vsControlBlocks.networkRelay, BlockMass.NONE);
     }
 
     private static void generateBlocksToNotPhysicsInfuse() {

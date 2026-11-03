@@ -9,11 +9,13 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ITickable;
 import net.minecraft.util.math.AxisAlignedBB;
 import org.jetbrains.annotations.NotNull;
+import org.valkyrienskies.mod.common.annotation.LegacyContent;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
 
 import java.util.List;
 
+@LegacyContent
 public class TileEntityWaterPump extends TileEntity implements ITickable {
     public static final int MIN_PUMP_SIZE = 1;
     public static final int MAX_PUMP_SIZE = 3;

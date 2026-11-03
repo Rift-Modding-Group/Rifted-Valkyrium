@@ -32,6 +32,7 @@ import net.minecraftforge.fml.common.registry.GameRegistry;
 import net.minecraftforge.fml.relauncher.Side;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.valkyrienskies.mod.common.annotation.LegacyContent;
 import org.valkyrienskies.mod.client.gui.TabValkyrienSkies;
 import org.valkyrienskies.mod.common.block.BlockBoatChair;
 import org.valkyrienskies.mod.common.block.BlockCaptainsChair;
@@ -97,10 +98,15 @@ public class ValkyrienSkiesMod {
      */
     private static ForkJoinPool physicsThreadPool = null;
 
+    @LegacyContent
     public Block captainsChair;
+    @LegacyContent
     public Block passengerChair;
+    @LegacyContent
     public Block waterPump;
+    @LegacyContent
     public Block boatChair;
+    @LegacyContent
     public Item shipTracker;
     public static SimpleNetworkWrapper physWrapperNetwork;
     public static SimpleNetworkWrapper physWrapperTransformUpdateNetwork;
@@ -114,11 +120,8 @@ public class ValkyrienSkiesMod {
         LOGGER.debug("Initializing configuration.");
         runConfiguration();
 
-        if (!VSConfig.disableLegacyContent) {
-            VS_CREATIVE_TAB = new TabValkyrienSkies(MOD_ID);
-            registerItems();
-		    registerBlocks();
-        }
+        registerItems();
+        registerBlocks();
 
         LOGGER.debug("Instantiating the physics thread executor.");
         ValkyrienSkiesMod.physicsThreadPool = new ForkJoinPool(VSConfig.threadCount);
@@ -240,8 +243,9 @@ public class ValkyrienSkiesMod {
         );
     }
 
+    @LegacyContent
     void registerRecipes(RegistryEvent.Register<IRecipe> event) {
-        if (VSConfig.disableLegacyContent || !VSConfig.chairRecipes) return;
+        if (!VSConfig.chairRecipes) return;
 
         registerRecipe(event, "recipe_captains_chair", new ItemStack(captainsChair),
                     "SLS",
@@ -274,6 +278,7 @@ public class ValkyrienSkiesMod {
         );
     }
 
+    @LegacyContent
     private static void registerRecipe(RegistryEvent.Register<IRecipe> event,
         String registryName, ItemStack out, Object... in) {
         CraftingHelper.ShapedPrimer primer = CraftingHelper.parseShaped(in);
@@ -290,6 +295,7 @@ public class ValkyrienSkiesMod {
         VSConfig.sync();
     }
 
+    @LegacyContent
     private void registerTileEntities() {
         GameRegistry.registerTileEntity(TileEntityCaptainsChair.class,
                 new ResourceLocation(MOD_ID, "tile_captains_chair"));
@@ -301,6 +307,7 @@ public class ValkyrienSkiesMod {
                 new ResourceLocation(MOD_ID, "tile_boat_chair"));
     }
 
+    @LegacyContent
     private void registerBlocks() {
         this.captainsChair = registerBlock(new BlockCaptainsChair());
         this.passengerChair = registerBlock(new BlockPassengerChair());
@@ -311,13 +318,16 @@ public class ValkyrienSkiesMod {
         this.registerTileEntities();
     }
 
+    @LegacyContent
     private Block registerBlock(Block block) {
         ValkyrienSkiesMod.BLOCKS.add(block);
         ValkyrienSkiesMod.ITEMS.add(new ItemBlock(block).setRegistryName(block.getRegistryName()));
         return block;
     }
 
+    @LegacyContent
     private void registerItems() {
+        VS_CREATIVE_TAB = new TabValkyrienSkies(MOD_ID);
         this.shipTracker = new ItemShipTracker("vs_ship_tracker", true);
     }
 

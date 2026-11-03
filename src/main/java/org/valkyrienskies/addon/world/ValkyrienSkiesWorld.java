@@ -32,7 +32,6 @@ import org.valkyrienskies.addon.world.proxy.CommonProxyWorld;
 import org.valkyrienskies.addon.world.worldgen.ValkyrienSkiesWorldGen;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.command.config.VSConfigCommand;
-import org.valkyrienskies.mod.common.config.VSConfig;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -67,10 +66,6 @@ public class ValkyrienSkiesWorld {
 
     @Mod.EventHandler
     private void preInit(FMLPreInitializationEvent event) {
-        if (VSConfig.disableLegacyContent) {
-            LOG.info("Legacy content is disabled; skipping VS World initialization.");
-            return;
-        }
         LOG.debug("Initializing configuration.");
         runConfiguration();
         registerCapabilities();
@@ -79,7 +74,6 @@ public class ValkyrienSkiesWorld {
 
     @Mod.EventHandler
     private void init(FMLInitializationEvent event) {
-        if (VSConfig.disableLegacyContent) return;
         EntityRegistry.registerModEntity(
                 new ResourceLocation(MOD_ID, "fall_up_block_entity"),
                 EntityFallingUpBlock.class,
@@ -96,17 +90,11 @@ public class ValkyrienSkiesWorld {
 
     @Mod.EventHandler
     public void postInit(FMLPostInitializationEvent event) {
-        if (VSConfig.disableLegacyContent) {
-            return;
-        }
         proxy.postInit(event);
     }
 
     @Mod.EventHandler
     public void serverStart(FMLServerStartingEvent event) {
-        if (VSConfig.disableLegacyContent) {
-            return;
-        }
         ServerCommandManager manager = (ServerCommandManager) event.getServer().getCommandManager();
         manager.registerCommand(new VSConfigCommand("vsworldconfig", VSWorldConfig.class));
     }
@@ -124,35 +112,23 @@ public class ValkyrienSkiesWorld {
 
     @SubscribeEvent
     public static void registerBlocks(RegistryEvent.Register<Block> event) {
-        if (VSConfig.disableLegacyContent) {
-            return;
-        }
         INSTANCE.valkyriumOre = registerBlock(new BlockValkyriumOre());
         event.getRegistry().registerAll(BLOCKS.toArray(new Block[0]));
     }
 
     @SubscribeEvent
     public static void registerItems(RegistryEvent.Register<Item> event) {
-        if (VSConfig.disableLegacyContent) {
-            return;
-        }
         INSTANCE.valkyriumCrystal = registerItem( new ItemValkyriumCrystal());
         event.getRegistry().registerAll(ITEMS.toArray(new Item[0]));
     }
 
     @SubscribeEvent
     public static void registerPotions(RegistryEvent.Register<Potion> event) {
-        if (VSConfig.disableLegacyContent) {
-            return;
-        }
         PotionInit.registerPotions(event);
     }
 
     @SubscribeEvent
     public static void registerPotionTypes(RegistryEvent.Register<PotionType> event) {
-        if (VSConfig.disableLegacyContent) {
-            return;
-        }
         PotionInit.registerPotionTypes(event);
     }
 

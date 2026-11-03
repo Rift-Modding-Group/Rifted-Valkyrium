@@ -17,6 +17,7 @@ if (propertyBool('publish_to_maven')) {
             mavenJava(MavenPublication) {
                 from components.java // Publish with standard artifacts
                 artifact tasks.named('apiJar')
+                artifact tasks.named('withoutLegacyJar')
                 setGroupId(propertyString('root_package'))// Publish with root package as maven group
                 setArtifactId(propertyString('mod_id')) // Publish artifacts with mod id as the artifact id
 

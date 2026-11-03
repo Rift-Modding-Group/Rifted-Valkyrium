@@ -13,6 +13,7 @@ import net.minecraft.util.text.TextComponentString;
 import net.minecraft.world.World;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
+import org.valkyrienskies.mod.common.annotation.LegacyContent;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
@@ -23,6 +24,11 @@ import java.text.DecimalFormat;
 import java.util.Optional;
 import java.util.UUID;
 
+@LegacyContent(resources = {
+        "assets/valkyrienskies/models/item/vs_ship_tracker.json",
+        "assets/valkyrienskies/textures/items/vs_ship_tracker.png",
+        "assets/valkyrienskies/recipes/vs_ship_tracker.json"
+})
 public class ItemShipTracker extends BaseItem {
 
     private static final String NBT_DATA_KEY = "vs_tracked_ship_uuid";

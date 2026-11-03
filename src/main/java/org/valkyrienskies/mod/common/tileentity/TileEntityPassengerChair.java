@@ -12,6 +12,7 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.WorldServer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.valkyrienskies.mod.common.annotation.LegacyContent;
 import org.valkyrienskies.mod.common.ships.ship_transform.CoordinateSpaceType;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.entity.EntityMountableChair;
@@ -20,6 +21,7 @@ import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import valkyrienwarfare.api.TransformType;
 
 // TODO: FIX THIS CLASS
+@LegacyContent
 public class TileEntityPassengerChair extends TileEntity /*implements IRelocationAwareTile*/ {
     // UUID of the mounting entity this chair is using to hold its passenger.
     @Nullable

@@ -43,7 +43,6 @@ import org.valkyrienskies.addon.control.tileentity.*;
 import org.valkyrienskies.addon.world.ValkyrienSkiesWorld;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.command.config.VSConfigCommand;
-import org.valkyrienskies.mod.common.config.VSConfig;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -88,7 +87,6 @@ public class ValkyrienSkiesControl {
 
 	@SubscribeEvent
 	public static void registerBlocks(RegistryEvent.Register<Block> event) {
-        if (VSConfig.disableLegacyContent) return;
         Block[] blockArray = BLOCKS.toArray(new Block[0]);
         event.getRegistry().registerAll(blockArray);
 	}
@@ -110,7 +108,6 @@ public class ValkyrienSkiesControl {
 
     @SubscribeEvent
     public static void registerItems(RegistryEvent.Register<Item> event) {
-        if (VSConfig.disableLegacyContent) return;
         event.getRegistry().registerAll(ITEMS.toArray(new Item[0]));
     }
 
@@ -123,10 +120,6 @@ public class ValkyrienSkiesControl {
 
     @Mod.EventHandler
     public void preInit(FMLPreInitializationEvent event) {
-        if (VSConfig.disableLegacyContent) {
-            log.info("Legacy content is disabled; skipping VS Control initialization.");
-            return;
-        }
         log.debug("Initializing configuration.");
         runConfiguration();
 
@@ -138,14 +131,12 @@ public class ValkyrienSkiesControl {
 
     @Mod.EventHandler
     public void serverStart(FMLServerStartingEvent event) {
-	    if (VSConfig.disableLegacyContent) return;
 	    ServerCommandManager manager = (ServerCommandManager) event.getServer().getCommandManager();
 	    manager.registerCommand(new VSConfigCommand("vscontrolconfig", VSControlConfig.class));
     }
 
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
-		if (VSConfig.disableLegacyContent) return;
 		registerMultiblocks();
         registerTileEntities();
         registerCapabilities();
@@ -154,7 +145,6 @@ public class ValkyrienSkiesControl {
 
     @Mod.EventHandler
     public void postInit(FMLPostInitializationEvent event) {
-        if (VSConfig.disableLegacyContent) return;
         proxy.postInit(event);
     }
 

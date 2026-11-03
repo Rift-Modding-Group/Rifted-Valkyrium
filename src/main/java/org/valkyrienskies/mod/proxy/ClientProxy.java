@@ -1,14 +1,12 @@
 package org.valkyrienskies.mod.proxy;
 
-import net.minecraft.block.Block;
 import net.minecraftforge.fml.common.Loader;
 import org.valkyrienskies.mod.client.EventsClient;
 import org.valkyrienskies.mod.client.VSKeyHandler;
 import org.valkyrienskies.mod.client.compat.ShipMinimapRenderer;
 import org.valkyrienskies.mod.client.render.GibsModelRegistry;
 import org.valkyrienskies.mod.client.render.ValkyrienSkiesOBJLoader;
-import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
-import org.valkyrienskies.mod.common.config.VSConfig;
+import org.valkyrienskies.mod.common.RegisterEvents;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.block.model.ModelResourceLocation;
@@ -52,21 +50,6 @@ public class ClientProxy extends CommonProxy {
         super.postInit(e);
         Minecraft.getMinecraft().getFramebuffer().enableStencil();
 
-        if (VSConfig.disableLegacyContent) {
-            return;
-        }
-        registerBlockItem(ValkyrienSkiesMod.INSTANCE.captainsChair);
-        registerBlockItem(ValkyrienSkiesMod.INSTANCE.passengerChair);
-    }
-
-    // Registers the inventory model for the ItemBlock of "toRegister"
-    private static void registerBlockItem(Block toRegister) {
-        Item item = Item.getItemFromBlock(toRegister);
-        Minecraft.getMinecraft()
-                .getRenderItem()
-                .getItemModelMesher()
-                .register(item, 0, new ModelResourceLocation(
-                        ValkyrienSkiesMod.MOD_ID + ":" + item.getTranslationKey()
-                                .substring(5), "inventory"));
+        RegisterEvents.registerLegacyModels();
     }
 }

@@ -7,6 +7,7 @@ import net.minecraft.util.math.BlockPos;
 import org.joml.AxisAngle4d;
 import org.joml.Matrix3d;
 import org.joml.Vector3d;
+import org.valkyrienskies.mod.common.annotation.LegacyContent;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.block.BlockCaptainsChair;
 import org.valkyrienskies.mod.common.physics.PhysicsCalculations;
@@ -15,6 +16,7 @@ import org.valkyrienskies.mod.common.piloting.PilotControlsMessage;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import valkyrienwarfare.api.TransformType;
 
+@LegacyContent
 public class TileEntityCaptainsChair extends TileEntityPilotableImpl implements ITickable {
     @Override
     public final void onStartTileUsage() {

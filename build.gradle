@@ -12,6 +12,7 @@ import org.jetbrains.gradle.ext.Gradle
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.commons.ClassRemapper
 import org.objectweb.asm.commons.Remapper
+import java.util.jar.JarFile
 
 ext {
     //noinspection GroovyAssignabilityCheck
@@ -144,6 +145,74 @@ dependencies {
 }
 
 apply from: 'gradle/scripts/dependencies.gradle'
+apply from: 'gradle/scripts/legacy.gradle'
+
+tasks.named('stripLegacyContent') {
+    dependsOn tasks.named(remapTaskName)
+    inputs.file(tasks.named(remapTaskName).flatMap { it.archiveFile })
+            .withPropertyName('modJar').withPathSensitivity(PathSensitivity.NONE)
+}
+
+tasks.register('withoutLegacyJar', Jar) {
+    group = 'build'
+    description = 'Assembles an additional mod JAR without annotated legacy content.'
+    dependsOn tasks.named('stripLegacyContent')
+    archiveClassifier = 'no-legacy'
+    includeEmptyDirs = false
+    from(tasks.named('stripLegacyContent')) {
+        exclude 'META-INF/MANIFEST.MF'
+    }
+    manifest.from(layout.buildDirectory.file('withoutLegacy/META-INF/MANIFEST.MF'))
+}
+
+tasks.register('verifyModJars') {
+    group = 'verification'
+    description = 'Checks that both distribution JARs declare the required Cleanroom loading metadata.'
+    inputs.files(tasks.named(remapTaskName).flatMap { it.archiveFile },
+            tasks.named('withoutLegacyJar').flatMap { it.archiveFile })
+            .withPropertyName('distributionJars').withPathSensitivity(PathSensitivity.NONE)
+    doLast {
+        Map<String, String> requiredAttributes = [
+                'ModType': 'CRL',
+                'MixinConfigs': "${mod_id}.mixin.json".toString()
+        ]
+        if (is_coremod.toBoolean()) {
+            requiredAttributes['FMLCorePlugin'] = coremod_plugin_class_name
+            if (coremod_includes_mod.toBoolean()) {
+                requiredAttributes['FMLCorePluginContainsFMLMod'] = 'true'
+            }
+        }
+        if (use_access_transformer.toBoolean()) {
+            requiredAttributes['FMLAT'] = access_transformer_locations
+        }
+        inputs.files.each { archive ->
+            new JarFile(archive).withCloseable { distribution ->
+                requiredAttributes.each { name, expected ->
+                    String actual = distribution.manifest?.mainAttributes?.getValue(name)
+                    if (actual != expected) {
+                        throw new GradleException("${archive.name}: expected manifest ${name}=${expected}, got ${actual}")
+                    }
+                }
+                List<String> requiredEntries = ["${mod_id}.mixin.json".toString()]
+                if (is_coremod.toBoolean()) {
+                    requiredEntries.add(coremod_plugin_class_name.replace('.', '/') + '.class')
+                }
+                if (use_access_transformer.toBoolean()) {
+                    requiredEntries.add("META-INF/${access_transformer_locations}".toString())
+                }
+                requiredEntries.each { path ->
+                    if (distribution.getJarEntry(path) == null) {
+                        throw new GradleException("${archive.name}: missing loading resource ${path}")
+                    }
+                }
+            }
+        }
+    }
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('verifyModJars')
+}
 
 processResources {
     rename '(.+_at.cfg)', 'META-INF/$1'
@@ -192,6 +261,7 @@ tasks.register('apiJar', Jar) {
 
 tasks.named('assemble') {
     dependsOn tasks.named('apiJar')
+    dependsOn tasks.named('withoutLegacyJar')
 }
 
 idea {
@@ -242,26 +312,24 @@ jar {
             from configurations.contain
         }
     }
-    doFirst {
-        manifest {
-            def attribute_map = [:]
-            attribute_map['ModType'] = "CRL"
-            attribute_map['MixinConfigs'] = "${mod_id}.mixin.json"
-            if (configurations.contain.size() > 0) {
-                attribute_map['ContainedDeps'] = configurations.contain.collect { it.name }.join(' ')
-                attribute_map['NonModDeps'] = true
-            }
-            if (is_coremod.toBoolean()) {
-                attribute_map['FMLCorePlugin'] = coremod_plugin_class_name
-                if (coremod_includes_mod.toBoolean()) {
-                    attribute_map['FMLCorePluginContainsFMLMod'] = true
-                }
-            }
-            if (use_access_transformer.toBoolean()) {
-                attribute_map['FMLAT'] = access_transformer_locations
-            }
-            attributes(attribute_map)
+    manifest {
+        def attribute_map = [:]
+        attribute_map['ModType'] = "CRL"
+        attribute_map['MixinConfigs'] = "${mod_id}.mixin.json"
+        if (configurations.contain.size() > 0) {
+            attribute_map['ContainedDeps'] = configurations.contain.collect { it.name }.join(' ')
+            attribute_map['NonModDeps'] = true
         }
+        if (is_coremod.toBoolean()) {
+            attribute_map['FMLCorePlugin'] = coremod_plugin_class_name
+            if (coremod_includes_mod.toBoolean()) {
+                attribute_map['FMLCorePluginContainsFMLMod'] = true
+            }
+        }
+        if (use_access_transformer.toBoolean()) {
+            attribute_map['FMLAT'] = access_transformer_locations
+        }
+        attributes(attribute_map)
     }
     finalizedBy(tasks.named(remapTaskName).get())
 }
@@ -271,6 +339,7 @@ shadowJar {
     //noinspection GroovyAssignabilityCheck,GroovyAccessibility
     configurations = [project.configurations.shadow]
     archiveClassifier = "shadow"
+    manifest.attributes(tasks.named('jar').get().manifest.attributes)
 }
 
 compileTestJava {

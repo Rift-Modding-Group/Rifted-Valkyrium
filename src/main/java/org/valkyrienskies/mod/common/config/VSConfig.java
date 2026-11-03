@@ -8,6 +8,7 @@ import net.minecraftforge.fml.client.event.ConfigChangedEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
+import org.valkyrienskies.mod.common.annotation.LegacyContent;
 import org.valkyrienskies.mod.common.command.config.ShortName;
 
 import java.util.Arrays;
@@ -143,18 +144,12 @@ public class VSConfig extends VSConfigTemplate {
     })
     public static boolean minecartsOnShips = true;
 
+    @LegacyContent
     @Name("Chair Recipes")
     @Comment({
         "Enable recipes for captain's chair/passenger's chair"
     })
     public static boolean chairRecipes = true;
-
-    @Name("Disable Legacy Content")
-    @Comment({
-            "Disables legacy content. Set this to true if you only care about content added by your addons."
-    })
-    @RequiresMcRestart
-    public static boolean disableLegacyContent = false;
 
     @Name("Fake Dimensions")
     @Comment({
@@ -243,6 +238,7 @@ public class VSConfig extends VSConfigTemplate {
 
     }
 
+    @LegacyContent
     @Name("(LEGACY) Ship Spawn Detector Blacklist")
     @Comment({
             "Blocks to not be included when assembling a ship using the legacy Physics Infuser.",

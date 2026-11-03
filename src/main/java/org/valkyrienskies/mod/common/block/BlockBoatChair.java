@@ -23,6 +23,7 @@ import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
+import org.valkyrienskies.mod.common.annotation.LegacyContent;
 import org.valkyrienskies.mod.common.physics.PhysicsCalculations;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.tileentity.TileEntityBoatChair;
@@ -33,6 +34,12 @@ import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Optional;
 
+@LegacyContent(resources = {
+        "assets/valkyrienskies/blockstates/boat_chair.json",
+        "assets/valkyrienskies/models/block/boat_chair.*",
+        "assets/valkyrienskies/textures/blocks/boat_chair.png",
+        "assets/valkyrienskies/recipes/boat_chair.json"
+})
 public class BlockBoatChair extends BlockPilotableBasic implements IBlockForceProvider, IBlockTorqueProvider {
 
     public static final PropertyDirection FACING = BlockHorizontal.FACING;
