@@ -25,6 +25,7 @@ import org.joml.Vector3dc;
 import org.valkyrienskies.mod.client.render.PhysObjectRenderManager;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
+import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
 import org.valkyrienskies.mod.common.compat.MalisisCoreCompat;
 import org.valkyrienskies.mod.common.config.VSConfig;
@@ -459,17 +460,23 @@ public class PhysicsObject implements IPhysicsEntity {
 
     // region VS API Functions
     @Override
-    public Vec3d rotateVector(Vec3d vector, TransformType transformType) {
-        return this.getShipTransformationManager()
-            .getCurrentTickTransform()
-            .rotate(vector, transformType);
+    @NotNull
+    public Vec3d rotateVector(@NotNull Vec3d vector, @NotNull TransformType transformType) {
+        IShipWorld shipWorld = this.world.getCapability(VSCapabilityRegistry.VS_SHIP_WORLD, null);
+        if (shipWorld != null && shipWorld.getManager() instanceof WorldServerShipManager manager && manager.isPhysicsThread()) {
+            return this.shipTransformationManager.getCurrentPhysicsTransform().rotate(vector, transformType);
+        }
+        return this.shipTransformationManager.getCurrentTickTransform().rotate(vector, transformType);
     }
 
     @Override
-    public Vec3d transformVector(Vec3d vector, TransformType transformType) {
-        return this.getShipTransformationManager()
-            .getCurrentTickTransform()
-            .transform(vector, transformType);
+    @NotNull
+    public Vec3d transformVector(@NotNull Vec3d vector, @NotNull TransformType transformType) {
+        IShipWorld shipWorld = this.world.getCapability(VSCapabilityRegistry.VS_SHIP_WORLD, null);
+        if (shipWorld != null && shipWorld.getManager() instanceof WorldServerShipManager manager && manager.isPhysicsThread()) {
+            return this.shipTransformationManager.getCurrentPhysicsTransform().transform(vector, transformType);
+        }
+        return this.shipTransformationManager.getCurrentTickTransform().transform(vector, transformType);
     }
     // endregion
 

@@ -12,24 +12,27 @@ import org.jetbrains.annotations.NotNull;
  */
 public interface IPhysicsEntity {
 	/**
-	 * Rotates a vector from global to ship space, or from ship to global space.
-	 * Typically used when adjusting the velocity vector of entities.
-	 * 
-	 * @param vector
-	 * @param transformType
-	 * @return
+	 * Rotates a direction between world and ship space, without translating it.
+	 * Uses the current simulation-step pose on the ship's physics thread, including force
+	 * callbacks, and the game-tick pose on other threads.
+	 *
+	 * @param vector direction to rotate
+	 * @param transformType direction of the coordinate conversion
+	 * @return the rotated direction
 	 */
-	Vec3d rotateVector(Vec3d vector, TransformType transformType);
+	@NotNull
+	Vec3d rotateVector(@NotNull Vec3d vector, @NotNull TransformType transformType);
 
 	/**
-	 * Transforms a vector from global to ship space, or from ship to global space.
-	 * Typically used when adjusting the position vector of entities.
-	 * 
-	 * @param vector
-	 * @param transformType
-	 * @return
+	 * Transforms a position between world and ship space, including translation.
+	 * Uses the same pose selection as {@link #rotateVector(Vec3d, TransformType)}.
+	 *
+	 * @param vector position to transform
+	 * @param transformType direction of the coordinate conversion
+	 * @return the transformed position
 	 */
-	Vec3d transformVector(Vec3d vector, TransformType transformType);
+	@NotNull
+	Vec3d transformVector(@NotNull Vec3d vector, @NotNull TransformType transformType);
 
 	/**
 	 * Get the {@link World} that a physics entity is currently in

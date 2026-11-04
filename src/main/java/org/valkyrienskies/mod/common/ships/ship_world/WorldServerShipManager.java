@@ -582,6 +582,10 @@ public class WorldServerShipManager implements IPhysObjectWorld {
         return this.world;
     }
 
+    public boolean isPhysicsThread() {
+        return Thread.currentThread() == this.physicsThread;
+    }
+
     public VSWorldPhysicsLoop getPhysicsLoop() {
         return this.physicsLoop;
     }

@@ -166,6 +166,30 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
         calculations.getPhysMOITensor().set(finalInertia);
         calculations.getPhysInvMOITensor().set(finalInertia).invert();
 
+        //rebuild or patch collision shapes when ship block collision data changed.
+        boolean collisionShapeDirty = this.ship.getPhysicsData().consumeCollisionShapeDirty();
+        Set<BlockPos> dirtyCollisionShapePositions = this.ship.getPhysicsData().consumeDirtyCollisionShapePositions();
+        boolean blockCountChanged = this.lastBlockCount != this.ship.getBlockPositions().size();
+        if (this.firstSync || collisionShapeDirty || (blockCountChanged && dirtyCollisionShapePositions.isEmpty())) {
+            this.rebuildCollisionShapes();
+            this.massPropertiesDirty = true;
+        }
+        else if (!dirtyCollisionShapePositions.isEmpty()) {
+            this.updateCollisionShapes(dirtyCollisionShapePositions);
+            this.massPropertiesDirty = true;
+        }
+
+        //refresh mass properties before applying addon forces and torque
+        this.updateMassPropertiesIfNeeded(calculations);
+        PxVec3 principalInertia = shipActor.getMassSpaceInertiaTensor();
+        Quaterniond massRotation = PhysXActorUtil.fromPxQuat(shipActor.getCMassLocalPose().getQ());
+        Matrix3d principalToWorld = new Matrix3d(rotationMatrix).mul(new Matrix3d().rotation(massRotation));
+        Matrix3d worldInertia = new Matrix3d(principalToWorld)
+                .scale(principalInertia.getX(), principalInertia.getY(), principalInertia.getZ())
+                .mul(principalToWorld.transpose(new Matrix3d()));
+        calculations.getPhysMOITensor().set(worldInertia);
+        calculations.getPhysInvMOITensor().set(worldInertia).invert();
+
         //let addons add forces after the accumulator reset and transform update.
         this.ship.applyForceInducers();
 
@@ -264,23 +288,9 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
             calculations.addTorque(new Vector3d(0D, -translationYawTorque, 0D));
         }
 
-        //rebuild or patch collision shapes when ship block collision data changed.
-        boolean collisionShapeDirty = this.ship.getPhysicsData().consumeCollisionShapeDirty();
-        Set<BlockPos> dirtyCollisionShapePositions = this.ship.getPhysicsData().consumeDirtyCollisionShapePositions();
-        boolean blockCountChanged = this.lastBlockCount != this.ship.getBlockPositions().size();
-        if (this.firstSync || collisionShapeDirty || (blockCountChanged && dirtyCollisionShapePositions.isEmpty())) {
-            this.rebuildCollisionShapes();
-            this.massPropertiesDirty = true;
-        }
-        else if (!dirtyCollisionShapePositions.isEmpty()) {
-            this.updateCollisionShapes(dirtyCollisionShapePositions);
-            this.massPropertiesDirty = true;
-        }
-
         //push gravity, mass, and velocity-limit settings into the PhysX actor.
         boolean disableGravity = !VSConfig.doGravity || aligningToGrid || calculations.actAsArchimedes;
         this.actor.setActorFlag(PxActorFlagEnum.eDISABLE_GRAVITY, disableGravity);
-        this.updateMassPropertiesIfNeeded(calculations);
         shipActor.setMaxLinearVelocity((float) VSConfig.shipMaxSpeed);
         shipActor.setMaxAngularVelocity((float) VSConfig.shipMaxAngularSpeed);
 

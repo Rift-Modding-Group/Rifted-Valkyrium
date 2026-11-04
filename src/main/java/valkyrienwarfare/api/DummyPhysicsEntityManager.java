@@ -8,8 +8,6 @@ import net.minecraft.world.World;
  * installed. It now redirects to {@link RiftedValkyriumAPI#getShipManagingBlock(World, BlockPos)}
  * (which should be used moving forward), and is kept to maintain compat with old
  * ass mods that still somehow rely on this interface.
- * 
- * @author thebest108
  */
 @Deprecated
 class DummyPhysicsEntityManager implements IPhysicsEntityManager {
