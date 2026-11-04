@@ -127,6 +127,10 @@ public class PhysRenderChunk {
     }
 
     void killRenderChunk() {
+        if (!this.tileEntitiesToRender.isEmpty()) {
+            Minecraft.getMinecraft().renderGlobal.updateTileEntities(this.tileEntitiesToRender, List.of());
+            this.tileEntitiesToRender.clear();
+        }
         for (int i = 0; i < 16; i++) {
             IVSRenderChunk renderChunk = renderChunks[i];
             if (renderChunk != null) {
