@@ -20,6 +20,7 @@ public class ImplCapabilityEntityShipDraggable implements IEntityShipDraggable {
     private UUID pendingShipId;
     @Nullable
     private Vector3dc pendingShipLocalPosition;
+    private boolean pendingShipTeleport;
     private int ticksInAirPocket;
     @Nullable
     private ShipLocalEntityMovementData shipLocalMovementData;
@@ -93,15 +94,22 @@ public class ImplCapabilityEntityShipDraggable implements IEntityShipDraggable {
     }
 
     @Override
-    public void setPendingShipPosition(@Nullable UUID shipId, @Nullable Vector3dc localPosition) {
+    public void setPendingShipPosition(@Nullable UUID shipId, @Nullable Vector3dc localPosition, boolean isTeleport) {
         this.pendingShipId = shipId;
         this.pendingShipLocalPosition = localPosition == null ? null : new Vector3d(localPosition);
+        this.pendingShipTeleport = isTeleport;
     }
 
     @Override
     public void clearPendingShipPosition() {
         this.pendingShipId = null;
         this.pendingShipLocalPosition = null;
+        this.pendingShipTeleport = false;
+    }
+
+    @Override
+    public boolean isPendingShipTeleport() {
+        return this.pendingShipTeleport;
     }
 
     //---server-controlled movement in ship coordinates---

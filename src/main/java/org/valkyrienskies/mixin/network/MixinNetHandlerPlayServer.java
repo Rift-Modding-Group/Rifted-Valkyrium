@@ -167,8 +167,11 @@ public abstract class MixinNetHandlerPlayServer {
      * @param packetPlayer The packet the player sent us
      * @param info We can use this to cancel the invocation
      */
-    @Inject(method = "processPlayer", at = @At("HEAD"))
-    private void preProcessPlayer(final CPacketPlayer packetPlayer, final CallbackInfo info) {
+    @Inject(
+            method = "processPlayer",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/network/play/client/CPacketPlayer;getX(D)D")
+    )
+    private void preProcessPlayer(CPacketPlayer packetPlayer, CallbackInfo info) {
         // Don't run any of this code on the network thread!
         if (this.player.getServerWorld().isCallingFromMinecraftThread()) {
             // Riding packets already carry the driver's current yaw and pitch. Replacing them
@@ -180,11 +183,11 @@ public abstract class MixinNetHandlerPlayServer {
             if (this.player.isInvulnerableDimensionChange()) {
                 return;
             }
-            final PlayerMovementData addedPlayerMovementData = IHasPlayerMovementData.class.cast(packetPlayer).getPlayerMovementData();
-            final World world = player.world;
+            PlayerMovementData addedPlayerMovementData = IHasPlayerMovementData.class.cast(packetPlayer).getPlayerMovementData();
+            World world = player.world;
 
-            final UUID lastTouchedShipId = addedPlayerMovementData.getLastTouchedShipId();
-            final int ticksSinceTouchedLastShip = addedPlayerMovementData.getTicksSinceTouchedLastShip();
+            UUID lastTouchedShipId = addedPlayerMovementData.getLastTouchedShipId();
+            int ticksSinceTouchedLastShip = addedPlayerMovementData.getTicksSinceTouchedLastShip();
 
             if (ticksSinceTouchedLastShip > 40) {
                 // If the player hasn't touched the ship in over 40 ticks, then ignore its coordinates relative to that ship.
@@ -199,30 +202,31 @@ public abstract class MixinNetHandlerPlayServer {
                 return;
             }
 
-            final int ticksPartOfGround = addedPlayerMovementData.getTicksPartOfGround();
-            final Vector3d playerPosInShip = new Vector3d(addedPlayerMovementData.getPlayerPosInShip());
-            final Vector3d playerLookInShip = new Vector3d(addedPlayerMovementData.getPlayerLookInShip());
+            int ticksPartOfGround = addedPlayerMovementData.getTicksPartOfGround();
+            Vector3d playerPosInShip = new Vector3d(addedPlayerMovementData.getPlayerPosInShip());
+            Vector3d playerLookInShip = new Vector3d(addedPlayerMovementData.getPlayerLookInShip());
 
             ShipData lastTouchedShip = null;
             if (lastTouchedShipId != null) {
-                final QueryableShipData queryableShipData = QueryableShipData.get(world);
-                final Optional<ShipData> shipDataOptional = queryableShipData.getShip(lastTouchedShipId);
+                QueryableShipData queryableShipData = QueryableShipData.get(world);
+                Optional<ShipData> shipDataOptional = queryableShipData.getShip(lastTouchedShipId);
                 if (shipDataOptional.isPresent()) {
                     lastTouchedShip = shipDataOptional.get();
 
-                    final PhysicsObject shipObject = ValkyrienUtils.getServerShipManager(world).getPhysObjectFromUUID(lastTouchedShip.getUuid());
+                    PhysicsObject shipObject = ValkyrienUtils.getServerShipManager(world).getPhysObjectFromUUID(lastTouchedShip.getUuid());
 
-                    if (shipObject != null) {
-                        if (shipObject.getTicksSinceShipTeleport() > PhysicsObject.TICKS_SINCE_TELEPORT_TO_START_DRAGGING) {
-                            final ShipTransform shipTransform = lastTouchedShip.getShipTransform();
-                            shipTransform.transformPosition(playerPosInShip, TransformType.SUBSPACE_TO_GLOBAL);
-                            shipTransform.transformDirection(playerLookInShip, TransformType.SUBSPACE_TO_GLOBAL);
-                        } else {
-                            // Don't move the player relative to the ship until the TicksSinceShipTeleport timer expires.
-                            playerPosInShip.set(player.posX, player.posY, player.posZ);
-                        }
+                    //never pass shipyard coordinates to vanilla movement
+                    if (shipObject == null || shipObject.getTicksSinceShipTeleport() > PhysicsObject.TICKS_SINCE_TELEPORT_TO_START_DRAGGING) {
+                        ShipTransform shipTransform = lastTouchedShip.getShipTransform();
+                        shipTransform.transformPosition(playerPosInShip, TransformType.SUBSPACE_TO_GLOBAL);
+                        shipTransform.transformDirection(playerLookInShip, TransformType.SUBSPACE_TO_GLOBAL);
                     }
-                } else {
+                    else {
+                        // Don't move the player relative to the ship until the TicksSinceShipTeleport timer expires.
+                        playerPosInShip.set(player.posX, player.posY, player.posZ);
+                    }
+                }
+                else {
                     // Rare case, just ignore this
                     // info.cancel();
                     return;
@@ -230,9 +234,9 @@ public abstract class MixinNetHandlerPlayServer {
             }
 
             // Get the player pitch/yaw from the look vector
-            final Tuple<Double, Double> pitchYawTuple = VSMath.getPitchYawFromVector(playerLookInShip);
-            final double playerPitchInGlobal = pitchYawTuple.getFirst();
-            final double playerYawInGlobal = pitchYawTuple.getSecond();
+            Tuple<Double, Double> pitchYawTuple = VSMath.getPitchYawFromVector(playerLookInShip);
+            double playerPitchInGlobal = pitchYawTuple.getFirst();
+            double playerYawInGlobal = pitchYawTuple.getSecond();
 
             if (lastTouchedShip != null) {
                 packetPlayer.moving = true;

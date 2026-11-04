@@ -41,9 +41,11 @@ public interface IEntityShipDraggable {
     @Nullable
     Vector3dc getPendingShipLocalPosition();
 
-    void setPendingShipPosition(@Nullable UUID shipId, @Nullable Vector3dc localPosition);
+    void setPendingShipPosition(@Nullable UUID shipId, @Nullable Vector3dc localPosition, boolean isTeleport);
 
     void clearPendingShipPosition();
+
+    boolean isPendingShipTeleport();
 
     //---server-controlled movement in ship coordinates---
     @Nullable

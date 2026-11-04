@@ -218,11 +218,12 @@ public class EntityDraggable {
         //now drag the entity along ship
         UUID pendingShipId = draggable.getPendingShipId();
         Vector3dc pendingLocalPosition = draggable.getPendingShipLocalPosition();
-        if (!entity.world.isRemote && pendingShipId != null && pendingLocalPosition != null) {
+        if (pendingShipId != null && pendingLocalPosition != null && !draggable.isPendingShipTeleport()) {
             VSWorldDataCapability worldData = entity.world.getCapability(VSCapabilityRegistry.VS_WORLD_DATA, null);
             if (worldData == null) return;
 
             ShipData pendingShip = worldData.get().getQueryableShipData().getShip(pendingShipId).orElse(null);
+            if (pendingShip == null && entity.world.isRemote) return;
             if (pendingShip == null) draggable.clearPendingShipPosition();
             else {
                 Vector3d worldPosition = new Vector3d(pendingLocalPosition);
@@ -334,7 +335,7 @@ public class EntityDraggable {
                 if (!entity.world.isRemote) {
                     Vector3d localPosition = new Vector3d(entity.posX, entity.posY, entity.posZ);
                     touchedShip.getShipTransform().transformPosition(localPosition, TransformType.GLOBAL_TO_SUBSPACE);
-                    draggable.setPendingShipPosition(touchedShip.getUuid(), localPosition);
+                    draggable.setPendingShipPosition(touchedShip.getUuid(), localPosition, false);
                 }
                 draggable.setLastTouchedShip(null);
             }

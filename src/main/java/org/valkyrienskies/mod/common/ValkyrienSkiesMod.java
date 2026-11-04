@@ -44,6 +44,7 @@ import org.valkyrienskies.mod.common.command.config.VSConfigCommand;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.item.ItemShipTracker;
 import org.valkyrienskies.mod.common.network.MessageEntityShipMovement;
+import org.valkyrienskies.mod.common.network.MessageShipBedRespawn;
 import org.valkyrienskies.mod.common.network.MessageMalisisChunkBlockRegistrations;
 import org.valkyrienskies.mod.common.network.MessageOarShip;
 import org.valkyrienskies.mod.common.network.MessagePlayerStoppedPiloting;
@@ -211,6 +212,11 @@ public class ValkyrienSkiesMod {
                 MessageMalisisChunkBlockRegistrations.Handler.class,
                 MessageMalisisChunkBlockRegistrations.class,
                 4, Side.CLIENT
+        );
+        physWrapperNetwork.registerMessage(
+                MessageShipBedRespawn.Handler.class,
+                MessageShipBedRespawn.class,
+                5, Side.CLIENT
         );
 
         controlNetwork = NetworkRegistry.INSTANCE.newSimpleChannel("valkyrien_piloting");

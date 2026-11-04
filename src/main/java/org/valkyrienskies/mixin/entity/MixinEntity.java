@@ -424,10 +424,14 @@ public abstract class MixinEntity {
         IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
         if (draggable == null) return;
 
-        draggable.setPendingShipPosition(shipPosition.getUniqueId("Ship"), new Vector3d(
-                shipPosition.getDouble("X"),
-                shipPosition.getDouble("Y"),
-                shipPosition.getDouble("Z")
-        ));
+        draggable.setPendingShipPosition(
+                shipPosition.getUniqueId("Ship"),
+                new Vector3d(
+                        shipPosition.getDouble("X"),
+                        shipPosition.getDouble("Y"),
+                        shipPosition.getDouble("Z")
+                ),
+                false
+        );
     }
 }
