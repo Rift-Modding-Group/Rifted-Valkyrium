@@ -157,16 +157,8 @@ public class VSWorldPhysicsLoop implements Runnable {
         this.taskQueue.forEach(Runnable::run);
         this.taskQueue.clear();
 
-        // Make a sublist of physics objects to process physics on.
-        List<PhysicsObject> physicsEntitiesToDoPhysics = new ArrayList<>();
-        for (PhysicsObject physicsObject : this.immutableShipsList) {
-            if (physicsObject.isPhysicsReady() && physicsObject.isPhysicsEnabled()) {
-                physicsEntitiesToDoPhysics.add(physicsObject);
-            }
-        }
-
-        // Finally, actually process the physics tick
-        this.physXBackend.update(this.hostWorld, physicsEntitiesToDoPhysics, delta);
+        // Keep every loaded ship in the collision scene; each body controls whether it can move.
+        this.physXBackend.update(this.hostWorld, this.immutableShipsList, delta);
 
         // Send ship position update packets around 20 times a second
         final long currentTimeMillis = System.currentTimeMillis();

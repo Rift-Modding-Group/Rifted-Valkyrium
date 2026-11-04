@@ -81,10 +81,10 @@ public class PhysXWorldBackend {
     /**
      * This is for updating the backend (and all physics stuff) from VSWorldPhysicsLoop.
      * */
-    public synchronized void update(World hostWorld, Collection<PhysicsObject> shipsWithPhysics, double timeStep) {
+    public synchronized void update(World hostWorld, Collection<PhysicsObject> loadedShips, double timeStep) {
         if (this.closed) return;
 
-        this.syncCollisionObjects(shipsWithPhysics);
+        this.syncCollisionObjects(loadedShips);
         this.updateShipsBeforeSimulation(hostWorld, timeStep);
 
         if (this.scene.simulate((float) timeStep)) this.scene.fetchResults(true);
@@ -96,11 +96,11 @@ public class PhysXWorldBackend {
      * For updating list of collision objects from the world. These objects
      * get auto added to the scene in their constructor btw.
      * */
-    private void syncCollisionObjects(Collection<PhysicsObject> shipsWithPhysics) {
+    private void syncCollisionObjects(Collection<PhysicsObject> loadedShips) {
         this.advanceSyncGeneration();
 
-        //-----loop over all provided ships with physics to create collision objects-----
-        for (PhysicsObject ship : shipsWithPhysics) {
+        //-----keep collision objects for every loaded ship-----
+        for (PhysicsObject ship : loadedShips) {
             //---ship objects---
             PhysXShipBody.Identifier shipIdentifier = new PhysXShipBody.Identifier(ship);
             this.markCollisionObjectSynced(shipIdentifier);
@@ -112,6 +112,9 @@ public class PhysXWorldBackend {
             }
             //update ship reference if there is
             else ((PhysXShipBody) shipCollisionObject).updateShipReference(ship);
+
+            // Only moving ships need terrain contacts and liquid samples.
+            if (!ship.isPhysicsEnabled() || !ship.isPhysicsReady()) continue;
 
             //---defining block and entity stuff---
             BlockSectionList collideWith = ship.getPhysicsCollideWith();

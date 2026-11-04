@@ -68,6 +68,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
     private final PxMaterial material;
     private int lastBlockCount;
     private boolean firstSync;
+    private boolean kinematic;
     private boolean centerOfMassPoseDirty;
     private boolean massPropertiesDirty;
     private boolean massPropertiesInitialized;
@@ -99,9 +100,9 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
         this.massPropertiesInitialized = false;
     }
 
-    private void forcePose(ShipTransform transform) {
+    private void forcePose(@NotNull ShipTransform transform) {
         PxTransform pxTransform = createActorPose(this.ship, transform);
-        this.actor.setGlobalPose(pxTransform, true);
+        this.actor.setGlobalPose(pxTransform, !this.kinematic);
         pxTransform.destroy();
     }
 
@@ -114,19 +115,23 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
         this.ship = ship;
     }
 
-    /**
-     * Copies the current PhysX actor pose. This must only be called by the physics
-     * thread, before or after scene simulation.
-     */
-    public void copyActorPose(@NotNull Vector3d positionDestination, @NotNull Quaterniond rotationDestination) {
-        PxTransform pose = this.actor.getGlobalPose();
-        positionDestination.set(PhysXActorUtil.fromPxVec(pose.getP()));
-        rotationDestination.set(PhysXActorUtil.fromPxQuat(pose.getQ()));
-    }
-
     public void updateBeforeSimulation(@NotNull World hostWorld, @NotNull List<PhysXBlockSectionBody> blockSectionsWithLiquids, double timeStep) {
         PhysicsCalculations calculations = this.ship.getPhysicsCalculations();
         PxRigidDynamic shipActor = (PxRigidDynamic) this.actor;
+        boolean wasKinematic = this.kinematic;
+        boolean stationary = !this.ship.isPhysicsEnabled() || !this.ship.isPhysicsReady();
+        if (stationary != this.kinematic) {
+            // Kinematic actors retain contacts with moving bodies and require CCD to be disabled.
+            if (stationary) {
+                shipActor.setRigidBodyFlag(PxRigidBodyFlagEnum.eENABLE_CCD, false);
+                shipActor.setRigidBodyFlag(PxRigidBodyFlagEnum.eKINEMATIC, true);
+            }
+            else {
+                shipActor.setRigidBodyFlag(PxRigidBodyFlagEnum.eKINEMATIC, false);
+                shipActor.setRigidBodyFlag(PxRigidBodyFlagEnum.eENABLE_CCD, true);
+            }
+            this.kinematic = stationary;
+        }
 
         //reset continuous force state and record this simulation step length.
         calculations.resetForceAndTorque();
@@ -189,6 +194,26 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
                 .mul(principalToWorld.transpose(new Matrix3d()));
         calculations.getPhysMOITensor().set(worldInertia);
         calculations.getPhysInvMOITensor().set(worldInertia).invert();
+
+        //synchronize commanded poses and keep paused ships available as stationary colliders
+        boolean forceGameTransform = calculations.setForceToUseGameTransform(false);
+        if (this.firstSync || forceGameTransform) {
+            this.forcePose(this.ship.getShipData().getShipTransform());
+        }
+        else if (this.kinematic || wasKinematic || this.centerOfMassPoseDirty) {
+            this.forcePose(this.ship.getShipTransformationManager().getCurrentPhysicsTransform());
+        }
+        this.centerOfMassPoseDirty = false;
+        if (this.firstSync || forceGameTransform || this.kinematic || wasKinematic) {
+            calculations.getLinearVelocity().zero();
+            calculations.getAngularVelocity().zero();
+        }
+        if (this.kinematic) {
+            this.ship.getShipData().getPhysicsData().setLinearVelocity(new Vector3d());
+            this.ship.getShipData().getPhysicsData().setAngularVelocity(new Vector3d());
+            this.firstSync = false;
+            return;
+        }
 
         //let addons add forces after the accumulator reset and transform update.
         this.ship.applyForceInducers();
@@ -294,18 +319,6 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
         shipActor.setMaxLinearVelocity((float) VSConfig.shipMaxSpeed);
         shipActor.setMaxAngularVelocity((float) VSConfig.shipMaxAngularSpeed);
 
-        //force actor pose when requested or when COM movement shifted the actor frame.
-        boolean forceGameTransform = calculations.setForceToUseGameTransform(false);
-        if (this.firstSync || forceGameTransform) {
-            this.forcePose(this.ship.getShipData().getShipTransform());
-            calculations.getLinearVelocity().zero();
-            calculations.getAngularVelocity().zero();
-        }
-        else if (this.centerOfMassPoseDirty) {
-            this.forcePose(this.ship.getShipTransformationManager().getCurrentPhysicsTransform());
-        }
-        this.centerOfMassPoseDirty = false;
-
         //copy game-side linear and angular velocity into PhysX.
         PxVec3 linearVelocity = PhysXActorUtil.toPxVec(calculations.getLinearVelocity());
         PxVec3 angularVelocity = PhysXActorUtil.toPxVec(calculations.getAngularVelocity());
@@ -332,6 +345,8 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
     }
 
     public void updateAfterSimulation() {
+        if (this.kinematic) return;
+
         PhysicsCalculations calculations = this.ship.getPhysicsCalculations();
         PxRigidDynamic shipActor = (PxRigidDynamic) this.actor;
         PxTransform pose = this.actor.getGlobalPose();

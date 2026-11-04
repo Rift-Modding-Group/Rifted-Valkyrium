@@ -121,10 +121,13 @@ public class ShipData implements IShipData {
         this.blockBlacklist = null;
     }
 
-    private ShipData(ConcurrentUpdatableIndexedCollection<ShipData> owner,
-                    ShipPhysicsData physicsData, @Nonnull ShipInertiaData inertiaData, ShipTransform shipTransform, ShipTransform prevTickShipTransform, AxisAlignedBB shipBB,
-                    boolean physicsEnabled, VSChunkClaim chunkClaim, UUID uuid, String name,
-                    ShipBlockBlacklist blockBlacklist) {
+    private ShipData(
+            ConcurrentUpdatableIndexedCollection<ShipData> owner,
+            ShipPhysicsData physicsData, @Nonnull ShipInertiaData inertiaData,
+            ShipTransform shipTransform, ShipTransform prevTickShipTransform, AxisAlignedBB shipBB,
+            boolean physicsEnabled, VSChunkClaim chunkClaim, UUID uuid, String name,
+            ShipBlockBlacklist blockBlacklist
+    ) {
         this.owner = owner;
         this.physicsData = physicsData;
         this.inertiaData = Objects.requireNonNull(inertiaData, "inertiaData");
@@ -137,8 +140,10 @@ public class ShipData implements IShipData {
         this.name = Objects.requireNonNull(name, "name");
         this.blockBlacklist = Objects.requireNonNull(blockBlacklist, "blockBlacklist");
 
-        this.blockPositions = new SmallBlockPosSetAABB(chunkClaim.getCenterPos().getXStart(), 0,
-                chunkClaim.getCenterPos().getZStart(), 1024, 1024, 1024);
+        this.blockPositions = new SmallBlockPosSetAABB(
+                chunkClaim.getCenterPos().getXStart(), 0, chunkClaim.getCenterPos().getZStart(),
+                4096, 1024, 4096
+        );
         this.activeForcePositions = new SmallBlockPosSet(chunkClaim.getCenterPos().getXStart(), chunkClaim.getCenterPos().getZStart());
     }
 

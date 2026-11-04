@@ -203,12 +203,28 @@ public class WorldServerShipManager implements IPhysObjectWorld {
             TLongObjectHashMap<Chunk> copiedChunksMap = new TLongObjectHashMap<>();
             TLongObjectHashMap<Chunk> sourceChunksMap = new TLongObjectHashMap<>();
             TLongHashSet occupiedShipChunks = new TLongHashSet();
+            TLongHashSet relocatedTilePositions = new TLongHashSet();
             IBlockState airState = Blocks.AIR.getDefaultState();
-            int[] detectedBlocks = detector.foundSet.toArray();
+            long[] detectedBlocks = detector.foundSet.toArray();
+
+            // Validate every destination before relocating any blocks or tiles.
+            boolean exceedsStorageBounds = false;
+            for (long hashedPos : detectedBlocks) {
+                srcLocationPos.setPos(BlockPos.fromLong(hashedPos));
+                pasteLocationPos.setPos(srcLocationPos.getX() + centerDifference.getX(), srcLocationPos.getY() + centerDifference.getY(), srcLocationPos.getZ() + centerDifference.getZ());
+                if (toSpawn.blockPositions != null && !toSpawn.blockPositions.canStore(pasteLocationPos)) {
+                    exceedsStorageBounds = true;
+                    break;
+                }
+            }
+            if (exceedsStorageBounds) {
+                ValkyrienSkiesMod.LOGGER.warn("Ship assembly canceled because its blocks exceed ship storage bounds: {}", toSpawn.getUuid());
+                continue;
+            }
 
             // Relocation-aware tiles need the complete destination set before any tile is copied.
-            for (int hashedPos : detectedBlocks) {
-                SpatialDetector.setPosWithRespectTo(hashedPos, detector.firstBlock, srcLocationPos);
+            for (long hashedPos : detectedBlocks) {
+                srcLocationPos.setPos(BlockPos.fromLong(hashedPos));
                 pasteLocationPos.setPos(srcLocationPos.getX() + centerDifference.getX(), srcLocationPos.getY() + centerDifference.getY(), srcLocationPos.getZ() + centerDifference.getZ());
                 if (toSpawn.blockPositions != null) toSpawn.blockPositions.add(pasteLocationPos.getX(), pasteLocationPos.getY(), pasteLocationPos.getZ());
                 occupiedShipChunks.add(ChunkPos.asLong(
@@ -241,8 +257,8 @@ public class WorldServerShipManager implements IPhysObjectWorld {
             }
 
             // First, copy the blocks and tiles to the new chunks
-            for (int hashedPos : detectedBlocks) {
-                SpatialDetector.setPosWithRespectTo(hashedPos, detector.firstBlock, srcLocationPos);
+            for (long hashedPos : detectedBlocks) {
+                srcLocationPos.setPos(BlockPos.fromLong(hashedPos));
                 // Get the BlockPos from the hashedPos
                 pasteLocationPos.setPos(srcLocationPos.getX() + centerDifference.getX(), srcLocationPos.getY() + centerDifference.getY(), srcLocationPos.getZ() + centerDifference.getZ());
 
@@ -296,8 +312,12 @@ public class WorldServerShipManager implements IPhysObjectWorld {
                         airState, srcState);
 
                 // Then copy the TileEntity (if there is one)
-                TileEntity srcTile = this.world.getTileEntity(srcLocationPos);
+                TileEntity srcTile = null;
+                if (srcState.getBlock().hasTileEntity(srcState) || chunkToSet.getTileEntityMap().containsKey(srcLocationPos)) {
+                    srcTile = this.world.getTileEntity(srcLocationPos);
+                }
                 if (srcTile != null) {
+                    relocatedTilePositions.add(hashedPos);
                     TileEntity pasteTile;
                     if (srcTile instanceof IRelocationAwareTile relocationAwareTile) {
                         pasteTile = relocationAwareTile.createRelocatedTile(pasteLocationPos, toSpawn);
@@ -319,8 +339,8 @@ public class WorldServerShipManager implements IPhysObjectWorld {
             preserveInfuserPlacementAfterCenterOfMassChange(toSpawn);
 
             // Then delete the copied blocks from the old chunks
-            for (int hashedPos : detectedBlocks) {
-                SpatialDetector.setPosWithRespectTo(hashedPos, detector.firstBlock, srcLocationPos);
+            for (long hashedPos : detectedBlocks) {
+                srcLocationPos.setPos(BlockPos.fromLong(hashedPos));
 
                 long sourceChunkPos = ChunkPos.asLong(
                         srcLocationPos.getX() >> 4,
@@ -353,7 +373,7 @@ public class WorldServerShipManager implements IPhysObjectWorld {
                 }
 
                 // Delete the TileEntity at this pos (if there is one)
-                this.world.removeTileEntity(srcLocationPos);
+                if (relocatedTilePositions.contains(hashedPos)) this.world.removeTileEntity(srcLocationPos);
             }
 
             // Then relight the original chunks
@@ -367,17 +387,15 @@ public class WorldServerShipManager implements IPhysObjectWorld {
             toSpawn.getChunkClaim().forEach((x, z) -> {
                 long chunkLong = ChunkPos.asLong(x, z);
                 Chunk copiedChunk = copiedChunksMap.get(chunkLong);
-                if (copiedChunk == null) copiedChunk = new Chunk(this.world, x, z);
+                if (copiedChunk == null) {
+                    copiedChunk = new Chunk(this.world, x, z);
+                    copiedChunksMap.put(chunkLong, copiedChunk);
+                }
                 injectChunkIntoWorldServer(copiedChunk, x, z);
             });
 
             // relight only after the whole claim, including its one-chunk margin, has been installed in the world.
-            for (ChunkPos chunkPos : toSpawn.getChunkClaim()) {
-                Chunk chunk = this.world.getChunk(chunkPos.x, chunkPos.z);
-                chunk.generateSkylightMap();
-                chunk.checkLight();
-                chunk.markDirty();
-            }
+            ShipLighting.initializeShipSkylight(this.world, copiedChunksMap.valueCollection());
 
             //transfer lighting properly when creating ship
             if (toSpawn.blockPositions != null) {

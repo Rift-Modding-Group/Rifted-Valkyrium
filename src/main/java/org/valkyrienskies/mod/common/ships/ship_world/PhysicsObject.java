@@ -1,17 +1,21 @@
 package org.valkyrienskies.mod.common.ships.ship_world;
 
+import gnu.trove.map.hash.TLongObjectHashMap;
 import net.minecraft.client.multiplayer.ChunkProviderClient;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.network.play.server.SPacketEntityTeleport;
+import net.minecraft.network.play.server.SPacketChunkData;
 import net.minecraft.network.play.server.SPacketUnloadChunk;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraft.server.management.PlayerChunkMapEntry;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.BlockPos.MutableBlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
+import net.minecraft.world.EnumSkyBlock;
 import net.minecraft.world.WorldServer;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.gen.ChunkProviderServer;
@@ -340,7 +344,6 @@ public class PhysicsObject implements IPhysicsEntity {
         if (!this.getBlockPositions().isEmpty()) {
             if (this.deconstructState.copyBlocks) {
                 MutableBlockPos newPos = new MutableBlockPos();
-                List<BlockPos> relocatedPositions = new ArrayList<>(); //for malisiscore
 
                 ShipTransform currentTransform = this.getShipTransformationManager().getCurrentTickTransform();
                 Vector3dc position = new Vector3d(currentTransform.getPosX(), currentTransform.getPosY(), currentTransform.getPosZ());
@@ -351,42 +354,41 @@ public class PhysicsObject implements IPhysicsEntity {
                         Math.round(this.getCenterCoord().z() - position.z())
                 );
 
-                for (BlockPos oldPos : this.getBlockPositions()) {
-                    newPos.setPos(
-                            oldPos.getX() - centerDifference.getX(),
-                            oldPos.getY() - centerDifference.getY(),
-                            oldPos.getZ() - centerDifference.getZ()
-                    );
-                    MoveBlocks.copyBlockToPos(this.getWorld(), oldPos, newPos, null);
-                    relocatedPositions.add(newPos.toImmutable());
-                }
+                TLongObjectHashMap<Chunk> changedChunks = MoveBlocks.copyBlocksToWorld(this.world, this.getBlockPositions(),
+                        this.claimedChunkCache, centerDifference);
 
                 if (Loader.isModLoaded("malisiscore")) {
+                    List<BlockPos> relocatedPositions = new ArrayList<>(this.getBlockPositions().size());
+                    for (BlockPos oldPos : this.getBlockPositions()) relocatedPositions.add(oldPos.subtract(centerDifference));
                     MalisisCoreCompat.sendRelocatedChunkBlockRegistrations(this.getWorld(), relocatedPositions);
                 }
 
-                // Then relight the chunks we just copied the blocks to
-                {
-                    Set<Long> chunksRelit = new HashSet<>();
-                    for (BlockPos changedPos : this.getBlockPositions()) {
-                        int changedChunkX = (changedPos.getX() - centerDifference.getX()) >> 4;
-                        int changedChunkZ = (changedPos.getZ() - centerDifference.getZ()) >> 4;
-                        long changedChunkPos = ChunkPos.asLong(changedChunkX, changedChunkZ);
+                Collection<Chunk> relitChunks = ShipLighting.relightWorldChunks(this.world, changedChunks.valueCollection());
+                for (BlockPos oldPos : this.getBlockPositions()) {
+                    newPos.setPos(oldPos.getX() - centerDifference.getX(), oldPos.getY() - centerDifference.getY(), oldPos.getZ() - centerDifference.getZ());
+                    if (newPos.getY() >= 0 && newPos.getY() < 256) this.world.checkLightFor(EnumSkyBlock.BLOCK, newPos);
+                }
 
-                        if (chunksRelit.contains(changedChunkPos)) {
-                            continue;
-                        }
-                        final Chunk chunk = world.getChunk(changedChunkX, changedChunkZ);
-                        chunk.generateSkylightMap();
-                        chunk.checkLight();
-                        chunk.markDirty();
-                        chunksRelit.add(changedChunkPos);
+                // Deliver completed terrain and lighting before removing the ship's client chunks.
+                WorldServer serverWorld = (WorldServer) this.world;
+                for (Chunk chunk : relitChunks) {
+                    PlayerChunkMapEntry entry = serverWorld.getPlayerChunkMap().getEntry(chunk.x, chunk.z);
+                    if (entry == null || !entry.isSentToPlayers()) continue;
+                    entry.update();
+                    int sectionMask = 0;
+                    for (int section = 0; section < 16; section++) {
+                        if (chunk.getBlockStorageArray()[section] != null) sectionMask |= 1 << section;
                     }
+                    // Partial chunk packets retain allocated air sections carrying propagated light.
+                    if (sectionMask == 65535) {
+                        entry.sendPacket(new SPacketChunkData(chunk, 255));
+                        entry.sendPacket(new SPacketChunkData(chunk, 65280));
+                    }
+                    else if (sectionMask != 0) entry.sendPacket(new SPacketChunkData(chunk, sectionMask));
                 }
 
                 //the blocks discard the ship's remaining rotation when they return to the world grid
                 //project associated entities through that same transform so their contact points still line up
-                WorldServer serverWorld = (WorldServer) this.world;
                 for (Entity entity : this.world.loadedEntityList) {
                     if (entity.isDead) continue;
 
@@ -430,11 +432,6 @@ public class PhysicsObject implements IPhysicsEntity {
                     }
                     serverWorld.getEntityTracker().sendToTracking(entity, new SPacketEntityTeleport(entity));
                 }
-            }
-
-            // Just delete the tile entities in ship to prevent any dupe bugs.
-            for (BlockPos oldPos : this.getBlockPositions()) {
-                this.getWorld().removeTileEntity(oldPos);
             }
         }
 
