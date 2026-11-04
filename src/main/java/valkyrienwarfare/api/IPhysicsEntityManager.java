@@ -6,13 +6,12 @@ import net.minecraft.world.World;
 import javax.annotation.Nullable;
 
 /**
- * This interface is used to get IPhysicsEntity objects. Do not make an
- * implementation of this, use the INSTANCE object provided to get
- * IPhysicsEntities.
- * 
- * @author thebest108
  *
+ * Legacy interface that was used to get IPhysicsEntity objects. Deprecated but kept
+ * to maintain compat with old ass mods that still use this interface (fairy lights for example).
+ * @deprecated Use {@link RiftedValkyriumAPI#getShipManagingBlock(World, BlockPos)} from now on
  */
+@Deprecated
 public interface IPhysicsEntityManager {
 	/**
 	 * This gets replaced at runtime if RV is installed.

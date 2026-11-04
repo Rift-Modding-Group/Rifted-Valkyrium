@@ -19,7 +19,6 @@ import java.util.stream.Collectors;
 @SuppressWarnings("WeakerAccess") // NOTE: Any forge config option MUST be "public"
 @Config(modid = ValkyrienSkiesMod.MOD_ID)
 public class VSConfig extends VSConfigTemplate {
-
     @Name("Ship Y Position Minimum")
     public static double shipLowerLimit = -30;
 
@@ -211,7 +210,6 @@ public class VSConfig extends VSConfigTemplate {
     }
 
     public static class ShipLoadingSettings {
-
         @Name("Player Watch Ship Distance")
         @Comment("If a player's XZ distance to a ship is less than this, then if aren't already watching it, they will start watching that ship.")
         public double watchDistance = 128;

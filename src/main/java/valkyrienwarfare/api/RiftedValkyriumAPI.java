@@ -259,18 +259,18 @@ public class RiftedValkyriumAPI {
      * @return The ship data, or an empty optional if none could be found
      * */
     @NotNull
-    public static Optional<IShipData> getShip(World world, UUID uuid) {
+    public static Optional<IShipData> getShipByUUID(World world, UUID uuid) {
         return provider.getShipByUUID(world, uuid);
     }
 
     /**
-     * Returns a {@link IShipData} instance that corresponds to a given name
-     * @param name A {@link String} that represents its name
-     * @return The ship data, or an empty optional if none could be found
+     * Returns a {@link List} of {@link IShipData} instances that correspond to a given name
+     * @param name A {@link String} that represents a name
+     * @return {@link List} of {@link IShipData} instances, can be empty if none are found.
      * */
     @NotNull
-    public static Optional<IShipData> getShip(World world, String name) {
-        return provider.getShipByName(world, name);
+    public static List<IShipData> getShipsByName(World world, String name) {
+        return provider.getShipsByName(world, name);
     }
 
     /**
@@ -306,11 +306,11 @@ public class RiftedValkyriumAPI {
     }
 
     /**
-     * Adds a metadata-specific default mass for an addon block to the Rifted Valkyrium block-mass
-     * config. An existing config entry for the same state is preserved so users can override the
-     * addon's default.
+     * Sets the default mass for an exact block state directly in the physics mass registry.
+     * Config overrides for the same state take precedence. The default survives config reloads
+     * without changing the config.
      *
-     * @param blockState the block state whose metadata should receive the default mass
+     * @param blockState the block state that should receive the default mass
      * @param blockMass the default mass category
      */
     public static void setBlockMass(IBlockState blockState, BlockMass blockMass) {
@@ -318,9 +318,9 @@ public class RiftedValkyriumAPI {
     }
 
     /**
-     * Adds a default mass for every state of an addon block to the Rifted Valkyrium block-mass
-     * config. An existing config entry for the same block is preserved so users can override the
-     * addon's default.
+     * Sets the default mass for a block directly in the physics mass registry. State-specific
+     * masses and config overrides for the same block take precedence. The default survives
+     * config reloads without changing the config.
      *
      * @param block the block whose states should receive the default mass
      * @param blockMass the default mass category
@@ -362,7 +362,7 @@ public class RiftedValkyriumAPI {
         Optional<IShipData> getShipByUUID(World world, UUID uuid);
 
         @NotNull
-        Optional<IShipData> getShipByName(World world, String name);
+        List<IShipData> getShipsByName(World world, String name);
     }
 
     private static class UnavailableProvider implements Provider {
@@ -425,8 +425,8 @@ public class RiftedValkyriumAPI {
 
         @Override
         @NotNull
-        public Optional<IShipData> getShipByName(World worldServer, String name) {
-            return Optional.empty();
+        public List<IShipData> getShipsByName(World worldServer, String name) {
+            return List.of();
         }
     }
 }

@@ -26,9 +26,14 @@ public class BlockPhysicsDetails {
      */
     private static final Map<Block, BlockMass> blockToMass = new HashMap<>();
     /**
-     * Block states mapped to their metadata-specific mass.
+     * Block states mapped to their state-specific mass.
      */
     private static final Map<IBlockState, BlockMass> blockStateToMass = new HashMap<>();
+    /**
+     * User overrides kept separate so config reloads preserve addon defaults.
+     */
+    private static final Map<Block, BlockMass> configuredBlockToMass = new HashMap<>();
+    private static final Map<IBlockState, BlockMass> configuredBlockStateToMass = new HashMap<>();
     /**
      * Materials mapped to their BlockMass.
      */
@@ -49,10 +54,8 @@ public class BlockPhysicsDetails {
     }
 
     private static void reloadBlockMasses() {
-        blockToMass.clear();
-        blockStateToMass.clear();
-        generateBlockMasses();
-        generateLegacyBlockMasses();
+        configuredBlockToMass.clear();
+        configuredBlockStateToMass.clear();
         if (VSConfig.blockMass == null) return;
         for (String entry : VSConfig.blockMass) {
             applyConfiguredBlockMass(entry);
@@ -103,14 +106,14 @@ public class BlockPhysicsDetails {
         }
 
         if (!hasMetadata(blockSelector)) {
-            blockToMass.put(block, mass);
+            configuredBlockToMass.put(block, mass);
             return;
         }
 
         boolean matchedState = false;
         for (IBlockState blockState : block.getBlockState().getValidStates()) {
             if (!ValkyrienUtils.blockMatchesString(blockState, blockSelector)) continue;
-            blockStateToMass.put(blockState, mass);
+            configuredBlockStateToMass.put(blockState, mass);
             matchedState = true;
         }
 
@@ -185,12 +188,21 @@ public class BlockPhysicsDetails {
         blockToMass.put(ValkyrienSkiesControl.INSTANCE.vsControlBlocks.networkRelay, BlockMass.NEGLIGIBLE);
     }
 
+    @LegacyContent
     private static void generateBlocksToNotPhysicsInfuse() {
         blocksToNotPhysicsInfuse.add(Blocks.AIR);
         blocksToNotPhysicsInfuse.add(Blocks.WATER);
         blocksToNotPhysicsInfuse.add(Blocks.FLOWING_WATER);
         blocksToNotPhysicsInfuse.add(Blocks.LAVA);
         blocksToNotPhysicsInfuse.add(Blocks.FLOWING_LAVA);
+    }
+
+    public static void setBlockMass(@NonNull IBlockState blockState, @NonNull BlockMass blockMass) {
+        blockStateToMass.put(blockState, blockMass);
+    }
+
+    public static void setBlockMass(@NonNull Block block, @NonNull BlockMass blockMass) {
+        blockToMass.put(block, blockMass);
     }
 
     /**
@@ -200,14 +212,18 @@ public class BlockPhysicsDetails {
         //special case for air, it gets no mass at all
         if (state.getMaterial() == Material.AIR) return 0;
 
-        BlockMass stateMass = blockStateToMass.get(state);
+        BlockMass stateMass = configuredBlockStateToMass.get(state);
+        if (stateMass != null) return stateMass.mass;
+        stateMass = blockStateToMass.get(state);
         if (stateMass != null) return stateMass.mass;
         return getMassOfBlock(state.getBlock());
     }
 
     private static double getMassOfBlock(Block block) {
         //prioritize block mass
-        BlockMass blockMass = blockToMass.get(block);
+        BlockMass blockMass = configuredBlockToMass.get(block);
+        if (blockMass != null) return blockMass.mass;
+        blockMass = blockToMass.get(block);
         if (blockMass != null) return blockMass.mass;
         if (block instanceof BlockLiquid) return BlockMass.NEGLIGIBLE.mass;
 
