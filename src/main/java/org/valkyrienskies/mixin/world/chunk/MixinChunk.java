@@ -87,6 +87,7 @@ public abstract class MixinChunk {
      */
     @Inject(method = "setBlockState", at = @At("HEAD"))
     private void pre_setBlockState(BlockPos pos, IBlockState state, CallbackInfoReturnable<IBlockState> cir) {
+        if (!ShipChunkAllocator.isChunkInShipyard(this.x, this.z)) return;
         if (!world.isRemote) {
             if (ValkyrienUtils.notInFakeWorldBlacklist(world)) {
                 IBlockState oldState = getBlockState(pos);
