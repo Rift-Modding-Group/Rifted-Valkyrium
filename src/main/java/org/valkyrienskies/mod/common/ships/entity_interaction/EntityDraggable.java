@@ -257,7 +257,12 @@ public class EntityDraggable {
             }
         }
 
+        IShipAnchoredMount anchoredMount = entity.getCapability(VSCapabilityRegistry.VS_SHIP_ANCHORED_MOUNT, null);
+        boolean wasAnchored = anchoredMount != null && anchoredMount.isAnchoredToShip();
+        boolean anchoredToShip = anchoredMount != null && (wasAnchored || anchoredMount.tryAnchorMount(entity));
         ShipLocalEntityMovementData shipLocalMovementData = draggable.getShipLocalMovementData();
+        // Fixed seats retain ship-local facing; their riders' camera and look transforms supply ship rotation.
+        if (anchoredToShip && shipLocalMovementData != null) shipLocalMovementData.clear();
         if (entity.world.isRemote && shipLocalMovementData != null && shipLocalMovementData.isActive()) {
             if (entity.isRiding() || entity.canPassengerSteer()) {
                 shipLocalMovementData.clear();
@@ -342,10 +347,8 @@ public class EntityDraggable {
         }
 
         //For chairs from other mods
-        IShipAnchoredMount anchoredMount = entity.getCapability(VSCapabilityRegistry.VS_SHIP_ANCHORED_MOUNT, null);
         boolean snapAnchorPosition = draggable.getLastTouchedShip() == null;
-        boolean wasAnchored = anchoredMount != null && anchoredMount.isAnchoredToShip();
-        if (anchoredMount != null && (wasAnchored || anchoredMount.tryAnchorMount(entity))) {
+        if (anchoredToShip) {
             Optional<PhysicsObject> mountedShip = ValkyrienUtils.getPhysoManagingBlock(entity.world, anchoredMount.getLocalAnchorBlock());
             if (mountedShip.isPresent()) {
                 PhysicsObject physicsObject = mountedShip.get();

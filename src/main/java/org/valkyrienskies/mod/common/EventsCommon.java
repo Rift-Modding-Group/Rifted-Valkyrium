@@ -7,14 +7,12 @@ import net.minecraft.entity.item.EntityFallingBlock;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.util.MovementInput;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.TextComponentTranslation;
 import net.minecraft.world.Explosion;
 import net.minecraft.world.World;
 import net.minecraft.world.EnumSkyBlock;
-import net.minecraftforge.client.event.InputUpdateEvent;
 import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.event.entity.living.LivingDropsEvent;
 import net.minecraftforge.event.world.ChunkEvent;
@@ -33,7 +31,6 @@ import org.joml.Vector3dc;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMount;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
-import org.valkyrienskies.mod.common.capability.ship_pilot.IShipPilot;
 import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
 import org.valkyrienskies.mod.common.ships.ship_world.*;
@@ -244,23 +241,4 @@ public class EventsCommon {
         }
     }
 
-    /**
-     * A replacement for MovementInputFromOptions.class
-     *
-     * This blocks player movement when they're piloting from a control tileentity, like
-     * the captains chair
-     * */
-    @SubscribeEvent
-    public static void onInputUpdate(InputUpdateEvent event) {
-        IShipPilot pilot = event.getEntityPlayer().getCapability(VSCapabilityRegistry.VS_SHIP_PILOT, null);
-        if (pilot == null) return;
-
-        if (pilot.isPilotingShip()) {
-            MovementInput input = event.getMovementInput();
-            input.moveStrafe = 0.0F;
-            input.moveForward = 0.0F;
-            input.jump = false;
-            input.sneak = false;
-        }
-    }
 }

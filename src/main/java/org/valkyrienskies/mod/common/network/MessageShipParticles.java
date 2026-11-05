@@ -9,6 +9,8 @@ import net.minecraft.util.IThreadListener;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Quaterniond;
@@ -135,12 +137,14 @@ public class MessageShipParticles implements IMessage {
 
     public static class Handler implements IMessageHandler<MessageShipParticles, IMessage> {
         @Override
+        @SideOnly(Side.CLIENT)
         public IMessage onMessage(@NotNull MessageShipParticles message, @NotNull MessageContext context) {
             IThreadListener mainThread = Minecraft.getMinecraft();
             mainThread.addScheduledTask(() -> spawnParticles(message));
             return null;
         }
 
+        @SideOnly(Side.CLIENT)
         private static void spawnParticles(@NotNull MessageShipParticles message) {
             WorldClient world = Minecraft.getMinecraft().world;
             if (world == null) return;
@@ -196,6 +200,7 @@ public class MessageShipParticles implements IMessage {
             }
         }
 
+        @SideOnly(Side.CLIENT)
         private static void transformDirectionIfNeeded(
                 @NotNull MessageShipParticles message,
                 @Nullable Quaterniond directionRotation,
@@ -208,6 +213,7 @@ public class MessageShipParticles implements IMessage {
             directionRotation.transform(direction);
         }
 
+        @SideOnly(Side.CLIENT)
         private static void spawnLocal(
                 @NotNull MessageShipParticles message, @NotNull WorldClient world,
                 @NotNull PhysicsObject ship, boolean ignoreRange,

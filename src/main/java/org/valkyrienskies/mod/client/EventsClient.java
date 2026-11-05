@@ -8,6 +8,7 @@ import net.minecraft.client.renderer.RenderGlobal;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.entity.Entity;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.MovementInput;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.RayTraceResult;
@@ -15,6 +16,7 @@ import net.minecraft.world.World;
 import net.minecraft.world.EnumSkyBlock;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraftforge.client.event.DrawBlockHighlightEvent;
+import net.minecraftforge.client.event.InputUpdateEvent;
 import net.minecraftforge.client.event.ModelBakeEvent;
 import net.minecraftforge.client.event.RenderWorldLastEvent;
 import net.minecraftforge.client.event.TextureStitchEvent;
@@ -34,6 +36,7 @@ import org.valkyrienskies.mod.client.compat.ShipMinimapRenderer;
 import org.valkyrienskies.mod.client.render.GibsModelRegistry;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
+import org.valkyrienskies.mod.common.capability.ship_pilot.IShipPilot;
 import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
 import org.valkyrienskies.mod.common.ships.QueryableShipData;
 import org.valkyrienskies.mod.common.ships.ShipData;
@@ -284,5 +287,20 @@ public class EventsClient {
             PhysicsObject physicsObject = physObjectWorld.getPhysObjectFromUUID(shipData.getUuid());
             if (physicsObject != null) physicsObject.updateChunk(chunk);
         }
+    }
+
+    /**
+     * Suppress player movement while piloting a ship from a control tile entity.
+     */
+    @SubscribeEvent
+    public void onInputUpdate(@NotNull InputUpdateEvent event) {
+        IShipPilot pilot = event.getEntityPlayer().getCapability(VSCapabilityRegistry.VS_SHIP_PILOT, null);
+        if (pilot == null || !pilot.isPilotingShip()) return;
+
+        MovementInput input = event.getMovementInput();
+        input.moveStrafe = 0f;
+        input.moveForward = 0f;
+        input.jump = false;
+        input.sneak = false;
     }
 }

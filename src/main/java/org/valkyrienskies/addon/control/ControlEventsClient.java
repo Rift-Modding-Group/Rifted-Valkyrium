@@ -10,6 +10,7 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumHand;
+import net.minecraft.util.MovementInput;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraftforge.client.event.InputUpdateEvent;
@@ -25,6 +26,7 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
+import org.jetbrains.annotations.NotNull;
 import org.valkyrienskies.addon.control.capability.controlNodeUser.ICapabilityControlNodeUser;
 import org.valkyrienskies.addon.control.capability.lastRelay.ICapabilityLastRelay;
 import org.valkyrienskies.addon.control.item.ItemBaseWire;
@@ -154,12 +156,21 @@ public class ControlEventsClient {
         }
     }
 
-    //apply dismount supression
+    //supress movement while using a control node and preserve dismount suppression until release.
     @SideOnly(Side.CLIENT)
     @SubscribeEvent
-    public void onInputUpdate(InputUpdateEvent event) {
+    public void onInputUpdate(@NotNull InputUpdateEvent event) {
         if (event.getEntityPlayer() != Minecraft.getMinecraft().player) return;
 
-        if (this.suppressDismountUntilRelease) event.getMovementInput().sneak = false;
+        MovementInput input = event.getMovementInput();
+        ICapabilityControlNodeUser nodeUser = event.getEntityPlayer().getCapability(ValkyrienSkiesControl.controlNodeUserCapability, null);
+        if (nodeUser != null && nodeUser.getUsedControlNodePos() != null) {
+            input.moveStrafe = 0f;
+            input.moveForward = 0f;
+            input.jump = false;
+            input.sneak = false;
+        }
+
+        if (this.suppressDismountUntilRelease) input.sneak = false;
     }
 }

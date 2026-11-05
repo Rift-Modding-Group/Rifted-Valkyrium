@@ -36,6 +36,7 @@ import org.lwjgl.opengl.GL11;
 import valkyrienwarfare.api.TransformType;
 import org.valkyrienskies.mod.client.entity_position.EntityRenderStateBackup;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
+import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMount;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.ShipLocalEntityMovementData;
 import org.valkyrienskies.mod.common.capability.ship_pilot.IShipPilot;
@@ -113,6 +114,12 @@ public abstract class MixinEntityRenderer {
             Vector3dc previousPosition = new Vector3d(entity.lastTickPosX, entity.lastTickPosY, entity.lastTickPosZ);
             Vector3d renderPosition;
             ShipLocalEntityMovementData movementData = draggable.getShipLocalMovementData();
+            IShipAnchoredMount anchoredMount = entity.getCapability(VSCapabilityRegistry.VS_SHIP_ANCHORED_MOUNT, null);
+            if (movementData != null && anchoredMount != null
+                    && (anchoredMount.isAnchoredToShip() || anchoredMount.tryAnchorMount(entity))) {
+                // Keep late movement packets from applying world-space facing to a fixed seat during rendering.
+                movementData.clear();
+            }
             ShipTransform shipLocalRenderTransform = null;
             EntityShipMountData mountData = ValkyrienUtils.getMountedShipAndPos(entity);
 
