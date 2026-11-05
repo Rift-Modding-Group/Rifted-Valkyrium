@@ -12,6 +12,7 @@ import org.jetbrains.annotations.NotNull;
 import org.joml.Vector3d;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.VSWorldDataCapability;
+import org.valkyrienskies.mod.common.entity.EntityMountable;
 import org.valkyrienskies.mod.common.physics.BlockPhysicsDetails;
 import org.valkyrienskies.mod.common.ships.QueryableShipData;
 import org.valkyrienskies.mod.common.ships.ShipData;
@@ -21,6 +22,7 @@ import org.valkyrienskies.mod.common.ships.chunk_claims.VSChunkClaim;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
+import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.ships.ship_world.WorldServerShipManager;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import org.valkyrienskies.mod.common.util.names.NounListNameGenerator;
@@ -62,8 +64,12 @@ public class RiftedValkyriumAPIProvider implements RiftedValkyriumAPI.Provider {
     @Override
     @NotNull
     public Optional<IShipData> getActiveShipOfEntity(Entity entity) {
-        ShipData lastTouchedShip = EntityDraggable.getActiveShip(entity);
-        return Optional.ofNullable(lastTouchedShip);
+        Entity carrier = entity.getLowestRidingEntity();
+        //special case for legacy chairs
+        if (carrier instanceof EntityMountable mountable) {
+            return mountable.getMountedShip().map(PhysicsObject::getShipData);
+        }
+        return Optional.ofNullable(EntityDraggable.getActiveShip(carrier));
     }
 
     @Override

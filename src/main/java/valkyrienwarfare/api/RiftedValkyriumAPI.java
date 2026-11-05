@@ -80,7 +80,9 @@ public class RiftedValkyriumAPI {
     }
 
     /**
-     * Determine the current ship that a given entity is making contact with
+     * Determine the current ship that a given entity is making contact with.
+     * Also takes into account if its riding an entity thats makin contact
+     * with a ship.
      * */
     @NotNull
     public static Optional<IShipData> getActiveShipOfEntity(@Nullable Entity entity) {
