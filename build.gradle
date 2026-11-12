@@ -221,7 +221,6 @@ processResources {
 sourceSets {
     main {
         compileClasspath += configurations.mapMods
-        runtimeClasspath += configurations.mapMods
         blossom {
             javaSources {
                 property('mod_id', mod_id)

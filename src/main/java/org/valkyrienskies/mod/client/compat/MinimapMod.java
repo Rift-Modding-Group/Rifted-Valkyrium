@@ -1,16 +1,11 @@
 package org.valkyrienskies.mod.client.compat;
 
-import journeymap.client.render.backend.LayerSink;
-import journeymap.client.render.backend.RenderBackends;
-import journeymap.client.render.backend.RenderContext;
-import journeymap.client.render.backend.RenderPose;
 import net.minecraft.client.renderer.BufferBuilder;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
 import org.lwjgl.opengl.GL11;
 
@@ -55,20 +50,7 @@ public enum MinimapMod {
     ),
     JOURNEYMAP(
             () -> 0,
-            context -> {
-                JourneyMapContext map = Objects.requireNonNull(context, "JourneyMap requires its render context");
-                return (texture, vertices) -> {
-                    LayerSink sink = map.context().layer(RenderBackends.get().layers().mapTile(texture.getGlTextureId(), map.filter()));
-                    RenderPose pose = map.context().currentPose();
-                    for (int i = 0; i < vertices.length; i++) {
-                        Vector3d vertex = vertices[i];
-                        float u = i == 1 || i == 2 ? 1F : 0F;
-                        float v = i < 2 ? 1F : 0F;
-                        sink.pos(pose, map.originX() + vertex.x * map.blockSize(), map.originY() + vertex.z * map.blockSize(), 0D)
-                                .uv(u, v).color(1F, 1F, 1F, map.alpha()).endVertex();
-                    }
-                };
-            },
+            context -> Objects.requireNonNull(context, "JourneyMap requires its render context").drawing(),
             boundTexture -> {}
     );
 
@@ -106,7 +88,6 @@ public enum MinimapMod {
 
     //special param for journeymap
     public record JourneyMapContext(
-            @NotNull RenderContext context, double originX, double originY, double blockSize,
-            float alpha, @Nullable String filter
+            @NotNull BiConsumer<DynamicTexture, Vector3d[]> drawing
     ) {}
 }

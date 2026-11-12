@@ -23,6 +23,7 @@ import net.minecraftforge.client.event.TextureStitchEvent;
 import net.minecraftforge.client.event.sound.PlaySoundEvent;
 import net.minecraftforge.event.world.ChunkEvent;
 import net.minecraftforge.event.world.WorldEvent;
+import net.minecraftforge.fml.common.Loader;
 import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent.ClientTickEvent;
@@ -89,7 +90,10 @@ public class EventsClient {
                 EntityDraggable.tickAddedVelocityForWorld(world);
                 shipWorld.getLighting().process(pos -> world.checkLightFor(EnumSkyBlock.SKY, pos), System::nanoTime);
             }
-            ShipMinimapRenderer.INSTANCE.tick();
+
+            if (Loader.isModLoaded("xaerominimap") || Loader.isModLoaded("xaeroworldmap") || Loader.isModLoaded("journeymap")) {
+                ShipMinimapRenderer.INSTANCE.tick();
+            }
         }
     }
 
