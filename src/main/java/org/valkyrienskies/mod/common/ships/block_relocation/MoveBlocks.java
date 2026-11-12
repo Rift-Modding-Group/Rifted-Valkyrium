@@ -11,6 +11,7 @@ import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 import net.minecraftforge.fml.common.Loader;
 import org.jetbrains.annotations.NotNull;
+import org.valkyrienskies.mod.common.compat.FluidloggedAPICompat;
 import org.valkyrienskies.mod.common.compat.MalisisCoreCompat;
 import org.valkyrienskies.mod.common.physics.BlockPhysicsDetails;
 import org.valkyrienskies.mod.common.ships.ShipData;
@@ -33,7 +34,6 @@ public class MoveBlocks {
         TLongObjectHashMap<Chunk> sourceChunksByPosition = new TLongObjectHashMap<>();
         for (Chunk chunk : sourceChunks) sourceChunksByPosition.put(ChunkPos.asLong(chunk.x, chunk.z), chunk);
         BlockPos.MutableBlockPos destination = new BlockPos.MutableBlockPos();
-        boolean hasMalisisCore = Loader.isModLoaded("malisiscore");
         for (BlockPos source : blockPositions) {
             destination.setPos(source.getX() - centerDifference.getX(), source.getY() - centerDifference.getY(), source.getZ() - centerDifference.getZ());
             int y = destination.getY();
@@ -58,7 +58,14 @@ public class MoveBlocks {
             int section = y >> 4;
             if (storage[section] == null) storage[section] = new ExtendedBlockStorage(section << 4, world.provider.hasSkyLight());
             storage[section].set(destination.getX() & 15, y & 15, destination.getZ() & 15, movedState);
-            if (hasMalisisCore) MalisisCoreCompat.updateChunkBlockRegistration(world, destination, previousState, movedState);
+
+            //update state for fluidlogged blocks by fluidlogged api
+            if (Loader.isModLoaded("fluidlogged_api")) FluidloggedAPICompat.copyFluidState(sourceChunk, source, targetChunk, destination);
+
+            //update state for multiblock doors by malisis doors
+            if (Loader.isModLoaded("malisiscore")) MalisisCoreCompat.updateChunkBlockRegistration(world, destination, previousState, movedState);
+
+            //normal update
             world.notifyBlockUpdate(destination, previousState, movedState, 2);
 
             if (movedState.getBlock().hasTileEntity(movedState) || sourceChunk.getTileEntityMap().containsKey(source)) {
@@ -89,8 +96,10 @@ public class MoveBlocks {
             chunkToSet.getBlockStorageArray()[storageIndex] = new ExtendedBlockStorage(storageIndex << 4,
                 true);
         }
-        chunkToSet.getBlockStorageArray()[storageIndex]
-            .set(newPos.getX() & 15, newPos.getY() & 15, newPos.getZ() & 15, newState);
+        chunkToSet.getBlockStorageArray()[storageIndex].set(newPos.getX() & 15, newPos.getY() & 15, newPos.getZ() & 15, newState);
+        if (Loader.isModLoaded("fluidlogged_api")) {
+            FluidloggedAPICompat.copyFluidState(world.getChunk(oldPos), oldPos, chunkToSet, newPos);
+        }
         if (Loader.isModLoaded("malisiscore")) {
             MalisisCoreCompat.updateChunkBlockRegistration(world, newPos, oldState, newState);
         }

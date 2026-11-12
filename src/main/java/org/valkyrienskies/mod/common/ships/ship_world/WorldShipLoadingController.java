@@ -8,6 +8,7 @@ import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraftforge.fml.common.Loader;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
+import org.valkyrienskies.mod.common.compat.FluidloggedAPICompat;
 import org.valkyrienskies.mod.common.compat.MalisisCoreCompat;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.network.ShipIndexDataMessage;
@@ -188,6 +189,9 @@ class WorldShipLoadingController {
             if (player.hasDisconnected()) return;
             for (Chunk chunk : chunks) {
                 player.connection.sendPacket(new SPacketChunkData(chunk, 65535));
+                if (Loader.isModLoaded("fluidlogged_api")) {
+                    FluidloggedAPICompat.sendChunkFluidStates(chunk, player);
+                }
                 if (Loader.isModLoaded("malisiscore")) {
                     MalisisCoreCompat.sendChunkBlockRegistrations(chunk, player);
                 }

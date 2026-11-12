@@ -104,6 +104,10 @@ dependencies {
     //Fairy Lights maven for compatibility
     modCompileOnly "curse.maven:fairy-lights-233342:3068499"
 
+    //Fluidlogged API for compat
+    modCompileOnly "maven.modrinth:fluidlogged-api:3.3.3"
+    testRuntimeOnly "maven.modrinth:fluidlogged-api:3.3.3"
+
     //xaero map mods for compat using a special config
     mapMods "xaero.lib:xaerolib-forge-1.12.2:1.7.3"
     mapMods("xaero.minimap:xaerominimap-forge-1.12.2:26.6.0") {

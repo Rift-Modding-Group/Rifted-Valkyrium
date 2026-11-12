@@ -22,7 +22,9 @@ import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 import net.minecraftforge.client.ForgeHooksClient;
 import net.minecraftforge.client.MinecraftForgeClient;
+import net.minecraftforge.fml.common.Loader;
 import org.lwjgl.opengl.GL11;
+import org.valkyrienskies.mod.client.compat.FluidloggedRenderCompat;
 import org.valkyrienskies.mod.common.util.TransformedAABB;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import valkyrienwarfare.api.TransformType;
@@ -315,6 +317,9 @@ public class PhysRenderChunk {
                         pos.setPos(x, y, z);
                         IBlockState iblockstate = chunkToRender.getBlockState(pos);
                         try {
+                            if (Loader.isModLoaded("fluidlogged_api")) {
+                                FluidloggedRenderCompat.renderFluidState(iblockstate, pos, renderAccess, vsChunkBuilder, layerToUpdate);
+                            }
                             if (iblockstate.getBlock()
                                 .canRenderInLayer(iblockstate, layerToUpdate)) {
                                 Minecraft.getMinecraft().getBlockRendererDispatcher()
@@ -499,6 +504,9 @@ public class PhysRenderChunk {
                         pos.setPos(x, y, z);
                         iblockstate = this.chunkToRender.getBlockState(pos);
                         try {
+                            if (Loader.isModLoaded("fluidlogged_api")) {
+                                FluidloggedRenderCompat.renderFluidState(iblockstate, pos, renderAccess, worldrenderer, layerToUpdate);
+                            }
                             if (iblockstate.getBlock().canRenderInLayer(iblockstate, layerToUpdate)) {
                                 Minecraft.getMinecraft().getBlockRendererDispatcher()
                                         .renderBlock(iblockstate, pos, renderAccess, worldrenderer);

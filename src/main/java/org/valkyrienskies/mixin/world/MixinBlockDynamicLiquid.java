@@ -23,7 +23,7 @@ public abstract class MixinBlockDynamicLiquid {
                     target = "Lnet/minecraft/block/BlockDynamicLiquid;canFlowInto(Lnet/minecraft/world/World;Lnet/minecraft/util/math/BlockPos;Lnet/minecraft/block/state/IBlockState;)Z",
                     ordinal = 0
             ),
-            require = 1
+            require = 0
     )
     private boolean limitShipWaterDownflow(BlockDynamicLiquid liquid, World world, BlockPos targetPos, IBlockState targetState) {
         if (!liquid.canFlowInto(world, targetPos, targetState)) return false;

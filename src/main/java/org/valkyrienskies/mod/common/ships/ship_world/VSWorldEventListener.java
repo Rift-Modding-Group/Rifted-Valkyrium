@@ -70,7 +70,25 @@ public class VSWorldEventListener implements IWorldEventListener {
     }
 
     @Override
-    public void markBlockRangeForRenderUpdate(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {}
+    public void markBlockRangeForRenderUpdate(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
+        if (!this.worldObj.isRemote) return;
+
+        // Stored fluid changes rebuild every layer, including adjacent fluid faces.
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+        for (int chunkX = (minX - 1) >> 4; chunkX <= (maxX + 1) >> 4; chunkX++) {
+            for (int chunkZ = (minZ - 1) >> 4; chunkZ <= (maxZ + 1) >> 4; chunkZ++) {
+                pos.setPos(chunkX << 4, minY, chunkZ << 4);
+                PhysicsObject ship = ValkyrienUtils.getPhysoManagingBlock(this.worldObj, pos).orElse(null);
+                if (ship == null || ship.getShipRenderer() == null) continue;
+
+                ship.getShipRenderer().updateRange(
+                        Math.max(minX - 1, chunkX << 4), minY - 1, Math.max(minZ - 1, chunkZ << 4),
+                        Math.min(maxX + 1, (chunkX << 4) + 15), maxY + 1, Math.min(maxZ + 1, (chunkZ << 4) + 15),
+                        null
+                );
+            }
+        }
+    }
 
     @Override
     public void playSoundToAllNearExcept(

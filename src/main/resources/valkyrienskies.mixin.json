@@ -66,6 +66,8 @@
     "world.chunk.MixinBlockStateContainer",
     "world.chunk.MixinChunk",
     "world.gen.MixinChunkProviderServer",
+    "mod.fluidlogged_api.MixinFluidFlowHandler",
+    "mod.fluidlogged_api.MixinMessageUtils",
     "mod.effortlessbuilding.MixinBuildModes",
     "mod.effortlessbuilding.MixinFloor",
     "mod.effortlessbuilding.MixinLine",
