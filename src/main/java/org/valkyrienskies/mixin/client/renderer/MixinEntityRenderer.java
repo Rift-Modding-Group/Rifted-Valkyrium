@@ -41,7 +41,7 @@ import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShi
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.ShipLocalEntityMovementData;
 import org.valkyrienskies.mod.common.capability.ship_pilot.IShipPilot;
 import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
-import org.valkyrienskies.mod.common.config.VSConfig;
+import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityShipMountData;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
@@ -149,11 +149,10 @@ public abstract class MixinEntityRenderer {
                 renderPosition = movementData.getWorldPosition(shipLocalRenderTransform, renderPartialTicks);
             }
             else {
-                if (draggable.getLastTouchedShip() == null || draggable.getTicksSinceTouchedShip() >= VSConfig.ticksToStickToShip) {
-                    continue;
-                }
+                ShipData carryingShip = EntityDraggable.getActiveShip(entity);
+                if (carryingShip == null) continue;
 
-                PhysicsObject shipPhysicsObject = physObjectWorld.getPhysObjectFromUUID(draggable.getLastTouchedShip().getUuid());
+                PhysicsObject shipPhysicsObject = physObjectWorld.getPhysObjectFromUUID(carryingShip.getUuid());
                 if (shipPhysicsObject == null) {
                     draggable.setLastTouchedShip(null);
                     continue;

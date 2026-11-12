@@ -90,14 +90,15 @@ public class EntityDraggable {
         if (entity.isRiding()) return null;
 
         IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
-        if (draggable == null || draggable.getLastTouchedShip() == null || draggable.getTicksSinceTouchedShip() >= VSConfig.ticksToStickToShip) {
-            return null;
-        }
+        if (draggable == null) return null;
+
+        ShipData carryingShip = draggable.getLastTouchedShip();
+        if (carryingShip == null || draggable.getTicksSinceTouchedShip() >= VSConfig.ticksToStickToShip) return null;
 
         IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(entity.world);
         if (physObjectWorld == null) return null;
 
-        PhysicsObject physicsObject = physObjectWorld.getPhysObjectFromUUID(draggable.getLastTouchedShip().getUuid());
+        PhysicsObject physicsObject = physObjectWorld.getPhysObjectFromUUID(carryingShip.getUuid());
         return physicsObject == null ? null : physicsObject.getShipData();
     }
 
@@ -423,7 +424,7 @@ public class EntityDraggable {
 
         if (lastShipTouchedPlayer == null || oldTicksSinceTouchedShip >= VSConfig.ticksToStickToShip) {
             if (entity.onGround) {
-                // Player is on ground and not on a ship, therefore set their added velocity to 0.
+                // Ground contact absorbs residual carrier motion after ship contact expires.
                 draggable.setAddedLinearVelocity(new Vector3d());
                 draggable.setAddedYawVelocity(0);
             }

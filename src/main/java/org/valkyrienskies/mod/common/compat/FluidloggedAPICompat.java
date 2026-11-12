@@ -33,6 +33,11 @@ import java.util.function.Function;
  * Helper for Fluidlogged
  */
 public class FluidloggedAPICompat {
+    @Nonnull
+    public static IBlockState getFluidOrReal(@Nonnull World world, @Nonnull BlockPos pos) {
+        return FluidloggedUtils.getFluidOrReal(world, pos);
+    }
+
     /**
      * Copies stored fluid alongside a relocated block, including an empty source state.
      */

@@ -61,6 +61,7 @@
     "util.math.MixinChunkPos",
     "world.MixinBlockDynamicLiquid",
     "world.MixinWorld",
+    "world.MixinWorldFluid",
     "world.MixinWorldServerParticles",
     "world.border.MixinWorldBorder",
     "world.chunk.MixinBlockStateContainer",

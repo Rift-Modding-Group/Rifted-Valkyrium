@@ -2,11 +2,15 @@ package org.valkyrienskies.mixin.entity;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityList;
 import net.minecraft.entity.MoverType;
 import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.World;
+import net.minecraftforge.fml.common.Loader;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
@@ -20,7 +24,10 @@ import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
 import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
 import org.valkyrienskies.mod.common.config.VSConfig;
+import org.valkyrienskies.mod.common.compat.FluidloggedAPICompat;
+import org.valkyrienskies.mod.common.entity.EntityMountable;
 import org.valkyrienskies.mod.common.ships.ShipData;
+import org.valkyrienskies.mod.common.ships.chunk_claims.ShipChunkAllocator;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityCollisionInjector;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityCollisionInjector.IntermediateMovementVariableStorage;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
@@ -153,14 +160,54 @@ public abstract class MixinEntityIntrinsic {
             EntityCollisionInjector.alterEntityMovementPost(thisEntity, this.alteredMovement);
         }
         else {
+            ShipData supportingShip = this.boatSupportBeforeMove;
+            boolean inWorldLiquid = false;
+            if (supportingShip == null && !thisEntity.isRiding() && !(thisEntity instanceof EntityMountable)
+                    && !entityShipDraggable.getInAirPocket()
+                    && !ShipChunkAllocator.isBlockInShipyard(thisEntity.getPosition())
+            ) {
+                AxisAlignedBB bounds = thisEntity.getEntityBoundingBox().shrink(0.001D);
+                // Inspect world blocks directly so this query does not include transformed ship liquids.
+                for (BlockPos pos : BlockPos.getAllInBoxMutable(
+                        MathHelper.floor(bounds.minX), MathHelper.floor(bounds.minY), MathHelper.floor(bounds.minZ),
+                        MathHelper.ceil(bounds.maxX) - 1, MathHelper.ceil(bounds.maxY) - 1, MathHelper.ceil(bounds.maxZ) - 1)
+                ) {
+                    if (!thisEntity.world.isBlockLoaded(pos)) continue;
+
+                    IBlockState state;
+                    if (Loader.isModLoaded("fluidlogged_api")) state = FluidloggedAPICompat.getFluidOrReal(thisEntity.world, pos);
+                    else state = thisEntity.world.getBlockState(pos);
+
+                    Boolean result = state.getBlock().isAABBInsideLiquid(thisEntity.world, pos, bounds);
+                    if (Boolean.TRUE.equals(result) || result == null && state.getMaterial().isLiquid()) {
+                        inWorldLiquid = true;
+                        break;
+                    }
+                }
+
+                if (!inWorldLiquid) {
+                    IShipWorld shipWorld = thisEntity.world.getCapability(VSCapabilityRegistry.VS_SHIP_WORLD, null);
+                    if (shipWorld != null && shipWorld.getManager() != null) {
+                        for (PhysicsObject ship : shipWorld.getManager().getPhysObjectsInAABB(bounds)) {
+                            AxisAlignedBB localBounds = new TransformedAABB(bounds, ship.getShipTransform(), TransformType.GLOBAL_TO_SUBSPACE)
+                                    .getEnclosedAABB();
+                            if (thisEntity.world.containsAnyLiquid(localBounds)) {
+                                supportingShip = ship.getShipData();
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
             //make sure that when on top of a boat on a ship, the game thinks
             //entity is still standing on the ship
-            if (this.boatSupportBeforeMove != null) {
-                entityShipDraggable.setLastTouchedShip(this.boatSupportBeforeMove);
+            if (supportingShip != null) {
+                entityShipDraggable.setLastTouchedShip(supportingShip);
                 entityShipDraggable.setTicksSinceTouchedShip(0);
                 entityShipDraggable.setTicksPartOfGround(0);
             }
-            else if (this.collided) {
+            else if (this.collided || inWorldLiquid) {
                 entityShipDraggable.setLastTouchedShip(null);
                 entityShipDraggable.setTicksSinceTouchedShip(0);
                 entityShipDraggable.setTicksPartOfGround(entityShipDraggable.getTicksPartOfGround() + 1);

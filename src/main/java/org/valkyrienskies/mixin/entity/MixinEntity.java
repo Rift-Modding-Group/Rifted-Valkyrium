@@ -2,8 +2,10 @@ package org.valkyrienskies.mixin.entity;
 
 import net.minecraft.block.material.Material;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.item.EntityBoat;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.DamageSource;
+import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
@@ -21,12 +23,16 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMount;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
+import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
+import org.valkyrienskies.mod.common.ships.chunk_claims.ShipChunkAllocator;
+import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityShipMountData;
 import org.valkyrienskies.mod.common.util.JOML;
+import org.valkyrienskies.mod.common.util.TransformedAABB;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import valkyrienwarfare.api.TransformType;
 
@@ -291,6 +297,61 @@ public abstract class MixinEntity {
         cir.setReturnValue(false);
     }
 
+    @Inject(method = "isInsideOfMaterial", at = @At("RETURN"), cancellable = true)
+    private void detectShipFluidAtEyes(Material material, CallbackInfoReturnable<Boolean> callback) {
+        if (callback.getReturnValueZ() || !material.isLiquid()) return;
+        Entity entity = (Entity) (Object) this;
+        if (entity.getRidingEntity() instanceof EntityBoat) return;
+        IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
+        if (material == Material.WATER && draggable != null && draggable.getInAirPocket()) return;
+
+        Vec3d eyes = new Vec3d(entity.posX, entity.posY + entity.getEyeHeight(), entity.posZ);
+        AxisAlignedBB eyeBounds = new AxisAlignedBB(eyes, eyes).grow(0.001D);
+        if (ShipChunkAllocator.isBlockInShipyard(new BlockPos(eyeBounds.getCenter()))) return;
+        IShipWorld shipWorld = entity.world.getCapability(VSCapabilityRegistry.VS_SHIP_WORLD, null);
+        if (shipWorld == null || shipWorld.getManager() == null) return;
+
+        for (PhysicsObject ship : shipWorld.getManager().getPhysObjectsInAABB(eyeBounds)) {
+            ShipTransform transform = ship.getShipTransform();
+            double originalX = entity.posX;
+            double originalY = entity.posY;
+            double originalZ = entity.posZ;
+            AxisAlignedBB originalBounds = entity.getEntityBoundingBox();
+            double originalMotionX = entity.motionX;
+            double originalMotionY = entity.motionY;
+            double originalMotionZ = entity.motionZ;
+            double eyeHeight = entity.getEyeHeight();
+            Vector3d localPosition = new Vector3d(originalX, originalY + eyeHeight, originalZ);
+            transform.transformPosition(localPosition, TransformType.GLOBAL_TO_SUBSPACE);
+            Vector3d localMotion = new Vector3d(originalMotionX, originalMotionY, originalMotionZ);
+            transform.transformDirection(localMotion, TransformType.GLOBAL_TO_SUBSPACE);
+
+            entity.posX = localPosition.x;
+            entity.posY = localPosition.y - eyeHeight;
+            entity.posZ = localPosition.z;
+            entity.setEntityBoundingBox(new TransformedAABB(originalBounds, transform, TransformType.GLOBAL_TO_SUBSPACE).getEnclosedAABB());
+            entity.motionX = localMotion.x;
+            entity.motionY = localMotion.y;
+            entity.motionZ = localMotion.z;
+
+            boolean inShipFluid = entity.isInsideOfMaterial(material);
+
+            Vector3d impulse = new Vector3d(entity.motionX, entity.motionY, entity.motionZ).sub(localMotion);
+            transform.transformDirection(impulse, TransformType.SUBSPACE_TO_GLOBAL);
+            entity.posX = originalX;
+            entity.posY = originalY;
+            entity.posZ = originalZ;
+            entity.setEntityBoundingBox(originalBounds);
+            entity.motionX = originalMotionX + impulse.x;
+            entity.motionY = originalMotionY + impulse.y;
+            entity.motionZ = originalMotionZ + impulse.z;
+            if (inShipFluid) {
+                callback.setReturnValue(true);
+                break;
+            }
+        }
+    }
+
     /**
      * This mixin removes the effect lava has on movement.
      */
@@ -379,20 +440,13 @@ public abstract class MixinEntity {
 
         //get from entity thats on a modded chair entity
         if (shipId == null) {
-            ShipData carryingShip = null;
             Entity rootCarrier = entity;
             Entity ridingEntity = rootCarrier.getRidingEntity();
             while (ridingEntity != null) {
                 rootCarrier = ridingEntity;
                 ridingEntity = rootCarrier.getRidingEntity();
             }
-            IEntityShipDraggable rootDraggable = rootCarrier.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
-            if (rootDraggable != null && rootDraggable.getLastTouchedShip() != null
-                    && rootDraggable.getTicksSinceTouchedShip() < VSConfig.ticksToStickToShip
-            ) {
-                carryingShip = rootDraggable.getLastTouchedShip();
-            }
-
+            ShipData carryingShip = EntityDraggable.getActiveShip(rootCarrier);
             if (carryingShip == null) return;
 
             shipId = carryingShip.getUuid();

@@ -47,7 +47,7 @@ public class PlayerMovementDataGenerator {
                 throw new RuntimeException("IEntityShipDraggable is not expected to be null!");
             }
 
-            final ShipData lastTouchedShip = draggable.getLastTouchedShip();
+            ShipData lastTouchedShip = draggable.getLastTouchedShip();
             final UUID lastTouchedShipId = lastTouchedShip != null ? lastTouchedShip.getUuid() : null;
             final Vector3d playerPosInLocal = new Vector3d(entityPlayer.posX, entityPlayer.posY, entityPlayer.posZ);
             final Vector3d playerLookInLocal = JOML.convert(entityPlayer.getLook(1));

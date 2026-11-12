@@ -396,11 +396,8 @@ public class PhysicsObject implements IPhysicsEntity {
                     if (draggable == null) continue;
 
                     ShipData touchedShip = draggable.getLastTouchedShip();
-                    if (touchedShip == null || !touchedShip.getUuid().equals(this.shipData.getUuid())
-                            || draggable.getTicksSinceTouchedShip() >= VSConfig.ticksToStickToShip
-                    ) {
-                        continue;
-                    }
+                    if (draggable.getTicksSinceTouchedShip() >= VSConfig.ticksToStickToShip) continue;
+                    if (touchedShip == null || !touchedShip.getUuid().equals(this.shipData.getUuid())) continue;
 
                     Vector3d deconstructedPosition = new Vector3d(entity.posX, entity.posY, entity.posZ);
                     currentTransform.transformPosition(deconstructedPosition, TransformType.GLOBAL_TO_SUBSPACE);
