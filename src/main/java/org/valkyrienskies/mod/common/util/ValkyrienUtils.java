@@ -46,9 +46,12 @@ import valkyrienwarfare.api.*;
 
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
+import java.util.ArrayDeque;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.BiPredicate;
+import java.util.function.ToIntFunction;
 
 /**
  * This class contains various helper functions for Valkyrien Skies.
@@ -76,10 +79,7 @@ public final class ValkyrienUtils {
 
     /**
      * Get ship data from a given position as an Optional.
-     *
-     * @deprecated use {@link RiftedValkyriumAPI#getShipManagingBlock(World, BlockPos)}
      * */
-    @Deprecated
     @NotNull
     public static Optional<ShipData> getShipManagingBlock(@Nullable World world, @Nullable BlockPos pos) {
         return RiftedValkyriumAPI.getShipManagingBlock(world, pos).map(ShipData.class::cast);
@@ -446,5 +446,54 @@ public final class ValkyrienUtils {
         int metadata = Integer.parseInt(string.substring(secondColonIndex + 1));
 
         return new ImmutablePair<>(itemId, metadata);
+    }
+
+    /**
+     * Follows horizontal and upward fluid connections to a source, visiting each cell once.
+     * The lookup returns a vanilla liquid level, -1 for an empty or incompatible cell, or -2
+     * for unavailable terrain. Flow bordering unavailable supply is retained until it can be checked.
+     * The connection predicate checks whether the current cell can receive fluid from that side.
+     */
+    public static boolean isLiquidFlowSupported(BlockPos origin, ToIntFunction<BlockPos> levelAt, BiPredicate<BlockPos, EnumFacing> canReceiveFrom) {
+        int originLevel = levelAt.applyAsInt(origin);
+        if (originLevel == 0 || originLevel == -2) return true;
+        if (originLevel < 0) return false;
+
+        Set<BlockPos> visited = new HashSet<>();
+        ArrayDeque<BlockPos> pending = new ArrayDeque<>();
+        BlockPos start = origin.toImmutable();
+        visited.add(start);
+        pending.add(start);
+        while (!pending.isEmpty()) {
+            BlockPos pos = pending.remove();
+            for (EnumFacing side : EnumFacing.values()) {
+                if (side == EnumFacing.DOWN) continue;
+                BlockPos neighbor = pos.offset(side);
+                if (visited.contains(neighbor)) continue;
+                int level = levelAt.applyAsInt(neighbor);
+                if (level == -1 || !canReceiveFrom.test(pos, side)) continue;
+                if (level == 0 || level == -2) return true;
+                if (level > 0) {
+                    visited.add(neighbor);
+                    pending.add(neighbor);
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Allows four blocks of downflow below a source or horizontal inlet.
+     * The lookup returns vanilla liquid levels, or -1 for a different fluid or an empty cell.
+     */
+    public static boolean canFlowDown(BlockPos sourcePos, ToIntFunction<BlockPos> levelAt) {
+        BlockPos.MutableBlockPos columnPos = new BlockPos.MutableBlockPos(sourcePos);
+        for (int distance = 0; distance < 4; distance++) {
+            int level = levelAt.applyAsInt(columnPos);
+            if (level < 0) return false;
+            if (level < 8) return true;
+            columnPos.move(EnumFacing.UP);
+        }
+        return false;
     }
 }
