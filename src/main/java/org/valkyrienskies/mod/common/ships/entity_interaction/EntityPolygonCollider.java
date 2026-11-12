@@ -43,7 +43,7 @@ class EntityPolygonCollider {
             }
         }
         if (!separated) {
-            double minDistance = 420;
+            double minDistance = Double.MAX_VALUE;
             for (int i = 0; i < collisions.length; i++) {
                 if (originallySeparated) {
                     double normalizedDistance = Math.abs((collisions[i].getCollisionPenetrationDistance() - collisions[i].getVelDot()) / collisions[i].getVelDot());

@@ -67,34 +67,35 @@ public class EntityCollisionObject {
         double movMinFixMax = playerMax - blockMin;
 
         boolean useDefault = true;
+        // Treat an approaching surface contact as a swept collision, including transform rounding.
+        boolean approachingContact = movMaxFixMin >= -1.0E-7D && this.velDot > 0D || movMinFixMax <= 1.0E-7D && this.velDot < 0D;
+        //original position not colliding, use velocity based bastards
+        if (movMaxFixMin > 0 || movMinFixMax < 0 || approachingContact) useDefault = false;
+        else this.originallyCollided = true;
+
+        if (this.velDot > 0) movMaxFixMin -= this.velDot;
+        else movMinFixMax -= this.velDot;
+
         if (movMaxFixMin > 0 || movMinFixMax < 0) {
-            // Original position not colliding, use velocity based bastards
-            useDefault = false;
-        } else {
-            originallyCollided = true;
-        }
-        if (velDot > 0) {
-            movMaxFixMin -= velDot;
-        } else {
-            movMinFixMax -= velDot;
-        }
-        if (movMaxFixMin > 0 || movMinFixMax < 0) {
-            separated = true;
-            penetrationDistance = 0.0D;
+            this.separated = true;
+            this.penetrationDistance = 0.0D;
             return;
         }
         // Set the penetration to be the smaller distance
-        if (useDefault || velDot == 0D) {
+        if (useDefault || this.velDot == 0D) {
             if (Math.abs(movMaxFixMin) < Math.abs(movMinFixMax)) {
-                penetrationDistance = movMaxFixMin;
-            } else {
-                penetrationDistance = movMinFixMax;
+                this.penetrationDistance = movMaxFixMin;
             }
-        } else {
-            if (Math.signum(velDot) != Math.signum(movMinFixMax)) {
-                penetrationDistance = movMinFixMax;
-            } else {
-                penetrationDistance = movMaxFixMin;
+            else {
+                this.penetrationDistance = movMinFixMax;
+            }
+        }
+        else {
+            if (Math.signum(this.velDot) != Math.signum(movMinFixMax)) {
+                this.penetrationDistance = movMinFixMax;
+            }
+            else {
+                this.penetrationDistance = movMaxFixMin;
             }
         }
         separated = false;

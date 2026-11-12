@@ -234,16 +234,8 @@ public class EntityCollisionInjector {
                             }
                         }
 
-                        // total.add(response);
-                        if (Math.abs(response.x) > .01D) {
-                            total.x += response.x;
-                        }
-                        if (Math.abs(response.y) > .01D) {
-                            total.y += response.y;
-                        }
-                        if (Math.abs(response.z) > .01D) {
-                            total.z += response.z;
-                        }
+                        // Carry every correction into the movement passed to vanilla.
+                        total.add(response);
 
                         entity.posX += response.x;
                         entity.posY += response.y;
@@ -367,11 +359,13 @@ public class EntityCollisionInjector {
             }
 
             entity.fallDistance = 0.0F;
-        } else if (entity.motionY < 0.0D) {
+        }
+        else if (entity.motionY < 0.0D) {
             entity.fallDistance = (float) (entity.fallDistance - entity.motionY);
         }
 
-        if (dy != origDy) {
+        // Apply block impact behavior when a significant correction opposes vertical movement.
+        if (entity.collidedVertically && (origDy < 0D && dy > origDy || origDy > 0D && dy < origDy)) {
             entity.motionY = motionYBefore;
             block.onLanded(entity.world, entity);
         }
@@ -439,7 +433,8 @@ public class EntityCollisionInjector {
         IShipWorld shipWorld = entity.getEntityWorld().getCapability(VSCapabilityRegistry.VS_SHIP_WORLD, null);
         if (shipWorld == null) return collisions;
 
-        AxisAlignedBB entityBB = entity.getEntityBoundingBox().offset(velocity.x, velocity.y, velocity.z).expand(1, 1, 1);
+        // Search the whole movement with room for collision shapes extending beyond their blocks.
+        AxisAlignedBB entityBB = entity.getEntityBoundingBox().expand(velocity.x, velocity.y, velocity.z).grow(1D);
 
         List<PhysicsObject> ships = shipWorld.getManager().getPhysObjectsInAABB(entityBB);
         // If a player is riding a Ship, don't process any collision between that Ship
