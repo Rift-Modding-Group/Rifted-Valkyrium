@@ -16,6 +16,7 @@ import org.valkyrienskies.mod.common.compat.MalisisCoreCompat;
 import org.valkyrienskies.mod.common.physics.BlockPhysicsDetails;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
+import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import org.valkyrienskies.mod.common.util.datastructures.IBlockPosSetAABB;
 
 import javax.annotation.Nullable;
@@ -39,6 +40,15 @@ public class MoveBlocks {
             int y = destination.getY();
             if (y < 0 || y >= 256) continue;
 
+            Chunk sourceChunk = sourceChunksByPosition.get(ChunkPos.asLong(source.getX() >> 4, source.getZ() >> 4));
+            if (sourceChunk == null) throw new IllegalStateException("Missing ship chunk for " + source);
+            IBlockState movedState = sourceChunk.getBlockState(source);
+            // Check supply before writing destination terrain, while every ship source is still in place.
+            if (Loader.isModLoaded("fluidlogged_api")) {
+                if (movedState.getMaterial().isLiquid() && !FluidloggedAPICompat.isFlowSupported(world, source)) continue;
+            }
+            else if (!ValkyrienUtils.isLiquidFlowSupported(world, source, movedState)) continue;
+
             int chunkX = destination.getX() >> 4;
             int chunkZ = destination.getZ() >> 4;
             long chunkKey = ChunkPos.asLong(chunkX, chunkZ);
@@ -47,10 +57,7 @@ public class MoveBlocks {
                 targetChunk = world.getChunk(chunkX, chunkZ);
                 changedChunks.put(chunkKey, targetChunk);
             }
-            Chunk sourceChunk = sourceChunksByPosition.get(ChunkPos.asLong(source.getX() >> 4, source.getZ() >> 4));
-            if (sourceChunk == null) throw new IllegalStateException("Missing ship chunk for " + source);
             IBlockState previousState = targetChunk.getBlockState(destination);
-            IBlockState movedState = sourceChunk.getBlockState(source);
             if (previousState.getBlock().hasTileEntity(previousState) || targetChunk.getTileEntityMap().containsKey(destination)) {
                 world.removeTileEntity(destination);
             }
@@ -60,7 +67,7 @@ public class MoveBlocks {
             storage[section].set(destination.getX() & 15, y & 15, destination.getZ() & 15, movedState);
 
             //update state for fluidlogged blocks by fluidlogged api
-            if (Loader.isModLoaded("fluidlogged_api")) FluidloggedAPICompat.copyFluidState(sourceChunk, source, targetChunk, destination);
+            if (Loader.isModLoaded("fluidlogged_api")) FluidloggedAPICompat.copyFluidState(sourceChunk, source, targetChunk, destination, true);
 
             //update state for multiblock doors by malisis doors
             if (Loader.isModLoaded("malisiscore")) MalisisCoreCompat.updateChunkBlockRegistration(world, destination, previousState, movedState);

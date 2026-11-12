@@ -12,6 +12,7 @@ import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.valkyrienskies.mod.common.compat.FluidloggedAPICompat;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -59,24 +60,7 @@ public abstract class MixinFluidFlowHandler {
         if (world.isRemote || originState.isEmpty() || !originState.isValid() || originState.isSource()) return;
         if (ValkyrienUtils.getShipManagingBlock(world, origin).isEmpty()) return;
 
-        boolean supported = ValkyrienUtils.isLiquidFlowSupported(
-                origin,
-                pos -> {
-                    if (world.isOutsideBuildHeight(pos)) return -1;
-                    if (!world.isBlockLoaded(pos, false)) return -2;
-                    FluidState state = FluidloggedUtils.getFluidState(world, pos);
-                    if (state.isEmpty() || !state.isValid() || !FluidloggedUtils.isCompatibleFluid(originState, state)) return -1;
-                    if (state.isSource()) return 0;
-                    return Math.max(1, state.getLevel());
-                },
-                (pos, side) -> {
-                    if (!FluidloggedUtils.canFluidFlow(world, pos, world.getBlockState(pos), side)) return false;
-                    BlockPos neighbor = pos.offset(side);
-                    if (!world.isBlockLoaded(neighbor, false)) return true;
-                    return FluidloggedUtils.canFluidFlow(world, neighbor, world.getBlockState(neighbor), side.getOpposite());
-                }
-        );
-        if (supported) return;
+        if (FluidloggedAPICompat.isFlowSupported(world, origin)) return;
 
         FluidState current = FluidloggedUtils.getFluidState(world, origin);
         if (!current.isEmpty() && FluidloggedUtils.isCompatibleFluid(originState, current)) {

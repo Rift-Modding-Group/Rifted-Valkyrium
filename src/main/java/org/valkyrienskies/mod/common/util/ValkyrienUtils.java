@@ -2,6 +2,7 @@ package org.valkyrienskies.mod.common.util;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockHorizontal;
+import net.minecraft.block.BlockLiquid;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLiving;
@@ -446,6 +447,24 @@ public final class ValkyrienUtils {
         int metadata = Integer.parseInt(string.substring(secondColonIndex + 1));
 
         return new ImmutablePair<>(itemId, metadata);
+    }
+
+    /**
+     * Checks the source-space supply of a vanilla liquid before ticking or relocating it.
+     */
+    public static boolean isLiquidFlowSupported(World world, BlockPos origin, IBlockState state) {
+        if (!(state.getBlock() instanceof BlockLiquid)) return true;
+        return isLiquidFlowSupported(
+                origin,
+                pos -> {
+                    if (world.isOutsideBuildHeight(pos)) return -1;
+                    if (!world.isBlockLoaded(pos, false)) return -2;
+                    IBlockState neighbor = world.getBlockState(pos);
+                    if (neighbor.getMaterial() != state.getMaterial() || !(neighbor.getBlock() instanceof BlockLiquid)) return -1;
+                    return neighbor.getValue(BlockLiquid.LEVEL);
+                },
+                (pos, side) -> true
+        );
     }
 
     /**

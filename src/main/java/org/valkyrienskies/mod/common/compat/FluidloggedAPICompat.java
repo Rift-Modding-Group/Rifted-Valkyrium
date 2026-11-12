@@ -18,6 +18,7 @@ import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraftforge.fluids.BlockFluidFinite;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
+import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayDeque;
@@ -39,7 +40,20 @@ public class FluidloggedAPICompat {
             @Nonnull Chunk sourceChunk, @Nonnull BlockPos sourcePos,
             @Nonnull Chunk destinationChunk, @Nonnull BlockPos destinationPos
     ) {
+        copyFluidState(sourceChunk, sourcePos, destinationChunk, destinationPos, false);
+    }
+
+    /**
+     * Copies stored fluid, optionally retaining only flow with a source-space supply.
+     */
+    public static void copyFluidState(
+            @Nonnull Chunk sourceChunk, @Nonnull BlockPos sourcePos,
+            @Nonnull Chunk destinationChunk, @Nonnull BlockPos destinationPos, boolean requireSource
+    ) {
         FluidState fluidState = FluidState.getFromProvider(sourceChunk, sourcePos);
+        if (requireSource && !fluidState.isEmpty() && !isFlowSupported(sourceChunk.getWorld(), sourcePos)) {
+            fluidState = FluidState.EMPTY;
+        }
         IFluidStateCapability capability = Objects.requireNonNull(IFluidStateCapability.get(destinationChunk));
         if (!capability.getContainer(destinationPos.getY()).setFluidState(destinationPos, fluidState)) return;
 
@@ -48,6 +62,29 @@ public class FluidloggedAPICompat {
                 new SMessageSyncFluidState(destinationPos.toImmutable(), fluidState, true),
                 destinationChunk, FluidloggedAPI.WRAPPER
         );
+    }
+
+    /**
+     * Checks fluid supply through both faces of each connection, including stored fluid.
+     * Finite fluids retain their independent volume when relocated.
+     */
+    public static boolean isFlowSupported(@Nonnull World world, @Nonnull BlockPos origin) {
+        FluidState originState = FluidloggedUtils.getFluidState(world, origin);
+        if (originState.isEmpty() || !originState.isValid() || originState.isSource()
+                || originState.getBlock() instanceof BlockFluidFinite) return true;
+        return ValkyrienUtils.isLiquidFlowSupported(origin, pos -> {
+            if (world.isOutsideBuildHeight(pos)) return -1;
+            if (!world.isBlockLoaded(pos, false)) return -2;
+            FluidState state = FluidloggedUtils.getFluidState(world, pos);
+            if (state.isEmpty() || !state.isValid() || !FluidloggedUtils.isCompatibleFluid(originState, state)) return -1;
+            if (state.isSource()) return 0;
+            return Math.max(1, state.getLevel());
+        }, (pos, side) -> {
+            if (!FluidloggedUtils.canFluidFlow(world, pos, world.getBlockState(pos), side)) return false;
+            BlockPos neighbor = pos.offset(side);
+            if (!world.isBlockLoaded(neighbor, false)) return true;
+            return FluidloggedUtils.canFluidFlow(world, neighbor, world.getBlockState(neighbor), side.getOpposite());
+        });
     }
 
     /**

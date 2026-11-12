@@ -55,18 +55,7 @@ public abstract class MixinBlockDynamicLiquid {
         if (ValkyrienUtils.getShipManagingBlock(world, origin).isEmpty()) return;
 
         Material material = state.getMaterial();
-        boolean supported = ValkyrienUtils.isLiquidFlowSupported(
-                origin,
-                pos -> {
-                    if (world.isOutsideBuildHeight(pos)) return -1;
-                    if (!world.isBlockLoaded(pos, false)) return -2;
-                    IBlockState neighbor = world.getBlockState(pos);
-                    if (neighbor.getMaterial() != material || !(neighbor.getBlock() instanceof BlockLiquid)) return -1;
-                    return neighbor.getValue(BlockLiquid.LEVEL);
-                },
-                (pos, side) -> true
-        );
-        if (supported) return;
+        if (ValkyrienUtils.isLiquidFlowSupported(world, origin, state)) return;
 
         IBlockState current = world.getBlockState(origin);
         if (current.getMaterial() == material && current.getBlock() instanceof BlockLiquid) world.setBlockToAir(origin);
