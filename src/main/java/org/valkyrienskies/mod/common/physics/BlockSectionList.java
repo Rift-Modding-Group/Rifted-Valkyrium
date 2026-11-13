@@ -8,6 +8,7 @@ import net.minecraft.world.ChunkCache;
 import net.minecraft.world.World;
 import net.minecraft.world.gen.ChunkProviderServer;
 import org.jetbrains.annotations.NotNull;
+import org.valkyrienskies.mod.common.compat.WorldHeightCompat;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -30,27 +31,28 @@ public class BlockSectionList {
     private final Set<BlockSection.Key> cachedEmptyBlockSections = new HashSet<>();
     private final Queue<BlockSection.Key> dirtyBlockSections = new ConcurrentLinkedQueue<>();
     @NotNull
-    private volatile CollisionSnapshot collisionSnapshot = new CollisionSnapshot(null, 256, List.of());
+    private volatile CollisionSnapshot collisionSnapshot = new CollisionSnapshot(null, 0, 256, List.of());
 
     /**
      * Publishes terrain colliders together with the range covered by the completed scan.
      * An empty scan in loaded chunks is ready; an unavailable chunk is not.
      */
     public boolean onUpdate(@NotNull World world, @Nullable AxisAlignedBB shipAabb) {
+        int worldMinY = WorldHeightCompat.getMinimumY(world);
         if (shipAabb == null) {
             this.clearBlockSectionCache();
-            this.collisionSnapshot = new CollisionSnapshot(null, world.getHeight(), List.of());
+            this.collisionSnapshot = new CollisionSnapshot(null, worldMinY, world.getHeight(), List.of());
             return false;
         }
-        List<BlockSection> sections = this.updateBlockSectionCache(world, shipAabb);
-        this.collisionSnapshot = new CollisionSnapshot(this.cachedBlockSectionRange, world.getHeight(), sections);
+        List<BlockSection> sections = this.updateBlockSectionCache(world, shipAabb, worldMinY);
+        this.collisionSnapshot = new CollisionSnapshot(this.cachedBlockSectionRange, worldMinY, world.getHeight(), sections);
         return this.cachedBlockSectionRange != null;
     }
 
     public void close() {
         this.clearBlockSectionCache();
         this.dirtyBlockSections.clear();
-        this.collisionSnapshot = new CollisionSnapshot(null, 256, List.of());
+        this.collisionSnapshot = new CollisionSnapshot(null, 0, 256, List.of());
     }
 
     /**
@@ -58,15 +60,15 @@ public class BlockSectionList {
      * If the chunks are not loaded, it just clears the old cache.
      */
     @NotNull
-    private List<BlockSection> updateBlockSectionCache(@NotNull World world, @NotNull AxisAlignedBB shipAabb) {
+    private List<BlockSection> updateBlockSectionCache(@NotNull World world, @NotNull AxisAlignedBB shipAabb, int worldMinY) {
         BlockPos shipMin = new BlockPos(
                 (int) Math.floor(shipAabb.minX),
-                Math.max(0, (int) Math.floor(shipAabb.minY)),
+                Math.clamp((int) Math.floor(shipAabb.minY), worldMinY, world.getHeight() - 1),
                 (int) Math.floor(shipAabb.minZ)
         );
         BlockPos shipMax = new BlockPos(
                 (int) Math.ceil(shipAabb.maxX),
-                Math.min(world.getHeight() - 1, (int) Math.ceil(shipAabb.maxY)),
+                Math.clamp((int) Math.ceil(shipAabb.maxY), worldMinY, world.getHeight() - 1),
                 (int) Math.ceil(shipAabb.maxZ)
         );
 
@@ -76,8 +78,8 @@ public class BlockSectionList {
             return List.of();
         }
 
-        BlockSection.Range hysteresisRange = this.createExpandedRange(world, shipMin, shipMax, BLOCK_SECTION_CACHE_HYSTERESIS_BLOCKS);
-        BlockSection.Range paddedRange = this.createExpandedRange(world, shipMin, shipMax, BLOCK_SECTION_CACHE_PADDING_BLOCKS);
+        BlockSection.Range hysteresisRange = this.createExpandedRange(world, shipMin, shipMax, BLOCK_SECTION_CACHE_HYSTERESIS_BLOCKS, worldMinY);
+        BlockSection.Range paddedRange = this.createExpandedRange(world, shipMin, shipMax, BLOCK_SECTION_CACHE_PADDING_BLOCKS, worldMinY);
 
         boolean sameWorld = this.cachedBlockSectionWorld == world;
         boolean useCachedRange = sameWorld && this.cachedBlockSectionRange != null && this.cachedBlockSectionRange.contains(hysteresisRange);
@@ -99,7 +101,7 @@ public class BlockSectionList {
         ChunkCache chunkCache = null;
         BlockPos cacheMin = new BlockPos(
                 nextRange.minX() << 4,
-                Math.max(0, nextRange.minY() << 4),
+                Math.max(worldMinY, nextRange.minY() << 4),
                 nextRange.minZ() << 4
         );
         BlockPos cacheMax = new BlockPos(
@@ -115,7 +117,7 @@ public class BlockSectionList {
 
             if (shouldRescan) {
                 if (chunkCache == null) chunkCache = new ChunkCache(world, cacheMin, cacheMax, 0);
-                BlockSection blockSection = this.createBlockSection(world, chunkCache, sectionKey);
+                BlockSection blockSection = this.createBlockSection(world, chunkCache, sectionKey, worldMinY);
                 if (blockSection == null) {
                     nextCachedEmptySections.add(sectionKey);
                 }
@@ -159,10 +161,10 @@ public class BlockSectionList {
      * Grows a block range while keeping its Y values inside the world.
      */
     @NotNull
-    private BlockSection.Range createExpandedRange(@NotNull World world, @NotNull BlockPos min, @NotNull BlockPos max, int grow) {
+    private BlockSection.Range createExpandedRange(@NotNull World world, @NotNull BlockPos min, @NotNull BlockPos max, int grow, int worldMinY) {
         BlockPos expandedMin = new BlockPos(
                 min.getX() - grow,
-                Math.max(0, min.getY() - grow),
+                Math.max(worldMinY, min.getY() - grow),
                 min.getZ() - grow
         );
         BlockPos expandedMax = new BlockPos(
@@ -185,7 +187,7 @@ public class BlockSectionList {
     }
 
     @Nullable
-    private BlockSection createBlockSection(World world, ChunkCache chunkCache, BlockSection.Key sectionKey) {
+    private BlockSection createBlockSection(World world, ChunkCache chunkCache, BlockSection.Key sectionKey, int worldMinY) {
         BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
         BlockSection.Builder builder = new BlockSection.Builder(
                 world,
@@ -194,7 +196,7 @@ public class BlockSectionList {
                 sectionKey.sectionZ()
         );
         int minX = sectionKey.sectionX() << 4;
-        int minY = Math.max(0, sectionKey.sectionY() << 4);
+        int minY = Math.max(worldMinY, sectionKey.sectionY() << 4);
         int minZ = sectionKey.sectionZ() << 4;
         int maxX = minX + 15;
         int maxY = Math.min(world.getHeight() - 1, (sectionKey.sectionY() << 4) + 15);
@@ -259,7 +261,7 @@ public class BlockSectionList {
     /**
      * One immutable publication of collision data and the storage sections it covers.
      */
-    public record CollisionSnapshot(@Nullable BlockSection.Range range, int worldHeight, @NotNull List<BlockSection> blockSections) {
+    public record CollisionSnapshot(@Nullable BlockSection.Range range, int worldMinY, int worldHeight, @NotNull List<BlockSection> blockSections) {
         public CollisionSnapshot {
             blockSections = List.copyOf(blockSections);
         }
@@ -268,12 +270,12 @@ public class BlockSectionList {
             if (this.range == null || shipAabb == null) return false;
             BlockPos min = new BlockPos(
                 (int) Math.floor(shipAabb.minX),
-                Math.max(0, (int) Math.floor(shipAabb.minY)),
+                Math.clamp((int) Math.floor(shipAabb.minY), this.worldMinY, this.worldHeight - 1),
                 (int) Math.floor(shipAabb.minZ)
             );
             BlockPos max = new BlockPos(
                 (int) Math.ceil(shipAabb.maxX),
-                Math.min(this.worldHeight - 1, (int) Math.ceil(shipAabb.maxY)),
+                Math.clamp((int) Math.ceil(shipAabb.maxY), this.worldMinY, this.worldHeight - 1),
                 (int) Math.ceil(shipAabb.maxZ)
             );
             return this.range.contains(BlockSection.Range.fromBlockCorners(min, max));

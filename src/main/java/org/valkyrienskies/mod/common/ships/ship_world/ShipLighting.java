@@ -11,6 +11,7 @@ import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 import org.jetbrains.annotations.NotNull;
+import org.valkyrienskies.mod.common.compat.WorldHeightCompat;
 
 import java.util.BitSet;
 import java.util.Arrays;
@@ -84,9 +85,11 @@ public class ShipLighting {
     }
 
     private static void rebuildSkylight(@NotNull World world, @NotNull Collection<Chunk> chunks, boolean existingWorld) {
+        int worldMinY = WorldHeightCompat.getMinimumY(world);
+        int worldMaxY = world.getHeight();
         if (existingWorld) {
             for (Chunk chunk : chunks) {
-                Arrays.fill(chunk.getHeightMap(), 0);
+                Arrays.fill(chunk.getHeightMap(), worldMinY);
                 for (ExtendedBlockStorage section : chunk.getBlockStorageArray()) {
                     if (section != null && section.getSkyLight() != null) Arrays.fill(section.getSkyLight().getData(), (byte) 0);
                 }
@@ -118,9 +121,11 @@ public class ShipLighting {
                 for (int z = 0; z < 16; z++) {
                     for (int x = 0; x < 16; x++) {
                         int height = chunk.getHeightValue(x, z);
-                        if (height == 0) {
-                            if (existingWorld && chunk.getBlockStorageArray()[0] != null) {
-                                chunk.getBlockStorageArray()[0].setSkyLight(x, 0, z, 15);
+                        if (height == worldMinY) {
+                            int floorIndex = WorldHeightCompat.getStorageIndex(world, worldMinY);
+                            ExtendedBlockStorage floorStorage = chunk.getBlockStorageArray()[floorIndex];
+                            if (existingWorld && floorStorage != null) {
+                                floorStorage.setSkyLight(x, worldMinY & 15, z, 15);
                             }
                             continue;
                         }
@@ -135,7 +140,7 @@ public class ShipLighting {
                         if (x == 15) east = readableChunks.get(ChunkPos.asLong(chunk.x + 1, chunk.z));
                         if (z == 0) north = readableChunks.get(ChunkPos.asLong(chunk.x, chunk.z - 1));
                         if (z == 15) south = readableChunks.get(ChunkPos.asLong(chunk.x, chunk.z + 1));
-                        for (int y = height - 1; y >= 0; y--) {
+                        for (int y = Math.min(height, worldMaxY) - 1; y >= worldMinY; y--) {
                             position.setPos(worldX, y, worldZ);
                             int light = chunk.getLightFor(EnumSkyBlock.SKY, position);
                             if (light >= 14) continue;
@@ -146,7 +151,7 @@ public class ShipLighting {
 
                             for (EnumFacing direction : directions) {
                                 int neighborY = y + direction.getYOffset();
-                                if (neighborY < 0 || neighborY >= 256) continue;
+                                if (neighborY < worldMinY || neighborY >= worldMaxY) continue;
                                 Chunk neighbor = switch (direction) {
                                     case WEST -> west;
                                     case EAST -> east;
@@ -160,7 +165,7 @@ public class ShipLighting {
                             }
                             if (light > chunk.getLightFor(EnumSkyBlock.SKY, position)) {
                                 initializeLightStorage(chunk, y >> 4, true);
-                                chunk.getBlockStorageArray()[y >> 4].setSkyLight(x, y & 15, z, light);
+                                chunk.getBlockStorageArray()[WorldHeightCompat.getStorageIndex(world, y)].setSkyLight(x, y & 15, z, light);
                                 lightQueue.add(position.toLong());
                                 world.notifyLightSet(position.toImmutable());
                             }
@@ -177,7 +182,7 @@ public class ShipLighting {
                 for (EnumFacing direction : directions) {
                     neighborPosition.setPos(position.getX() + direction.getXOffset(), position.getY() + direction.getYOffset(), position.getZ() + direction.getZOffset());
                     int neighborY = neighborPosition.getY();
-                    if (neighborY < 0 || neighborY >= 256) continue;
+                    if (neighborY < worldMinY || neighborY >= worldMaxY) continue;
                     Chunk neighbor = chunk;
                     if (neighborPosition.getX() >> 4 != chunk.x || neighborPosition.getZ() >> 4 != chunk.z) {
                         neighbor = chunksByPosition.get(ChunkPos.asLong(neighborPosition.getX() >> 4, neighborPosition.getZ() >> 4));
@@ -191,7 +196,7 @@ public class ShipLighting {
                     if (propagatedLight <= previousLight) continue;
 
                     initializeLightStorage(neighbor, neighborY >> 4, true);
-                    neighbor.getBlockStorageArray()[neighborY >> 4].setSkyLight(neighborPosition.getX() & 15, neighborY & 15, neighborPosition.getZ() & 15, propagatedLight);
+                    neighbor.getBlockStorageArray()[WorldHeightCompat.getStorageIndex(world, neighborY)].setSkyLight(neighborPosition.getX() & 15, neighborY & 15, neighborPosition.getZ() & 15, propagatedLight);
                     lightQueue.add(neighborPosition.toLong());
                     world.notifyLightSet(neighborPosition.toImmutable());
                 }
@@ -211,7 +216,8 @@ public class ShipLighting {
      * */
     public static void initializeLightStorage(@NotNull Chunk chunk, int section, boolean hasSkyLight) {
         ExtendedBlockStorage[] storage = chunk.getBlockStorageArray();
-        if (section < 0 || section >= storage.length || storage[section] != null) return;
+        int storageIndex = WorldHeightCompat.getStorageIndex(chunk.getWorld(), section << 4);
+        if (storageIndex < 0 || storageIndex >= storage.length || storage[storageIndex] != null) return;
 
         ExtendedBlockStorage created = new ExtendedBlockStorage(section << 4, hasSkyLight);
         if (hasSkyLight) {
@@ -223,6 +229,6 @@ public class ShipLighting {
                 }
             }
         }
-        storage[section] = created;
+        storage[storageIndex] = created;
     }
 }

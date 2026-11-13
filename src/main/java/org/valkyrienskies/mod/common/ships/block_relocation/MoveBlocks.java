@@ -14,6 +14,7 @@ import net.minecraftforge.fml.common.Loader;
 import org.jetbrains.annotations.NotNull;
 import org.valkyrienskies.mod.common.compat.FluidloggedAPICompat;
 import org.valkyrienskies.mod.common.compat.MalisisCoreCompat;
+import org.valkyrienskies.mod.common.compat.WorldHeightCompat;
 import org.valkyrienskies.mod.common.physics.BlockPhysicsDetails;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
@@ -39,7 +40,7 @@ public class MoveBlocks {
         for (BlockPos source : blockPositions) {
             destination.setPos(source.getX() - centerDifference.getX(), source.getY() - centerDifference.getY(), source.getZ() - centerDifference.getZ());
             int y = destination.getY();
-            if (y < 0 || y >= 256) continue;
+            if (world.isOutsideBuildHeight(destination)) continue;
 
             Chunk sourceChunk = sourceChunksByPosition.get(ChunkPos.asLong(source.getX() >> 4, source.getZ() >> 4));
             if (sourceChunk == null) throw new IllegalStateException("Missing ship chunk for " + source);
@@ -66,8 +67,8 @@ public class MoveBlocks {
                 world.removeTileEntity(destination);
             }
             ExtendedBlockStorage[] storage = targetChunk.getBlockStorageArray();
-            int section = y >> 4;
-            if (storage[section] == null) storage[section] = new ExtendedBlockStorage(section << 4, world.provider.hasSkyLight());
+            int section = WorldHeightCompat.getStorageIndex(world, y);
+            if (storage[section] == null) storage[section] = new ExtendedBlockStorage(y & ~15, world.provider.hasSkyLight());
             storage[section].set(destination.getX() & 15, y & 15, destination.getZ() & 15, movedState);
 
             //update state for fluidlogged blocks by fluidlogged api
@@ -97,14 +98,15 @@ public class MoveBlocks {
         IBlockState newState = world.getBlockState(oldPos);
         // A hacky way to set the block state within the chunk while avoiding any block updates.
         Chunk chunkToSet = world.getChunk(newPos);
-        int storageIndex = newPos.getY() >> 4;
+        if (world.isOutsideBuildHeight(newPos)) return;
+        int storageIndex = WorldHeightCompat.getStorageIndex(world, newPos.getY());
         // Check that we're placing the block in a valid position
         if (storageIndex < 0 || storageIndex >= chunkToSet.getBlockStorageArray().length) {
             // Invalid position, abort!
             return;
         }
         if (chunkToSet.getBlockStorageArray()[storageIndex] == Chunk.NULL_BLOCK_STORAGE) {
-            chunkToSet.getBlockStorageArray()[storageIndex] = new ExtendedBlockStorage(storageIndex << 4,
+            chunkToSet.getBlockStorageArray()[storageIndex] = new ExtendedBlockStorage(newPos.getY() & ~15,
                 true);
         }
         chunkToSet.getBlockStorageArray()[storageIndex].set(newPos.getX() & 15, newPos.getY() & 15, newPos.getZ() & 15, newState);

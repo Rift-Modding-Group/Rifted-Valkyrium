@@ -283,16 +283,7 @@ public class WorldServerShipManager implements IPhysObjectWorld {
                 );
                 Chunk chunkToSet = sourceChunksMap.get(sourceChunkPos);
 
-                // Then get the old IBlockState, as efficiently as possible
-                int storageIndex = srcLocationPos.getY() >> 4;
-                // Check that we're placing the block in a valid position
-                if (storageIndex < 0 || storageIndex >= chunkToSet.getBlockStorageArray().length) {
-                    // Invalid position, abort!
-                    throw new IllegalStateException("Incorrect block copy!\n" + srcLocationPos);
-                }
-
-                IBlockState srcState = chunkToSet.getBlockStorageArray()[storageIndex]
-                        .get(srcLocationPos.getX() & 15, srcLocationPos.getY() & 15, srcLocationPos.getZ() & 15);
+                IBlockState srcState = chunkToSet.getBlockState(srcLocationPos);
 
                 // Then paste that IBlockState into the new ship chunk
                 int newChunkStorageIndex = pasteLocationPos.getY() >> 4;
@@ -356,26 +347,21 @@ public class WorldServerShipManager implements IPhysObjectWorld {
                 );
                 Chunk chunkToSet = sourceChunksMap.get(sourceChunkPos);
 
-                // Then get the old IBlockState, as efficiently as possible
-                int storageIndex = srcLocationPos.getY() >> 4;
-                // Check that we're placing the block in a valid position
-                if (storageIndex < 0 || storageIndex >= chunkToSet.getBlockStorageArray().length) {
-                    // Invalid position, abort!
-                    throw new IllegalStateException("Incorrect block copy!\n" + srcLocationPos);
-                }
-
-                IBlockState srcState = chunkToSet.getBlockStorageArray()[storageIndex]
-                        .get(srcLocationPos.getX() & 15, srcLocationPos.getY() & 15,
-                                srcLocationPos.getZ() & 15);
+                IBlockState srcState = chunkToSet.getBlockState(srcLocationPos);
 
                 // THIS IS TEMP because its extremely inefficient.
                 // Come up with a clever way to let clients figure this out in the future.
                 this.world.notifyBlockUpdate(srcLocationPos, srcState, airState, 3);
                 this.world.notifyNeighborsOfStateChange(srcLocationPos, Blocks.AIR, false);
 
-                // Finally, delete the old IBlockState and TileEntity from the old Chunk
-                chunkToSet.getBlockStorageArray()[storageIndex]
-                        .set(srcLocationPos.getX() & 15, srcLocationPos.getY() & 15, srcLocationPos.getZ() & 15, airState);
+                // Locate the source section by its block height, independent of its array position.
+                int sectionY = srcLocationPos.getY() & ~15;
+                for (ExtendedBlockStorage storage : chunkToSet.getBlockStorageArray()) {
+                    if (storage != null && storage.getYLocation() == sectionY) {
+                        storage.set(srcLocationPos.getX() & 15, srcLocationPos.getY() & 15, srcLocationPos.getZ() & 15, airState);
+                        break;
+                    }
+                }
 
                 //and on fluidlogged
                 if (Loader.isModLoaded("fluidlogged_api")) FluidloggedAPICompat.clearFluidState(chunkToSet, srcLocationPos);

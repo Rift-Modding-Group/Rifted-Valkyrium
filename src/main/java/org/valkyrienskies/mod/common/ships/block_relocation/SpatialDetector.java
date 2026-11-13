@@ -46,7 +46,7 @@ public abstract class SpatialDetector {
 
     @NotNull
     protected IBlockState getBlockState(@NotNull BlockPos position) {
-        if (position.getY() < 0 || position.getY() >= 256) return Blocks.AIR.getDefaultState();
+        if (this.worldObj.isOutsideBuildHeight(position)) return Blocks.AIR.getDefaultState();
 
         int chunkX = position.getX() >> 4;
         int chunkZ = position.getZ() >> 4;
@@ -95,9 +95,8 @@ public abstract class SpatialDetector {
                     if (!this.corners && yOffset != 0 && zOffset != 0) continue;
                     int y = spanStart.getY() + yOffset;
                     int z = spanStart.getZ() + zOffset;
-                    if (y < 0 || y >= 256) continue;
-                    for (int x = spanMinX - padding; x <= spanMaxX + padding
-                            && this.foundSet.size() < this.maxSize && !this.cleanHouse; x++) {
+                    if (this.worldObj.isOutsideBuildHeight(this.hashPosition.setPos(spanMinX, y, z))) continue;
+                    for (int x = spanMinX - padding; x <= spanMaxX + padding && this.foundSet.size() < this.maxSize && !this.cleanHouse; x++) {
                         x = this.expandSpan(x, y, z, false);
                     }
                 }

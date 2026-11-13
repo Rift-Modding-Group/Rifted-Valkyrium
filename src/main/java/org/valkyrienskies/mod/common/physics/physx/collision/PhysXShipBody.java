@@ -364,7 +364,9 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
         Vector3d centerPosition = getReferenceToCenterOfMass(this.ship, calculations.getPhysCenterOfMass());
         rotation.transform(centerPosition);
         referencePosition.add(centerPosition, centerPosition);
-        centerPosition.y = Math.clamp(centerPosition.y, VSConfig.shipLowerLimit, VSConfig.shipUpperLimit);
+        // Preserve the configured lower margin relative to the world's build floor.
+        int worldMinY = this.terrainSnapshot == null ? 0 : this.terrainSnapshot.worldMinY();
+        centerPosition.y = Math.clamp(centerPosition.y, VSConfig.shipLowerLimit + worldMinY, VSConfig.shipUpperLimit);
 
         PxVec3 linearVelocity = shipActor.getLinearVelocity();
         PxVec3 angularVelocity = shipActor.getAngularVelocity();
@@ -727,10 +729,11 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
     private double getSubmergedFraction(@NotNull World world, BlockPos.MutableBlockPos mutablePos, Vector3d centerWorld) {
         int x = (int) Math.floor(centerWorld.x);
         int z = (int) Math.floor(centerWorld.z);
-        int minY = Math.max(0, (int) Math.floor(centerWorld.y - BLOCK_HALF_EXTENT - 0.25D));
+        int minY = (int) Math.floor(centerWorld.y - BLOCK_HALF_EXTENT - 0.25D);
         int maxY = Math.min(world.getHeight() - 1, (int) Math.floor(centerWorld.y + BLOCK_HALF_EXTENT));
         for (int y = maxY; y >= minY; y--) {
             mutablePos.setPos(x, y, z);
+            if (world.isOutsideBuildHeight(mutablePos)) continue;
             if (PhysicsUtils.isLiquid(world.getBlockState(mutablePos))) {
                 double waterSurfaceY = y + 1D;
                 return Math.clamp(waterSurfaceY - (centerWorld.y - BLOCK_HALF_EXTENT), 0D, 1D);

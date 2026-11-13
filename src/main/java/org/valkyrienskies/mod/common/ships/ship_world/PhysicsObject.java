@@ -313,16 +313,29 @@ public class PhysicsObject implements IPhysicsEntity {
      * Returns true if this ship is aligned close enough to the grid that it is allowed to
      * deconstruct back to the world.
      */
-    boolean shouldShipBeDestroyed() {
+    public boolean shouldShipBeDestroyed() {
         if (getBlockPositions().isEmpty()) {
             return true;
         }
-        if (deconstructState.deconstructShip) {
-            if (deconstructState.mustBeAlignedBeforeDeconstruct) {
-                return isShipAlignedToWorld();
-            } else {
-                return true;
+        if (this.deconstructState.deconstructShip) {
+            if (this.deconstructState.mustBeAlignedBeforeDeconstruct && !isShipAlignedToWorld()) return false;
+            if (this.deconstructState.copyBlocks) {
+                ShipTransform transform = this.getShipTransformationManager().getCurrentTickTransform();
+                BlockPos centerDifference = new BlockPos(
+                    Math.round(this.getCenterCoord().x() - transform.getPosX()),
+                    Math.round(this.getCenterCoord().y() - transform.getPosY()),
+                    Math.round(this.getCenterCoord().z() - transform.getPosZ())
+                );
+                for (BlockPos source : this.getBlockPositions()) {
+                    if (this.world.isOutsideBuildHeight(source.subtract(centerDifference))) {
+                        this.deconstructState = DeconstructState.NOT_DECONSTRUCTING;
+                        this.shipAligningToGrid = false;
+                        ValkyrienSkiesMod.LOGGER.warn("Ship disassembly canceled because a destination exceeds the world build height: {}", this.getUuid());
+                        return false;
+                    }
+                }
             }
+            return true;
         }
         return false;
     }
@@ -364,7 +377,7 @@ public class PhysicsObject implements IPhysicsEntity {
                 Collection<Chunk> relitChunks = ShipLighting.relightWorldChunks(this.world, changedChunks.valueCollection());
                 for (BlockPos oldPos : this.getBlockPositions()) {
                     newPos.setPos(oldPos.getX() - centerDifference.getX(), oldPos.getY() - centerDifference.getY(), oldPos.getZ() - centerDifference.getZ());
-                    if (newPos.getY() >= 0 && newPos.getY() < 256) this.world.checkLightFor(EnumSkyBlock.BLOCK, newPos);
+                    if (!this.world.isOutsideBuildHeight(newPos)) this.world.checkLightFor(EnumSkyBlock.BLOCK, newPos);
                 }
 
                 // Deliver completed terrain and lighting before removing the ship's client chunks.
@@ -374,13 +387,15 @@ public class PhysicsObject implements IPhysicsEntity {
                     if (entry == null || !entry.isSentToPlayers()) continue;
                     entry.update();
                     int sectionMask = 0;
-                    for (int section = 0; section < 16; section++) {
+                    int sectionCount = Math.min(chunk.getBlockStorageArray().length, Integer.SIZE);
+                    for (int section = 0; section < sectionCount; section++) {
                         if (chunk.getBlockStorageArray()[section] != null) sectionMask |= 1 << section;
                     }
                     // Partial chunk packets retain allocated air sections carrying propagated light.
-                    if (sectionMask == 65535) {
-                        entry.sendPacket(new SPacketChunkData(chunk, 255));
-                        entry.sendPacket(new SPacketChunkData(chunk, 65280));
+                    int fullChunkSectionMask = -1 >>> (Integer.SIZE - sectionCount);
+                    if (sectionMask == fullChunkSectionMask) {
+                        entry.sendPacket(new SPacketChunkData(chunk, sectionMask & ~1));
+                        entry.sendPacket(new SPacketChunkData(chunk, 1));
                     }
                     else if (sectionMask != 0) entry.sendPacket(new SPacketChunkData(chunk, sectionMask));
                 }

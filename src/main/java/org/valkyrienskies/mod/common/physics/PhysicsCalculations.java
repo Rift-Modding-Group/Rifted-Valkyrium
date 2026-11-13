@@ -169,11 +169,12 @@ public class PhysicsCalculations implements IShipForces {
         World world = this.parent.getWorld();
         int x = (int) Math.floor(worldPosition.x());
         int z = (int) Math.floor(worldPosition.z());
-        int minY = Math.max(0, (int) Math.floor(worldPosition.y() - 0.75D));
+        int minY = (int) Math.floor(worldPosition.y() - 0.75D);
         int maxY = Math.min(world.getHeight() - 1, (int) Math.floor(worldPosition.y() + 0.5D));
         BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
         for (int y = maxY; y >= minY; y--) {
             mutablePos.setPos(x, y, z);
+            if (world.isOutsideBuildHeight(mutablePos)) continue;
             if (PhysicsUtils.isLiquid(world.getBlockState(mutablePos))) {
                 return Math.clamp(y + 1D - (worldPosition.y() - 0.5D), 0D, 1D);
             }
