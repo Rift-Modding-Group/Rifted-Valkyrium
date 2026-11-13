@@ -25,6 +25,7 @@ import net.minecraftforge.client.MinecraftForgeClient;
 import net.minecraftforge.fml.common.Loader;
 import org.lwjgl.opengl.GL11;
 import org.valkyrienskies.mod.client.compat.FluidloggedRenderCompat;
+import org.valkyrienskies.mod.client.compat.ShipTextureAnimationCompat;
 import org.valkyrienskies.mod.common.util.TransformedAABB;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import valkyrienwarfare.api.TransformType;
@@ -156,6 +157,7 @@ public class PhysRenderChunk {
     }
 
     private static class RenderLayerVBO implements IVSRenderChunk {
+        private final ShipTextureAnimationCompat textureAnimation = new ShipTextureAnimationCompat(); //for celeritas and chibi compat
         Chunk chunkToRender;
         int yMin, yMax;
         VertexBuffer cutoutBuffer, cutoutMippedBuffer, solidBuffer, translucentBuffer;
@@ -204,56 +206,51 @@ public class PhysRenderChunk {
         }
 
         public void deleteRenderChunk() {
-            clearRenderLists();
-        }
+            if (this.cutoutBuffer != null) this.cutoutBuffer.deleteGlBuffers();
+            if (this.cutoutMippedBuffer != null) this.cutoutMippedBuffer.deleteGlBuffers();
+            if (this.solidBuffer != null) this.solidBuffer.deleteGlBuffers();
+            if (this.translucentBuffer != null) this.translucentBuffer.deleteGlBuffers();
 
-        private void clearRenderLists() {
-            if (cutoutBuffer != null)
-                cutoutBuffer.deleteGlBuffers();
-            if (cutoutMippedBuffer != null)
-                cutoutMippedBuffer.deleteGlBuffers();
-            if (solidBuffer != null)
-                solidBuffer.deleteGlBuffers();
-            if (translucentBuffer != null)
-                translucentBuffer.deleteGlBuffers();
+            this.textureAnimation.clear();
         }
 
         public void renderBlockLayer(BlockRenderLayer layerToRender, double partialTicks, int pass) {
             switch (layerToRender) {
                 case CUTOUT:
-                    if (needsCutoutUpdate) {
-                        updateList(layerToRender);
+                    if (this.needsCutoutUpdate) {
+                        this.updateList(layerToRender);
                     }
-                    FastBlockModelRenderer.renderVertexBuffer(cutoutBuffer);
+                    FastBlockModelRenderer.renderVertexBuffer(this.cutoutBuffer);
                     break;
                 case CUTOUT_MIPPED:
-                    if (needsCutoutMippedUpdate) {
-                        updateList(layerToRender);
+                    if (this.needsCutoutMippedUpdate) {
+                        this.updateList(layerToRender);
                     }
-                    FastBlockModelRenderer.renderVertexBuffer(cutoutMippedBuffer);
+                    FastBlockModelRenderer.renderVertexBuffer(this.cutoutMippedBuffer);
                     break;
                 case SOLID:
-                    if (needsSolidUpdate) {
-                        updateList(layerToRender);
+                    if (this.needsSolidUpdate) {
+                        this.updateList(layerToRender);
                     }
                     FastBlockModelRenderer.renderVertexBuffer(solidBuffer);
                     break;
                 case TRANSLUCENT:
-                    if (needsTranslucentUpdate) {
-                        updateList(layerToRender);
+                    if (this.needsTranslucentUpdate) {
+                        this.updateList(layerToRender);
                     }
                     FastBlockModelRenderer.renderVertexBuffer(translucentBuffer);
                     break;
                 default:
                     break;
             }
+            this.textureAnimation.markActive(layerToRender);
         }
 
         private void updateList(BlockRenderLayer layerToUpdate) {
-            if (parent.toRender.getShipRenderer() == null) {
+            if (this.parent.toRender.getShipRenderer() == null) {
                 return;
             }
-            BlockPos offsetPos = parent.toRender.getShipRenderer().offsetPos;
+            BlockPos offsetPos = this.parent.toRender.getShipRenderer().offsetPos;
             if (offsetPos == null) {
                 return;
             }
@@ -268,32 +265,32 @@ public class PhysRenderChunk {
 
             switch (layerToUpdate) {
                 case CUTOUT:
-                    if (cutoutBuffer != null) {
-                        cutoutBuffer.deleteGlBuffers();
+                    if (this.cutoutBuffer != null) {
+                        this.cutoutBuffer.deleteGlBuffers();
                     }
-                    cutoutBuffer = new VertexBuffer(DefaultVertexFormats.BLOCK);
-                    renderBuffer = cutoutBuffer;
+                    this.cutoutBuffer = new VertexBuffer(DefaultVertexFormats.BLOCK);
+                    renderBuffer = this.cutoutBuffer;
                     break;
                 case CUTOUT_MIPPED:
-                    if (cutoutMippedBuffer != null) {
-                        cutoutMippedBuffer.deleteGlBuffers();
+                    if (this.cutoutMippedBuffer != null) {
+                        this.cutoutMippedBuffer.deleteGlBuffers();
                     }
-                    cutoutMippedBuffer = new VertexBuffer(DefaultVertexFormats.BLOCK);
-                    renderBuffer = cutoutMippedBuffer;
+                    this.cutoutMippedBuffer = new VertexBuffer(DefaultVertexFormats.BLOCK);
+                    renderBuffer = this.cutoutMippedBuffer;
                     break;
                 case SOLID:
-                    if (solidBuffer != null) {
-                        solidBuffer.deleteGlBuffers();
+                    if (this.solidBuffer != null) {
+                        this.solidBuffer.deleteGlBuffers();
                     }
-                    solidBuffer = new VertexBuffer(DefaultVertexFormats.BLOCK);
-                    renderBuffer = solidBuffer;
+                    this.solidBuffer = new VertexBuffer(DefaultVertexFormats.BLOCK);
+                    renderBuffer = this.solidBuffer;
                     break;
                 case TRANSLUCENT:
-                    if (translucentBuffer != null) {
-                        translucentBuffer.deleteGlBuffers();
+                    if (this.translucentBuffer != null) {
+                        this.translucentBuffer.deleteGlBuffers();
                     }
-                    translucentBuffer = new VertexBuffer(DefaultVertexFormats.BLOCK);
-                    renderBuffer = translucentBuffer;
+                    this.translucentBuffer = new VertexBuffer(DefaultVertexFormats.BLOCK);
+                    renderBuffer = this.translucentBuffer;
                     break;
                 default:
                     throw new IllegalStateException("Unexpected value: " + layerToUpdate);
@@ -325,13 +322,15 @@ public class PhysRenderChunk {
                                 Minecraft.getMinecraft().getBlockRendererDispatcher()
                                     .renderBlock(iblockstate, pos, renderAccess, vsChunkBuilder);
                             }
-                        } catch (NullPointerException e) {
+                        }
+                        catch (NullPointerException e) {
                             System.out.println("Something was null!");
                         }
                     }
                 }
             }
 
+            this.textureAnimation.collect(layerToUpdate, vsChunkBuilder);
             vsChunkBuilder.finishDrawing();
             renderBuffer.bufferData(vsChunkBuilder.getByteBuffer());
             vsChunkBuilder.reset();
@@ -361,6 +360,7 @@ public class PhysRenderChunk {
     }
 
     public static class RenderLayerDisplayList implements IVSRenderChunk {
+        private final ShipTextureAnimationCompat textureAnimation = new ShipTextureAnimationCompat();
 
         Chunk chunkToRender;
         int yMin, yMax;
@@ -410,14 +410,12 @@ public class PhysRenderChunk {
         }
 
         public void deleteRenderChunk() {
-            clearRenderLists();
-        }
+            GLAllocation.deleteDisplayLists(this.glCallListCutout);
+            GLAllocation.deleteDisplayLists(this.glCallListCutoutMipped);
+            GLAllocation.deleteDisplayLists(this.glCallListSolid);
+            GLAllocation.deleteDisplayLists(this.glCallListTranslucent);
 
-        private void clearRenderLists() {
-            GLAllocation.deleteDisplayLists(glCallListCutout);
-            GLAllocation.deleteDisplayLists(glCallListCutoutMipped);
-            GLAllocation.deleteDisplayLists(glCallListSolid);
-            GLAllocation.deleteDisplayLists(glCallListTranslucent);
+            this.textureAnimation.clear();
         }
 
         public void renderBlockLayer(BlockRenderLayer layerToRender, double partialTicks, int pass) {
@@ -449,6 +447,7 @@ public class PhysRenderChunk {
                 default:
                     break;
             }
+            this.textureAnimation.markActive(layerToRender);
         }
 
         private void updateList(BlockRenderLayer layerToUpdate) {
@@ -518,6 +517,7 @@ public class PhysRenderChunk {
                     }
                 }
             }
+            this.textureAnimation.collect(layerToUpdate, worldrenderer);
             tessellator.draw();
             // worldrenderer.finishDrawing();
             ForgeHooksClient.setRenderLayer(oldLayer);

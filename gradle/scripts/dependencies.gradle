@@ -97,6 +97,9 @@ dependencies {
     //celeritas jar for compat
     implementation files("dependencies/celeritas-forge-mc12.2-2.4.0-dev.jar")
 
+    //chibi for compat
+    modCompileOnly 'curse.maven:chibi-460609:8957115'
+
     //MalisisDoors and core mavens for compatibility
     modCompileOnly "curse.maven:malisiscore-223896:2680892"
     modCompileOnly "curse.maven:malisisdoors-223891:2526674"
