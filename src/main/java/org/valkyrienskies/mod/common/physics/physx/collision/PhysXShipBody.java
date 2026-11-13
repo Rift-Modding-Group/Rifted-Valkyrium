@@ -693,6 +693,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
     }
 
     private IBlockState getShipBlockState(PhysicsObject ship, BlockPos pos) {
+        if (!ship.getChunkClaim().containsBlock(pos)) return Blocks.AIR.getDefaultState();
         Chunk chunk = ship.getChunkAt(pos.getX() >> 4, pos.getZ() >> 4);
         if (chunk == null) return Blocks.AIR.getDefaultState();
         return chunk.getBlockState(pos);
