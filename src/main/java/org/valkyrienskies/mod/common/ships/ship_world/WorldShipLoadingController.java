@@ -188,7 +188,12 @@ class WorldShipLoadingController {
         playerChunkLoads.forEach((player, chunks) -> {
             if (player.hasDisconnected()) return;
             for (Chunk chunk : chunks) {
-                player.connection.sendPacket(new SPacketChunkData(chunk, 65535));
+                //Include every storage section so height extension mods recognize a full chunk load
+                //currently just depths update, not sure about cubic chunks (but who cares about that anyway lol)
+                int sectionCount = chunk.getBlockStorageArray().length;
+                int fullChunkSectionMask = -1;
+                if (sectionCount < Integer.SIZE) fullChunkSectionMask = (1 << sectionCount) - 1;
+                player.connection.sendPacket(new SPacketChunkData(chunk, fullChunkSectionMask));
                 if (Loader.isModLoaded("fluidlogged_api")) {
                     FluidloggedAPICompat.sendChunkFluidStates(chunk, player);
                 }
