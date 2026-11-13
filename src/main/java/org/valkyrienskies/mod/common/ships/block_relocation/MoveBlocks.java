@@ -9,6 +9,7 @@ import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
+import net.minecraftforge.fluids.IFluidBlock;
 import net.minecraftforge.fml.common.Loader;
 import org.jetbrains.annotations.NotNull;
 import org.valkyrienskies.mod.common.compat.FluidloggedAPICompat;
@@ -58,6 +59,9 @@ public class MoveBlocks {
                 changedChunks.put(chunkKey, targetChunk);
             }
             IBlockState previousState = targetChunk.getBlockState(destination);
+            if ((movedState.getMaterial().isLiquid() || movedState.getBlock() instanceof IFluidBlock)
+                    && !previousState.getBlock().isAir(previousState, world, destination)) continue;
+
             if (previousState.getBlock().hasTileEntity(previousState) || targetChunk.getTileEntityMap().containsKey(destination)) {
                 world.removeTileEntity(destination);
             }
