@@ -23,6 +23,7 @@ import org.valkyrienskies.mod.common.block.IBlockForceProvider;
 import org.valkyrienskies.mod.common.block.IBlockTorqueProvider;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.physics.GreedyBlockMerger;
+import org.valkyrienskies.mod.common.physics.BlockSectionList;
 import org.valkyrienskies.mod.common.physics.PhysicsUtils;
 import org.valkyrienskies.mod.common.physics.physx.PhysXActor;
 import org.valkyrienskies.mod.common.physics.physx.PhysXActorUtil;
@@ -73,6 +74,8 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
     private boolean massPropertiesDirty;
     private boolean massPropertiesInitialized;
     private double lastAppliedMass;
+    @Nullable
+    private BlockSectionList.CollisionSnapshot terrainSnapshot;
 
     public PhysXShipBody(
             @NotNull PhysXShipBody.Identifier identifier, @NotNull PxPhysics physics, @NotNull PxScene scene,
@@ -115,11 +118,14 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
         this.ship = ship;
     }
 
-    public void updateBeforeSimulation(@NotNull World hostWorld, @NotNull List<PhysXBlockSectionBody> blockSectionsWithLiquids, double timeStep) {
+    public void updateBeforeSimulation(@NotNull World hostWorld, @NotNull List<PhysXBlockSectionBody> blockSectionsWithLiquids, double timeStep,
+                                       @NotNull BlockSectionList.CollisionSnapshot terrainSnapshot) {
+        this.terrainSnapshot = terrainSnapshot;
         PhysicsCalculations calculations = this.ship.getPhysicsCalculations();
         PxRigidDynamic shipActor = (PxRigidDynamic) this.actor;
         boolean wasKinematic = this.kinematic;
-        boolean stationary = !this.ship.isPhysicsEnabled() || !this.ship.isPhysicsReady();
+        boolean stationary = !this.ship.isPhysicsEnabled() || !this.ship.isPhysicsReady()
+            || !terrainSnapshot.isReadyFor(this.ship.getPhysicsTransformAABB());
         if (stationary != this.kinematic) {
             // Kinematic actors retain contacts with moving bodies and require CCD to be disabled.
             if (stationary) {
@@ -372,6 +378,18 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
                 rotation,
                 new Vector3d(calculations.getPhysCenterOfMass())
         );
+
+        // Commit movement only within the terrain snapshot installed for this simulation step.
+        if (this.terrainSnapshot == null || !this.terrainSnapshot.isReadyFor(this.ship.getPhysicsTransformAABB(finalTransform))) {
+            finalTransform = this.ship.getShipTransformationManager().getCurrentPhysicsTransform();
+            finalLinearVelocity.zero();
+            finalAngularVelocity.zero();
+            this.forcePose(finalTransform);
+            PxVec3 stoppedVelocity = new PxVec3(0f, 0f, 0f);
+            shipActor.setLinearVelocity(stoppedVelocity, true);
+            shipActor.setAngularVelocity(stoppedVelocity, true);
+            stoppedVelocity.destroy();
+        }
 
         calculations.getLinearVelocity().set(finalLinearVelocity);
         calculations.getAngularVelocity().set(finalAngularVelocity);

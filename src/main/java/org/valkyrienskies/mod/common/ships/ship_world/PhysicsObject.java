@@ -120,7 +120,7 @@ public class PhysicsObject implements IPhysicsEntity {
     // Used to prevent players from thinking they're on a ship if this ship just got teleported.
     private int ticksSinceShipTeleport;
 
-    // Published after the first complete terrain collision scan.
+    // Published after each terrain collision scan.
     private volatile boolean physicsReady;
 
     // endregion
@@ -194,9 +194,7 @@ public class PhysicsObject implements IPhysicsEntity {
             this.getShipData().setShipTransform(getShipTransformationManager().getCurrentTickTransform());
             this.getShipData().setPrevTickShipTransform(getShipTransformationManager().getPrevTickTransform());
 
-            if (this.physicsCollideWith.onUpdate(this.world, this.getPhysicsTransformAABB())) {
-                this.physicsReady = true;
-            }
+            this.physicsReady = this.physicsCollideWith.onUpdate(this.world, this.getPhysicsTransformAABB());
         }
         else {
             this.transformInterpolator.tickTransformInterpolator();
@@ -561,6 +559,11 @@ public class PhysicsObject implements IPhysicsEntity {
     }
 
     public AxisAlignedBB getPhysicsTransformAABB() {
+        return this.getPhysicsTransformAABB(this.getShipTransformationManager().getCurrentPhysicsTransform());
+    }
+
+    @Nullable
+    public AxisAlignedBB getPhysicsTransformAABB(@Nonnull ShipTransform transform) {
         AxisAlignedBB subspaceBB = getBlockPositions().makeAABB();
         if (subspaceBB == null) {
             // The aabbMaker didn't know what the aabb was, just don't update the aabb for now.
@@ -569,18 +572,19 @@ public class PhysicsObject implements IPhysicsEntity {
         // Expand subspaceBB by 1 to fit the block grid.
         subspaceBB = subspaceBB.expand(1, 1, 1);
         // Now transform the subspaceBB to world coordinates
-        TransformedAABB largerPoly = new TransformedAABB(subspaceBB, getShipTransformationManager().getCurrentPhysicsTransform(),
+        TransformedAABB largerPoly = new TransformedAABB(subspaceBB, transform,
                 TransformType.SUBSPACE_TO_GLOBAL);
         // Set the ship AABB to that of the polygon and return.
         return largerPoly.getEnclosedAABB();
     }
 
     /**
-     * Starts simulation once the initial terrain collision scan has completed. The physics
-     * backend installs those colliders before its first simulation step.
+     * Reports whether the latest terrain collision scan completed. The physics backend
+     * installs the scan's colliders before allowing the ship to move within its range.
      */
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     public boolean isPhysicsReady() {
-        return this.physicsReady;
+        return this.physicsReady && this.physicsCollideWith.getCollisionSnapshot().isReadyFor(this.getPhysicsTransformAABB());
     }
 
     /**

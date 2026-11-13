@@ -30,26 +30,27 @@ public class BlockSectionList {
     private final Set<BlockSection.Key> cachedEmptyBlockSections = new HashSet<>();
     private final Queue<BlockSection.Key> dirtyBlockSections = new ConcurrentLinkedQueue<>();
     @NotNull
-    private volatile List<BlockSection> blockSections = List.of();
+    private volatile CollisionSnapshot collisionSnapshot = new CollisionSnapshot(null, 256, List.of());
 
     /**
-     * Publishes the current terrain colliders and reports whether the initial scan completed.
+     * Publishes terrain colliders together with the range covered by the completed scan.
      * An empty scan in loaded chunks is ready; an unavailable chunk is not.
      */
     public boolean onUpdate(@NotNull World world, @Nullable AxisAlignedBB shipAabb) {
         if (shipAabb == null) {
             this.clearBlockSectionCache();
-            this.blockSections = List.of();
+            this.collisionSnapshot = new CollisionSnapshot(null, world.getHeight(), List.of());
             return false;
         }
-        this.blockSections = List.copyOf(this.updateBlockSectionCache(world, shipAabb));
+        List<BlockSection> sections = this.updateBlockSectionCache(world, shipAabb);
+        this.collisionSnapshot = new CollisionSnapshot(this.cachedBlockSectionRange, world.getHeight(), sections);
         return this.cachedBlockSectionRange != null;
     }
 
     public void close() {
         this.clearBlockSectionCache();
         this.dirtyBlockSections.clear();
-        this.blockSections = List.of();
+        this.collisionSnapshot = new CollisionSnapshot(null, 256, List.of());
     }
 
     /**
@@ -229,7 +230,12 @@ public class BlockSectionList {
 
     @NotNull
     public List<BlockSection> getBlockSections() {
-        return this.blockSections;
+        return this.collisionSnapshot.blockSections();
+    }
+
+    @NotNull
+    public CollisionSnapshot getCollisionSnapshot() {
+        return this.collisionSnapshot;
     }
 
     public void invalidateBlockSectionAt(@NotNull World world, @NotNull BlockPos pos) {
@@ -247,6 +253,30 @@ public class BlockSectionList {
 
         for (int sectionY = cachedRange.minY(); sectionY <= cachedRange.maxY(); sectionY++) {
             this.dirtyBlockSections.add(new BlockSection.Key(world, chunkX, sectionY, chunkZ));
+        }
+    }
+
+    /**
+     * One immutable publication of collision data and the storage sections it covers.
+     */
+    public record CollisionSnapshot(@Nullable BlockSection.Range range, int worldHeight, @NotNull List<BlockSection> blockSections) {
+        public CollisionSnapshot {
+            blockSections = List.copyOf(blockSections);
+        }
+
+        public boolean isReadyFor(@Nullable AxisAlignedBB shipAabb) {
+            if (this.range == null || shipAabb == null) return false;
+            BlockPos min = new BlockPos(
+                (int) Math.floor(shipAabb.minX),
+                Math.max(0, (int) Math.floor(shipAabb.minY)),
+                (int) Math.floor(shipAabb.minZ)
+            );
+            BlockPos max = new BlockPos(
+                (int) Math.ceil(shipAabb.maxX),
+                Math.min(this.worldHeight - 1, (int) Math.ceil(shipAabb.maxY)),
+                (int) Math.ceil(shipAabb.maxZ)
+            );
+            return this.range.contains(BlockSection.Range.fromBlockCorners(min, max));
         }
     }
 }

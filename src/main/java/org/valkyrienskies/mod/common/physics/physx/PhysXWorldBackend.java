@@ -84,8 +84,8 @@ public class PhysXWorldBackend {
     public synchronized void update(World hostWorld, Collection<PhysicsObject> loadedShips, double timeStep) {
         if (this.closed) return;
 
-        this.syncCollisionObjects(loadedShips);
-        this.updateShipsBeforeSimulation(hostWorld, timeStep);
+        Map<PhysicsObject, BlockSectionList.CollisionSnapshot> terrainSnapshots = this.syncCollisionObjects(loadedShips);
+        this.updateShipsBeforeSimulation(hostWorld, timeStep, terrainSnapshots);
 
         if (this.scene.simulate((float) timeStep)) this.scene.fetchResults(true);
 
@@ -96,11 +96,15 @@ public class PhysXWorldBackend {
      * For updating list of collision objects from the world. These objects
      * get auto added to the scene in their constructor btw.
      * */
-    private void syncCollisionObjects(Collection<PhysicsObject> loadedShips) {
+    @NotNull
+    private Map<PhysicsObject, BlockSectionList.CollisionSnapshot> syncCollisionObjects(Collection<PhysicsObject> loadedShips) {
         this.advanceSyncGeneration();
+        Map<PhysicsObject, BlockSectionList.CollisionSnapshot> terrainSnapshots = new IdentityHashMap<>();
 
         //-----keep collision objects for every loaded ship-----
         for (PhysicsObject ship : loadedShips) {
+            BlockSectionList.CollisionSnapshot terrainSnapshot = ship.getPhysicsCollideWith().getCollisionSnapshot();
+            terrainSnapshots.put(ship, terrainSnapshot);
             //---ship objects---
             PhysXShipBody.Identifier shipIdentifier = new PhysXShipBody.Identifier(ship);
             this.markCollisionObjectSynced(shipIdentifier);
@@ -113,12 +117,11 @@ public class PhysXWorldBackend {
             //update ship reference if there is
             else ((PhysXShipBody) shipCollisionObject).updateShipReference(ship);
 
-            // Only moving ships need terrain contacts and liquid samples.
-            if (!ship.isPhysicsEnabled() || !ship.isPhysicsReady()) continue;
+            // Install contacts from the same completed snapshot used to authorize movement.
+            if (terrainSnapshot.range() == null) continue;
 
             //---defining block and entity stuff---
-            BlockSectionList collideWith = ship.getPhysicsCollideWith();
-            List<BlockSection> blockSections = collideWith.getBlockSections();
+            List<BlockSection> blockSections = terrainSnapshot.blockSections();
 
             //---block section objects---
             for (BlockSection blockSection : blockSections) {
@@ -163,6 +166,7 @@ public class PhysXWorldBackend {
             if (!(collisionObject instanceof PhysXBlockSectionBody blockSectionObject)) continue;
             if (blockSectionObject.hasLiquidBlocks()) this.blockSectionsWithLiquids.add(blockSectionObject);
         }
+        return terrainSnapshots;
     }
 
     private void addCollisionObject(AbstractPhysXCollisionObject<?> collisionObject) {
@@ -201,11 +205,11 @@ public class PhysXWorldBackend {
     /**
      * Do I have to explain what this shit does?
      * */
-    private void updateShipsBeforeSimulation(World hostWorld, double timeStep) {
+    private void updateShipsBeforeSimulation(World hostWorld, double timeStep, Map<PhysicsObject, BlockSectionList.CollisionSnapshot> terrainSnapshots) {
         for (AbstractPhysXCollisionObject<?> collisionObject : new ArrayList<>(this.collisionObjects.values())) {
             if (!(collisionObject instanceof PhysXShipBody shipBody)) continue;
             try {
-                shipBody.updateBeforeSimulation(hostWorld, this.blockSectionsWithLiquids, timeStep);
+                shipBody.updateBeforeSimulation(hostWorld, this.blockSectionsWithLiquids, timeStep, terrainSnapshots.get(shipBody.getShip()));
             }
             catch (Exception e) {
                 e.printStackTrace();
