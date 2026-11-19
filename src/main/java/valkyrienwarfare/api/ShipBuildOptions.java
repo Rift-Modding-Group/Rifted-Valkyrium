@@ -1,5 +1,7 @@
 package valkyrienwarfare.api;
 
+import net.minecraft.entity.Entity;
+import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -15,6 +17,11 @@ public final class ShipBuildOptions {
     @Nullable
     private String shipName;
     private boolean physicsEnabled;
+    private int @Nullable [] maxShipBounds;
+    @Nullable
+    private Entity peggedEntity;
+    @Nullable
+    private Vec3d peggedEntityOffset;
 
     /**
      * Set a blacklist for the blocks that Rifted Valkyrium will ignore when building a {@link IPhysicsEntity}.
@@ -55,5 +62,49 @@ public final class ShipBuildOptions {
 
     public boolean getPhysicsEnabled() {
         return this.physicsEnabled;
+    }
+
+    /**
+     * Defines the bounds of the ship. If not set, its presumed to be infinite.
+     * Note that the maximum block count remains in effect, and has the final say on ship sizes.
+     * */
+    public ShipBuildOptions setMaxShipBounds(int horizontalSize, int verticalSize) {
+        return this.setMaxShipBounds(horizontalSize, verticalSize, horizontalSize);
+    }
+
+    public ShipBuildOptions setMaxShipBounds(int xSize, int ySize, int zSize) {
+        if (xSize <= 0 || ySize <= 0 || zSize <= 0) {
+            throw new IllegalArgumentException("Ship bounds must have positive dimensions");
+        }
+        this.maxShipBounds = new int[]{xSize, ySize, zSize};
+        return this;
+    }
+
+    public int @Nullable [] getMaxShipBounds() {
+        if (this.maxShipBounds == null) return null;
+        return this.maxShipBounds.clone();
+    }
+
+    /**
+     * This pegs this ship to an entity. This means that it is attached to said entity.
+     * */
+    public ShipBuildOptions setEntityPeggedTo(Entity entity) {
+        return this.setEntityPeggedTo(entity, Vec3d.ZERO);
+    }
+
+    public ShipBuildOptions setEntityPeggedTo(Entity entity, Vec3d peggedEntityOffset) {
+        this.peggedEntity = entity;
+        this.peggedEntityOffset = peggedEntityOffset;
+        return this;
+    }
+
+    @Nullable
+    public Entity getPeggedEntity() {
+        return this.peggedEntity;
+    }
+
+    @Nullable
+    public Vec3d getPeggedEntityOffset() {
+        return this.peggedEntityOffset;
     }
 }

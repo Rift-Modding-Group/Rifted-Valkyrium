@@ -91,6 +91,27 @@ public class RiftedValkyriumAPIProvider implements RiftedValkyriumAPI.Provider {
             throw new IllegalStateException("Could not get server ship manager from world!");
         }
 
+        BlockPos assemblyPosition = new BlockPos(initialPosition.x, initialPosition.y, initialPosition.z);
+        ShipBlockBlacklist blockBlacklist = shipBuildOptions.getShipBlockBlacklist();
+        int[] maxShipBounds = shipBuildOptions.getMaxShipBounds();
+        if (maxShipBounds != null) {
+            long minX = (long) assemblyPosition.getX() - maxShipBounds[0] / 2;
+            long minY = (long) assemblyPosition.getY() - maxShipBounds[1] / 2;
+            long minZ = (long) assemblyPosition.getZ() - maxShipBounds[2] / 2;
+            long maxX = minX + maxShipBounds[0];
+            long maxY = minY + maxShipBounds[1];
+            long maxZ = minZ + maxShipBounds[2];
+
+            //combine le original blacklist and ship bounding
+            ShipBlockBlacklist configuredBlacklist = blockBlacklist;
+            blockBlacklist = (candidateWorld, candidatePosition, state) -> {
+                return candidatePosition.getX() < minX || candidatePosition.getX() >= maxX
+                        || candidatePosition.getY() < minY || candidatePosition.getY() >= maxY
+                        || candidatePosition.getZ() < minZ || candidatePosition.getZ() >= maxZ
+                        || configuredBlacklist.isBlacklisted(candidateWorld, candidatePosition, state);
+            };
+        }
+
         Vector3d position = new Vector3d(initialPosition.x, initialPosition.y, initialPosition.z);
         VSWorldDataCapability worldData = this.getWorldDataCapability(world);
         QueryableShipData queryableShipData = worldData.get().getQueryableShipData();
@@ -106,11 +127,10 @@ public class RiftedValkyriumAPIProvider implements RiftedValkyriumAPI.Provider {
         ShipData shipData = ShipData.createData(
                 queryableShipData.allShips(), shipName,
                 chunkClaim, UUID.randomUUID(), initialTransform,
-                initialBounds, shipBuildOptions.getShipBlockBlacklist()
+                initialBounds, blockBlacklist
         );
         shipData.setPhysicsEnabled(shipBuildOptions.getPhysicsEnabled());
 
-        BlockPos assemblyPosition = new BlockPos(initialPosition.x, initialPosition.y, initialPosition.z);
         serverShipManager.queueShipSpawn(shipData, assemblyPosition, BlockFinder.BlockFinderType.FIND_ALLOWED_BLOCKS);
         return shipData;
     }
