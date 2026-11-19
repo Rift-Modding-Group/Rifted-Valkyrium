@@ -10,12 +10,15 @@ import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Vector3d;
+import org.joml.Vector3dc;
+import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.VSWorldDataCapability;
 import org.valkyrienskies.mod.common.entity.EntityMountable;
 import org.valkyrienskies.mod.common.physics.BlockPhysicsDetails;
 import org.valkyrienskies.mod.common.ships.QueryableShipData;
 import org.valkyrienskies.mod.common.ships.ShipData;
+import org.valkyrienskies.mod.common.ships.ShipEntityAttachment;
 import org.valkyrienskies.mod.common.ships.block_relocation.BlockFinder;
 import org.valkyrienskies.mod.common.ships.chunk_claims.ShipChunkAllocator;
 import org.valkyrienskies.mod.common.ships.chunk_claims.VSChunkClaim;
@@ -30,6 +33,7 @@ import valkyrienwarfare.api.*;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -63,6 +67,13 @@ public class RiftedValkyriumAPIProvider implements RiftedValkyriumAPI.Provider {
 
     @Override
     @NotNull
+    public Vector3dc getWorldGravity() {
+        double gravityY = VSConfig.doGravity ? VSConfig.gravityVecY : 0D;
+        return new Vector3d(0D, gravityY, 0D);
+    }
+
+    @Override
+    @NotNull
     public Optional<IShipData> getActiveShipOfEntity(Entity entity) {
         Entity carrier = entity.getLowestRidingEntity();
         //special case for legacy chairs
@@ -89,6 +100,18 @@ public class RiftedValkyriumAPIProvider implements RiftedValkyriumAPI.Provider {
         IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(world);
         if (!(physObjectWorld instanceof WorldServerShipManager serverShipManager)) {
             throw new IllegalStateException("Could not get server ship manager from world!");
+        }
+
+        Entity peggedEntity = shipBuildOptions.getPeggedEntity();
+        ShipEntityAttachment entityAttachment = null;
+        if (peggedEntity != null) {
+            if (peggedEntity.world != world || peggedEntity.isDead) {
+                throw new IllegalArgumentException("Ship carrier must be a living entity in the same world");
+            }
+            Vec3d offset = shipBuildOptions.getPeggedEntityOffset();
+            if (offset == null) offset = Vec3d.ZERO;
+            entityAttachment = new ShipEntityAttachment(peggedEntity.getUniqueID(), offset.x, offset.y, offset.z,
+                    ShipEntityAttachment.getEntityYaw(peggedEntity), shipBuildOptions.getEntityDeathBehavior());
         }
 
         BlockPos assemblyPosition = new BlockPos(initialPosition.x, initialPosition.y, initialPosition.z);
@@ -130,9 +153,43 @@ public class RiftedValkyriumAPIProvider implements RiftedValkyriumAPI.Provider {
                 initialBounds, blockBlacklist
         );
         shipData.setPhysicsEnabled(shipBuildOptions.getPhysicsEnabled());
+        if (maxShipBounds != null) {
+            double minX = regionCenter.getX() - maxShipBounds[0] / 2D;
+            double minY = regionCenter.getY() - maxShipBounds[1] / 2D;
+            double minZ = regionCenter.getZ() - maxShipBounds[2] / 2D;
+            shipData.shipBounds = new AxisAlignedBB(minX, minY, minZ,
+                    minX + maxShipBounds[0], minY + maxShipBounds[1], minZ + maxShipBounds[2]);
+        }
+        shipData.entityAttachment = entityAttachment;
 
         serverShipManager.queueShipSpawn(shipData, assemblyPosition, BlockFinder.BlockFinderType.FIND_ALLOWED_BLOCKS);
         return shipData;
+    }
+
+    @Override
+    public void linkShipToEntity(WorldServer world, IShipData ship, Entity entity, Vec3d offset, ShipEntityDeathBehavior entityDeathBehavior) {
+        if (!world.isCallingFromMinecraftThread()) {
+            throw new IllegalStateException("Ships must be linked on the owning world's server thread");
+        }
+        if (entity.world != world || entity.isDead) {
+            throw new IllegalArgumentException("Ship carrier must be an alive entity in the same world");
+        }
+        ShipData data = this.getWorldDataCapability(world).get().getQueryableShipData().getShip(ship.getUuid())
+                .orElseThrow(() -> new IllegalArgumentException("Ship does not belong to this world"));
+        ShipEntityAttachment attachment = ShipEntityAttachment.create(entity, offset, data.getShipTransform(), entityDeathBehavior);
+        data.entityAttachment = attachment;
+        data.entityCarrierDead = false;
+        data.entityAttachmentPoint = null;
+        ShipTransform transform = attachment.createTransform(entity, data.getEntityAttachmentPoint(),
+                data.getShipTransform().getCenterCoord());
+        data.setShipTransform(transform);
+        data.getPhysicsData().setLinearVelocity(new Vector3d());
+        data.getPhysicsData().setAngularVelocity(new Vector3d());
+        IPhysObjectWorld shipWorld = ValkyrienUtils.getPhysObjWorld(world);
+        if (shipWorld != null) {
+            PhysicsObject physicsObject = shipWorld.getPhysObjectFromUUID(data.getUuid());
+            if (physicsObject != null) physicsObject.entityAttachmentTransform = transform;
+        }
     }
 
     @Override

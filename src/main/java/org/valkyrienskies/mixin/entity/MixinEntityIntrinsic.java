@@ -91,6 +91,7 @@ public abstract class MixinEntityIntrinsic {
 
         AxisAlignedBB insetSupportBox = supportBox.grow(-0.2D, 0D, -0.2D);
         for (PhysicsObject ship : shipWorld.getManager().getPhysObjectsInAABB(supportBox)) {
+            if (ship.getShipData().isPeggedTo(entity)) continue;
             ShipTransform transform = ship.getShipTransformationManager().getCurrentTickTransform();
             AxisAlignedBB localSupportBox = new TransformedAABB(supportBox, transform, TransformType.GLOBAL_TO_SUBSPACE).getEnclosedAABB();
             if ((localSupportBox.maxX - localSupportBox.minX) * (localSupportBox.maxZ - localSupportBox.minZ) > 9898989D) {
@@ -189,6 +190,7 @@ public abstract class MixinEntityIntrinsic {
                     IShipWorld shipWorld = thisEntity.world.getCapability(VSCapabilityRegistry.VS_SHIP_WORLD, null);
                     if (shipWorld != null && shipWorld.getManager() != null) {
                         for (PhysicsObject ship : shipWorld.getManager().getPhysObjectsInAABB(bounds)) {
+                            if (ship.getShipData().isPeggedTo(thisEntity)) continue;
                             AxisAlignedBB localBounds = new TransformedAABB(bounds, ship.getShipTransform(), TransformType.GLOBAL_TO_SUBSPACE)
                                     .getEnclosedAABB();
                             if (thisEntity.world.containsAnyLiquid(localBounds)) {

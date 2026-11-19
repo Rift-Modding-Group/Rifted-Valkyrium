@@ -31,7 +31,6 @@ public class RegisterEvents {
         event.getRegistry().registerAll(blockArray);
     }
 
-    @LegacyContent
     @SubscribeEvent
     public static void registerItems(@Nonnull RegistryEvent.Register<Item> event) {
         ValkyrienSkiesMod.LOGGER.debug("Registering items");
@@ -44,7 +43,6 @@ public class RegisterEvents {
         ValkyrienSkiesMod.INSTANCE.registerRecipes(event);
     }
 
-    @LegacyContent
     @SubscribeEvent
     public static void onModelRegister(ModelRegistryEvent event) {
         for (Item item : ValkyrienSkiesMod.ITEMS) {

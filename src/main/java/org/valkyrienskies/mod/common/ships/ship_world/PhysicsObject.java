@@ -13,6 +13,7 @@ import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.BlockPos.MutableBlockPos;
 import net.minecraft.util.math.ChunkPos;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import net.minecraft.world.EnumSkyBlock;
@@ -24,6 +25,7 @@ import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Quaterniondc;
+import org.joml.Quaterniond;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.valkyrienskies.mod.client.render.PhysObjectRenderManager;
@@ -37,6 +39,7 @@ import org.valkyrienskies.mod.common.physics.PhysicsCalculations;
 import org.valkyrienskies.mod.common.physics.BlockSectionList;
 import org.valkyrienskies.mod.common.physics.physx.IPhysicsBlockController;
 import org.valkyrienskies.mod.common.ships.ShipData;
+import org.valkyrienskies.mod.common.ships.ShipEntityAttachment;
 import org.valkyrienskies.mod.common.ships.block_relocation.MoveBlocks;
 import org.valkyrienskies.mod.common.ships.chunk_claims.ClaimedChunkCacheController;
 import org.valkyrienskies.mod.common.ships.chunk_claims.VSChunkClaim;
@@ -123,6 +126,12 @@ public class PhysicsObject implements IPhysicsEntity {
     // Published after each terrain collision scan.
     private volatile boolean physicsReady;
 
+    @Nullable
+    public volatile ShipTransform entityAttachmentTransform;
+
+    @Nullable
+    private Entity entityPeggedTo;
+
     // endregion
 
     // region Methods
@@ -137,6 +146,15 @@ public class PhysicsObject implements IPhysicsEntity {
         // QueryableShipData.get(world).registerUpdateListener(this::shipDataUpdateListener);
         this.world = world;
         this.shipData = initial;
+        if (!world.isRemote && initial.entityAttachment != null) {
+            Entity carrier = this.getEntityPeggedTo();
+            if (carrier != null) {
+                ShipTransform transform = initial.entityAttachment.createTransform(carrier,
+                        initial.getEntityAttachmentPoint(), initial.getShipTransform().getCenterCoord());
+                initial.setShipTransform(transform);
+                initial.setPrevTickShipTransform(transform);
+            }
+        }
         this.referenceBlockPos = this.getShipData().getChunkClaim().getRegionCenter();
         this.watchingPlayers = new ArrayList<>();
         this.physicsControllers = ConcurrentHashMap.newKeySet();
@@ -156,6 +174,7 @@ public class PhysicsObject implements IPhysicsEntity {
         this.forceToUseShipDataTransform = false;
         this.ticksSinceShipTeleport = TICKS_SINCE_TELEPORT_TO_START_DRAGGING + 1; // Anything larger than TICKS_SINCE_TELEPORT_TO_START_DRAGGING works
         this.physicsReady = false;
+        if (initial.entityAttachment != null) this.entityAttachmentTransform = initial.getShipTransform();
 
         // Note how this is last.
         if (world.isRemote) {
@@ -175,7 +194,7 @@ public class PhysicsObject implements IPhysicsEntity {
         if (!this.world.isRemote) {
             final boolean forceToUseShipDataTransformLocalCopy = this.forceToUseShipDataTransform;
             this.forceToUseShipDataTransform = false;
-            if (forceToUseShipDataTransformLocalCopy) {
+            if (forceToUseShipDataTransformLocalCopy && this.shipData.entityAttachment == null) {
                 final ShipTransform forcedTransform = shipData.getShipTransform();
 
                 // This is BAD! Race condition! But I don't think this will cause any problems (I hope).
@@ -188,6 +207,28 @@ public class PhysicsObject implements IPhysicsEntity {
             this.ticksSinceShipTeleport++;
 
             ShipTransform physicsTransform = this.getShipTransformationManager().getCurrentPhysicsTransform();
+            ShipEntityAttachment attachment = this.shipData.entityAttachment;
+            if (attachment != null) {
+                ShipTransform previousTransform = this.shipTransformationManager.getCurrentTickTransform();
+                physicsTransform = previousTransform;
+                Entity carrier = this.getEntityPeggedTo();
+                if (carrier != null) {
+                    physicsTransform = attachment.createTransform(carrier, this.shipData.getEntityAttachmentPoint(),
+                            this.getInertiaData().getGameTickCenterOfMass());
+                }
+
+                Vector3d previousCenter = new Vector3d(physicsTransform.getCenterCoord());
+                previousTransform.transformPosition(previousCenter, TransformType.SUBSPACE_TO_GLOBAL);
+                Vector3d velocity = new Vector3d(
+                        physicsTransform.getPosX(), physicsTransform.getPosY(), physicsTransform.getPosZ()
+                ).sub(previousCenter).mul(20D);
+                Quaterniond rotationChange = physicsTransform.rotationQuaternion(TransformType.SUBSPACE_TO_GLOBAL)
+                        .mul(previousTransform.rotationQuaternion(TransformType.SUBSPACE_TO_GLOBAL).conjugate());
+                double yawChange = MathHelper.wrapDegrees(Math.toDegrees(2D * Math.atan2(rotationChange.y, rotationChange.w)));
+                this.getPhysicsData().setLinearVelocity(velocity);
+                this.getPhysicsData().setAngularVelocity(new Vector3d(0D, Math.toRadians(yawChange) * 20D, 0D));
+                this.entityAttachmentTransform = physicsTransform;
+            }
             this.getShipTransformationManager().updateShipTransform(physicsTransform);
             this.getShipTransformationManager().updateShipBoundingBox();
             // Copy the current and prev transforms into ShipData
@@ -197,7 +238,16 @@ public class PhysicsObject implements IPhysicsEntity {
             this.physicsReady = this.physicsCollideWith.onUpdate(this.world, this.getPhysicsTransformAABB());
         }
         else {
-            this.transformInterpolator.tickTransformInterpolator();
+            ShipTransform attachedTransform = null;
+            ShipEntityAttachment attachment = this.shipData.entityAttachment;
+            Entity carrier = this.getEntityPeggedTo();
+            if (attachment != null && carrier != null) {
+                attachedTransform = attachment.createTransform(
+                        carrier, this.shipData.getEntityAttachmentPoint(),
+                        this.getInertiaData().getGameTickCenterOfMass()
+                );
+            }
+            this.transformInterpolator.tickTransformInterpolator(attachedTransform);
             ShipTransform newTransform = this.transformInterpolator.getCurrentTickTransform();
             AxisAlignedBB newAABB = this.transformInterpolator.getCurrentAABB();
 
@@ -215,6 +265,30 @@ public class PhysicsObject implements IPhysicsEntity {
     /*
      * Encapsulation code past here.
      */
+
+    @Nullable
+    public Entity getEntityPeggedTo() {
+        ShipEntityAttachment attachment = this.shipData.entityAttachment;
+        if (attachment == null) {
+            this.entityPeggedTo = null;
+            return null;
+        }
+        if (this.world instanceof WorldServer serverWorld) {
+            this.entityPeggedTo = serverWorld.getEntityFromUuid(attachment.entityUuid());
+        } else if (this.entityPeggedTo == null
+                || !attachment.entityUuid().equals(this.entityPeggedTo.getUniqueID())
+                || this.world.getEntityByID(this.entityPeggedTo.getEntityId()) != this.entityPeggedTo) {
+            this.entityPeggedTo = null;
+            for (Entity entity : this.world.loadedEntityList) {
+                if (attachment.entityUuid().equals(entity.getUniqueID())) {
+                    this.entityPeggedTo = entity;
+                    break;
+                }
+            }
+        }
+        if (this.entityPeggedTo == null || this.entityPeggedTo.isDead) return null;
+        return this.entityPeggedTo;
+    }
 
     // ===== Keep track of all Node Processors in a concurrent Set =====
     public void onSetTileEntity(BlockPos pos, TileEntity tileentity) {
@@ -723,6 +797,13 @@ public class PhysicsObject implements IPhysicsEntity {
 
     public void setPhysicsEnabled(boolean value) {
         this.shipData.setPhysicsEnabled(value);
+    }
+
+    public void detachFromEntity() {
+        this.shipData.detachFromEntity();
+        this.entityAttachmentTransform = null;
+        this.physicsCalculations.setForceToUseGameTransform(true);
+        this.setForceToUseShipDataTransform(true);
     }
 
     @NotNull

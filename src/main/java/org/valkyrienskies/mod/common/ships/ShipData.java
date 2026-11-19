@@ -5,7 +5,9 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.googlecode.cqengine.attribute.Attribute;
 import com.googlecode.cqengine.attribute.MultiValueAttribute;
 import com.googlecode.cqengine.query.option.QueryOptions;
+import net.minecraft.entity.Entity;
 import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
@@ -80,6 +82,20 @@ public class ShipData implements IShipData {
      * Whether or not physics are enabled on this physo
      */
     private boolean physicsEnabled;
+
+    @Nullable
+    public ShipEntityAttachment entityAttachment;
+
+    @PacketIgnore
+    public boolean entityCarrierDead;
+
+    @Nullable
+    @JsonSerialize(as = Vector3d.class)
+    @JsonDeserialize(as = Vector3d.class)
+    public Vector3dc entityAttachmentPoint;
+
+    @Nullable
+    public AxisAlignedBB shipBounds;
 
     /**
      * The chunks claimed by this physo
@@ -225,6 +241,49 @@ public class ShipData implements IShipData {
 
     public void setPhysicsEnabled(boolean physicsEnabled) {
         this.physicsEnabled = physicsEnabled;
+    }
+
+    public boolean isPeggedTo(@NotNull Entity entity) {
+        if (this.entityAttachment == null) return false;
+        for (Entity carrier = entity; carrier != null; carrier = carrier.getRidingEntity()) {
+            if (this.entityAttachment.entityUuid().equals(carrier.getUniqueID())) return true;
+        }
+        return false;
+    }
+
+    public void onCarrierDeath(@NotNull UUID carrierId) {
+        if (this.entityAttachment != null && this.entityAttachment.entityUuid().equals(carrierId)) {
+            this.entityCarrierDead = true;
+        }
+    }
+
+    public void detachFromEntity() {
+        this.entityAttachment = null;
+        this.entityAttachmentPoint = null;
+        this.entityCarrierDead = false;
+    }
+
+    @NotNull
+    public Vector3d getEntityAttachmentPoint() {
+        if (this.entityAttachment != null && this.entityAttachmentPoint != null) {
+            return new Vector3d(this.entityAttachmentPoint);
+        }
+        AxisAlignedBB bounds = this.shipBounds;
+        if (bounds == null && this.blockPositions != null) {
+            bounds = this.blockPositions.makeAABB();
+            if (bounds != null) bounds = bounds.expand(1D, 1D, 1D);
+        }
+        Vector3d attachmentPoint;
+        if (bounds == null) {
+            BlockPos origin = this.chunkClaim.getRegionCenter();
+            attachmentPoint = new Vector3d(origin.getX() + 0.5D, origin.getY(), origin.getZ() + 0.5D);
+        }
+        else {
+            attachmentPoint = new Vector3d((bounds.minX + bounds.maxX) * 0.5D, bounds.minY,
+                    (bounds.minZ + bounds.maxZ) * 0.5D);
+        }
+        if (this.entityAttachment != null) this.entityAttachmentPoint = new Vector3d(attachmentPoint);
+        return attachmentPoint;
     }
 
     public VSChunkClaim getChunkClaim() {

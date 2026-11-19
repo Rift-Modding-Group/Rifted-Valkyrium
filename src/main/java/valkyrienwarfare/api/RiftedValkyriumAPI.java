@@ -10,9 +10,7 @@ import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
-import org.joml.Vector3d;
 import org.joml.Vector3dc;
-import org.valkyrienskies.mod.common.config.VSConfig;
 
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -71,12 +69,11 @@ public class RiftedValkyriumAPI {
     }
 
     /**
-     * @return gravitational acceleration in blocks per second squared from {@link VSConfig#doGravity} as a vector
+     * @return configured gravitational acceleration in blocks per second squared as a vector
      * */
     @NotNull
     public static Vector3dc getWorldGravity() {
-        double gravityY = VSConfig.doGravity ? VSConfig.gravityVecY : 0D;
-        return new Vector3d(0D, gravityY, 0D);
+        return provider.getWorldGravity();
     }
 
     /**
@@ -236,6 +233,37 @@ public class RiftedValkyriumAPI {
     }
 
     /**
+     * Links an existing ship's bottom center to the bottom center of an entity's hitbox.
+     */
+    public static void linkShipToEntity(WorldServer world, IShipData shipData, Entity entity) {
+        linkShipToEntity(world, shipData, entity, Vec3d.ZERO, ShipEntityDeathBehavior.DETACH);
+    }
+
+    /**
+     * Links an existing ship to an entity. The offset rotates with the entity's body yaw.
+     * Configured build bounds determine the ship's bottom center; otherwise its blocks do.
+     * Call this on the owning world's server thread.
+     */
+    public static void linkShipToEntity(WorldServer world, IShipData shipData, Entity entity, Vec3d offset) {
+        linkShipToEntity(world, shipData, entity, offset, ShipEntityDeathBehavior.DETACH);
+    }
+
+    public static void linkShipToEntity(WorldServer world, IShipData shipData, Entity entity, ShipEntityDeathBehavior entityDeathBehavior) {
+        linkShipToEntity(world, shipData, entity, Vec3d.ZERO, entityDeathBehavior);
+    }
+
+    /**
+     * Links a ship with an entity-local offset and chooses its behavior when the carrier dies.
+     * Call on the owning world's server thread.
+     */
+    public static void linkShipToEntity(
+            WorldServer world, IShipData shipData, Entity entity, Vec3d offset,
+            ShipEntityDeathBehavior entityDeathBehavior
+    ) {
+        provider.linkShipToEntity(world, shipData, entity, offset, entityDeathBehavior);
+    }
+
+    /**
      * Returns a list of ships in the world.
      *
      * @param world the server world to find the ships in
@@ -345,6 +373,9 @@ public class RiftedValkyriumAPI {
         boolean isPosInShipyard(BlockPos pos);
 
         @NotNull
+        Vector3dc getWorldGravity();
+
+        @NotNull
         Optional<IShipData> getActiveShipOfEntity(Entity entity);
 
         void setBlockMass(IBlockState blockState, BlockMass blockMass);
@@ -353,6 +384,8 @@ public class RiftedValkyriumAPI {
 
         @NotNull
         IShipData createNewShip(WorldServer world, Vec3d initialPosition, AxisAlignedBB initialBounds, ShipBuildOptions shipBuildOptions);
+
+        void linkShipToEntity(WorldServer world, IShipData shipData, Entity entity, Vec3d offset, ShipEntityDeathBehavior entityDeathBehavior);
 
         @NotNull
         List<IShipData> getAllShips(World world);
@@ -387,6 +420,12 @@ public class RiftedValkyriumAPI {
 
         @Override
         @NotNull
+        public Vector3dc getWorldGravity() {
+            throw new IllegalStateException("Rifted Valkyrium has not initialized its API provider");
+        }
+
+        @Override
+        @NotNull
         public Optional<IShipData> getActiveShipOfEntity(Entity entity) {
             return Optional.empty();
         }
@@ -404,6 +443,11 @@ public class RiftedValkyriumAPI {
         @Override
         @NotNull
         public IShipData createNewShip(WorldServer world, Vec3d initialPosition, AxisAlignedBB initialBounds, ShipBuildOptions shipBuildOptions) {
+            throw new IllegalStateException("Rifted Valkyrium has not initialized its API provider");
+        }
+
+        @Override
+        public void linkShipToEntity(WorldServer world, IShipData shipData, Entity entity, Vec3d offset, ShipEntityDeathBehavior entityDeathBehavior) {
             throw new IllegalStateException("Rifted Valkyrium has not initialized its API provider");
         }
 

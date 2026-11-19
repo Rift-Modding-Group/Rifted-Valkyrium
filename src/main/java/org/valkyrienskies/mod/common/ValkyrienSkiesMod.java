@@ -32,6 +32,7 @@ import net.minecraftforge.fml.common.registry.GameRegistry;
 import net.minecraftforge.fml.relauncher.Side;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.valkyrienskies.mod.client.gui.TabRiftedValkyriumDebug;
 import org.valkyrienskies.mod.common.annotation.LegacyContent;
 import org.valkyrienskies.mod.client.gui.TabValkyrienSkies;
 import org.valkyrienskies.mod.common.block.BlockBoatChair;
@@ -43,6 +44,7 @@ import org.valkyrienskies.mod.common.command.MainCommand;
 import org.valkyrienskies.mod.common.command.config.VSConfigCommand;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.item.ItemShipTracker;
+import org.valkyrienskies.mod.common.item.ItemEntityShipLinkerStick;
 import org.valkyrienskies.mod.common.network.MessageEntityShipMovement;
 import org.valkyrienskies.mod.common.network.MessageShipBedRespawn;
 import org.valkyrienskies.mod.common.network.MessageMalisisChunkBlockRegistrations;
@@ -113,6 +115,7 @@ public class ValkyrienSkiesMod {
     public static SimpleNetworkWrapper physWrapperTransformUpdateNetwork;
     public static SimpleNetworkWrapper controlNetwork;
     public static CreativeTabs VS_CREATIVE_TAB;
+    public static CreativeTabs RV_DEBUG_TAG;
 
     private static final List<String> MODULES = ImmutableList.of("vs_control", "vs_world");
 
@@ -121,6 +124,8 @@ public class ValkyrienSkiesMod {
         LOGGER.debug("Initializing configuration.");
         runConfiguration();
 
+        RV_DEBUG_TAG = new TabRiftedValkyriumDebug();
+        new ItemEntityShipLinkerStick();
         registerItems();
         registerBlocks();
 
@@ -139,6 +144,7 @@ public class ValkyrienSkiesMod {
 		registerDarknessLib();
     }
 
+    //better do something about this shite
     private void registerDarknessLib() {
         // Register light provider with DarknessLib
         try {

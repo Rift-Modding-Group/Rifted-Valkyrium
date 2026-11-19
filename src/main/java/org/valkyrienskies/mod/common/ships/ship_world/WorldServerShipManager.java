@@ -5,6 +5,7 @@ import gnu.trove.iterator.TLongIterator;
 import gnu.trove.map.hash.TLongObjectHashMap;
 import gnu.trove.set.hash.TLongHashSet;
 import net.minecraft.block.state.IBlockState;
+import net.minecraft.entity.Entity;
 import net.minecraft.init.Blocks;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntity;
@@ -29,6 +30,7 @@ import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.physics.BlockPhysicsDetails;
 import org.valkyrienskies.mod.common.ships.QueryableShipData;
 import org.valkyrienskies.mod.common.ships.ShipData;
+import org.valkyrienskies.mod.common.ships.ShipEntityAttachment;
 import org.valkyrienskies.mod.common.ships.block_relocation.BlockFinder;
 import org.valkyrienskies.mod.common.ships.block_relocation.IRelocationAwareTile;
 import org.valkyrienskies.mod.common.ships.block_relocation.SpatialDetector;
@@ -38,6 +40,7 @@ import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.util.multithreaded.CalledFromWrongThreadException;
 import org.valkyrienskies.mod.common.util.multithreaded.VSWorldPhysicsLoop;
 import valkyrienwarfare.api.TransformType;
+import valkyrienwarfare.api.ShipEntityDeathBehavior;
 
 import javax.annotation.Nonnull;
 import java.util.*;
@@ -136,11 +139,47 @@ public class WorldServerShipManager implements IPhysObjectWorld {
         // Then execute queued ship spawn operations
         spawnNewShips();
 
+        for (ShipData data : QueryableShipData.get(this.world)) {
+            if (!data.entityCarrierDead) continue;
+            ShipEntityAttachment attachment = data.entityAttachment;
+            if (attachment == null) {
+                data.entityCarrierDead = false;
+                continue;
+            }
+            Entity carrier = this.world.getEntityFromUuid(attachment.entityUuid());
+            if (carrier != null && carrier.isEntityAlive()) {
+                data.entityCarrierDead = false;
+                continue;
+            }
+            if (attachment.entityDeathBehavior() == ShipEntityDeathBehavior.DETACH) {
+                PhysicsObject physicsObject = this.loadedShips.get(data.getUuid());
+                if (physicsObject != null) physicsObject.detachFromEntity();
+                else data.detachFromEntity();
+            }
+        }
+
         // Then determine which ships to load and unload
         this.loadingController.determineLoadAndUnload();
 
         // Then execute queued ship load and unload operations
         loadAndUnloadShips();
+
+        for (PhysicsObject ship : this.loadedShips.values()) {
+            ShipData data = ship.getShipData();
+            if (!data.entityCarrierDead || data.entityAttachment == null) continue;
+
+            switch (data.entityAttachment.entityDeathBehavior()) {
+                case DETACH -> {}
+                case BREAK_BLOCKS -> {
+                    // Keep the ship loaded while vanilla block breaking creates drops and empties containers.
+                    for (BlockPos position : new ArrayList<>(ship.getBlockPositions())) {
+                        this.world.destroyBlock(position, true);
+                    }
+                }
+                case DELETE_SHIP -> ship.setDeconstructState(PhysicsObject.DeconstructState.DECONSTRUCT_IMMEDIATE_NO_COPY);
+            }
+            ship.detachFromEntity();
+        }
 
         // Then tick all the loaded ships
         for (PhysicsObject ship : getAllLoadedPhysObj()) {
@@ -152,6 +191,15 @@ public class WorldServerShipManager implements IPhysObjectWorld {
 
         // And then update the thread safe ship list.
         this.threadSafeLoadedShips = ImmutableList.copyOf(this.loadedShips.values());
+    }
+
+    public void onCarrierDeath(@Nonnull Entity carrier) {
+        for (ShipData data : QueryableShipData.get(this.world)) {
+            data.onCarrierDeath(carrier.getUniqueID());
+        }
+        for (ImmutableTriple<BlockPos, ShipData, BlockFinder.BlockFinderType> spawnData : this.spawnQueue) {
+            spawnData.getMiddle().onCarrierDeath(carrier.getUniqueID());
+        }
     }
 
     private void spawnNewShips() {

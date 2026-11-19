@@ -321,3 +321,11 @@ vs_world.general.valkyriumoregenenabled.tooltip=Default is true. Set to false to
 # Minimap integration
 valkyrienskies.general.showshipinminimapmods=Show Ships in Minimap Mods
 valkyrienskies.general.showshipinminimapmods.tooltip=Show loaded ships on supported map mods. Supports Xaero's Minimap, Xaero's World Map, and JourneyMap.
+
+itemGroup.rifted_valkyrium_debug=Rifted Valkyrium Debug
+item.entity_ship_linker_stick.name=Entity-Ship Linker Stick
+tooltip.valkyrienskies.linker.usage=Right-click a ship block, then an entity to place the platform on its back.
+message.valkyrienskies.linker.select_ship=Right-click a ship block to select a ship first.
+message.valkyrienskies.linker.selected=Selected %s. Right-click an entity to link it.
+message.valkyrienskies.linker.ship_missing=The selected ship no longer exists in this world.
+message.valkyrienskies.linker.linked=Linked %s to %s.

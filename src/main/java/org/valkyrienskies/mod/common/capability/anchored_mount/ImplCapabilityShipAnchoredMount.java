@@ -76,6 +76,7 @@ public class ImplCapabilityShipAnchoredMount implements IShipAnchoredMount {
             ).grow(2D);
 
             for (PhysicsObject nearbyShip : physObjectWorld.getPhysObjectsInAABB(searchBox)) {
+                if (nearbyShip.getShipData().isPeggedTo(entity)) continue;
                 Vec3d possibleLocalMountPos = nearbyShip.transformVector(rawEntityPos, TransformType.GLOBAL_TO_SUBSPACE);
                 BlockPos possibleLocalBlock = new BlockPos(possibleLocalMountPos);
                 Optional<PhysicsObject> managingShip = ValkyrienUtils.getPhysoManagingBlock(entity.world, possibleLocalBlock);

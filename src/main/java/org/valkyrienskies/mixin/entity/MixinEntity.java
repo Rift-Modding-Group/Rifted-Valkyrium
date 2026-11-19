@@ -312,6 +312,7 @@ public abstract class MixinEntity {
         if (shipWorld == null || shipWorld.getManager() == null) return;
 
         for (PhysicsObject ship : shipWorld.getManager().getPhysObjectsInAABB(eyeBounds)) {
+            if (ship.getShipData().isPeggedTo(entity)) continue;
             ShipTransform transform = ship.getShipTransform();
             double originalX = entity.posX;
             double originalY = entity.posY;

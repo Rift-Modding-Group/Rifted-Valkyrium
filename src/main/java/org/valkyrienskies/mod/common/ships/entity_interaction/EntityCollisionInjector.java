@@ -436,7 +436,8 @@ public class EntityCollisionInjector {
         // Search the whole movement with room for collision shapes extending beyond their blocks.
         AxisAlignedBB entityBB = entity.getEntityBoundingBox().expand(velocity.x, velocity.y, velocity.z).grow(1D);
 
-        List<PhysicsObject> ships = shipWorld.getManager().getPhysObjectsInAABB(entityBB);
+        List<PhysicsObject> ships = shipWorld.getManager().getPhysObjectsInAABB(entityBB).stream()
+                .filter(ship -> !ship.getShipData().isPeggedTo(entity)).toList();
         // If a player is riding a Ship, don't process any collision between that Ship
         // and the Player
         for (PhysicsObject wrapper : ships) {
@@ -585,6 +586,7 @@ public class EntityCollisionInjector {
         if (!isSpectator) {
             final AxisAlignedBB bb = entity.getEntityBoundingBox();
             for (PhysicsObject physicsObject : collidingShips) {
+                if (physicsObject.getShipData().isPeggedTo(entity)) continue;
                 final TransformedAABB playerPolyInShip = new TransformedAABB(bb, physicsObject.getShipTransform(), TransformType.GLOBAL_TO_SUBSPACE);
 
                 final AxisAlignedBB playerPolyInShipBB = playerPolyInShip.getEnclosedAABB();

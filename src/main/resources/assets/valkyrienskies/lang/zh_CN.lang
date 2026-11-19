@@ -326,3 +326,11 @@ vs_world.general.valkyriumoregenenabled.tooltip=默认启用。改为false停用
 # Minimap integration
 valkyrienskies.general.showshipinminimapmods=在小地图模组中显示船只
 valkyrienskies.general.showshipinminimapmods.tooltip=在支持的地图模组中显示已加载的船只。支持 Xaero's Minimap、Xaero's World Map 和 JourneyMap。
+
+itemGroup.rifted_valkyrium_debug=Rifted Valkyrium 调试
+item.entity_ship_linker_stick.name=实体飞船连接棒
+tooltip.valkyrienskies.linker.usage=右键点击飞船方块，再右键点击实体，将平台放置在其背上。
+message.valkyrienskies.linker.select_ship=请先右键点击飞船方块来选择飞船。
+message.valkyrienskies.linker.selected=已选择 %s。右键点击实体进行连接。
+message.valkyrienskies.linker.ship_missing=所选飞船已不在此世界中。
+message.valkyrienskies.linker.linked=已将 %s 连接到 %s。

@@ -7,6 +7,7 @@ import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import valkyrienwarfare.api.TransformType;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
  * A simple implementation of ITransformInterpolator that uses an exponential moving average filter to smooth out the
@@ -40,7 +41,11 @@ public class SimpleEMATransformInterpolator implements ITransformInterpolator {
     }
 
     @Override
-    public void tickTransformInterpolator() {
+    public void tickTransformInterpolator(@Nullable ShipTransform attachedTransform) {
+        if (attachedTransform != null) {
+            this.curTickTransform = attachedTransform;
+            return;
+        }
         // First compute the new position
         Vector3dc curPos = new Vector3d(curTickTransform.getPosX(), curTickTransform.getPosY(), curTickTransform.getPosZ());
         // If the new center coord != current center coord, then offset the current position by the difference

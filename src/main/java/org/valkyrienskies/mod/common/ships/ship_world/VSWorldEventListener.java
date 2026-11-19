@@ -135,7 +135,13 @@ public class VSWorldEventListener implements IWorldEventListener {
     }
 
     @Override
-    public void onEntityRemoved(Entity entityIn) {}
+    public void onEntityRemoved(Entity entityIn) {
+        if (this.worldObj.isRemote || !entityIn.isDead || entityIn.dimension != this.worldObj.provider.getDimension()) return;
+        if (entityIn instanceof EntityPlayer player && player.getHealth() > 0f) return;
+
+        IPhysObjectWorld shipWorld = ValkyrienUtils.getPhysObjWorld(this.worldObj);
+        if (shipWorld instanceof WorldServerShipManager manager) manager.onCarrierDeath(entityIn);
+    }
 
     @Override
     public void broadcastSound(int soundID, BlockPos pos, int data) {}

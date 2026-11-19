@@ -35,6 +35,7 @@ public abstract class MixinWorldFluid {
         if (shipWorld == null || shipWorld.getManager() == null) return;
 
         for (PhysicsObject ship : shipWorld.getManager().getPhysObjectsInAABB(bounds)) {
+            if (ship.getShipData().isPeggedTo(entity)) continue;
             ShipTransform transform = ship.getShipTransform();
             AxisAlignedBB localBounds = new TransformedAABB(bounds, transform, TransformType.GLOBAL_TO_SUBSPACE).getEnclosedAABB();
             double originalX = entity.posX;

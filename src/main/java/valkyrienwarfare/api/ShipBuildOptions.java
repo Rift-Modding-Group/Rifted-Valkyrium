@@ -6,6 +6,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.annotation.ParametersAreNonnullByDefault;
+import java.util.Objects;
 
 /**
  * This builder-like class stores additional options for ship-building
@@ -22,6 +23,8 @@ public final class ShipBuildOptions {
     private Entity peggedEntity;
     @Nullable
     private Vec3d peggedEntityOffset;
+    @NotNull
+    private ShipEntityDeathBehavior entityDeathBehavior = ShipEntityDeathBehavior.DETACH;
 
     /**
      * Set a blacklist for the blocks that Rifted Valkyrium will ignore when building a {@link IPhysicsEntity}.
@@ -89,12 +92,28 @@ public final class ShipBuildOptions {
      * This pegs this ship to an entity. This means that it is attached to said entity.
      * */
     public ShipBuildOptions setEntityPeggedTo(Entity entity) {
-        return this.setEntityPeggedTo(entity, Vec3d.ZERO);
+        return this.setEntityPeggedTo(entity, Vec3d.ZERO, ShipEntityDeathBehavior.DETACH);
     }
 
+    /**
+     * This pegs this ship to an entity. This means that it is attached to said entity.
+     * By default it uses the position of the entity, but it can be offsetted.
+     * */
     public ShipBuildOptions setEntityPeggedTo(Entity entity, Vec3d peggedEntityOffset) {
+        return this.setEntityPeggedTo(entity, peggedEntityOffset, ShipEntityDeathBehavior.DETACH);
+    }
+
+    public ShipBuildOptions setEntityPeggedTo(Entity entity, ShipEntityDeathBehavior entityDeathBehavior) {
+        return this.setEntityPeggedTo(entity, Vec3d.ZERO, entityDeathBehavior);
+    }
+
+    /**
+     * Chooses whether the carrier's death detaches the ship, breaks its blocks, or deletes it.
+     */
+    public ShipBuildOptions setEntityPeggedTo(Entity entity, Vec3d peggedEntityOffset, ShipEntityDeathBehavior entityDeathBehavior) {
         this.peggedEntity = entity;
         this.peggedEntityOffset = peggedEntityOffset;
+        this.entityDeathBehavior = entityDeathBehavior;
         return this;
     }
 
@@ -106,5 +125,10 @@ public final class ShipBuildOptions {
     @Nullable
     public Vec3d getPeggedEntityOffset() {
         return this.peggedEntityOffset;
+    }
+
+    @NotNull
+    public ShipEntityDeathBehavior getEntityDeathBehavior() {
+        return this.entityDeathBehavior;
     }
 }

@@ -321,3 +321,11 @@ vs_world.general.valkyriumoregenenabled.tooltip=El valor predeterminado es verda
 # Minimap integration
 valkyrienskies.general.showshipinminimapmods=Mostrar barcos en los mods de minimapa
 valkyrienskies.general.showshipinminimapmods.tooltip=Mostrar los barcos cargados en los mods de mapa compatibles. Compatible con Xaero's Minimap, Xaero's World Map y JourneyMap.
+
+itemGroup.rifted_valkyrium_debug=Depuración de Rifted Valkyrium
+item.entity_ship_linker_stick.name=Vara de enlace entre entidad y nave
+tooltip.valkyrienskies.linker.usage=Haz clic derecho en un bloque de una nave y luego en una entidad para colocar la plataforma sobre su lomo.
+message.valkyrienskies.linker.select_ship=Primero haz clic derecho en un bloque de una nave para seleccionarla.
+message.valkyrienskies.linker.selected=Se seleccionó %s. Haz clic derecho en una entidad para enlazarla.
+message.valkyrienskies.linker.ship_missing=La nave seleccionada ya no existe en este mundo.
+message.valkyrienskies.linker.linked=Se enlazó %s a %s.

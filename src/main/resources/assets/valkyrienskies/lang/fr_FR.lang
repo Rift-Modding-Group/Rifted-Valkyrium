@@ -325,3 +325,11 @@ vs_world.general.valkyriumoregenenabled.tooltip=Default is true. Set to false to
 # Minimap integration
 valkyrienskies.general.showshipinminimapmods=Afficher les navires sur les mods de carte
 valkyrienskies.general.showshipinminimapmods.tooltip=Afficher les navires chargés sur les mods de carte compatibles. Compatible avec Xaero's Minimap, Xaero's World Map et JourneyMap.
+
+itemGroup.rifted_valkyrium_debug=Débogage de Rifted Valkyrium
+item.entity_ship_linker_stick.name=Bâton de liaison entre entité et vaisseau
+tooltip.valkyrienskies.linker.usage=Faites un clic droit sur un bloc de vaisseau, puis sur une entité pour placer la plateforme sur son dos.
+message.valkyrienskies.linker.select_ship=Sélectionnez d’abord un vaisseau par un clic droit sur l’un de ses blocs.
+message.valkyrienskies.linker.selected=Vaisseau sélectionné : %s. Faites un clic droit sur une entité pour le lier.
+message.valkyrienskies.linker.ship_missing=Le vaisseau sélectionné n’existe plus dans ce monde.
+message.valkyrienskies.linker.linked=Vaisseau %s lié à %s.

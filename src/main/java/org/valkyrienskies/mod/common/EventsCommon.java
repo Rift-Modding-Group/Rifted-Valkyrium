@@ -7,14 +7,21 @@ import net.minecraft.entity.item.EntityFallingBlock;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.util.EnumActionResult;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.text.TextComponentTranslation;
 import net.minecraft.world.Explosion;
 import net.minecraft.world.World;
 import net.minecraft.world.EnumSkyBlock;
+import net.minecraft.world.WorldServer;
 import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.event.entity.living.LivingDropsEvent;
+import net.minecraftforge.event.entity.living.LivingDeathEvent;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.world.ChunkEvent;
 import net.minecraftforge.event.world.ExplosionEvent;
 import net.minecraftforge.event.world.WorldEvent;
@@ -32,17 +39,68 @@ import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMount;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
 import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
+import org.valkyrienskies.mod.common.item.ItemEntityShipLinkerStick;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
 import org.valkyrienskies.mod.common.ships.ship_world.*;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import valkyrienwarfare.api.TransformType;
+import valkyrienwarfare.api.IShipData;
+import valkyrienwarfare.api.RiftedValkyriumAPI;
+import valkyrienwarfare.api.ShipEntityDeathBehavior;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @EventBusSubscriber(modid = ValkyrienSkiesMod.MOD_ID)
 public class EventsCommon {
     private static final int PLAYER_WORLD_LIMIT = 27_000_000;
+
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public static void onEntityInteract(@NotNull PlayerInteractEvent.EntityInteract event) {
+        handleEntityShipLink(event, event.getTarget());
+    }
+
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public static void onEntityInteractSpecific(@NotNull PlayerInteractEvent.EntityInteractSpecific event) {
+        handleEntityShipLink(event, event.getTarget());
+    }
+
+    private static void handleEntityShipLink(@NotNull PlayerInteractEvent event, @NotNull Entity target) {
+        ItemStack stack = event.getItemStack();
+        if (!(stack.getItem() instanceof ItemEntityShipLinkerStick)) return;
+        event.setCanceled(true);
+        event.setCancellationResult(EnumActionResult.SUCCESS);
+        if (!(event.getWorld() instanceof WorldServer world)) return;
+
+        EntityPlayer player = event.getEntityPlayer();
+        NBTTagCompound tag = stack.getTagCompound();
+        UUID selectedShipId = tag == null ? null : tag.getUniqueId(ItemEntityShipLinkerStick.SELECTED_SHIP);
+        if (tag == null || !tag.hasUniqueId(ItemEntityShipLinkerStick.SELECTED_SHIP) || selectedShipId == null
+                || tag.getInteger(ItemEntityShipLinkerStick.SELECTED_DIMENSION) != world.provider.getDimension()
+        ) {
+            player.sendStatusMessage(new TextComponentTranslation("message.valkyrienskies.linker.select_ship"), true);
+            return;
+        }
+
+        IShipData ship = RiftedValkyriumAPI.getShipByUUID(world, selectedShipId).orElse(null);
+        if (ship == null) {
+            player.sendStatusMessage(new TextComponentTranslation("message.valkyrienskies.linker.ship_missing"), true);
+            return;
+        }
+
+        if (target.isDead) return;
+
+        AxisAlignedBB bounds = target.getEntityBoundingBox();
+        RiftedValkyriumAPI.linkShipToEntity(
+                world, ship, target, new Vec3d(0D, bounds.maxY - bounds.minY, 0D),
+                ShipEntityDeathBehavior.DELETE_SHIP
+        );
+        tag.removeTag(ItemEntityShipLinkerStick.SELECTED_SHIP + "Most");
+        tag.removeTag(ItemEntityShipLinkerStick.SELECTED_SHIP + "Least");
+        tag.removeTag(ItemEntityShipLinkerStick.SELECTED_DIMENSION);
+        player.sendStatusMessage(new TextComponentTranslation("message.valkyrienskies.linker.linked", ship.getName(), target.getDisplayName()), true);
+    }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onEntityJoinWorldEvent(EntityJoinWorldEvent event) {
@@ -74,6 +132,15 @@ public class EventsCommon {
 
             EntityPlayer thrower = entityItem.world.getPlayerEntityByName(throwerName);
             if (thrower != null) EntityDraggable.copyShipTracking(thrower, entityItem);
+        }
+    }
+
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void onLivingDeath(@NotNull LivingDeathEvent event) {
+        if (event.getEntityLiving().world.isRemote) return;
+        IPhysObjectWorld shipWorld = ValkyrienUtils.getPhysObjWorld(event.getEntityLiving().world);
+        if (shipWorld instanceof WorldServerShipManager manager) {
+            manager.onCarrierDeath(event.getEntityLiving());
         }
     }
 

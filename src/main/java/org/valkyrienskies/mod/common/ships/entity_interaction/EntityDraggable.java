@@ -77,7 +77,7 @@ public class EntityDraggable {
                     || entityBox.maxZ <= boatBox.minZ || entityBox.minZ >= boatBox.maxZ) continue;
 
             ShipData boatShip = getActiveShip(boat);
-            if (boatShip != null) return boatShip;
+            if (boatShip != null && !boatShip.isPeggedTo(entity)) return boatShip;
         }
         return null;
     }
@@ -93,7 +93,8 @@ public class EntityDraggable {
         if (draggable == null) return null;
 
         ShipData carryingShip = draggable.getLastTouchedShip();
-        if (carryingShip == null || draggable.getTicksSinceTouchedShip() >= VSConfig.ticksToStickToShip) return null;
+        if (carryingShip == null || carryingShip.isPeggedTo(entity)
+                || draggable.getTicksSinceTouchedShip() >= VSConfig.ticksToStickToShip) return null;
 
         IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(entity.world);
         if (physObjectWorld == null) return null;
@@ -109,7 +110,7 @@ public class EntityDraggable {
     public static boolean startTrackingShip(@NotNull Entity entity, @NotNull ShipData ship) {
         // EntityMountable already derives its position from the ship every tick.
         // Generic dragging would apply the ship transform a second time to it and its passengers.
-        if (entity instanceof EntityMountable) return false;
+        if (entity instanceof EntityMountable || ship.isPeggedTo(entity)) return false;
 
         IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
         if (draggable == null) return false;
@@ -190,6 +191,18 @@ public class EntityDraggable {
         IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
         if (draggable == null) return;
 
+        //entity pegged to ship also counts as touchin le ship
+        ShipData trackedShip = draggable.getLastTouchedShip();
+        if (trackedShip != null && trackedShip.isPeggedTo(entity)) {
+            draggable.setLastTouchedShip(null);
+            draggable.setTicksSinceTouchedShip(VSConfig.ticksToStickToShip);
+            draggable.setAddedLinearVelocity(new Vector3d());
+            draggable.setAddedYawVelocity(0D);
+            draggable.clearPendingShipPosition();
+            ShipLocalEntityMovementData movementData = draggable.getShipLocalMovementData();
+            if (movementData != null) movementData.clear();
+        }
+
         //make sure entities ridin on another entity thats on a ship get dragged along too
         if (entity.isRiding()) {
             EntityShipMountData mountData = ValkyrienUtils.getMountedShipAndPos(entity);
@@ -225,7 +238,7 @@ public class EntityDraggable {
 
             ShipData pendingShip = worldData.get().getQueryableShipData().getShip(pendingShipId).orElse(null);
             if (pendingShip == null && entity.world.isRemote) return;
-            if (pendingShip == null) draggable.clearPendingShipPosition();
+            if (pendingShip == null || pendingShip.isPeggedTo(entity)) draggable.clearPendingShipPosition();
             else {
                 Vector3d worldPosition = new Vector3d(pendingLocalPosition);
                 pendingShip.getShipTransform().transformPosition(worldPosition, TransformType.SUBSPACE_TO_GLOBAL);
@@ -273,6 +286,11 @@ public class EntityDraggable {
                 PhysicsObject physicsObject = physObjectWorld == null || shipLocalMovementData.getShipUuid() == null
                         ? null : physObjectWorld.getPhysObjectFromUUID(shipLocalMovementData.getShipUuid());
                 if (physicsObject == null) return;
+
+                if (physicsObject.getShipData().isPeggedTo(entity)) {
+                    shipLocalMovementData.clear();
+                    return;
+                }
 
                 ShipTransform currentShipTransform = physicsObject.getShipTransformationManager().getCurrentTickTransform();
                 shipLocalMovementData.initializeIfNeeded(

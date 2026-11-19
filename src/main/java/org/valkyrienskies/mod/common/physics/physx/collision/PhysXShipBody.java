@@ -43,6 +43,7 @@ import physx.physics.PxRigidDynamic;
 import physx.physics.PxScene;
 import physx.physics.PxShape;
 import valkyrienwarfare.api.TransformType;
+import org.valkyrienskies.mod.common.ships.ShipEntityAttachment;
 
 import java.util.*;
 
@@ -76,6 +77,8 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
     private double lastAppliedMass;
     @Nullable
     private BlockSectionList.CollisionSnapshot terrainSnapshot;
+    @Nullable
+    private ShipEntityAttachment lastEntityAttachment;
 
     public PhysXShipBody(
             @NotNull PhysXShipBody.Identifier identifier, @NotNull PxPhysics physics, @NotNull PxScene scene,
@@ -124,7 +127,9 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
         PhysicsCalculations calculations = this.ship.getPhysicsCalculations();
         PxRigidDynamic shipActor = (PxRigidDynamic) this.actor;
         boolean wasKinematic = this.kinematic;
-        boolean stationary = !this.ship.isPhysicsEnabled() || !this.ship.isPhysicsReady()
+        ShipEntityAttachment entityAttachment = this.ship.getShipData().entityAttachment;
+        boolean stationary = entityAttachment != null
+            || !this.ship.isPhysicsEnabled() || !this.ship.isPhysicsReady()
             || !terrainSnapshot.isReadyFor(this.ship.getPhysicsTransformAABB());
         if (stationary != this.kinematic) {
             // Kinematic actors retain contacts with moving bodies and require CCD to be disabled.
@@ -166,6 +171,19 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
             this.massPropertiesDirty = true;
         }
 
+        ShipTransform attachmentTransform = null;
+        if (entityAttachment != null) attachmentTransform = this.ship.entityAttachmentTransform;
+        if (attachmentTransform != null) {
+            Vector3d centerPosition = new Vector3d(currentCenterOfMass);
+            attachmentTransform.transformPosition(centerPosition, TransformType.SUBSPACE_TO_GLOBAL);
+            ShipTransform targetTransform = new ShipTransform(
+                    centerPosition, attachmentTransform.rotationQuaternion(TransformType.SUBSPACE_TO_GLOBAL),
+                    new Vector3d(currentCenterOfMass)
+            );
+            this.ship.getShipTransformationManager().updatePreviousPhysicsTransform();
+            this.ship.getShipTransformationManager().setCurrentPhysicsTransform(targetTransform);
+        }
+
         //rotate the ship inertia tensor into world space for this physics step.
         Matrix3dc rotationMatrix = this.ship.getShipTransformationManager()
                 .getCurrentPhysicsTransform().createRotationMatrix(TransformType.SUBSPACE_TO_GLOBAL);
@@ -203,7 +221,15 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
 
         //synchronize commanded poses and keep paused ships available as stationary colliders
         boolean forceGameTransform = calculations.setForceToUseGameTransform(false);
-        if (this.firstSync || forceGameTransform) {
+        if (attachmentTransform != null) {
+            ShipTransform targetTransform = this.ship.getShipTransformationManager().getCurrentPhysicsTransform();
+            if (this.firstSync || entityAttachment != this.lastEntityAttachment) this.forcePose(targetTransform);
+            this.lastEntityAttachment = entityAttachment;
+            PxTransform targetPose = createActorPose(this.ship, targetTransform);
+            shipActor.setKinematicTarget(targetPose);
+            targetPose.destroy();
+        }
+        else if (this.firstSync || forceGameTransform) {
             this.forcePose(this.ship.getShipData().getShipTransform());
         }
         else if (this.kinematic || wasKinematic || this.centerOfMassPoseDirty) {
@@ -215,8 +241,14 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
             calculations.getAngularVelocity().zero();
         }
         if (this.kinematic) {
-            this.ship.getShipData().getPhysicsData().setLinearVelocity(new Vector3d());
-            this.ship.getShipData().getPhysicsData().setAngularVelocity(new Vector3d());
+            if (attachmentTransform != null) {
+                calculations.getLinearVelocity().set(this.ship.getPhysicsData().getLinearVelocity());
+                calculations.getAngularVelocity().set(this.ship.getPhysicsData().getAngularVelocity());
+            }
+            else {
+                this.ship.getShipData().getPhysicsData().setLinearVelocity(new Vector3d());
+                this.ship.getShipData().getPhysicsData().setAngularVelocity(new Vector3d());
+            }
             this.firstSync = false;
             return;
         }

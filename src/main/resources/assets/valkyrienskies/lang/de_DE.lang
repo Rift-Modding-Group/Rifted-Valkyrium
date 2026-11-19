@@ -326,3 +326,11 @@ vs_world.general.valkyriumoregenenabled.tooltip=Default is true. Set to false to
 # Minimap integration
 valkyrienskies.general.showshipinminimapmods=Schiffe in Minikarten-Mods anzeigen
 valkyrienskies.general.showshipinminimapmods.tooltip=Geladene Schiffe in unterstützten Karten-Mods anzeigen. Unterstützt Xaero's Minimap, Xaero's World Map und JourneyMap.
+
+itemGroup.rifted_valkyrium_debug=Rifted Valkyrium Debug
+item.entity_ship_linker_stick.name=Schiff-Kreatur-Verknüpfungsstab
+tooltip.valkyrienskies.linker.usage=Rechtsklicke auf einen Schiffsblock und dann auf eine Kreatur, um die Plattform auf ihrem Rücken zu platzieren.
+message.valkyrienskies.linker.select_ship=Wähle zuerst ein Schiff durch Rechtsklick auf einen seiner Blöcke aus.
+message.valkyrienskies.linker.selected=%s ausgewählt. Rechtsklicke auf eine Kreatur, um das Schiff zu verknüpfen.
+message.valkyrienskies.linker.ship_missing=Das ausgewählte Schiff existiert in dieser Welt nicht mehr.
+message.valkyrienskies.linker.linked=%s wurde mit %s verknüpft.

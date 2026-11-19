@@ -326,3 +326,11 @@ vs_world.general.valkyriumoregenenabled.tooltip=Arr, the standards allow it. Let
 # Minimap integration
 valkyrienskies.general.showshipinminimapmods=Show Ships on Minimap Charts
 valkyrienskies.general.showshipinminimapmods.tooltip=Chart loaded ships on supported chart mods. Supports Xaero's Wee Chart, Xaero's World Chart, and JourneyChart, arr!
+
+itemGroup.rifted_valkyrium_debug=Rifted Valkyrium Debug
+item.entity_ship_linker_stick.name=Beast 'n Ship Linkin' Stick
+tooltip.valkyrienskies.linker.usage=Right-click a ship block, then a beast to put the deck on its back.
+message.valkyrienskies.linker.select_ship=Right-click a ship block to choose yer vessel first.
+message.valkyrienskies.linker.selected=Chose %s. Right-click a beast to link it.
+message.valkyrienskies.linker.ship_missing=Yer chosen vessel be gone from this world.
+message.valkyrienskies.linker.linked=Lashed %s to %s.

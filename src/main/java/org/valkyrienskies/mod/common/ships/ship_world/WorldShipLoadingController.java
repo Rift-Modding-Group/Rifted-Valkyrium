@@ -1,8 +1,10 @@
 package org.valkyrienskies.mod.common.ships.ship_world;
 
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.network.play.server.SPacketChunkData;
+import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
@@ -14,7 +16,11 @@ import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.network.ShipIndexDataMessage;
 import org.valkyrienskies.mod.common.ships.QueryableShipData;
 import org.valkyrienskies.mod.common.ships.ShipData;
+import org.valkyrienskies.mod.common.ships.ShipEntityAttachment;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
+import org.valkyrienskies.mod.common.util.TransformedAABB;
+import valkyrienwarfare.api.TransformType;
+import valkyrienwarfare.api.ShipEntityDeathBehavior;
 
 import java.util.*;
 
@@ -39,6 +45,30 @@ class WorldShipLoadingController {
     void determineLoadAndUnload() {
         for (ShipData data : QueryableShipData.get(shipManager.getWorld())) {
             ShipTransform transform = data.getShipTransform();
+            ShipEntityAttachment attachment = data.entityAttachment;
+            if (data.entityCarrierDead && attachment != null && attachment.entityDeathBehavior() != ShipEntityDeathBehavior.DETACH) {
+                if (this.shipManager.getPhysObjectFromUUID(data.getUuid()) == null) {
+                    this.shipManager.queueShipLoad(data.getUuid());
+                }
+                continue;
+            }
+            if (attachment != null) {
+                Entity carrier = this.shipManager.getWorld().getEntityFromUuid(attachment.entityUuid());
+                if (carrier != null && !carrier.isDead) {
+                    transform = attachment.createTransform(carrier, data.getEntityAttachmentPoint(), transform.getCenterCoord());
+                    if (this.shipManager.getPhysObjectFromUUID(data.getUuid()) == null) {
+                        data.setShipTransform(transform);
+                        data.setPrevTickShipTransform(transform);
+                        if (data.blockPositions != null) {
+                            AxisAlignedBB localBounds = data.blockPositions.makeAABB();
+                            if (localBounds != null) {
+                                data.setShipBB(new TransformedAABB(localBounds.expand(1, 1, 1), transform,
+                                        TransformType.SUBSPACE_TO_GLOBAL).getEnclosedAABB());
+                            }
+                        }
+                    }
+                }
+            }
             Vec3d shipPos = transform.getShipPositionVec3d();
             if (shipManager.getPhysObjectFromUUID(data.getUuid()) == null) {
                 if (existsPlayerWithinDistanceXZ(shipManager.getWorld(), shipPos, VSConfig.SHIP_LOADING_SETTINGS.loadDistance)) {

@@ -171,6 +171,9 @@ public record QueryableShipData(ConcurrentUpdatableIndexedCollection<ShipData> a
 
             // old.get().setName(ship.getName());
             old.get().setPhysicsEnabled(ship.isPhysicsEnabled());
+            old.get().entityAttachment = ship.entityAttachment;
+            old.get().entityAttachmentPoint = ship.entityAttachmentPoint;
+            old.get().shipBounds = ship.shipBounds;
             // Update inertia data
             old.get().getInertiaData().setGameMoITensor(ship.getInertiaData().getGameMoITensor());
             old.get().getInertiaData().setGameTickMass(ship.getInertiaData().getGameTickMass());

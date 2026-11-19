@@ -1,10 +1,12 @@
 package org.valkyrienskies.mod.common.ships.ship_transform;
 
+import net.minecraft.entity.Entity;
 import net.minecraft.util.math.AxisAlignedBB;
 import org.joml.Quaterniond;
 import org.joml.Quaterniondc;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
+import org.valkyrienskies.mod.common.ships.ShipEntityAttachment;
 import org.valkyrienskies.mod.common.util.TransformedAABB;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import valkyrienwarfare.api.TransformType;
@@ -170,13 +172,25 @@ public class ShipTransformationManager {
     }
 
     public void updateRenderTransform(double partialTick) {
+        ShipEntityAttachment attachment = this.parent.getShipData().entityAttachment;
+        Entity carrier = this.parent.getEntityPeggedTo();
+        if (attachment != null && carrier != null) {
+            this.renderTransform = attachment.createTransform(
+                    carrier, partialTick,
+                    this.parent.getShipData().getEntityAttachmentPoint(), this.currentTickTransform.getCenterCoord()
+            );
+            return;
+        }
+
         if (partialTick == 0) {
             renderTransform = prevTickTransform;
             return;
-        } else if (partialTick == 1) {
+        }
+        else if (partialTick == 1) {
             renderTransform = currentTickTransform;
             return;
         }
+
         ShipTransform prev = prevTickTransform;
         ShipTransform cur = currentTickTransform;
         Vector3dc shipCenter = parent.getCenterCoord();
