@@ -20,7 +20,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Pins the initial bottom center of a platform to an entity-local offset while preserving its initial rotation.
+ * Pins the initial bottom center of a platform to an entity-local offset and follows its body heading.
  */
 public record ShipEntityAttachment(
         @JsonProperty("entityUuid") @NotNull UUID entityUuid,
@@ -90,7 +90,9 @@ public record ShipEntityAttachment(
     public static ShipEntityAttachment create(@NotNull Entity entity, @NotNull Vec3d offset, @NotNull ShipTransform transform,
                                               @NotNull ShipEntityDeathBehavior entityDeathBehavior) {
         Quaterniond rotation = transform.rotationQuaternion(TransformType.SUBSPACE_TO_GLOBAL);
-        return new ShipEntityAttachment(entity.getUniqueID(), offset.x, offset.y, offset.z, getEntityYaw(entity),
+        Vector3d forward = rotation.transform(new Vector3d(0D, 0D, 1D));
+        double shipYaw = -Math.toDegrees(Math.atan2(forward.x, forward.z));
+        return new ShipEntityAttachment(entity.getUniqueID(), offset.x, offset.y, offset.z, shipYaw,
                 rotation.x, rotation.y, rotation.z, rotation.w, entityDeathBehavior);
     }
 

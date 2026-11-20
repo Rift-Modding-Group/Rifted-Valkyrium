@@ -111,7 +111,7 @@ public class RiftedValkyriumAPIProvider implements RiftedValkyriumAPI.Provider {
             Vec3d offset = shipBuildOptions.getPeggedEntityOffset();
             if (offset == null) offset = Vec3d.ZERO;
             entityAttachment = new ShipEntityAttachment(peggedEntity.getUniqueID(), offset.x, offset.y, offset.z,
-                    ShipEntityAttachment.getEntityYaw(peggedEntity), shipBuildOptions.getEntityDeathBehavior());
+                    0D, shipBuildOptions.getEntityDeathBehavior());
         }
 
         BlockPos assemblyPosition = new BlockPos(initialPosition.x, initialPosition.y, initialPosition.z);
