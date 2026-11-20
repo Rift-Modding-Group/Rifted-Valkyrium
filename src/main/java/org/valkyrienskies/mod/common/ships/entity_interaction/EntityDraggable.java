@@ -124,6 +124,29 @@ public class EntityDraggable {
     }
 
     /**
+     * Releases only contact, restoration, and interpolation state belonging to an unloaded ship.
+     * */
+    public static void clearUnloadedShipTracking(@NotNull IEntityShipDraggable draggable, @NotNull UUID shipId) {
+        ShipData touchedShip = draggable.getLastTouchedShip();
+        if (touchedShip != null && shipId.equals(touchedShip.getUuid())) {
+            draggable.setLastTouchedShip(null);
+            draggable.setTicksSinceTouchedShip(VSConfig.ticksToStickToShip);
+            draggable.setTicksPartOfGround(0);
+            draggable.setAddedLinearVelocity(new Vector3d());
+            draggable.setAddedYawVelocity(0D);
+            draggable.setRenderRelativeMovement(null);
+            draggable.setTicksAirPocket(0);
+        }
+        if (shipId.equals(draggable.getPendingShipId())) draggable.clearPendingShipPosition();
+
+        ShipLocalEntityMovementData movementData = draggable.getShipLocalMovementData();
+        if (movementData != null && shipId.equals(movementData.getShipUuid())) {
+            movementData.clear();
+            draggable.setRenderRelativeMovement(null);
+        }
+    }
+
+    /**
      * Copies the active ship coordinate frame from an entity to another entity it spawned.
      * Helps out with XP orbs from dead mobs and thrown/dropped items by other entities.
      */

@@ -66,6 +66,15 @@ public class EntityCollisionObject {
         double movMaxFixMin = playerMin - blockMax;
         double movMinFixMax = playerMax - blockMin;
 
+        // Allow motion parallel to or away from a touching surface.
+        if (movMaxFixMin >= -1.0E-7D && this.velDot <= 0D
+                || movMinFixMax <= 1.0E-7D && this.velDot >= 0D
+        ) {
+            this.separated = true;
+            this.penetrationDistance = 0D;
+            return;
+        }
+
         boolean useDefault = true;
         // Treat an approaching surface contact as a swept collision, including transform rounding.
         boolean approachingContact = movMaxFixMin >= -1.0E-7D && this.velDot > 0D || movMinFixMax <= 1.0E-7D && this.velDot < 0D;

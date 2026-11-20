@@ -5,6 +5,9 @@ import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.RayTraceResult;
+import org.jetbrains.annotations.Nullable;
+import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
@@ -111,7 +114,7 @@ public class RiftedValkyriumAPIProvider implements RiftedValkyriumAPI.Provider {
             Vec3d offset = shipBuildOptions.getPeggedEntityOffset();
             if (offset == null) offset = Vec3d.ZERO;
             entityAttachment = new ShipEntityAttachment(peggedEntity.getUniqueID(), offset.x, offset.y, offset.z,
-                    0D, shipBuildOptions.getEntityDeathBehavior());
+                    0D, 0D, 0D, 0D, 1D, shipBuildOptions.getEntityDeathBehavior(), shipBuildOptions.getPeggedEntityLocator());
         }
 
         BlockPos assemblyPosition = new BlockPos(initialPosition.x, initialPosition.y, initialPosition.z);
@@ -167,7 +170,7 @@ public class RiftedValkyriumAPIProvider implements RiftedValkyriumAPI.Provider {
     }
 
     @Override
-    public void linkShipToEntity(WorldServer world, IShipData ship, Entity entity, Vec3d offset, ShipEntityDeathBehavior entityDeathBehavior) {
+    public void linkShipToEntity(WorldServer world, IShipData ship, Entity entity, Vec3d offset, ShipEntityDeathBehavior entityDeathBehavior, @org.jetbrains.annotations.Nullable String locator) {
         if (!world.isCallingFromMinecraftThread()) {
             throw new IllegalStateException("Ships must be linked on the owning world's server thread");
         }
@@ -176,7 +179,13 @@ public class RiftedValkyriumAPIProvider implements RiftedValkyriumAPI.Provider {
         }
         ShipData data = this.getWorldDataCapability(world).get().getQueryableShipData().getShip(ship.getUuid())
                 .orElseThrow(() -> new IllegalArgumentException("Ship does not belong to this world"));
-        ShipEntityAttachment attachment = ShipEntityAttachment.create(entity, offset, data.getShipTransform(), entityDeathBehavior);
+        if (data.entityAttachment != null && data.entityAttachment.entityUuid().equals(entity.getUniqueID())) {
+            // Offset updates retain the rotation reference and let the regular ship tick advance motion.
+            data.entityAttachment = ShipEntityAttachment.updateOffset(data.entityAttachment, offset, entityDeathBehavior, locator);
+            data.entityCarrierDead = false;
+            return;
+        }
+        ShipEntityAttachment attachment = ShipEntityAttachment.create(entity, offset, data.getShipTransform(), entityDeathBehavior, locator);
         data.entityAttachment = attachment;
         data.entityCarrierDead = false;
         data.entityAttachmentPoint = null;
@@ -190,6 +199,43 @@ public class RiftedValkyriumAPIProvider implements RiftedValkyriumAPI.Provider {
             PhysicsObject physicsObject = shipWorld.getPhysObjectFromUUID(data.getUuid());
             if (physicsObject != null) physicsObject.entityAttachmentTransform = transform;
         }
+    }
+
+
+    @Override
+    @Nullable
+    public RayTraceResult rayTraceBlocksIgnoringCarrierShip(
+            World world, Entity carrier, Vec3d start, Vec3d end,
+            boolean stopOnLiquid, boolean ignoreBlocksWithoutBounds, boolean returnLastMiss
+    ) {
+        IShipWorld shipWorld = world.getCapability(VSCapabilityRegistry.VS_SHIP_WORLD, null);
+        IPhysObjectWorld manager = ValkyrienUtils.getPhysObjWorld(world);
+        PhysicsObject ignored = null;
+        if (manager != null) {
+            for (PhysicsObject ship : manager.getAllLoadedThreadSafe()) {
+                if (ship.getShipData().isPeggedTo(carrier)) {
+                    ignored = ship;
+                    break;
+                }
+            }
+        }
+        if (shipWorld == null || ignored == null) {
+            return world.rayTraceBlocks(start, end, stopOnLiquid, ignoreBlocksWithoutBounds, returnLastMiss);
+        }
+        PhysicsObject previous = shipWorld.getDontInterceptShip().get();
+        shipWorld.getDontInterceptShip().set(ignored);
+        RayTraceResult result;
+        try {
+            result = world.rayTraceBlocks(start, end, stopOnLiquid, ignoreBlocksWithoutBounds, returnLastMiss);
+        }
+        catch (RuntimeException | Error failure) {
+            if (previous == null) shipWorld.getDontInterceptShip().remove();
+            else shipWorld.getDontInterceptShip().set(previous);
+            throw failure;
+        }
+        if (previous == null) shipWorld.getDontInterceptShip().remove();
+        else shipWorld.getDontInterceptShip().set(previous);
+        return result;
     }
 
     @Override

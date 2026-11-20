@@ -23,6 +23,8 @@ public final class ShipBuildOptions {
     private Entity peggedEntity;
     @Nullable
     private Vec3d peggedEntityOffset;
+    @Nullable
+    private String peggedEntityLocator;
     @NotNull
     private ShipEntityDeathBehavior entityDeathBehavior = ShipEntityDeathBehavior.DETACH;
 
@@ -111,10 +113,22 @@ public final class ShipBuildOptions {
      * Chooses whether the carrier's death detaches the ship, breaks its blocks, or deletes it.
      */
     public ShipBuildOptions setEntityPeggedTo(Entity entity, Vec3d peggedEntityOffset, ShipEntityDeathBehavior entityDeathBehavior) {
+        return this.setEntityPeggedTo(entity, peggedEntityOffset, entityDeathBehavior, null);
+    }
+
+    /** An optional RiftLibrary locator makes the offset relative to its animated pose. */
+    public ShipBuildOptions setEntityPeggedTo(Entity entity, Vec3d peggedEntityOffset, ShipEntityDeathBehavior entityDeathBehavior,
+                                            @Nullable String locator) {
         this.peggedEntity = entity;
         this.peggedEntityOffset = peggedEntityOffset;
         this.entityDeathBehavior = entityDeathBehavior;
+        this.peggedEntityLocator = locator;
         return this;
+    }
+
+    @Nullable
+    public String getPeggedEntityLocator() {
+        return this.peggedEntityLocator;
     }
 
     @Nullable

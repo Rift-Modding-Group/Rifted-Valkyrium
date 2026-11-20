@@ -5,6 +5,7 @@ import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
@@ -260,7 +261,28 @@ public class RiftedValkyriumAPI {
             WorldServer world, IShipData shipData, Entity entity, Vec3d offset,
             ShipEntityDeathBehavior entityDeathBehavior
     ) {
-        provider.linkShipToEntity(world, shipData, entity, offset, entityDeathBehavior);
+        linkShipToEntity(world, shipData, entity, offset, entityDeathBehavior, null);
+    }
+
+    /**
+     * Links to an optional RiftLibrary locator; the offset is then local to that locator.
+     * */
+    public static void linkShipToEntity(
+            WorldServer world, IShipData shipData, Entity entity, Vec3d offset,
+            ShipEntityDeathBehavior entityDeathBehavior, @Nullable String locator
+    ) {
+        provider.linkShipToEntity(world, shipData, entity, offset, entityDeathBehavior, locator);
+    }
+
+    /**
+     * Traces terrain and other ships while ignoring the ship attached to this carrier.
+     * */
+    @Nullable
+    public static RayTraceResult rayTraceBlocksIgnoringCarrierShip(
+            World world, Entity carrier, Vec3d start, Vec3d end,
+            boolean stopOnLiquid, boolean ignoreBlocksWithoutBounds, boolean returnLastMiss
+    ) {
+        return provider.rayTraceBlocksIgnoringCarrierShip(world, carrier, start, end, stopOnLiquid, ignoreBlocksWithoutBounds, returnLastMiss);
     }
 
     /**
@@ -385,7 +407,13 @@ public class RiftedValkyriumAPI {
         @NotNull
         IShipData createNewShip(WorldServer world, Vec3d initialPosition, AxisAlignedBB initialBounds, ShipBuildOptions shipBuildOptions);
 
-        void linkShipToEntity(WorldServer world, IShipData shipData, Entity entity, Vec3d offset, ShipEntityDeathBehavior entityDeathBehavior);
+        void linkShipToEntity(WorldServer world, IShipData shipData, Entity entity, Vec3d offset, ShipEntityDeathBehavior entityDeathBehavior, @Nullable String locator);
+
+        @Nullable
+        RayTraceResult rayTraceBlocksIgnoringCarrierShip(
+                World world, Entity carrier, Vec3d start, Vec3d end,
+                boolean stopOnLiquid, boolean ignoreBlocksWithoutBounds, boolean returnLastMiss
+        );
 
         @NotNull
         List<IShipData> getAllShips(World world);
@@ -447,8 +475,17 @@ public class RiftedValkyriumAPI {
         }
 
         @Override
-        public void linkShipToEntity(WorldServer world, IShipData shipData, Entity entity, Vec3d offset, ShipEntityDeathBehavior entityDeathBehavior) {
+        public void linkShipToEntity(WorldServer world, IShipData shipData, Entity entity, Vec3d offset, ShipEntityDeathBehavior entityDeathBehavior, @Nullable String locator) {
             throw new IllegalStateException("Rifted Valkyrium has not initialized its API provider");
+        }
+
+        @Override
+        @Nullable
+        public RayTraceResult rayTraceBlocksIgnoringCarrierShip(
+                World world, Entity carrier, Vec3d start, Vec3d end,
+                boolean stopOnLiquid, boolean ignoreBlocksWithoutBounds, boolean returnLastMiss
+        ) {
+            return world.rayTraceBlocks(start, end, stopOnLiquid, ignoreBlocksWithoutBounds, returnLastMiss);
         }
 
         @Override

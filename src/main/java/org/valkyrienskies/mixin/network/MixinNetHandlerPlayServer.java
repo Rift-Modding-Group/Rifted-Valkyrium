@@ -27,7 +27,6 @@ import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShi
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.network.IHasPlayerMovementData;
 import org.valkyrienskies.mod.common.network.PlayerMovementData;
-import org.valkyrienskies.mod.common.ships.QueryableShipData;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.chunk_claims.ShipChunkAllocator;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
@@ -208,28 +207,23 @@ public abstract class MixinNetHandlerPlayServer {
 
             ShipData lastTouchedShip = null;
             if (lastTouchedShipId != null) {
-                QueryableShipData queryableShipData = QueryableShipData.get(world);
-                Optional<ShipData> shipDataOptional = queryableShipData.getShip(lastTouchedShipId);
-                if (shipDataOptional.isPresent()) {
-                    lastTouchedShip = shipDataOptional.get();
+                PhysicsObject shipObject = ValkyrienUtils.getServerShipManager(world).getPhysObjectFromUUID(lastTouchedShipId);
+                if (shipObject == null) {
+                    IEntityShipDraggable draggable = this.player.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
+                    if (draggable != null) EntityDraggable.clearUnloadedShipTracking(draggable, lastTouchedShipId);
+                    return;
+                }
+                lastTouchedShip = shipObject.getShipData();
 
-                    PhysicsObject shipObject = ValkyrienUtils.getServerShipManager(world).getPhysObjectFromUUID(lastTouchedShip.getUuid());
-
-                    //never pass shipyard coordinates to vanilla movement
-                    if (shipObject == null || shipObject.getTicksSinceShipTeleport() > PhysicsObject.TICKS_SINCE_TELEPORT_TO_START_DRAGGING) {
-                        ShipTransform shipTransform = lastTouchedShip.getShipTransform();
-                        shipTransform.transformPosition(playerPosInShip, TransformType.SUBSPACE_TO_GLOBAL);
-                        shipTransform.transformDirection(playerLookInShip, TransformType.SUBSPACE_TO_GLOBAL);
-                    }
-                    else {
-                        // Don't move the player relative to the ship until the TicksSinceShipTeleport timer expires.
-                        playerPosInShip.set(player.posX, player.posY, player.posZ);
-                    }
+                // Transform relative movement only while its ship is loaded and ready to carry entities.
+                if (shipObject.getTicksSinceShipTeleport() > PhysicsObject.TICKS_SINCE_TELEPORT_TO_START_DRAGGING) {
+                    ShipTransform shipTransform = lastTouchedShip.getShipTransform();
+                    shipTransform.transformPosition(playerPosInShip, TransformType.SUBSPACE_TO_GLOBAL);
+                    shipTransform.transformDirection(playerLookInShip, TransformType.SUBSPACE_TO_GLOBAL);
                 }
                 else {
-                    // Rare case, just ignore this
-                    // info.cancel();
-                    return;
+                    // Don't move the player relative to the ship until the TicksSinceShipTeleport timer expires.
+                    playerPosInShip.set(player.posX, player.posY, player.posZ);
                 }
             }
 

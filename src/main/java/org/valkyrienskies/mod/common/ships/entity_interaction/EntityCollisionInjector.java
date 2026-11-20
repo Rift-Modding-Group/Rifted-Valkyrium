@@ -38,6 +38,7 @@ import valkyrienwarfare.api.TransformType;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -152,6 +153,8 @@ public class EntityCollisionInjector {
         // endregion
 
         final Vector3dc velVec = new Vector3d(dx, dy, dz);
+
+        sortCollisionsByTime(colPolys, playerBeforeMove, velVec);
 
         for (ShipCollisionBox shipPoly : colPolys) {
                 try {
@@ -294,6 +297,19 @@ public class EntityCollisionInjector {
 
         return new IntermediateMovementVariableStorage(dxyz, origDxyz, origPosXyz, alreadyOnGround, motionYBefore,
             oldFallDistance, worldBelow.getShipData());
+    }
+
+    /**
+     * Resolves existing support before surfaces reached later during the same movement.
+     * */
+    public static void sortCollisionsByTime(
+            @NotNull List<ShipCollisionBox> blocks, @NotNull TransformedAABB entity, @NotNull Vector3dc motion
+    ) {
+        blocks.sort(Comparator.comparingDouble(block -> {
+            EntityPolygonCollider collision = new EntityPolygonCollider(entity, block, block.normals, motion);
+            if (collision.arePolygonsSeparated()) return 1D;
+            return collision.getCollisionTime();
+        }));
     }
 
     public static void alterEntityMovementPost(Entity entity, IntermediateMovementVariableStorage storage) {
@@ -611,8 +627,7 @@ public class EntityCollisionInjector {
         return ladderCollisions;
     }
 
-    static class ShipCollisionBox extends TransformedAABB {
-
+    public static class ShipCollisionBox extends TransformedAABB {
         final Vector3dc[] normals;
         final PhysicsObject shipFrom;
 

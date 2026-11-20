@@ -71,6 +71,13 @@ class EntityPolygonCollider {
         return collisions;
     }
 
+    double getCollisionTime() {
+        if (!this.originallySeparated) return 0D;
+        EntityCollisionObject contact = this.collisions[this.minDistanceIndex];
+        if (contact.getVelDot() == 0D) return 0D;
+        return Math.clamp(1D + contact.getCollisionPenetrationDistance() / contact.getVelDot(), 0D, 1D);
+    }
+
     int getMinDistanceIndex() {
         return minDistanceIndex;
     }

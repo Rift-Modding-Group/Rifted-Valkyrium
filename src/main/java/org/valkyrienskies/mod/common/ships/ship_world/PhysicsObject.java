@@ -43,6 +43,7 @@ import org.valkyrienskies.mod.common.ships.ShipEntityAttachment;
 import org.valkyrienskies.mod.common.ships.block_relocation.MoveBlocks;
 import org.valkyrienskies.mod.common.ships.chunk_claims.ClaimedChunkCacheController;
 import org.valkyrienskies.mod.common.ships.chunk_claims.VSChunkClaim;
+import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
 import org.valkyrienskies.mod.common.ships.interpolation.ITransformInterpolator;
 import org.valkyrienskies.mod.common.ships.interpolation.SimpleEMATransformInterpolator;
 import org.valkyrienskies.mod.common.ships.physics_data.ShipInertiaData;
@@ -580,6 +581,10 @@ public class PhysicsObject implements IPhysicsEntity {
 
     void unload() {
         this.physicsReady = false;
+        for (Entity entity : this.world.loadedEntityList) {
+            IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
+            if (draggable != null) EntityDraggable.clearUnloadedShipTracking(draggable, this.shipData.getUuid());
+        }
         this.maintenanceProviders.clear();
         watchingPlayers.clear();
         this.physicsCollideWith.close();

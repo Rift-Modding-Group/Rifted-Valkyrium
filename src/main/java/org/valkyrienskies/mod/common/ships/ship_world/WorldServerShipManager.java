@@ -169,6 +169,9 @@ public class WorldServerShipManager implements IPhysObjectWorld {
             if (!data.entityCarrierDead || data.entityAttachment == null) continue;
 
             switch (data.entityAttachment.entityDeathBehavior()) {
+                case UNLOAD -> {
+                    continue;
+                }
                 case DETACH -> {}
                 case BREAK_BLOCKS -> {
                     // Keep the ship loaded while vanilla block breaking creates drops and empties containers.

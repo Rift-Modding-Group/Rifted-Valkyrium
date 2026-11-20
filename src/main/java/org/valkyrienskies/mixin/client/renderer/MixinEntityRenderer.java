@@ -6,6 +6,7 @@ import com.llamalad7.mixinextras.sugar.Local;
 import net.minecraft.block.Block;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.WorldClient;
 import net.minecraft.client.renderer.ActiveRenderInfo;
 import net.minecraft.client.renderer.EntityRenderer;
 import net.minecraft.client.renderer.GlStateManager;
@@ -34,6 +35,9 @@ import org.spongepowered.asm.mixin.injection.*;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.lwjgl.opengl.GL11;
 import valkyrienwarfare.api.TransformType;
+import valkyrienwarfare.api.RiftedValkyriumAPI;
+import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.NotNull;
 import org.valkyrienskies.mod.client.entity_position.EntityRenderStateBackup;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMount;
@@ -292,6 +296,18 @@ public abstract class MixinEntityRenderer {
         this.renderStateBackups.clear();
     }
 
+    @WrapOperation(method = "orientCamera", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/multiplayer/WorldClient;rayTraceBlocks(Lnet/minecraft/util/math/Vec3d;Lnet/minecraft/util/math/Vec3d;)Lnet/minecraft/util/math/RayTraceResult;"))
+    @Nullable
+    private RayTraceResult traceCameraPastCarrierShip(
+            @NotNull WorldClient world, @NotNull Vec3d start, @NotNull Vec3d end,
+            @NotNull Operation<RayTraceResult> original
+    ) {
+        Entity viewer = Minecraft.getMinecraft().getRenderViewEntity();
+        if (viewer == null) return original.call(world, start, end);
+        return RiftedValkyriumAPI.rayTraceBlocksIgnoringCarrierShip(world, viewer, start, end, false, false, false);
+    }
+
     @Inject(method = "orientCamera", at = @At("HEAD"), cancellable = true)
     private void orientCamera(float partialTicks, CallbackInfo ci) {
         EntityShipMountData mountData = ValkyrienUtils.getMountedShipAndPos(mc.getRenderViewEntity());
@@ -414,7 +430,10 @@ public abstract class MixinEntityRenderer {
                     }
 
                     // RayTraceResult raytraceresult = EntityMoveInjectionMethods.rayTraceBlocksIgnoreShip(Minecraft.getMinecraft().world, new Vec3d(d0 + f3, d1 + f4, d2 + f5), new Vec3d(d0 - d4 + f3 + f5, d1 - d6 + f4, d2 - d5 + f5), false, false, false, pilot.getPilotedShip());
-                    RayTraceResult raytraceresult = this.mc.world.rayTraceBlocks(new Vec3d(d0 + (double)f3, d1 + (double)f4, d2 + (double)f5), new Vec3d(d0 - d4 + (double)f3 + (double)f5, d1 - d6 + (double)f4, d2 - d5 + (double)f5));
+                    RayTraceResult raytraceresult = RiftedValkyriumAPI.rayTraceBlocksIgnoringCarrierShip(this.mc.world, entity,
+                            new Vec3d(d0 + (double)f3, d1 + (double)f4, d2 + (double)f5),
+                            new Vec3d(d0 - d4 + (double)f3 + (double)f5, d1 - d6 + (double)f4, d2 - d5 + (double)f5),
+                            false, false, false);
 
                     if (pilotNew != null && shipWorld != null) {
                         shipWorld.unexcludeShipFromRayTracer(pilotNew.getPilotedShip());

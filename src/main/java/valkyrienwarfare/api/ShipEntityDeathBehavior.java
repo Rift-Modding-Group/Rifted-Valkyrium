@@ -15,5 +15,9 @@ public enum ShipEntityDeathBehavior {
     /**
      * Deletes the ship, its blocks, and their contents without drops.
      * */
-    DELETE_SHIP
+    DELETE_SHIP,
+    /**
+     * Saves and unloads the ship while its carrier is absent, retaining the link for its return.
+     * */
+    UNLOAD
 }

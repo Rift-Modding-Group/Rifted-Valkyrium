@@ -404,6 +404,23 @@ public abstract class MixinWorld {
         }
     }
 
+    // Keep ship-local placement and spawning clear of the ship's own carrier.
+    @WrapOperation(
+            method = "checkNoEntityCollision(Lnet/minecraft/util/math/AxisAlignedBB;Lnet/minecraft/entity/Entity;)Z",
+            at = @At(value = "FIELD", target = "Lnet/minecraft/entity/Entity;preventEntitySpawning:Z")
+    )
+    private boolean checkShipCarrierObstruction(
+            @NotNull Entity entity, @NotNull Operation<Boolean> original,
+            @Local(argsOnly = true) @NotNull AxisAlignedBB bounds
+    ) {
+        if (!original.call(entity)) return false;
+
+        World world = (World) (Object) this;
+        PhysicsObject ship = ValkyrienUtils.getPhysoManagingBlock(world, new BlockPos(bounds.getCenter())).orElse(null);
+        return ship == null || ship.getShipData().entityAttachment == null
+                || !ship.getShipData().entityAttachment.entityUuid().equals(entity.getUniqueID());
+    }
+
     //boats r weird
     @Nullable
     @WrapOperation(

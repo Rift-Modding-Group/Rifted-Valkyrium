@@ -13,6 +13,8 @@ import org.joml.Quaterniond;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import valkyrienwarfare.api.TransformType;
+import net.minecraftforge.fml.common.Loader;
+import org.valkyrienskies.mod.common.compat.RiftLibraryCompat;
 import valkyrienwarfare.api.ShipEntityDeathBehavior;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 
@@ -20,7 +22,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Pins the initial bottom center of a platform to an entity-local offset and follows its body heading.
+ * Pins the initial bottom center of a platform to an entity or an animated model locator.
  */
 public record ShipEntityAttachment(
         @JsonProperty("entityUuid") @NotNull UUID entityUuid,
@@ -32,7 +34,8 @@ public record ShipEntityAttachment(
         @JsonProperty("rotationY") double rotationY,
         @JsonProperty("rotationZ") double rotationZ,
         @JsonProperty("rotationW") double rotationW,
-        @JsonProperty("entityDeathBehavior") @NotNull ShipEntityDeathBehavior entityDeathBehavior
+        @JsonProperty("entityDeathBehavior") @NotNull ShipEntityDeathBehavior entityDeathBehavior, //for ships linked to entities only
+        @JsonProperty("locator") @Nullable String locator //riftlib compat
 ) {
     public ShipEntityAttachment {
         Objects.requireNonNull(entityUuid, "entityUuid");
@@ -51,7 +54,13 @@ public record ShipEntityAttachment(
 
     public ShipEntityAttachment(UUID entityUuid, double offsetX, double offsetY, double offsetZ, double initialYaw,
                                 @NotNull ShipEntityDeathBehavior entityDeathBehavior) {
-        this(entityUuid, offsetX, offsetY, offsetZ, initialYaw, 0D, 0D, 0D, 1D, entityDeathBehavior);
+        this(entityUuid, offsetX, offsetY, offsetZ, initialYaw, 0D, 0D, 0D, 1D, entityDeathBehavior, null);
+    }
+
+    public ShipEntityAttachment(UUID entityUuid, double offsetX, double offsetY, double offsetZ, double initialYaw,
+                                double rotationX, double rotationY, double rotationZ, double rotationW,
+                                @NotNull ShipEntityDeathBehavior entityDeathBehavior) {
+        this(entityUuid, offsetX, offsetY, offsetZ, initialYaw, rotationX, rotationY, rotationZ, rotationW, entityDeathBehavior, null);
     }
 
     public ShipEntityAttachment(UUID entityUuid, double offsetX, double offsetY, double offsetZ, double initialYaw,
@@ -72,13 +81,14 @@ public record ShipEntityAttachment(
             @JsonProperty("rotationZ") double rotationZ,
             @JsonProperty("rotationW") double rotationW,
             @JsonProperty("entityDeathBehavior") @Nullable ShipEntityDeathBehavior entityDeathBehavior,
-            @JsonProperty("breakShipBlocksOnEntityDeath") boolean breakShipBlocksOnEntityDeath
+            @JsonProperty("breakShipBlocksOnEntityDeath") boolean breakShipBlocksOnEntityDeath,
+            @JsonProperty("locator") @Nullable String locator
     ) {
         if (entityDeathBehavior == null) {
             entityDeathBehavior = breakShipBlocksOnEntityDeath ? ShipEntityDeathBehavior.BREAK_BLOCKS : ShipEntityDeathBehavior.DETACH;
         }
         return new ShipEntityAttachment(entityUuid, offsetX, offsetY, offsetZ, initialYaw,
-                rotationX, rotationY, rotationZ, rotationW, entityDeathBehavior);
+                rotationX, rotationY, rotationZ, rotationW, entityDeathBehavior, locator);
     }
 
     @NotNull
@@ -89,11 +99,17 @@ public record ShipEntityAttachment(
     @NotNull
     public static ShipEntityAttachment create(@NotNull Entity entity, @NotNull Vec3d offset, @NotNull ShipTransform transform,
                                               @NotNull ShipEntityDeathBehavior entityDeathBehavior) {
+        return create(entity, offset, transform, entityDeathBehavior, null);
+    }
+
+    @NotNull
+    public static ShipEntityAttachment create(@NotNull Entity entity, @NotNull Vec3d offset, @NotNull ShipTransform transform,
+                                              @NotNull ShipEntityDeathBehavior entityDeathBehavior, @Nullable String locator) {
         Quaterniond rotation = transform.rotationQuaternion(TransformType.SUBSPACE_TO_GLOBAL);
         Vector3d forward = rotation.transform(new Vector3d(0D, 0D, 1D));
         double shipYaw = -Math.toDegrees(Math.atan2(forward.x, forward.z));
         return new ShipEntityAttachment(entity.getUniqueID(), offset.x, offset.y, offset.z, shipYaw,
-                rotation.x, rotation.y, rotation.z, rotation.w, entityDeathBehavior);
+                rotation.x, rotation.y, rotation.z, rotation.w, entityDeathBehavior, locator);
     }
 
     public static double getEntityYaw(@NotNull Entity entity) {
@@ -102,13 +118,36 @@ public record ShipEntityAttachment(
     }
 
     @NotNull
+    public static ShipEntityAttachment updateOffset(
+            @NotNull ShipEntityAttachment attachment, @NotNull Vec3d offset,
+            @NotNull ShipEntityDeathBehavior entityDeathBehavior
+    ) {
+        return updateOffset(attachment, offset, entityDeathBehavior, attachment.locator);
+    }
+
+    @NotNull
+    public static ShipEntityAttachment updateOffset(
+            @NotNull ShipEntityAttachment attachment, @NotNull Vec3d offset,
+            @NotNull ShipEntityDeathBehavior entityDeathBehavior, @Nullable String locator
+    ) {
+        if (attachment.offsetX == offset.x && attachment.offsetY == offset.y && attachment.offsetZ == offset.z
+                && attachment.entityDeathBehavior == entityDeathBehavior && Objects.equals(attachment.locator, locator)) return attachment;
+        return new ShipEntityAttachment(attachment.entityUuid, offset.x, offset.y, offset.z,
+                attachment.initialYaw, attachment.rotationX, attachment.rotationY,
+                attachment.rotationZ, attachment.rotationW, entityDeathBehavior, locator);
+    }
+
+    @NotNull
     public ShipTransform createTransform(@NotNull Entity entity, @NotNull Vector3dc attachmentPoint, @NotNull Vector3dc centerOfMass) {
         return this.createTransform(entity, 1D, attachmentPoint, centerOfMass);
     }
 
     @NotNull
-    public ShipTransform createTransform(@NotNull Entity entity, double partialTick,
-                                         @NotNull Vector3dc attachmentPoint, @NotNull Vector3dc centerOfMass) {
+    public ShipTransform createTransform(@NotNull Entity entity, double partialTick, @NotNull Vector3dc attachmentPoint, @NotNull Vector3dc centerOfMass) {
+        if (this.locator != null && Loader.isModLoaded("riftlib")) {
+            ShipTransform transform = RiftLibraryCompat.createAttachmentTransform(entity, this, partialTick, attachmentPoint, centerOfMass);
+            if (transform != null) return transform;
+        }
         AxisAlignedBB bounds = entity.getEntityBoundingBox();
         double remainingTick = entity.ticksExisted == 0 ? 0D : 1D - partialTick;
         double previousYaw = entity.prevRotationYaw;

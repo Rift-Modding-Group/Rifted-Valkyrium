@@ -46,6 +46,16 @@ class WorldShipLoadingController {
         for (ShipData data : QueryableShipData.get(shipManager.getWorld())) {
             ShipTransform transform = data.getShipTransform();
             ShipEntityAttachment attachment = data.entityAttachment;
+            if (attachment != null && attachment.entityDeathBehavior() == ShipEntityDeathBehavior.UNLOAD) {
+                Entity carrier = this.shipManager.getWorld().getEntityFromUuid(attachment.entityUuid());
+                if (carrier == null || !carrier.isEntityAlive()) {
+                    if (this.shipManager.getPhysObjectFromUUID(data.getUuid()) != null) {
+                        this.shipManager.queueShipUnload(data.getUuid());
+                    }
+                    continue;
+                }
+                data.entityCarrierDead = false;
+            }
             if (data.entityCarrierDead && attachment != null && attachment.entityDeathBehavior() != ShipEntityDeathBehavior.DETACH) {
                 if (this.shipManager.getPhysObjectFromUUID(data.getUuid()) == null) {
                     this.shipManager.queueShipLoad(data.getUuid());
