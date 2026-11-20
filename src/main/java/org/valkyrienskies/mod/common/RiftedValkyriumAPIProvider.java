@@ -156,6 +156,7 @@ public class RiftedValkyriumAPIProvider implements RiftedValkyriumAPI.Provider {
                 initialBounds, blockBlacklist
         );
         shipData.setPhysicsEnabled(shipBuildOptions.getPhysicsEnabled());
+        shipData.dontSetSpawn = shipBuildOptions.getDontSetSpawn();
         if (maxShipBounds != null) {
             double minX = regionCenter.getX() - maxShipBounds[0] / 2D;
             double minY = regionCenter.getY() - maxShipBounds[1] / 2D;

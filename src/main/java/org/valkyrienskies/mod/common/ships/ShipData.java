@@ -83,6 +83,8 @@ public class ShipData implements IShipData {
      */
     private boolean physicsEnabled;
 
+    public boolean dontSetSpawn;
+
     @Nullable
     public ShipEntityAttachment entityAttachment;
 

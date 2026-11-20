@@ -6,7 +6,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.annotation.ParametersAreNonnullByDefault;
-import java.util.Objects;
 
 /**
  * This builder-like class stores additional options for ship-building
@@ -27,6 +26,7 @@ public final class ShipBuildOptions {
     private String peggedEntityLocator;
     @NotNull
     private ShipEntityDeathBehavior entityDeathBehavior = ShipEntityDeathBehavior.DETACH;
+    private boolean dontSetSpawn;
 
     /**
      * Set a blacklist for the blocks that Rifted Valkyrium will ignore when building a {@link IPhysicsEntity}.
@@ -116,9 +116,10 @@ public final class ShipBuildOptions {
         return this.setEntityPeggedTo(entity, peggedEntityOffset, entityDeathBehavior, null);
     }
 
-    /** An optional RiftLibrary locator makes the offset relative to its animated pose. */
-    public ShipBuildOptions setEntityPeggedTo(Entity entity, Vec3d peggedEntityOffset, ShipEntityDeathBehavior entityDeathBehavior,
-                                            @Nullable String locator) {
+    /**
+     * An optional RiftLibrary locator makes the offset relative to its animated pose.
+     * */
+    public ShipBuildOptions setEntityPeggedTo(Entity entity, Vec3d peggedEntityOffset, ShipEntityDeathBehavior entityDeathBehavior, @Nullable String locator) {
         this.peggedEntity = entity;
         this.peggedEntityOffset = peggedEntityOffset;
         this.entityDeathBehavior = entityDeathBehavior;
@@ -144,5 +145,17 @@ public final class ShipBuildOptions {
     @NotNull
     public ShipEntityDeathBehavior getEntityDeathBehavior() {
         return this.entityDeathBehavior;
+    }
+
+    /**
+     * If set, this makes it so sleeping on ships will not set the spawnpoint to there
+     * */
+    public ShipBuildOptions setDontSetSpawn() {
+        this.dontSetSpawn = true;
+        return this;
+    }
+
+    public boolean getDontSetSpawn() {
+        return this.dontSetSpawn;
     }
 }

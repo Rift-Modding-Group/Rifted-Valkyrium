@@ -22,6 +22,7 @@ import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.event.entity.living.LivingDropsEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.event.entity.player.PlayerSetSpawnEvent;
 import net.minecraftforge.event.world.ChunkEvent;
 import net.minecraftforge.event.world.ExplosionEvent;
 import net.minecraftforge.event.world.WorldEvent;
@@ -40,6 +41,7 @@ import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMoun
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
 import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
 import org.valkyrienskies.mod.common.item.ItemEntityShipLinkerStick;
+import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
 import org.valkyrienskies.mod.common.ships.ship_world.*;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
@@ -55,6 +57,14 @@ import java.util.UUID;
 @EventBusSubscriber(modid = ValkyrienSkiesMod.MOD_ID)
 public class EventsCommon {
     private static final int PLAYER_WORLD_LIMIT = 27_000_000;
+
+    @SubscribeEvent
+    public static void onPlayerSetSpawn(@NotNull PlayerSetSpawnEvent event) {
+        if (event.isForced() || event.getNewSpawn() == null) return;
+
+        ShipData ship = ValkyrienUtils.getShipManagingBlock(event.getEntityPlayer().world, event.getNewSpawn()).orElse(null);
+        if (ship != null && ship.dontSetSpawn) event.setCanceled(true);
+    }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onEntityInteract(@NotNull PlayerInteractEvent.EntityInteract event) {
