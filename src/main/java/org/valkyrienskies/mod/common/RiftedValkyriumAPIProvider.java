@@ -21,6 +21,7 @@ import org.valkyrienskies.mod.common.entity.EntityMountable;
 import org.valkyrienskies.mod.common.physics.BlockPhysicsDetails;
 import org.valkyrienskies.mod.common.ships.QueryableShipData;
 import org.valkyrienskies.mod.common.ships.ShipData;
+import org.valkyrienskies.mod.common.ships.ShipDataMethods;
 import org.valkyrienskies.mod.common.ships.ShipEntityAttachment;
 import org.valkyrienskies.mod.common.ships.block_relocation.BlockFinder;
 import org.valkyrienskies.mod.common.ships.chunk_claims.ShipChunkAllocator;
@@ -121,19 +122,12 @@ public class RiftedValkyriumAPIProvider implements RiftedValkyriumAPI.Provider {
         ShipBlockBlacklist blockBlacklist = shipBuildOptions.getShipBlockBlacklist();
         int[] maxShipBounds = shipBuildOptions.getMaxShipBounds();
         if (maxShipBounds != null) {
-            long minX = (long) assemblyPosition.getX() - maxShipBounds[0] / 2;
-            long minY = (long) assemblyPosition.getY() - maxShipBounds[1] / 2;
-            long minZ = (long) assemblyPosition.getZ() - maxShipBounds[2] / 2;
-            long maxX = minX + maxShipBounds[0];
-            long maxY = minY + maxShipBounds[1];
-            long maxZ = minZ + maxShipBounds[2];
+            AxisAlignedBB bounds = ShipDataMethods.createBuildBounds(assemblyPosition, maxShipBounds);
 
-            //combine le original blacklist and ship bounding
+            // Apply the creator's blacklist inside the fixed build region.
             ShipBlockBlacklist configuredBlacklist = blockBlacklist;
             blockBlacklist = (candidateWorld, candidatePosition, state) -> {
-                return candidatePosition.getX() < minX || candidatePosition.getX() >= maxX
-                        || candidatePosition.getY() < minY || candidatePosition.getY() >= maxY
-                        || candidatePosition.getZ() < minZ || candidatePosition.getZ() >= maxZ
+                return !ShipDataMethods.isWithinBuildBounds(bounds, candidatePosition)
                         || configuredBlacklist.isBlacklisted(candidateWorld, candidatePosition, state);
             };
         }
@@ -158,11 +152,7 @@ public class RiftedValkyriumAPIProvider implements RiftedValkyriumAPI.Provider {
         shipData.setPhysicsEnabled(shipBuildOptions.getPhysicsEnabled());
         shipData.dontSetSpawn = shipBuildOptions.getDontSetSpawn();
         if (maxShipBounds != null) {
-            double minX = regionCenter.getX() - maxShipBounds[0] / 2D;
-            double minY = regionCenter.getY() - maxShipBounds[1] / 2D;
-            double minZ = regionCenter.getZ() - maxShipBounds[2] / 2D;
-            shipData.shipBounds = new AxisAlignedBB(minX, minY, minZ,
-                    minX + maxShipBounds[0], minY + maxShipBounds[1], minZ + maxShipBounds[2]);
+            shipData.shipBounds = ShipDataMethods.createBuildBounds(regionCenter, maxShipBounds);
         }
         shipData.entityAttachment = entityAttachment;
 

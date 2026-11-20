@@ -1,6 +1,7 @@
 package org.valkyrienskies.mixin.mod.spongeforge;
 
 import net.minecraft.block.state.IBlockState;
+import net.minecraft.block.material.Material;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
@@ -24,12 +25,19 @@ public abstract class MixinChunkSponge {
     @Shadow @Final
     public World world;
 
-    @Inject(method = "bridge$setBlockState", at = @At("HEAD"), remap = false)
+    @Inject(method = "bridge$setBlockState", at = @At("HEAD"), remap = false, cancellable = true)
     private void onPreSpongeBridgeSetBlockState(BlockPos pos, IBlockState newState, IBlockState currentState, BlockChangeFlag flag, CallbackInfoReturnable<IBlockState> cir) {
         if (!world.isRemote) {
             QueryableShipData queryableShipData = QueryableShipData.get(world);
             Optional<ShipData> shipDataOptional = queryableShipData.getShipFromChunk(pos.getX() >> 4, pos.getZ() >> 4);
-            shipDataOptional.ifPresent(shipData -> ShipDataMethods.onSetBlockState(shipData, pos, currentState, newState));
+            if (shipDataOptional.isPresent()) {
+                ShipData shipData = shipDataOptional.get();
+                if (newState.getMaterial() != Material.AIR && !ShipDataMethods.isWithinBuildBounds(shipData.shipBounds, pos)) {
+                    cir.setReturnValue(null);
+                    return;
+                }
+                ShipDataMethods.onSetBlockState(shipData, pos, currentState, newState);
+            }
         }
     }
 

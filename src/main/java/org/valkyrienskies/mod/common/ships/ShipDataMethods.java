@@ -2,7 +2,10 @@ package org.valkyrienskies.mod.common.ships;
 
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.init.Blocks;
+import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.valkyrienskies.mod.common.physics.BlockPhysicsDetails;
 import org.valkyrienskies.mod.common.ships.physics_data.BasicCenterOfMassProvider;
 import org.valkyrienskies.mod.common.ships.physics_data.IPhysicsObjectCenterOfMassProvider;
@@ -28,6 +31,24 @@ public final class ShipDataMethods {
 
     private ShipDataMethods() {
         throw new UnsupportedOperationException("Utility class");
+    }
+
+    /**
+     * Creates block-aligned limits extending upward from the bottom-center assembly block.
+     */
+    @NotNull
+    public static AxisAlignedBB createBuildBounds(BlockPos bottomCenter, int[] dimensions) {
+        long minX = (long) bottomCenter.getX() - dimensions[0] / 2;
+        long minY = bottomCenter.getY();
+        long minZ = (long) bottomCenter.getZ() - dimensions[2] / 2;
+        return new AxisAlignedBB(minX, minY, minZ,
+                minX + dimensions[0], minY + dimensions[1], minZ + dimensions[2]);
+    }
+
+    public static boolean isWithinBuildBounds(@Nullable AxisAlignedBB bounds, BlockPos pos) {
+        return bounds == null || (pos.getX() >= bounds.minX && pos.getX() < bounds.maxX
+                && pos.getY() >= bounds.minY && pos.getY() < bounds.maxY
+                && pos.getZ() >= bounds.minZ && pos.getZ() < bounds.maxZ);
     }
 
     /**

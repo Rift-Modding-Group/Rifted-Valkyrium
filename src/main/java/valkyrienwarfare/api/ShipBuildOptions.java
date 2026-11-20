@@ -70,13 +70,30 @@ public final class ShipBuildOptions {
     }
 
     /**
-     * Defines the bounds of the ship. If not set, its presumed to be infinite.
-     * Note that the maximum block count remains in effect, and has the final say on ship sizes.
+     * Defines equal X/Z build limits and a height, anchored at the bottom-center assembly block.
+     * See {@link #setMaxShipBounds(int, int, int)} for alignment and examples.
      * */
     public ShipBuildOptions setMaxShipBounds(int horizontalSize, int verticalSize) {
         return this.setMaxShipBounds(horizontalSize, verticalSize, horizontalSize);
     }
 
+    /**
+     * Defines fixed build limits in blocks, used during assembly and for later block placement.
+     * The assembly seed is the bottom-center block: no blocks may be added below it, and
+     * {@code ySize} includes its own layer. Each horizontal axis starts at
+     * {@code seed - size / 2} (integer division) and contains exactly {@code size} blocks.
+     * Even sizes therefore have one more block on the negative side of the seed.
+     * <p>
+     * A centered 3 x 1 x 3 ship with 7 x 7 x 7 limits can grow two blocks on each horizontal
+     * side and six blocks above, with none below. With 6 x 6 x 6 limits it can grow two
+     * blocks toward negative X/Z, one toward positive X/Z, and five above.
+     * These limits stay anchored when blocks are added or removed.
+     * <p>
+     * If unset, there are no additional build bounds. The maximum block count and ship
+     * storage limits still apply.
+     *
+     * @throws IllegalArgumentException if any dimension is not positive
+     */
     public ShipBuildOptions setMaxShipBounds(int xSize, int ySize, int zSize) {
         if (xSize <= 0 || ySize <= 0 || zSize <= 0) {
             throw new IllegalArgumentException("Ship bounds must have positive dimensions");

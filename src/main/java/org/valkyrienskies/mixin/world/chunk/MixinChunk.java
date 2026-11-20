@@ -1,6 +1,7 @@
 package org.valkyrienskies.mixin.world.chunk;
 
 import net.minecraft.block.state.IBlockState;
+import net.minecraft.block.material.Material;
 import net.minecraft.entity.Entity;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.math.BlockPos;
@@ -81,11 +82,9 @@ public abstract class MixinChunk {
 
     /**
      * If this chunk is part of a ship, then tell that ship about the IBlockState update.
-     *
-     * Note that we're assuming that a Chunk cannot deny the setBlockState request. Therefore its safe to assume that
-     * the parameter "state" will be the final IBlockState of BlockPos "pos".
+     * Rejects non-air changes outside its fixed build limits before updating ship data.
      */
-    @Inject(method = "setBlockState", at = @At("HEAD"))
+    @Inject(method = "setBlockState", at = @At("HEAD"), cancellable = true)
     private void pre_setBlockState(BlockPos pos, IBlockState state, CallbackInfoReturnable<IBlockState> cir) {
         if (!ShipChunkAllocator.isChunkInShipyard(this.x, this.z)) return;
         if (!world.isRemote) {
@@ -93,7 +92,14 @@ public abstract class MixinChunk {
                 IBlockState oldState = getBlockState(pos);
                 QueryableShipData queryableShipData = QueryableShipData.get(world);
                 Optional<ShipData> shipDataOptional = queryableShipData.getShipFromChunk(pos.getX() >> 4, pos.getZ() >> 4);
-                shipDataOptional.ifPresent(shipData -> ShipDataMethods.onSetBlockState(shipData, pos, oldState, state));
+                if (shipDataOptional.isPresent()) {
+                    ShipData shipData = shipDataOptional.get();
+                    if (state.getMaterial() != Material.AIR && !ShipDataMethods.isWithinBuildBounds(shipData.shipBounds, pos)) {
+                        cir.setReturnValue(null);
+                        return;
+                    }
+                    ShipDataMethods.onSetBlockState(shipData, pos, oldState, state);
+                }
             }
         }
     }
