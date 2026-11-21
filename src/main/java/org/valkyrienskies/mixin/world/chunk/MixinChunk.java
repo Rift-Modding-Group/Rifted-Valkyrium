@@ -1,7 +1,6 @@
 package org.valkyrienskies.mixin.world.chunk;
 
 import net.minecraft.block.state.IBlockState;
-import net.minecraft.block.material.Material;
 import net.minecraft.entity.Entity;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.math.BlockPos;
@@ -82,7 +81,7 @@ public abstract class MixinChunk {
 
     /**
      * If this chunk is part of a ship, then tell that ship about the IBlockState update.
-     * Rejects non-air changes outside its fixed build limits before updating ship data.
+     * Checks its build limits and placement blacklist before updating ship data.
      */
     @Inject(method = "setBlockState", at = @At("HEAD"), cancellable = true)
     private void pre_setBlockState(BlockPos pos, IBlockState state, CallbackInfoReturnable<IBlockState> cir) {
@@ -94,7 +93,7 @@ public abstract class MixinChunk {
                 Optional<ShipData> shipDataOptional = queryableShipData.getShipFromChunk(pos.getX() >> 4, pos.getZ() >> 4);
                 if (shipDataOptional.isPresent()) {
                     ShipData shipData = shipDataOptional.get();
-                    if (state.getMaterial() != Material.AIR && !ShipDataMethods.isWithinBuildBounds(shipData.shipBounds, pos)) {
+                    if (!ShipDataMethods.canSetBlockState(shipData, world, pos, state)) {
                         cir.setReturnValue(null);
                         return;
                     }

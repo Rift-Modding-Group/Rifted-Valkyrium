@@ -1,7 +1,6 @@
 package org.valkyrienskies.mixin.mod.spongeforge;
 
 import net.minecraft.block.state.IBlockState;
-import net.minecraft.block.material.Material;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
@@ -32,7 +31,7 @@ public abstract class MixinChunkSponge {
             Optional<ShipData> shipDataOptional = queryableShipData.getShipFromChunk(pos.getX() >> 4, pos.getZ() >> 4);
             if (shipDataOptional.isPresent()) {
                 ShipData shipData = shipDataOptional.get();
-                if (newState.getMaterial() != Material.AIR && !ShipDataMethods.isWithinBuildBounds(shipData.shipBounds, pos)) {
+                if (!ShipDataMethods.canSetBlockState(shipData, world, pos, newState)) {
                     cir.setReturnValue(null);
                     return;
                 }
