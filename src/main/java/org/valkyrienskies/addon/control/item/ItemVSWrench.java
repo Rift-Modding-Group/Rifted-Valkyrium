@@ -1,5 +1,6 @@
 package org.valkyrienskies.addon.control.item;
 
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.client.settings.GameSettings;
@@ -14,7 +15,9 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.TextComponentString;
 import net.minecraft.util.text.TextFormatting;
 import net.minecraft.world.World;
+import org.valkyrienskies.addon.control.block.BlockRotationAxle;
 import org.valkyrienskies.addon.control.block.multiblocks.ITileEntityMultiblockPart;
+import org.valkyrienskies.addon.control.block.torque.TileEntityRotationAxle;
 import org.valkyrienskies.addon.control.config.VSControlConfig;
 import org.valkyrienskies.addon.control.tileentity.TileEntityGearbox;
 import org.valkyrienskies.mod.common.util.BaseItem;
@@ -51,9 +54,10 @@ public class ItemVSWrench extends BaseItem {
     // Construct potential multiblock if set to construct mode.
     // Otherwise, try to deconstruct a multiblock.
     @Override
-    public EnumActionResult onItemUse(EntityPlayer player, World worldIn, BlockPos pos,
-        EnumHand hand,
-        EnumFacing facing, float hitX, float hitY, float hitZ) {
+    public EnumActionResult onItemUse(
+            EntityPlayer player, World worldIn, BlockPos pos, EnumHand hand,
+            EnumFacing facing, float hitX, float hitY, float hitZ
+    ) {
         if (worldIn.isRemote) {
             return EnumActionResult.SUCCESS;
         }
@@ -68,25 +72,35 @@ public class ItemVSWrench extends BaseItem {
         TileEntity blockTile = worldIn.getTileEntity(pos);
         boolean shouldConstruct = this.mode == EnumWrenchMode.CONSTRUCT || VSControlConfig.wrenchModeless;
         boolean shouldDeconstruct = this.mode == EnumWrenchMode.DECONSTRUCT || VSControlConfig.wrenchModeless;
-        if (blockTile instanceof ITileEntityMultiblockPart) {
-            ITileEntityMultiblockPart part = (ITileEntityMultiblockPart) blockTile;
+        if (blockTile instanceof ITileEntityMultiblockPart part) {
             shouldConstruct = shouldConstruct && !part.isPartOfAssembledMultiblock();
             shouldDeconstruct = shouldDeconstruct && part.isPartOfAssembledMultiblock();
-        } else if (blockTile instanceof TileEntityGearbox) {
+        }
+        else if (blockTile instanceof TileEntityGearbox || blockTile instanceof TileEntityRotationAxle) {
             shouldConstruct = true;
-        } else {
+        }
+        else {
             return EnumActionResult.PASS;
         }
+
         if (shouldConstruct) {
-            if (blockTile instanceof ITileEntityMultiblockPart) {
-                if (((ITileEntityMultiblockPart) blockTile).attemptToAssembleMultiblock(worldIn, pos, facing)) {
+            if (blockTile instanceof ITileEntityMultiblockPart part) {
+                if (part.attemptToAssembleMultiblock(worldIn, pos, facing)) {
                     return EnumActionResult.SUCCESS;
                 }
-            } else if (blockTile instanceof TileEntityGearbox) {
-                ((TileEntityGearbox) blockTile).setInputFacing(
-                    player.isSneaking() ? facing.getOpposite() : facing);
             }
-        } else if (shouldDeconstruct) {
+            else if (blockTile instanceof TileEntityGearbox gearbox) {
+                gearbox.setInputFacing(player.isSneaking() ? facing.getOpposite() : facing);
+                return EnumActionResult.SUCCESS;
+            }
+            else if (blockTile instanceof TileEntityRotationAxle rotationAxle) {
+                IBlockState state = worldIn.getBlockState(pos);
+                worldIn.setBlockState(pos, state.withProperty(BlockRotationAxle.AXIS, facing.getAxis()));
+                rotationAxle.setAxleAxis(facing.getAxis());
+                return EnumActionResult.SUCCESS;
+            }
+        }
+        else if (shouldDeconstruct) {
             ((ITileEntityMultiblockPart) blockTile).disassembleMultiblock();
             return EnumActionResult.SUCCESS;
         }

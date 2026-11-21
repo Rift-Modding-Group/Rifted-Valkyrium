@@ -26,16 +26,13 @@ import java.util.List;
  * orientation of the gearbox. Afterwards the value stored by the tile tile entity dominates.
  */
 public class BlockGearbox extends BaseBlock implements ITileEntityProvider {
-
     public BlockGearbox() {
-        super("gearbox", Material.IRON, 0.0F, true);
-        this.setHardness(6.0F);
+        super("gearbox", Material.IRON, 0f, true);
+        this.setHardness(6f);
     }
 
     @Override
-    public void addInformation(ItemStack stack, @Nullable World player,
-        List<String> itemInformation,
-        ITooltipFlag advanced) {
+    public void addInformation(ItemStack stack, @Nullable World player, List<String> itemInformation, ITooltipFlag advanced) {
         itemInformation.add(TextFormatting.BLUE + I18n.format("tooltip.vs_control.gearbox_1"));
         itemInformation.add(TextFormatting.BLUE + I18n.format("tooltip.vs_control.gearbox_2"));
     }

@@ -6,11 +6,9 @@ import net.minecraft.util.Tuple;
 import java.util.Optional;
 
 public class TileEntityRotationAxle extends TileEntityBasicRotationTile {
-
     // Used internally by Minecraft
     @SuppressWarnings("WeakerAccess")
-    public TileEntityRotationAxle() {
-    }
+    public TileEntityRotationAxle() {}
 
     public TileEntityRotationAxle(EnumFacing.Axis axleAxis) {
         super();
