@@ -38,6 +38,7 @@ import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMount;
+import org.valkyrienskies.mod.common.capability.anchored_mount.ImplCapabilityShipAnchoredMount;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
 import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
 import org.valkyrienskies.mod.common.item.ItemEntityShipLinkerStick;
@@ -128,9 +129,15 @@ public class EventsCommon {
             PhysicsObject spawningShip = physicsObject.get();
 
             //turn entity position in world space to ship space
-            spawningShip.getShipTransformationManager()
-                    .getCurrentTickTransform()
-                    .transform(entity, TransformType.SUBSPACE_TO_GLOBAL, false);
+            if (mount != null && mount.isAnchoredToShip() && ImplCapabilityShipAnchoredMount.isAlignedEntity(entity.getClass())) {
+                Vec3d position = spawningShip.transformVector(mount.getLocalMountPos(), TransformType.SUBSPACE_TO_GLOBAL);
+                entity.setPosition(position.x, position.y, position.z);
+            }
+            else {
+                spawningShip.getShipTransformationManager()
+                        .getCurrentTickTransform()
+                        .transform(entity, TransformType.SUBSPACE_TO_GLOBAL, false);
+            }
 
             //now peg the entity to the ship to ensure it moves alongside it
             EntityDraggable.startTrackingShip(entity, spawningShip.getShipData());

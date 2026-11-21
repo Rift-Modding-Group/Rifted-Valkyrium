@@ -10,6 +10,7 @@ import net.minecraft.entity.projectile.EntityFireball;
 import net.minecraft.util.Tuple;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -415,6 +416,12 @@ public class EntityDraggable {
                 entity.lastTickPosY = previousGlobalMountPosition.y;
                 entity.lastTickPosZ = previousGlobalMountPosition.z;
 
+                entity.motionX = 0D;
+                entity.motionY = 0D;
+                entity.motionZ = 0D;
+                entity.fallDistance = 0F;
+                entity.onGround = true;
+
                 updatePassengersAfterCarrierMovement(entity, 0F);
 
                 draggable.setLastTouchedShip(physicsObject.getShipData());
@@ -617,9 +624,25 @@ public class EntityDraggable {
             if (passenger instanceof EntityLivingBase livingPassenger) {
                 livingPassenger.renderYawOffset += yawMovement;
             }
-            updatePassengerPosition(carrier, passenger, true);
+            EntityShipMountData mountData = ValkyrienUtils.getMountedShipAndPos(passenger);
+            if (mountData.isMounted() && mountData.mountedShip() != null && mountData.mountPos() != null) {
+                Vec3d worldPosition = mountData.mountedShip().transformVector(mountData.mountPos(), TransformType.SUBSPACE_TO_GLOBAL);
+                passenger.setPosition(worldPosition.x, worldPosition.y, worldPosition.z);
+            }
+            else updatePassengerPosition(carrier, passenger, true);
             updatePassengersAfterCarrierMovement(passenger, yawMovement);
         }
+    }
+
+    /**
+     * Carries a fixed mount's ship-local view into world space before the dismount position is synchronized.
+     */
+    public static void applyDismountOrientation(@NotNull EntityLivingBase rider, @NotNull ShipTransform transform) {
+        Vec3d direction = transform.rotate(Vec3d.fromPitchYaw(rider.rotationPitch, rider.rotationYaw), TransformType.SUBSPACE_TO_GLOBAL);
+        rider.rotationYaw = rider.prevRotationYaw = (float) Math.toDegrees(Math.atan2(-direction.x, direction.z));
+        rider.rotationPitch = rider.prevRotationPitch = (float) Math.toDegrees(Math.atan2(-direction.y, Math.hypot(direction.x, direction.z)));
+        rider.rotationYawHead = rider.prevRotationYawHead = rider.rotationYaw;
+        rider.renderYawOffset = rider.prevRenderYawOffset = rider.rotationYaw;
     }
 
     /**
@@ -645,6 +668,32 @@ public class EntityDraggable {
         previousShipTransform.transformPosition(renderPosition, TransformType.GLOBAL_TO_SUBSPACE);
         renderShipTransform.transformPosition(renderPosition, TransformType.SUBSPACE_TO_GLOBAL);
         return renderPosition;
+    }
+
+    /**
+     * Evaluates carrier-defined passenger offsets in ship space and restores both entities afterward.
+     */
+    @NotNull
+    public static Vec3d getShipLocalPassengerPosition(
+            @NotNull Entity carrier, @NotNull Entity passenger, @NotNull Vec3d localCarrierPosition,
+            @NotNull ShipTransform shipTransform
+    ) {
+        Vec3d carrierPosition = new Vec3d(carrier.posX, carrier.posY, carrier.posZ);
+        AxisAlignedBB carrierBounds = carrier.getEntityBoundingBox();
+        Vec3d passengerPosition = new Vec3d(passenger.posX, passenger.posY, passenger.posZ);
+        AxisAlignedBB passengerBounds = passenger.getEntityBoundingBox();
+        Vec3d localPassengerPosition = shipTransform.transform(passengerPosition, TransformType.GLOBAL_TO_SUBSPACE);
+        carrier.setPosition(localCarrierPosition.x, localCarrierPosition.y, localCarrierPosition.z);
+        passenger.setPosition(localPassengerPosition.x, localPassengerPosition.y, localPassengerPosition.z);
+
+        updatePassengerPosition(carrier, passenger, true);
+        Vec3d position = new Vec3d(passenger.posX, passenger.posY, passenger.posZ);
+
+        carrier.setPosition(carrierPosition.x, carrierPosition.y, carrierPosition.z);
+        carrier.setEntityBoundingBox(carrierBounds);
+        passenger.setPosition(passengerPosition.x, passengerPosition.y, passengerPosition.z);
+        passenger.setEntityBoundingBox(passengerBounds);
+        return position;
     }
 
     /**

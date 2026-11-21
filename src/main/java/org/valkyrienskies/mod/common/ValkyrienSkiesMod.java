@@ -117,7 +117,7 @@ public class ValkyrienSkiesMod {
     public static SimpleNetworkWrapper controlNetwork;
     public static CreativeTabs VS_CREATIVE_TAB;
     public static CreativeTabs RV_DEBUG_TAG;
-    public static Item ENTITY_SHIP_LINKER_STICK;
+    public Item ENTITY_SHIP_LINKER_STICK;
 
     private static final List<String> MODULES = ImmutableList.of("vs_control", "vs_world");
 
@@ -145,6 +145,9 @@ public class ValkyrienSkiesMod {
 
         LOGGER.debug("Initializing the Rifted Valkyrium API.");
         RiftedValkyriumAPI.registerProvider(new RiftedValkyriumAPIProvider());
+
+        //default entity align w ship registry
+        RiftedValkyriumAPI.setEntityAlignWithShip(EntityArmorStand.class);
 
         //default unloadable entities registry
         RiftedValkyriumAPI.setEntityUnloadWithShip(EntityArmorStand.class);

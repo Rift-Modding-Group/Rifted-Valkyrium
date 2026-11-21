@@ -6,8 +6,9 @@ import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * This capability is to allow compatibility with other mods that add
- * their own sittable blocks.
+ * Helps out with making aligned entities set to align w ships using {@link valkyrienwarfare.api.RiftedValkyriumAPI#setEntityAlignWithShip(Class)}
+ * align to the ship, of course.
+ * TODO: remove everything relating to compat w config sittable entities
  * */
 public interface IShipAnchoredMount {
     boolean isAnchoredToShip();

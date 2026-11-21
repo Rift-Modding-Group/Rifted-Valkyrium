@@ -21,6 +21,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
+import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMount;
+import org.valkyrienskies.mod.common.capability.anchored_mount.ImplCapabilityShipAnchoredMount;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
 import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
 import org.valkyrienskies.mod.common.config.VSConfig;
@@ -115,6 +117,20 @@ public abstract class MixinEntityIntrinsic {
     @Inject(method = "move", at = @At("HEAD"), cancellable = true)
     private void onEntityPreMove(MoverType type, double dx, double dy, double dz, CallbackInfo callbackInfo) {
         Entity thisEntity = (Entity) ((Object) this);
+        if (!thisEntity.isRiding() && ImplCapabilityShipAnchoredMount.isAlignedEntity(thisEntity.getClass())) {
+            IShipAnchoredMount anchor = thisEntity.getCapability(VSCapabilityRegistry.VS_SHIP_ANCHORED_MOUNT, null);
+            if (anchor != null && (anchor.isAnchoredToShip() || anchor.tryAnchorMount(thisEntity))) {
+                this.alteredMovement = null;
+                this.boatSupportBeforeMove = null;
+                thisEntity.motionX = 0D;
+                thisEntity.motionY = 0D;
+                thisEntity.motionZ = 0D;
+                thisEntity.fallDistance = 0F;
+                thisEntity.onGround = true;
+                callbackInfo.cancel();
+                return;
+            }
+        }
         if (thisEntity.world.isRemote && EntityDraggable.isUsingShipLocalMovement(thisEntity)) {
             this.alteredMovement = null;
             this.boatSupportBeforeMove = null;
@@ -148,6 +164,10 @@ public abstract class MixinEntityIntrinsic {
     @Inject(method = "move", at = @At("RETURN"))
     private void onEntityPostMove(CallbackInfo callbackInfo) {
         Entity thisEntity = (Entity) ((Object) this);
+        if (ImplCapabilityShipAnchoredMount.isAlignedEntity(thisEntity.getClass())) {
+            IShipAnchoredMount anchor = thisEntity.getCapability(VSCapabilityRegistry.VS_SHIP_ANCHORED_MOUNT, null);
+            if (anchor != null && anchor.isAnchoredToShip()) return;
+        }
         if (thisEntity.world.isRemote && EntityDraggable.isUsingShipLocalMovement(thisEntity)) return;
 
         IEntityShipDraggable entityShipDraggable = thisEntity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);

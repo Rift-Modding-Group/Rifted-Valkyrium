@@ -9,11 +9,13 @@ import net.minecraft.network.play.server.SPacketBlockBreakAnim;
 import net.minecraft.util.SoundCategory;
 import net.minecraft.util.SoundEvent;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.IWorldEventListener;
 import net.minecraft.world.World;
 import org.joml.Vector3d;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMount;
+import org.valkyrienskies.mod.common.capability.anchored_mount.ImplCapabilityShipAnchoredMount;
 import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
@@ -121,15 +123,17 @@ public class VSWorldEventListener implements IWorldEventListener {
         if (!this.worldObj.isRemote && physicsObject.isPresent() && !(entity instanceof EntityFallingBlock)) {
             PhysicsObject spawningShip = physicsObject.get();
             BlockPos rawPosBeforeTransform = new BlockPos(entity.posX, entity.posY, entity.posZ);
-            world.getChunk(rawPosBeforeTransform.getX() >> 4, rawPosBeforeTransform.getZ() >> 4)
-                .removeEntity(entity);
-            spawningShip
-                .getShipTransformationManager()
-                .getCurrentTickTransform().transform(entity,
-                TransformType.SUBSPACE_TO_GLOBAL, false);
+            world.getChunk(rawPosBeforeTransform.getX() >> 4, rawPosBeforeTransform.getZ() >> 4).removeEntity(entity);
+            if (mount != null && mount.isAnchoredToShip() && ImplCapabilityShipAnchoredMount.isAlignedEntity(entity.getClass())) {
+                Vec3d position = spawningShip.transformVector(mount.getLocalMountPos(), TransformType.SUBSPACE_TO_GLOBAL);
+                entity.setPosition(position.x, position.y, position.z);
+            }
+            else {
+                spawningShip.getShipTransformationManager().getCurrentTickTransform()
+                        .transform(entity, TransformType.SUBSPACE_TO_GLOBAL, false);
+            }
             BlockPos rawPosAfterTransform = new BlockPos(entity.posX, entity.posY, entity.posZ);
-            world.getChunk(rawPosAfterTransform.getX() >> 4, rawPosAfterTransform.getZ() >> 4)
-                .addEntity(entity);
+            world.getChunk(rawPosAfterTransform.getX() >> 4, rawPosAfterTransform.getZ() >> 4).addEntity(entity);
             EntityDraggable.startTrackingShip(entity, spawningShip.getShipData());
         }
     }

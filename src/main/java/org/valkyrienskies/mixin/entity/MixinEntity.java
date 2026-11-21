@@ -22,6 +22,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMount;
+import org.valkyrienskies.mod.common.capability.anchored_mount.ImplCapabilityShipAnchoredMount;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
 import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
 import org.valkyrienskies.mod.common.config.VSConfig;
@@ -398,7 +399,12 @@ public abstract class MixinEntity {
         thisEntity.setPosition(globalMountPos.x, globalMountPos.y, globalMountPos.z);
 
         for (Entity passenger : thisEntity.getPassengers()) {
-            thisEntity.updatePassenger(passenger);
+            EntityShipMountData passengerMount = ValkyrienUtils.getAnchoredMountShipAndPos(passenger);
+            if (passengerMount.isMounted()) {
+                Vec3d position = passengerMount.mountedShip().transformVector(
+                        passengerMount.mountPos(), TransformType.SUBSPACE_TO_GLOBAL);
+                passenger.setPosition(position.x, position.y, position.z);
+            }
         }
     }
 
@@ -460,6 +466,14 @@ public abstract class MixinEntity {
         shipPosition.setDouble("X", localPosition.x);
         shipPosition.setDouble("Y", localPosition.y);
         shipPosition.setDouble("Z", localPosition.z);
+        IShipAnchoredMount anchor = entity.getCapability(VSCapabilityRegistry.VS_SHIP_ANCHORED_MOUNT, null);
+        if (anchor != null && anchor.isAnchoredToShip() && ImplCapabilityShipAnchoredMount.isAlignedEntity(entity.getClass())) {
+            Vec3d anchorPosition = anchor.getLocalMountPos();
+            shipPosition.setDouble("X", anchorPosition.x);
+            shipPosition.setDouble("Y", anchorPosition.y);
+            shipPosition.setDouble("Z", anchorPosition.z);
+            shipPosition.setLong("Anchor", anchor.getLocalAnchorBlock().toLong());
+        }
         compound.setTag("VSShipPosition", shipPosition);
     }
 
@@ -476,16 +490,22 @@ public abstract class MixinEntity {
         NBTTagCompound shipPosition = compound.getCompoundTag("VSShipPosition");
         if (!shipPosition.hasUniqueId("Ship")) return;
 
+        if (shipPosition.hasKey("Anchor", 4) && ImplCapabilityShipAnchoredMount.isAlignedEntity(entity.getClass())) {
+            IShipAnchoredMount anchor = entity.getCapability(VSCapabilityRegistry.VS_SHIP_ANCHORED_MOUNT, null);
+            if (anchor != null) {
+                anchor.setAnchorMountData(
+                        new Vec3d(shipPosition.getDouble("X"), shipPosition.getDouble("Y"), shipPosition.getDouble("Z")),
+                        BlockPos.fromLong(shipPosition.getLong("Anchor"))
+                );
+            }
+        }
+
         IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
         if (draggable == null) return;
 
         draggable.setPendingShipPosition(
                 shipPosition.getUniqueId("Ship"),
-                new Vector3d(
-                        shipPosition.getDouble("X"),
-                        shipPosition.getDouble("Y"),
-                        shipPosition.getDouble("Z")
-                ),
+                new Vector3d(shipPosition.getDouble("X"), shipPosition.getDouble("Y"), shipPosition.getDouble("Z")),
                 false
         );
     }

@@ -337,6 +337,17 @@ public class RiftedValkyriumAPI {
     }
 
     /**
+     * Makes a given entity be pegged to the ship, effectively making them
+     * part of a ship. This means no matter what kind of rotations were done
+     * on it, it will never fall off or slide off.
+     * Includes subclasses. Entities attach when spawned on or brought into contact with a ship.
+     * @param entityClass the entity class to keep fixed in ship coordinates
+     * */
+    public static void setEntityAlignWithShip(Class<? extends Entity> entityClass) {
+        provider.setEntityAlignWithShip(Objects.requireNonNull(entityClass, "entityClass"));
+    }
+
+    /**
      * Formats a force magnitude using the next SI unit whenever its absolute value reaches four digits.
      * Useful for people trying to render the amount of force their force applying blocks create in a visible manner.
      * @param magnitude The raw magnitude of a force in Newtons.
@@ -417,6 +428,8 @@ public class RiftedValkyriumAPI {
 
         void setEntityUnloadWithShip(Class<? extends Entity> entityClass);
 
+        void setEntityAlignWithShip(Class<? extends Entity> entityClass);
+
         @NotNull
         IShipData createNewShip(WorldServer world, Vec3d initialPosition, AxisAlignedBB initialBounds, ShipBuildOptions shipBuildOptions);
 
@@ -483,6 +496,11 @@ public class RiftedValkyriumAPI {
 
         @Override
         public void setEntityUnloadWithShip(Class<? extends Entity> entityClass) {
+            throw new IllegalStateException("Rifted Valkyrium has not initialized its API provider");
+        }
+
+        @Override
+        public void setEntityAlignWithShip(Class<? extends Entity> entityClass) {
             throw new IllegalStateException("Rifted Valkyrium has not initialized its API provider");
         }
 

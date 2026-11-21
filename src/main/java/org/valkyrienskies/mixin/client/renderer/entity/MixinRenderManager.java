@@ -48,8 +48,12 @@ public abstract class MixinRenderManager {
         //yaw when on a ship thats rotating along yaw
         ShipLocalEntityMovementData projectileMovementData = null;
 
+        EntityShipMountData mountData = ValkyrienUtils.getMountedShipAndPos(entityIn);
+        renderedShip = mountData.mountedShip();
+        renderedLocalPosition = mountData.mountPos();
+
         //well...
-        if (entityIn instanceof IProjectile) {
+        if (renderedShip == null && entityIn instanceof IProjectile) {
             IEntityShipDraggable draggable = entityIn.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
             projectileMovementData = draggable == null ? null : draggable.getShipLocalMovementData();
             if (projectileMovementData != null && projectileMovementData.isActive() && projectileMovementData.isInitialized()
@@ -63,11 +67,6 @@ public abstract class MixinRenderManager {
                     renderedLocalPosition = new Vec3d(relativePosition.x, relativePosition.y, relativePosition.z);
                 }
             }
-        }
-        else {
-            EntityShipMountData mountData = ValkyrienUtils.getMountedShipAndPos(entityIn);
-            renderedShip = mountData.mountedShip();
-            renderedLocalPosition = mountData.mountPos();
         }
 
         //---apply rendering---

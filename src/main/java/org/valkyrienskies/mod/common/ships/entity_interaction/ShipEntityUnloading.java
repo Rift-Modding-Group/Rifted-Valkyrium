@@ -65,11 +65,13 @@ public class ShipEntityUnloading {
                     tag.removeTag("Passengers");
                     Vector3d position = new Vector3d(entity.posX, entity.posY, entity.posZ);
                     data.getShipTransform().transformPosition(position, TransformType.GLOBAL_TO_SUBSPACE);
-                    NBTTagCompound localPosition = new NBTTagCompound();
+                    NBTTagCompound localPosition = tag.getCompoundTag("VSShipPosition");
                     localPosition.setUniqueId("Ship", data.getUuid());
-                    localPosition.setDouble("X", position.x);
-                    localPosition.setDouble("Y", position.y);
-                    localPosition.setDouble("Z", position.z);
+                    if (!localPosition.hasKey("Anchor", 4)) {
+                        localPosition.setDouble("X", position.x);
+                        localPosition.setDouble("Y", position.y);
+                        localPosition.setDouble("Z", position.z);
+                    }
                     tag.setTag("VSShipPosition", localPosition);
                     Entity vehicle = entity.getRidingEntity();
                     if (vehicle != null) {

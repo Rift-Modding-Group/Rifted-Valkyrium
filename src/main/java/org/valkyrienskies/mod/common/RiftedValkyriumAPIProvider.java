@@ -16,6 +16,7 @@ import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
+import org.valkyrienskies.mod.common.capability.anchored_mount.ImplCapabilityShipAnchoredMount;
 import org.valkyrienskies.mod.common.capability.VSWorldDataCapability;
 import org.valkyrienskies.mod.common.entity.EntityMountable;
 import org.valkyrienskies.mod.common.physics.BlockPhysicsDetails;
@@ -102,6 +103,11 @@ public class RiftedValkyriumAPIProvider implements RiftedValkyriumAPI.Provider {
     @Override
     public void setEntityUnloadWithShip(Class<? extends Entity> entityClass) {
         ShipEntityUnloading.register(entityClass);
+    }
+
+    @Override
+    public void setEntityAlignWithShip(Class<? extends Entity> entityClass) {
+        ImplCapabilityShipAnchoredMount.registerAlignedEntity(entityClass);
     }
 
     @Override

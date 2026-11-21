@@ -30,6 +30,7 @@ import org.valkyrienskies.mod.common.annotation.LegacyContent;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.VSWorldDataCapability;
 import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMount;
+import org.valkyrienskies.mod.common.capability.anchored_mount.ImplCapabilityShipAnchoredMount;
 import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
 import org.valkyrienskies.mod.common.entity.EntityMountable;
 import org.valkyrienskies.mod.common.physics.BlockPhysicsDetails;
@@ -38,6 +39,7 @@ import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.block_relocation.BlockFinder;
 import org.valkyrienskies.mod.common.ships.chunk_claims.ShipChunkAllocator;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityShipMountData;
+import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
 import org.valkyrienskies.mod.common.ships.ship_transform.CoordinateSpaceType;
 import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
@@ -106,6 +108,14 @@ public final class ValkyrienUtils {
 
     @NotNull
     public static EntityShipMountData getMountedShipAndPos(Entity entity) {
+        if (!entity.isRiding() && ImplCapabilityShipAnchoredMount.isAlignedEntity(entity.getClass())) {
+            IShipAnchoredMount anchor = entity.getCapability(VSCapabilityRegistry.VS_SHIP_ANCHORED_MOUNT, null);
+            if (anchor != null && (anchor.isAnchoredToShip() || anchor.tryAnchorMount(entity))) {
+                Optional<PhysicsObject> ship = getPhysoManagingBlock(entity.world, anchor.getLocalAnchorBlock());
+                if (ship.isPresent()) return new EntityShipMountData(ship.get(), anchor.getLocalMountPos());
+            }
+        }
+
         EntityShipMountData sleepingPlayerMount = getSleepingPlayerShipAndPos(entity);
         if (sleepingPlayerMount.isMounted()) {
             return sleepingPlayerMount;
@@ -149,27 +159,29 @@ public final class ValkyrienUtils {
     }
 
     /**
-     * position of player on ship when sittin on chair attached to it
-     * */
+     * Resolves a rider's position using its carrier's passenger placement in ship coordinates.
+     */
     @NotNull
     public static EntityShipMountData getAnchoredMountShipAndPos(Entity entity) {
-        final Entity ridingEntity = entity.getRidingEntity();
+        Entity ridingEntity = entity.getRidingEntity();
         if (ridingEntity == null) return new EntityShipMountData();
 
-        final IShipAnchoredMount anchoredMount = ridingEntity.getCapability(VSCapabilityRegistry.VS_SHIP_ANCHORED_MOUNT, null);
-        if (anchoredMount == null || (!anchoredMount.isAnchoredToShip() && !anchoredMount.tryAnchorMount(ridingEntity))) {
-            return new EntityShipMountData();
+        IShipAnchoredMount anchoredMount = ridingEntity.getCapability(VSCapabilityRegistry.VS_SHIP_ANCHORED_MOUNT, null);
+        EntityShipMountData carrierMountData;
+        if (anchoredMount != null && (anchoredMount.isAnchoredToShip() || anchoredMount.tryAnchorMount(ridingEntity))) {
+            Optional<PhysicsObject> mountedShip = getPhysoManagingBlock(ridingEntity.world, anchoredMount.getLocalAnchorBlock());
+            if (mountedShip.isEmpty()) return new EntityShipMountData();
+            carrierMountData = new EntityShipMountData(mountedShip.get(), anchoredMount.getLocalMountPos());
         }
+        else carrierMountData = getMountedShipAndPos(ridingEntity);
+        if (!carrierMountData.isMounted()) return new EntityShipMountData();
 
-        final Optional<PhysicsObject> mountedShip = getPhysoManagingBlock(ridingEntity.world, anchoredMount.getLocalAnchorBlock());
-        if (mountedShip.isEmpty()) return new EntityShipMountData();
-
-        final Vec3d localMountPos = anchoredMount.getLocalMountPos();
-        return new EntityShipMountData(mountedShip.get(), new Vec3d(
-                localMountPos.x,
-                localMountPos.y + ridingEntity.getMountedYOffset() + entity.getYOffset(),
-                localMountPos.z
-        ));
+        PhysicsObject mountedShip = carrierMountData.mountedShip();
+        Vec3d localPassengerPosition = EntityDraggable.getShipLocalPassengerPosition(
+                ridingEntity, entity, carrierMountData.mountPos(),
+                mountedShip.getShipTransformationManager().getCurrentTickTransform()
+        );
+        return new EntityShipMountData(mountedShip, localPassengerPosition);
     }
 
     public static void fixEntityToShip(Entity toFix, Vector3dc posInLocal, PhysicsObject mountingShip) {

@@ -20,6 +20,7 @@ import org.joml.Vector3dc;
 import valkyrienwarfare.api.TransformType;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMount;
+import org.valkyrienskies.mod.common.capability.anchored_mount.ImplCapabilityShipAnchoredMount;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.ShipLocalEntityMovementData;
 import org.valkyrienskies.mod.common.config.VSConfig;
@@ -118,9 +119,16 @@ public class MessageEntityShipMovement implements IMessage {
         this.serverPosZ = serverPosZ;
 
         ShipTransform shipTransform = shipData.getShipTransform();
+        IShipAnchoredMount anchor = entity.getCapability(VSCapabilityRegistry.VS_SHIP_ANCHORED_MOUNT, null);
+        boolean alignedEntity = ImplCapabilityShipAnchoredMount.isAlignedEntity(entity.getClass())
+                && anchor != null && (anchor.isAnchoredToShip() || anchor.tryAnchorMount(entity));
         if (this.hasComponent(POSITION)) {
             Vector3d localPosition = new Vector3d(entity.posX, entity.posY, entity.posZ);
             shipTransform.transformPosition(localPosition, TransformType.GLOBAL_TO_SUBSPACE);
+            if (alignedEntity) {
+                Vec3d anchorPosition = anchor.getLocalMountPos();
+                localPosition.set(anchorPosition.x, anchorPosition.y, anchorPosition.z);
+            }
             this.localX = localPosition.x;
             this.localY = localPosition.y;
             this.localZ = localPosition.z;
@@ -139,6 +147,7 @@ public class MessageEntityShipMovement implements IMessage {
                     TransformType.GLOBAL_TO_SUBSPACE
             );
             this.pitch = entity.rotationPitch;
+            if (alignedEntity) this.localYaw = entity.rotationYaw;
         }
         if (this.hasComponent(HEAD_ROTATION)) {
             this.localHeadYaw = ShipLocalEntityMovementData.transformYaw(
@@ -146,6 +155,7 @@ public class MessageEntityShipMovement implements IMessage {
                     entity.getRotationYawHead(),
                     TransformType.GLOBAL_TO_SUBSPACE
             );
+            if (alignedEntity) this.localHeadYaw = entity.getRotationYawHead();
         }
     }
 
@@ -318,10 +328,38 @@ public class MessageEntityShipMovement implements IMessage {
                             ? indexedShip.map(ShipData::getShipTransform).orElse(null)
                             : physicsObject.getShipTransformationManager().getCurrentTickTransform();
 
+                    if (!entity.isRiding() && ImplCapabilityShipAnchoredMount.isAlignedEntity(entity.getClass())) {
+                        IShipAnchoredMount anchor = entity.getCapability(VSCapabilityRegistry.VS_SHIP_ANCHORED_MOUNT, null);
+                        if (anchor != null) {
+                            if (message.hasComponent(POSITION)) {
+                                anchor.setAnchorMountData(
+                                        new Vec3d(message.localX, message.localY, message.localZ),
+                                        new BlockPos(message.localX, message.localY, message.localZ)
+                                );
+                                entity.serverPosX = message.serverPosX;
+                                entity.serverPosY = message.serverPosY;
+                                entity.serverPosZ = message.serverPosZ;
+                            }
+                            if (message.hasComponent(ROTATION)) {
+                                entity.rotationYaw = (float) message.localYaw;
+                                entity.rotationPitch = message.pitch;
+                            }
+                            if (message.hasComponent(HEAD_ROTATION)) entity.setRotationYawHead((float) message.localHeadYaw);
+                            if (movementData != null) movementData.clear();
+                            if (physicsObject != null) {
+                                draggable.setLastTouchedShip(physicsObject.getShipData());
+                                draggable.setTicksSinceTouchedShip(0);
+                                draggable.setTicksPartOfGround(0);
+                            }
+                            return;
+                        }
+                    }
+
                     if (message.hasComponent(POSITION)) {
                         ResourceLocation entityType = EntityList.getKey(entity);
                         if (entityType != null && VSConfig.sittableBlockEntityIDsSet != null
-                                && VSConfig.sittableBlockEntityIDsSet.contains(entityType)) {
+                                && VSConfig.sittableBlockEntityIDsSet.contains(entityType)
+                        ) {
                             IShipAnchoredMount anchoredMount = entity.getCapability(
                                     VSCapabilityRegistry.VS_SHIP_ANCHORED_MOUNT,
                                     null
