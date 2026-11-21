@@ -44,6 +44,7 @@ import org.valkyrienskies.mod.common.ships.block_relocation.MoveBlocks;
 import org.valkyrienskies.mod.common.ships.chunk_claims.ClaimedChunkCacheController;
 import org.valkyrienskies.mod.common.ships.chunk_claims.VSChunkClaim;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
+import org.valkyrienskies.mod.common.ships.entity_interaction.ShipEntityUnloading;
 import org.valkyrienskies.mod.common.ships.interpolation.ITransformInterpolator;
 import org.valkyrienskies.mod.common.ships.interpolation.SimpleEMATransformInterpolator;
 import org.valkyrienskies.mod.common.ships.physics_data.ShipInertiaData;
@@ -579,8 +580,9 @@ public class PhysicsObject implements IPhysicsEntity {
         getShipData().setShipBB(shipBoundingBox);
     }
 
-    void unload() {
+    public void unload() {
         this.physicsReady = false;
+        if (!this.world.isRemote) ShipEntityUnloading.unload(this.world, this.shipData);
         for (Entity entity : this.world.loadedEntityList) {
             IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
             if (draggable != null) EntityDraggable.clearUnloadedShipTracking(draggable, this.shipData.getUuid());

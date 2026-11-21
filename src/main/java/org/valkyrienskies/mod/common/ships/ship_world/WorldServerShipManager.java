@@ -34,6 +34,7 @@ import org.valkyrienskies.mod.common.ships.ShipEntityAttachment;
 import org.valkyrienskies.mod.common.ships.block_relocation.BlockFinder;
 import org.valkyrienskies.mod.common.ships.block_relocation.IRelocationAwareTile;
 import org.valkyrienskies.mod.common.ships.block_relocation.SpatialDetector;
+import org.valkyrienskies.mod.common.ships.entity_interaction.ShipEntityUnloading;
 import org.valkyrienskies.mod.common.ships.physics_data.BasicCenterOfMassProvider;
 import org.valkyrienskies.mod.common.ships.physics_data.IPhysicsObjectCenterOfMassProvider;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
@@ -186,6 +187,7 @@ public class WorldServerShipManager implements IPhysObjectWorld {
 
         // Then tick all the loaded ships
         for (PhysicsObject ship : getAllLoadedPhysObj()) {
+            ShipEntityUnloading.reload(ship);
             ship.onTick();
         }
 

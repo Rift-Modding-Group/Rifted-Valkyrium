@@ -28,6 +28,7 @@ import org.valkyrienskies.mod.common.ships.block_relocation.BlockFinder;
 import org.valkyrienskies.mod.common.ships.chunk_claims.ShipChunkAllocator;
 import org.valkyrienskies.mod.common.ships.chunk_claims.VSChunkClaim;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
+import org.valkyrienskies.mod.common.ships.entity_interaction.ShipEntityUnloading;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
@@ -96,6 +97,11 @@ public class RiftedValkyriumAPIProvider implements RiftedValkyriumAPI.Provider {
     @Override
     public void setBlockMass(Block block, BlockMass blockMass) {
         BlockPhysicsDetails.setBlockMass(block, blockMass);
+    }
+
+    @Override
+    public void setEntityUnloadWithShip(Class<? extends Entity> entityClass) {
+        ShipEntityUnloading.register(entityClass);
     }
 
     @Override

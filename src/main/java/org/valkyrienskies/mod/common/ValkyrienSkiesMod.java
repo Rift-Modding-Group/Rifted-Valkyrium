@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import net.minecraft.block.Block;
 import net.minecraft.command.ServerCommandManager;
 import net.minecraft.creativetab.CreativeTabs;
+import net.minecraft.entity.item.*;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Items;
 import net.minecraft.item.Item;
@@ -116,6 +117,7 @@ public class ValkyrienSkiesMod {
     public static SimpleNetworkWrapper controlNetwork;
     public static CreativeTabs VS_CREATIVE_TAB;
     public static CreativeTabs RV_DEBUG_TAG;
+    public static Item ENTITY_SHIP_LINKER_STICK;
 
     private static final List<String> MODULES = ImmutableList.of("vs_control", "vs_world");
 
@@ -124,8 +126,11 @@ public class ValkyrienSkiesMod {
         LOGGER.debug("Initializing configuration.");
         runConfiguration();
 
+        //debug sticks
         RV_DEBUG_TAG = new TabRiftedValkyriumDebug();
-        new ItemEntityShipLinkerStick();
+        ENTITY_SHIP_LINKER_STICK = new ItemEntityShipLinkerStick();
+
+        //legacy blocks and items
         registerItems();
         registerBlocks();
 
@@ -140,6 +145,15 @@ public class ValkyrienSkiesMod {
 
         LOGGER.debug("Initializing the Rifted Valkyrium API.");
         RiftedValkyriumAPI.registerProvider(new RiftedValkyriumAPIProvider());
+
+        //default unloadable entities registry
+        RiftedValkyriumAPI.setEntityUnloadWithShip(EntityArmorStand.class);
+        RiftedValkyriumAPI.setEntityUnloadWithShip(EntityMinecart.class);
+        RiftedValkyriumAPI.setEntityUnloadWithShip(EntityMinecartChest.class);
+        RiftedValkyriumAPI.setEntityUnloadWithShip(EntityMinecartHopper.class);
+        RiftedValkyriumAPI.setEntityUnloadWithShip(EntityMinecartFurnace.class);
+        RiftedValkyriumAPI.setEntityUnloadWithShip(EntityMinecartCommandBlock.class);
+        RiftedValkyriumAPI.setEntityUnloadWithShip(EntityBoat.class);
 
 		registerDarknessLib();
     }

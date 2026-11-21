@@ -27,6 +27,8 @@ import valkyrienwarfare.api.ShipBlockBlacklist;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -90,6 +92,10 @@ public class ShipData implements IShipData {
 
     @PacketIgnore
     public boolean entityCarrierDead;
+
+    /** Serialized entity groups awaiting restoration on the server. */
+    @PacketIgnore
+    public List<byte[]> unloadedEntities = new ArrayList<>();
 
     @Nullable
     @JsonSerialize(as = Vector3d.class)

@@ -326,6 +326,17 @@ public class RiftedValkyriumAPI {
     }
 
     /**
+     * Allow for a given entity to be unloaded when a ship they're colliding
+     * with also unloads. They will reload again when the ship reloads.
+     * Includes subclasses and non-player passengers. Groups containing players stay in the world.
+     * A registered passenger riding an unregistered vehicle stays with that vehicle.
+     * @param entityClass The class of the entity that should unload and reload along with a ship
+     * */
+    public static void setEntityUnloadWithShip(Class<? extends Entity> entityClass) {
+        provider.setEntityUnloadWithShip(Objects.requireNonNull(entityClass, "entityClass"));
+    }
+
+    /**
      * Formats a force magnitude using the next SI unit whenever its absolute value reaches four digits.
      * Useful for people trying to render the amount of force their force applying blocks create in a visible manner.
      * @param magnitude The raw magnitude of a force in Newtons.
@@ -404,6 +415,8 @@ public class RiftedValkyriumAPI {
 
         void setBlockMass(Block block, BlockMass blockMass);
 
+        void setEntityUnloadWithShip(Class<? extends Entity> entityClass);
+
         @NotNull
         IShipData createNewShip(WorldServer world, Vec3d initialPosition, AxisAlignedBB initialBounds, ShipBuildOptions shipBuildOptions);
 
@@ -465,6 +478,11 @@ public class RiftedValkyriumAPI {
 
         @Override
         public void setBlockMass(Block block, BlockMass blockMass) {
+            throw new IllegalStateException("Rifted Valkyrium has not initialized its API provider");
+        }
+
+        @Override
+        public void setEntityUnloadWithShip(Class<? extends Entity> entityClass) {
             throw new IllegalStateException("Rifted Valkyrium has not initialized its API provider");
         }
 
