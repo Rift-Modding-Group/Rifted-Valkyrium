@@ -1,7 +1,9 @@
 package valkyrienwarfare.api;
 
+import net.minecraft.entity.Entity;
 import net.minecraft.util.math.AxisAlignedBB;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3dc;
 
 import java.util.UUID;
@@ -54,4 +56,9 @@ public interface IShipData {
      * @return If physics is enabled on the {@link IPhysicsEntity}
      * */
     boolean isPhysicsEnabled();
+
+    /**
+     * @return the {@link UUID} of the {@link Entity} thie ship is pegged to, or a nil value if none exists.
+     * */
+    @NotNull UUID getEntityPeggedToUUID();
 }

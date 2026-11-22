@@ -16,6 +16,7 @@ import org.valkyrienskies.mod.common.ships.physics_data.ShipInertiaData;
 import org.valkyrienskies.mod.common.ships.physics_data.ShipPhysicsData;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
+import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import org.valkyrienskies.mod.common.util.cqengine.ConcurrentUpdatableIndexedCollection;
 import org.valkyrienskies.mod.common.util.datastructures.IBlockPosSet;
 import org.valkyrienskies.mod.common.util.datastructures.IBlockPosSetAABB;
@@ -269,6 +270,12 @@ public class ShipData implements IShipData {
 
     public void setPhysicsEnabled(boolean physicsEnabled) {
         this.physicsEnabled = physicsEnabled;
+    }
+
+    @NotNull
+    public UUID getEntityPeggedToUUID() {
+        if (this.entityAttachment == null) return new UUID(0, 0);
+        return this.entityAttachment.entityUuid();
     }
 
     public boolean isPeggedTo(@NotNull Entity entity) {
