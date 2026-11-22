@@ -38,6 +38,8 @@ commands.vs.rename.success=已成功将%s重命名为%s！
 debug.valkyrienskies.ship_name=飞船名称：%s
 debug.valkyrienskies.center_of_mass=质心：%s
 debug.valkyrienskies.mass=质量：%.2f kg
+debug.valkyrienskies.linear_velocity=线速度：%s
+debug.valkyrienskies.angular_velocity=角速度：%s
 
 
 # Config (Remember to update VSConfig after any changes are made here)

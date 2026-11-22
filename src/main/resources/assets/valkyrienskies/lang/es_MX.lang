@@ -38,6 +38,8 @@ commands.vs.rename.success=¡Se cambió correctamente el nombre de %s a %s!
 debug.valkyrienskies.ship_name=Nombre de la nave: %s
 debug.valkyrienskies.center_of_mass=Centro de masa: %s
 debug.valkyrienskies.mass=Masa: %.2f kg
+debug.valkyrienskies.linear_velocity=Velocidad lineal: %s
+debug.valkyrienskies.angular_velocity=Velocidad angular: %s
 
 
 # Config (Remember to update VSConfig after any changes are made here)

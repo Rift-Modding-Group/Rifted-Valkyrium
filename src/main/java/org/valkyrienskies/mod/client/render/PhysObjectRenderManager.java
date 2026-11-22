@@ -204,13 +204,12 @@ public class PhysObjectRenderManager {
     public void renderDebugInfo(double offsetX, double offsetY, double offsetZ) {
         GlStateManager.pushMatrix();
 
-        AxisAlignedBB shipBB = parent.getShipBB().offset(offsetX, offsetY, offsetZ);
-        ShipTransform renderTransform = parent.getShipTransformationManager().getRenderTransform();
+        AxisAlignedBB shipBB = this.parent.getShipBB().offset(offsetX, offsetY, offsetZ);
+        ShipTransform renderTransform = this.parent.getShipTransformationManager().getRenderTransform();
 
-        Vector3dc centerOfMass = parent.getShipData().getInertiaData().getGameTickCenterOfMass();
-
+        Vector3dc centerOfMass = this.parent.getShipData().getInertiaData().getGameTickCenterOfMass();
         Vector3d centerOfMassPos = new Vector3d(centerOfMass);
-        parent.getShipTransformationManager().getRenderTransform().transformPosition(centerOfMassPos, TransformType.SUBSPACE_TO_GLOBAL);
+        this.parent.getShipTransformationManager().getRenderTransform().transformPosition(centerOfMassPos, TransformType.SUBSPACE_TO_GLOBAL);
 
         AxisAlignedBB centerOfMassBB = new AxisAlignedBB(JOML.toMinecraft(centerOfMassPos), JOML.toMinecraft(centerOfMassPos))
             .grow(.1).offset(offsetX, offsetY, offsetZ);
@@ -280,6 +279,29 @@ public class PhysObjectRenderManager {
                 massStr, renderTransform.getPosX(), renderTransform.getPosY() + 0.5D, renderTransform.getPosZ(),
                 offsetX, offsetY, offsetZ
         );
+
+        //debug velocities
+        if (VSConfig.showVelocitiesInDebug) {
+            Vector3d linearVelocity = new Vector3d(this.parent.getPhysicsData().getLinearVelocity());
+            String linearVelocityStr = I18n.format(
+                    "debug.valkyrienskies.linear_velocity",
+                    linearVelocity.toString(new DecimalFormat("############.##"))
+            );
+            this.renderTextBox(
+                    linearVelocityStr, renderTransform.getPosX(), renderTransform.getPosY(), renderTransform.getPosZ(),
+                    offsetX, offsetY, offsetZ
+            );
+
+            Vector3d angularVelocity = new Vector3d(this.parent.getPhysicsData().getAngularVelocity());
+            String angularVelocityStr = I18n.format(
+                    "debug.valkyrienskies.angular_velocity",
+                    angularVelocity.toString(new DecimalFormat("############.##"))
+            );
+            this.renderTextBox(
+                    angularVelocityStr, renderTransform.getPosX(), renderTransform.getPosY() - 0.5D, renderTransform.getPosZ(),
+                    offsetX, offsetY, offsetZ
+            );
+        }
 
         GlStateManager.popMatrix();
     }

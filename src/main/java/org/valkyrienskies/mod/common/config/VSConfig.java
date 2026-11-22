@@ -278,7 +278,13 @@ public class VSConfig extends VSConfigTemplate {
             "Show loaded ships on supported map mods.",
             "Supports Xaero's Minimap, Xaero's World Map, and JourneyMap."
     })
-    public static boolean showShipInMinimapMods;
+    public static boolean showShipInMinimapMods = false;
+
+    @Name("Show Linear and Angular velocities in debug view")
+    @Comment({
+            "Show linear and angular velocities acting on a ship when F3+B is enabled."
+    })
+    public static boolean showVelocitiesInDebug = false;
 
     @Ignore
     public static Set<ResourceLocation> sittableBlockEntityIDsSet;
