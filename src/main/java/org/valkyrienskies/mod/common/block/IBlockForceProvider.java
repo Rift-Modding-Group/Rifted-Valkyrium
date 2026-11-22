@@ -7,10 +7,15 @@ import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
+import valkyrienwarfare.api.IShipForces;
 import valkyrienwarfare.api.TransformType;
 
 import javax.annotation.Nullable;
 
+/**
+ * @deprecated Use {@link valkyrienwarfare.api.IShipForcesInducer#applyForces(IShipForces)} moving forward, this mostly exists to keep compat w old VS1 addons.
+ * */
+@Deprecated
 public interface IBlockForceProvider {
     /**
      * The World space version of the force vector, calculated by default from the Ship space

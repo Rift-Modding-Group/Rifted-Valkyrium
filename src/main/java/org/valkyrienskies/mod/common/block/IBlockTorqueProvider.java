@@ -3,9 +3,13 @@ package org.valkyrienskies.mod.common.block;
 import net.minecraft.util.math.BlockPos;
 import org.joml.Vector3dc;
 import org.valkyrienskies.mod.common.physics.PhysicsCalculations;
+import valkyrienwarfare.api.IShipForces;
 
 import javax.annotation.Nullable;
 
+/**
+ * @deprecated Use {@link valkyrienwarfare.api.IShipForcesInducer#applyForces(IShipForces)} moving forward, this mostly exists to keep compat w old VS1 addons.
+ * */
 public interface IBlockTorqueProvider extends Comparable<IBlockTorqueProvider> {
 
     @Nullable
