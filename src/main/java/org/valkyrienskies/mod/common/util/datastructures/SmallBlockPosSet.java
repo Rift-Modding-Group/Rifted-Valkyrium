@@ -107,7 +107,7 @@ public class SmallBlockPosSet implements IBlockPosSet {
     public boolean canStore(int x, int y, int z) {
         int xLocal = x - centerX;
         int zLocal = z - centerZ;
-        return !(y < 0 | y > 255 | xLocal < -2048 | xLocal > 2047 | zLocal < -2048 | zLocal > 2047);
+        return y >= 0 && y <= 255 && xLocal >= -2048 && xLocal <= 2047 && zLocal >= -2048 && zLocal <= 2047;
     }
 
     @Override

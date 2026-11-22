@@ -103,7 +103,7 @@ valkyrienskies.general.ship_loading_settings.unloadDistance=Distancia de descarg
 valkyrienskies.general.ship_loading_settings.unloadDistance.tooltip=Si no hay jugadores dentro de esta distancia XZ de una nave y la nave está cargada, se descargará.
 
 valkyrienskies.general.shipspawndetectorblacklist=Lista negra del detector de creación de naves
-valkyrienskies.general.shipspawndetectorblacklist.tooltip=Bloques que no se incluirán al ensamblar una nave.
+valkyrienskies.general.shipspawndetectorblacklist.tooltip=Bloques que no se incluirán al armar una nave.
 
 valkyrienskies.general.blockmass=Masa de los bloques
 valkyrienskies.general.blockmass.tooltip=Sobrescribe el valor de masa generado automáticamente para los bloques. La unidad de masa es el kg.
@@ -232,10 +232,10 @@ tooltip.vs_control.wrench.switched.deconstruct=Llave inglesa en modo de desmonta
 
 # Gui
 gui.physics_infuser=Infusor de física
-gui.assemble_ship=Ensamblar nave
-gui.disassemble_ship=Desensamblar nave
-gui.assembling_ship=Ensamblando nave...
-gui.disassembling_ship=Desensamblando nave...
+gui.assemble_ship=Armar nave
+gui.disassemble_ship=Desarmar nave
+gui.assembling_ship=Armando nave...
+gui.disassembling_ship=Desarmando nave...
 gui.enable_physics=Activar física
 gui.disable_physics=Desactivar física
 gui.align_ship=Alinear nave
@@ -322,10 +322,33 @@ vs_world.general.valkyriumoregenenabled.tooltip=El valor predeterminado es verda
 valkyrienskies.general.showshipinminimapmods=Mostrar barcos en los mods de minimapa
 valkyrienskies.general.showshipinminimapmods.tooltip=Mostrar los barcos cargados en los mods de mapa compatibles. Compatible con Xaero's Minimap, Xaero's World Map y JourneyMap.
 
-itemGroup.rifted_valkyrium_debug=Depuración de Rifted Valkyrium
-item.entity_ship_linker_stick.name=Vara de enlace entre entidad y nave
+itemGroup.rifted_valkyrium_debug=Debug de Rifted Valkyrium
+item.entity_ship_linker_stick.name=Palo de enlace entre entidad y nave
 tooltip.valkyrienskies.linker.usage=Haz clic derecho en un bloque de una nave y luego en una entidad para colocar la plataforma sobre su lomo.
 message.valkyrienskies.linker.select_ship=Primero haz clic derecho en un bloque de una nave para seleccionarla.
 message.valkyrienskies.linker.selected=Se seleccionó %s. Haz clic derecho en una entidad para enlazarla.
 message.valkyrienskies.linker.ship_missing=La nave seleccionada ya no existe en este mundo.
 message.valkyrienskies.linker.linked=Se enlazó %s a %s.
+
+item.ship_assembler_stick.name=Palo para armar naves
+tooltip.valkyrienskies.assembler.usage=Haz clic derecho en dos esquinas para armar una nave con todos los bloques que no sean aire entre ellas. Haz clic derecho en una nave para desarmarla. Agáchate y haz clic derecho para borrar la selección.
+message.valkyrienskies.assembler.selected=Selecciona otra esquina para armar.
+message.valkyrienskies.assembler.cleared=Selección borrada.
+message.valkyrienskies.assembler.queued=Armado de nave en cola.
+message.valkyrienskies.assembler.too_large=La región seleccionada excede los límites de almacenamiento de la nave (4096 bloques en X o Z).
+message.valkyrienskies.assembler.unloaded=La región seleccionada debe estar completamente cargada antes de armar la nave.
+
+item.physics_stick.name=Palo de física
+tooltip.valkyrienskies.physics_stick.usage=Haz clic derecho en una nave para arrastrarla. Agáchate y haz clic derecho para activar o desactivar la física.
+message.valkyrienskies.physics_stick.select_ship=Haz clic derecho en una nave para seleccionarla.
+message.valkyrienskies.physics_stick.enabled=Física activada.
+message.valkyrienskies.physics_stick.disabled=Física desactivada.
+message.valkyrienskies.physics_stick.selected=Nave seleccionada. Mira para moverla.
+message.valkyrienskies.physics_stick.released=Nave soltada.
+message.valkyrienskies.physics_stick.unavailable=Esta nave no está disponible, ya está sujetada o está unida a una entidad.
+
+item.ship_size_lock_stick.name=Palo de bloqueo de tamaño del barco
+tooltip.valkyrienskies.size_lock.usage=Haz clic derecho en un bloque del barco para bloquear o desbloquear su tamaño de construcción actual.
+message.valkyrienskies.size_lock.select_ship=Haz clic derecho en un bloque del barco para alternar el bloqueo de tamaño.
+message.valkyrienskies.size_lock.locked=Se bloqueó %s en su tamaño actual.
+message.valkyrienskies.size_lock.unlocked=Se desbloqueó el tamaño de %s.

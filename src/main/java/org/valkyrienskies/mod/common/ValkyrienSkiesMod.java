@@ -44,6 +44,9 @@ import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.command.MainCommand;
 import org.valkyrienskies.mod.common.command.config.VSConfigCommand;
 import org.valkyrienskies.mod.common.config.VSConfig;
+import org.valkyrienskies.mod.common.item.ItemShipAssemblerStick;
+import org.valkyrienskies.mod.common.item.ItemShipSizeLockStick;
+import org.valkyrienskies.mod.common.item.ItemPhysicsStick;
 import org.valkyrienskies.mod.common.item.ItemShipTracker;
 import org.valkyrienskies.mod.common.item.ItemEntityShipLinkerStick;
 import org.valkyrienskies.mod.common.network.MessageEntityShipMovement;
@@ -117,7 +120,10 @@ public class ValkyrienSkiesMod {
     public static SimpleNetworkWrapper controlNetwork;
     public static CreativeTabs VS_CREATIVE_TAB;
     public static CreativeTabs RV_DEBUG_TAG;
+    public Item SHIP_ASSEMBLER_STICK;
+    public Item PHYSICS_STICK;
     public Item ENTITY_SHIP_LINKER_STICK;
+    public Item SHIP_SIZE_LOCK_STICK;
 
     private static final List<String> MODULES = ImmutableList.of("vs_control", "vs_world");
 
@@ -128,7 +134,10 @@ public class ValkyrienSkiesMod {
 
         //debug sticks
         RV_DEBUG_TAG = new TabRiftedValkyriumDebug();
+        SHIP_ASSEMBLER_STICK = new ItemShipAssemblerStick();
+        PHYSICS_STICK = new ItemPhysicsStick();
         ENTITY_SHIP_LINKER_STICK = new ItemEntityShipLinkerStick();
+        SHIP_SIZE_LOCK_STICK = new ItemShipSizeLockStick();
 
         //legacy blocks and items
         registerItems();

@@ -134,6 +134,9 @@ public class PhysicsObject implements IPhysicsEntity {
     @Nullable
     private Entity entityPeggedTo;
 
+    @Nullable
+    public PhysicsStickController physicsStickController;
+
     // endregion
 
     // region Methods
@@ -425,6 +428,7 @@ public class PhysicsObject implements IPhysicsEntity {
     }
 
     public void destroyShip() {
+        PhysicsStickController.release(this);
         this.physicsReady = false;
         this.maintenanceProviders.clear();
         //copy all the blocks from the ship to the world
@@ -581,6 +585,7 @@ public class PhysicsObject implements IPhysicsEntity {
     }
 
     public void unload() {
+        PhysicsStickController.release(this);
         this.physicsReady = false;
         if (!this.world.isRemote) ShipEntityUnloading.unload(this.world, this.shipData);
         for (Entity entity : this.world.loadedEntityList) {

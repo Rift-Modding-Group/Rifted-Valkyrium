@@ -556,7 +556,7 @@ public class EntityCollisionInjector {
     }
 
     private static boolean isDifSignificant(double dif1, double d2) {
-        return !(Math.abs(dif1 - d2) < errorSignificance);
+        return Math.abs(dif1 - d2) >= errorSignificance;
     }
 
     private static boolean motionInterfering(double orig, double modded) {

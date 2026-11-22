@@ -113,7 +113,7 @@ public class RiftedValkyriumAPIProvider implements RiftedValkyriumAPI.Provider {
     @Override
     @NotNull
     @SuppressWarnings("deprecation")
-    public IShipData createNewShip(WorldServer world, Vec3d initialPosition, AxisAlignedBB initialBounds, ShipBuildOptions shipBuildOptions) {
+    public IShipData createNewShip(WorldServer world, Vec3d initialPosition, @Nullable AxisAlignedBB initialBounds, ShipBuildOptions shipBuildOptions) {
         IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(world);
         if (!(physObjectWorld instanceof WorldServerShipManager serverShipManager)) {
             throw new IllegalStateException("Could not get server ship manager from world!");
@@ -163,13 +163,21 @@ public class RiftedValkyriumAPIProvider implements RiftedValkyriumAPI.Provider {
         if (shipBuildOptions.getShipName() != null) shipName = shipBuildOptions.getShipName();
         else shipName = NounListNameGenerator.getInstance().generateName();
 
+        AxisAlignedBB shipBounds = initialBounds;
+        if (shipBounds == null) {
+            shipBounds = new AxisAlignedBB(
+                    initialPosition.x, initialPosition.y, initialPosition.z,
+                    initialPosition.x + 1D, initialPosition.y + 1D, initialPosition.z + 1D
+            );
+        }
         ShipData shipData = ShipData.createData(
                 queryableShipData.allShips(), shipName,
                 chunkClaim, UUID.randomUUID(), initialTransform,
-                initialBounds, blockBlacklist
+                shipBounds, blockBlacklist
         );
         shipData.setPhysicsEnabled(shipBuildOptions.getPhysicsEnabled());
         shipData.dontSetSpawn = shipBuildOptions.getDontSetSpawn();
+        shipData.assemblyBounds = initialBounds;
         shipData.assembledBlockBlacklistId = assembledBlacklistId;
         if (maxShipBounds != null) {
             shipData.shipBounds = ShipDataMethods.createBuildBounds(regionCenter, maxShipBounds);

@@ -333,3 +333,26 @@ message.valkyrienskies.linker.select_ship=Sélectionnez d’abord un vaisseau pa
 message.valkyrienskies.linker.selected=Vaisseau sélectionné : %s. Faites un clic droit sur une entité pour le lier.
 message.valkyrienskies.linker.ship_missing=Le vaisseau sélectionné n’existe plus dans ce monde.
 message.valkyrienskies.linker.linked=Vaisseau %s lié à %s.
+
+item.ship_assembler_stick.name=Bâton d’assemblage de navire
+tooltip.valkyrienskies.assembler.usage=Faites un clic droit sur deux coins pour assembler tous les blocs autres que l’air entre eux. Faites un clic droit sur un navire pour le désassembler. Accroupissez-vous et faites un clic droit pour effacer la sélection.
+message.valkyrienskies.assembler.selected=Sélectionnez un autre coin pour assembler.
+message.valkyrienskies.assembler.cleared=Sélection effacée.
+message.valkyrienskies.assembler.queued=Assemblage du navire en attente.
+message.valkyrienskies.assembler.too_large=La région sélectionnée dépasse les limites de stockage du navire (4096 blocs sur X ou Z).
+message.valkyrienskies.assembler.unloaded=La région sélectionnée doit être entièrement chargée avant l’assemblage.
+
+item.physics_stick.name=Bâton de physique
+tooltip.valkyrienskies.physics_stick.usage=Faites un clic droit sur un navire pour le déplacer. Accroupissez-vous et faites un clic droit pour activer ou désactiver la physique.
+message.valkyrienskies.physics_stick.select_ship=Faites un clic droit sur un navire pour le sélectionner.
+message.valkyrienskies.physics_stick.enabled=Physique activée.
+message.valkyrienskies.physics_stick.disabled=Physique désactivée.
+message.valkyrienskies.physics_stick.selected=Navire sélectionné. Regardez pour le déplacer.
+message.valkyrienskies.physics_stick.released=Navire relâché.
+message.valkyrienskies.physics_stick.unavailable=Ce navire est indisponible, déjà tenu ou attaché à une entité.
+
+item.ship_size_lock_stick.name=Bâton de verrouillage de la taille du navire
+tooltip.valkyrienskies.size_lock.usage=Faites un clic droit sur un bloc du navire pour verrouiller ou déverrouiller sa taille de construction actuelle.
+message.valkyrienskies.size_lock.select_ship=Faites un clic droit sur un bloc du navire pour basculer le verrouillage de sa taille.
+message.valkyrienskies.size_lock.locked=La taille actuelle de %s est verrouillée.
+message.valkyrienskies.size_lock.unlocked=La taille de %s est déverrouillée.

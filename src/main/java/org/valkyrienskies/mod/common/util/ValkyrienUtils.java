@@ -72,9 +72,7 @@ public final class ValkyrienUtils {
      * @param world The World we are in
      * @param pos   A BlockPos within the physics object space.
      * @return The PhysicsObject that owns the chunk at pos within the given world.
-     * @deprecated use {@link RiftedValkyriumAPI#getPhysoManagingBlock(World, BlockPos)}
      */
-    @Deprecated
     @NotNull
     public static Optional<PhysicsObject> getPhysoManagingBlock(@Nullable World world, @Nullable BlockPos pos) {
         return RiftedValkyriumAPI.getPhysoManagingBlock(world, pos).map(PhysicsObject.class::cast);

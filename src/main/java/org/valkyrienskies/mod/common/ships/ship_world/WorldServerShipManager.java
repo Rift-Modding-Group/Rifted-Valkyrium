@@ -42,6 +42,7 @@ import org.valkyrienskies.mod.common.util.multithreaded.CalledFromWrongThreadExc
 import org.valkyrienskies.mod.common.util.multithreaded.VSWorldPhysicsLoop;
 import valkyrienwarfare.api.TransformType;
 import valkyrienwarfare.api.ShipEntityDeathBehavior;
+import valkyrienwarfare.api.ShipBlockBlacklist;
 
 import javax.annotation.Nonnull;
 import java.util.*;
@@ -187,6 +188,7 @@ public class WorldServerShipManager implements IPhysObjectWorld {
 
         // Then tick all the loaded ships
         for (PhysicsObject ship : getAllLoadedPhysObj()) {
+            PhysicsStickController.tick(ship);
             ShipEntityUnloading.reload(ship);
             ship.onTick();
         }
@@ -217,19 +219,34 @@ public class WorldServerShipManager implements IPhysObjectWorld {
                 throw new IllegalStateException("Tried spawning a ShipData that was already loaded?\n" + toSpawn);
             }
 
-            final SpatialDetector detector = BlockFinder.getBlockFinderFor(
-                    blockBlockFinderType,
-                    physicsInfuserPos,
-                    this.world,
-                    VSConfig.maxDetectedShipSize + 1,
-                    true,
-                    toSpawn.takeBlockBlacklist()
-            );
+            TLongHashSet detectedPositions;
+            boolean cleanHouse = false;
+            ShipBlockBlacklist blockBlacklist = toSpawn.takeBlockBlacklist();
+            if (toSpawn.assemblyBounds != null) {
+                detectedPositions = BlockFinder.findBlocksInRegion(
+                        toSpawn.assemblyBounds, VSConfig.maxDetectedShipSize + 1,
+                        position -> {
+                            IBlockState state = this.world.getBlockState(position);
+                            return !state.getBlock().isAir(state, this.world, position)
+                                    && !blockBlacklist.isBlacklisted(this.world, position, state);
+                        }
+                );
+                toSpawn.assemblyBounds = null;
+            }
+            else {
+                SpatialDetector detector = BlockFinder.getBlockFinderFor(
+                        blockBlockFinderType, physicsInfuserPos, this.world,
+                        VSConfig.maxDetectedShipSize + 1, true, blockBlacklist
+                );
+                detectedPositions = detector.foundSet;
+                cleanHouse = detector.cleanHouse;
+            }
 
             if (VSConfig.showAnnoyingDebugOutput) {
                 System.out.println("Attempting to spawn " + toSpawn + " on the thread " + Thread.currentThread().getName());
             }
-            if (detector.foundSet.size() > VSConfig.maxDetectedShipSize || detector.cleanHouse) {
+            if (detectedPositions.isEmpty()) continue;
+            if (detectedPositions.size() > VSConfig.maxDetectedShipSize || cleanHouse) {
                 System.err.println("Ship too big or bedrock detected!");
 
                 /*
@@ -259,7 +276,7 @@ public class WorldServerShipManager implements IPhysObjectWorld {
             TLongHashSet occupiedShipChunks = new TLongHashSet();
             TLongHashSet relocatedTilePositions = new TLongHashSet();
             IBlockState airState = Blocks.AIR.getDefaultState();
-            long[] detectedBlocks = detector.foundSet.toArray();
+            long[] detectedBlocks = detectedPositions.toArray();
 
             // Validate every destination before relocating any blocks or tiles.
             boolean exceedsStorageBounds = false;

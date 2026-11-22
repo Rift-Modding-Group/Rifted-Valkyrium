@@ -323,9 +323,33 @@ valkyrienskies.general.showshipinminimapmods=Show Ships in Minimap Mods
 valkyrienskies.general.showshipinminimapmods.tooltip=Show loaded ships on supported map mods. Supports Xaero's Minimap, Xaero's World Map, and JourneyMap.
 
 itemGroup.rifted_valkyrium_debug=Rifted Valkyrium Debug
+
 item.entity_ship_linker_stick.name=Entity-Ship Linker Stick
 tooltip.valkyrienskies.linker.usage=Right-click a ship block, then an entity to place the platform on its back.
 message.valkyrienskies.linker.select_ship=Right-click a ship block to select a ship first.
 message.valkyrienskies.linker.selected=Selected %s. Right-click an entity to link it.
 message.valkyrienskies.linker.ship_missing=The selected ship no longer exists in this world.
 message.valkyrienskies.linker.linked=Linked %s to %s.
+
+item.ship_assembler_stick.name=Ship Assembler Stick
+tooltip.valkyrienskies.assembler.usage=Right-click two corners to assemble a ship. Right-click a ship to disassemble it. Sneak-right-click to clear the selection.
+message.valkyrienskies.assembler.selected=Select another corner to assemble.
+message.valkyrienskies.assembler.cleared=Selection cleared.
+message.valkyrienskies.assembler.queued=Ship assembly queued.
+message.valkyrienskies.assembler.too_large=The selected region exceeds ship storage limits (4096 blocks along X or Z).
+message.valkyrienskies.assembler.unloaded=The selected region must be fully loaded before assembly.
+
+item.physics_stick.name=Physics Stick
+tooltip.valkyrienskies.physics_stick.usage=Right-click a ship to be able to drag it around. Sneak-right-click to toggle physics.
+message.valkyrienskies.physics_stick.select_ship=Right-click a ship to select it.
+message.valkyrienskies.physics_stick.enabled=Physics enabled.
+message.valkyrienskies.physics_stick.disabled=Physics disabled.
+message.valkyrienskies.physics_stick.selected=Ship selected.
+message.valkyrienskies.physics_stick.released=Ship released.
+message.valkyrienskies.physics_stick.unavailable=This ship is unavailable, already held, or attached to an entity.
+
+item.ship_size_lock_stick.name=Ship Size Lock Stick
+tooltip.valkyrienskies.size_lock.usage=Right-click a ship block to lock or unlock its current build size.
+message.valkyrienskies.size_lock.select_ship=Right-click a ship block to toggle its size lock.
+message.valkyrienskies.size_lock.locked=Locked %s to its current size.
+message.valkyrienskies.size_lock.unlocked=Unlocked the size of %s.

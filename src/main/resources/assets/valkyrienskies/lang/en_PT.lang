@@ -334,3 +334,26 @@ message.valkyrienskies.linker.select_ship=Right-click a ship block to choose yer
 message.valkyrienskies.linker.selected=Chose %s. Right-click a beast to link it.
 message.valkyrienskies.linker.ship_missing=Yer chosen vessel be gone from this world.
 message.valkyrienskies.linker.linked=Lashed %s to %s.
+
+item.ship_assembler_stick.name=Ship Assemblin' Stick
+tooltip.valkyrienskies.assembler.usage=Right-click two corners to assemble every non-air block betwixt them. Right-click a vessel to take it apart. Sneak-right-click to clear yer choice.
+message.valkyrienskies.assembler.selected=Choose another corner to assemble yer vessel.
+message.valkyrienskies.assembler.cleared=Yer selection be cleared.
+message.valkyrienskies.assembler.queued=Yer vessel be queued for assembly.
+message.valkyrienskies.assembler.too_large=Yer chosen region be too wide for a vessel (4096 blocks along X or Z).
+message.valkyrienskies.assembler.unloaded=Yer whole chosen region must be loaded before assemblin'.
+
+item.physics_stick.name=Physics Stick
+tooltip.valkyrienskies.physics_stick.usage=Right-click a vessel to drag it about. Sneak-right-click to toggle physics.
+message.valkyrienskies.physics_stick.select_ship=Right-click a vessel to choose it.
+message.valkyrienskies.physics_stick.enabled=Physics be enabled.
+message.valkyrienskies.physics_stick.disabled=Physics be disabled.
+message.valkyrienskies.physics_stick.selected=Vessel chosen. Look to move it.
+message.valkyrienskies.physics_stick.released=Vessel released.
+message.valkyrienskies.physics_stick.unavailable=This vessel be unavailable, already held, or lashed to a beast.
+
+item.ship_size_lock_stick.name=Ship Size Lockin’ Stick
+tooltip.valkyrienskies.size_lock.usage=Right-click a ship block to lock or unlock its current buildin’ size.
+message.valkyrienskies.size_lock.select_ship=Right-click a ship block to toggle its size lock, matey.
+message.valkyrienskies.size_lock.locked=Locked %s to its current size, arrr!
+message.valkyrienskies.size_lock.unlocked=Unlocked the size o’ %s.

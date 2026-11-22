@@ -128,6 +128,13 @@ public class ShipData implements IShipData {
     private transient ShipBlockBlacklist blockBlacklist;
 
     /**
+     * World-space region consumed by the server assembly queue.
+     * */
+    @PacketIgnore
+    @Nullable
+    public transient AxisAlignedBB assemblyBounds;
+
+    /**
      * Stable placement policy ID. The callback remains in the addon registry on the server.
      */
     @PacketIgnore

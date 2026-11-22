@@ -334,3 +334,26 @@ message.valkyrienskies.linker.select_ship=Wähle zuerst ein Schiff durch Rechtsk
 message.valkyrienskies.linker.selected=%s ausgewählt. Rechtsklicke auf eine Kreatur, um das Schiff zu verknüpfen.
 message.valkyrienskies.linker.ship_missing=Das ausgewählte Schiff existiert in dieser Welt nicht mehr.
 message.valkyrienskies.linker.linked=%s wurde mit %s verknüpft.
+
+item.ship_assembler_stick.name=Schiffsbaustab
+tooltip.valkyrienskies.assembler.usage=Klicke mit rechts auf zwei Ecken, um alle Blöcke außer Luft dazwischen zu einem Schiff zusammenzubauen. Rechtsklicke auf ein Schiff, um es zu zerlegen. Schleichen und Rechtsklick löscht die Auswahl.
+message.valkyrienskies.assembler.selected=Wähle eine weitere Ecke zum Zusammenbauen aus.
+message.valkyrienskies.assembler.cleared=Auswahl gelöscht.
+message.valkyrienskies.assembler.queued=Schiff wird zusammengebaut.
+message.valkyrienskies.assembler.too_large=Der ausgewählte Bereich überschreitet den Schiffsspeicher (4096 Blöcke entlang X oder Z).
+message.valkyrienskies.assembler.unloaded=Der ausgewählte Bereich muss vor dem Zusammenbau vollständig geladen sein.
+
+item.physics_stick.name=Physikstab
+tooltip.valkyrienskies.physics_stick.usage=Rechtsklicke auf ein Schiff, um es zu bewegen. Schleiche und rechtsklicke, um die Physik umzuschalten.
+message.valkyrienskies.physics_stick.select_ship=Rechtsklicke auf ein Schiff, um es auszuwählen.
+message.valkyrienskies.physics_stick.enabled=Physik aktiviert.
+message.valkyrienskies.physics_stick.disabled=Physik deaktiviert.
+message.valkyrienskies.physics_stick.selected=Schiff ausgewählt. Bewege es mit deiner Blickrichtung.
+message.valkyrienskies.physics_stick.released=Schiff losgelassen.
+message.valkyrienskies.physics_stick.unavailable=Dieses Schiff ist nicht verfügbar, wird bereits gehalten oder ist an eine Entität gebunden.
+
+item.ship_size_lock_stick.name=Schiffsgrößen-Sperrstab
+tooltip.valkyrienskies.size_lock.usage=Rechtsklicke auf einen Schiffsblock, um die aktuelle Baugröße zu sperren oder freizugeben.
+message.valkyrienskies.size_lock.select_ship=Rechtsklicke auf einen Schiffsblock, um die Größensperre umzuschalten.
+message.valkyrienskies.size_lock.locked=%s auf die aktuelle Größe gesperrt.
+message.valkyrienskies.size_lock.unlocked=Größe von %s freigegeben.

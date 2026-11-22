@@ -334,3 +334,26 @@ message.valkyrienskies.linker.select_ship=请先右键点击飞船方块来选�
 message.valkyrienskies.linker.selected=已选择 %s。右键点击实体进行连接。
 message.valkyrienskies.linker.ship_missing=所选飞船已不在此世界中。
 message.valkyrienskies.linker.linked=已将 %s 连接到 %s。
+
+item.ship_assembler_stick.name=舰船组装棒
+tooltip.valkyrienskies.assembler.usage=右键点击两个角点，将其间所有非空气方块组装为舰船。右键点击舰船可将其拆解。潜行时右键点击可清除选择。
+message.valkyrienskies.assembler.selected=选择另一个角点以组装舰船。
+message.valkyrienskies.assembler.cleared=已清除选择。
+message.valkyrienskies.assembler.queued=舰船组装已加入队列。
+message.valkyrienskies.assembler.too_large=所选区域超出舰船存储限制（X 或 Z 方向最多 4096 个方块）。
+message.valkyrienskies.assembler.unloaded=组装前必须完全加载所选区域。
+
+item.physics_stick.name=物理棒
+tooltip.valkyrienskies.physics_stick.usage=右键点击舰船以拖动。潜行时右键点击可切换物理模拟。
+message.valkyrienskies.physics_stick.select_ship=右键点击舰船以选择。
+message.valkyrienskies.physics_stick.enabled=已启用物理模拟。
+message.valkyrienskies.physics_stick.disabled=已禁用物理模拟。
+message.valkyrienskies.physics_stick.selected=已选择舰船。转动视角以移动。
+message.valkyrienskies.physics_stick.released=已释放舰船。
+message.valkyrienskies.physics_stick.unavailable=此舰船不可用、已被抓取或已绑定到实体。
+
+item.ship_size_lock_stick.name=船体尺寸锁定棒
+tooltip.valkyrienskies.size_lock.usage=右键点击船体方块，锁定或解锁当前建造范围。
+message.valkyrienskies.size_lock.select_ship=右键点击船体方块以切换尺寸锁定。
+message.valkyrienskies.size_lock.locked=已将 %s 锁定为当前尺寸。
+message.valkyrienskies.size_lock.unlocked=已解锁 %s 的尺寸。

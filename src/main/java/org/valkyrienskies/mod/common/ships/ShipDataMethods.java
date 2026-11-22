@@ -55,6 +55,21 @@ public final class ShipDataMethods {
     }
 
     /**
+     * Returns whether the lock was toggled, leaving empty or unloaded ships unchanged.
+     * */
+    public static boolean toggleShipSizeLock(ShipData shipData) {
+        if (shipData.shipBounds != null) {
+            shipData.shipBounds = null;
+            return true;
+        }
+        if (shipData.blockPositions == null) return false;
+        AxisAlignedBB bounds = shipData.blockPositions.makeAABB();
+        if (bounds == null) return false;
+        shipData.shipBounds = bounds.expand(1D, 1D, 1D);
+        return true;
+    }
+
+    /**
      * Checks ship placement limits before changing blocks or physics data, always allowing removal.
      */
     public static boolean canSetBlockState(ShipData shipData, World world, BlockPos pos, IBlockState state) {

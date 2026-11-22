@@ -130,7 +130,7 @@ public class RiftedValkyriumAPI {
         return createNewShip(
                 world,
                 new Vec3d(initialPosition.getX(), initialPosition.getY(), initialPosition.getZ()),
-                new AxisAlignedBB(initialPosition),
+                null,
                 shipBuildOptions
         );
     }
@@ -163,19 +163,16 @@ public class RiftedValkyriumAPI {
      */
     @NotNull
     public static IShipData createNewShip(WorldServer world, Vec3d initialPosition, ShipBuildOptions shipBuildOptions) {
-        AxisAlignedBB initialBounds = new AxisAlignedBB(
-                initialPosition.x, initialPosition.y, initialPosition.z,
-                initialPosition.x + 1D, initialPosition.y + 1D, initialPosition.z + 1D
-        );
-        return createNewShip(world, initialPosition, initialBounds, shipBuildOptions);
+        return createNewShip(world, initialPosition, null, shipBuildOptions);
     }
 
     /**
-     * Queues a new ship with caller-defined initial bounds.
+     * Queues all eligible blocks inside the supplied world-space region for assembly.
+     * Disconnected blocks in the region belong to the same ship.
      *
      * @param world the server world that will own the ship
      * @param initialPosition the initial world position of the ship as a {@link BlockPos}
-     * @param initialBounds the initial world-space bounds of the ship
+     * @param initialBounds the assembly region, with inclusive minimum and exclusive maximum coordinates
      * @return the data for the queued ship
      */
     @NotNull
@@ -184,11 +181,11 @@ public class RiftedValkyriumAPI {
     }
 
     /**
-     * Queues a new ship with caller-defined initial bounds.
+     * Queues all eligible blocks inside the supplied world-space region for assembly.
      *
      * @param world the server world that will own the ship
      * @param initialPosition the initial world position of the ship
-     * @param initialBounds the initial world-space bounds of the ship
+     * @param initialBounds the assembly region, with inclusive minimum and exclusive maximum coordinates
      * @param shipBuildOptions a {@link ShipBuildOptions} for passing additional settings to the ship
      * @return the data for the queued ship
      */
@@ -202,13 +199,12 @@ public class RiftedValkyriumAPI {
     }
 
     /**
-     * Queues a new ship at an arbitrary position with caller-defined initial bounds.
-     * Connected-block assembly recalculates these bounds from the assembled blocks. The supplied
-     * bounds allow other assembly systems to describe ships of any size before that happens.
+     * Queues all eligible blocks inside the supplied world-space region for assembly
+     * at an arbitrary position. Disconnected blocks in the region belong to the same ship.
      *
      * @param world the server world that will own the ship
      * @param initialPosition the initial world position of the ship as a {@link Vec3d}
-     * @param initialBounds the initial world-space bounds of the ship
+     * @param initialBounds the assembly region, with inclusive minimum and exclusive maximum coordinates
      * @return the data for the queued ship
      */
     @NotNull
@@ -217,17 +213,19 @@ public class RiftedValkyriumAPI {
     }
 
     /**
-     * Queues a new ship at an arbitrary position with caller-defined initial bounds.
+     * Queues a ship at an arbitrary position. Supplied bounds select every eligible block
+     * in that world-space region; absent bounds select blocks connected to the assembly seed.
      *
      * @param world the server world that will own the ship
      * @param initialPosition the initial world position of the ship
-     * @param initialBounds the initial world-space bounds of the ship
+     * @param initialBounds the assembly region, with inclusive minimum and exclusive maximum
+     *                      coordinates, or null for connected-block assembly
      * @param shipBuildOptions a {@link ShipBuildOptions} for passing additional settings to the ship
      * @return the data for the queued ship
      */
     @NotNull
     public static IShipData createNewShip(
-            WorldServer world, Vec3d initialPosition, AxisAlignedBB initialBounds,
+            WorldServer world, Vec3d initialPosition, @Nullable AxisAlignedBB initialBounds,
             ShipBuildOptions shipBuildOptions
     ) {
         return provider.createNewShip(world, initialPosition, initialBounds, shipBuildOptions);
@@ -431,7 +429,7 @@ public class RiftedValkyriumAPI {
         void setEntityAlignWithShip(Class<? extends Entity> entityClass);
 
         @NotNull
-        IShipData createNewShip(WorldServer world, Vec3d initialPosition, AxisAlignedBB initialBounds, ShipBuildOptions shipBuildOptions);
+        IShipData createNewShip(WorldServer world, Vec3d initialPosition, @Nullable AxisAlignedBB initialBounds, ShipBuildOptions shipBuildOptions);
 
         void linkShipToEntity(WorldServer world, IShipData shipData, Entity entity, Vec3d offset, ShipEntityDeathBehavior entityDeathBehavior, @Nullable String locator);
 
@@ -506,7 +504,7 @@ public class RiftedValkyriumAPI {
 
         @Override
         @NotNull
-        public IShipData createNewShip(WorldServer world, Vec3d initialPosition, AxisAlignedBB initialBounds, ShipBuildOptions shipBuildOptions) {
+        public IShipData createNewShip(WorldServer world, Vec3d initialPosition, @Nullable AxisAlignedBB initialBounds, ShipBuildOptions shipBuildOptions) {
             throw new IllegalStateException("Rifted Valkyrium has not initialized its API provider");
         }
 
