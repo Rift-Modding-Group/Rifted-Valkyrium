@@ -18,7 +18,7 @@ import java.util.List;
 public class RiftedValkyriumHWYLA implements IWailaPlugin {
     @Override
     public void register(IWailaRegistrar registrar) {
-        if (VSConfig.showBlockMassesInDebug) return;
+        if (!VSConfig.showBlockMassesInDebug) return;
 
         registrar.registerBodyProvider(
                 new IWailaDataProvider() {
