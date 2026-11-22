@@ -1,6 +1,6 @@
 {
   "parent": "item/handheld",
   "textures": {
-    "layer0": "minecraft:items/stick"
+    "layer0": "valkyrienskies:items/ship_size_lock_stick"
   }
 }
