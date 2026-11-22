@@ -402,6 +402,28 @@ public class RiftedValkyriumAPI {
     }
 
     /**
+     * Get the mass category of a block state
+     *
+     * @param blockState A block state
+     * @return the corresponding mass category
+     * */
+    @NotNull
+    public static BlockMass getBlockMass(IBlockState blockState) {
+        return provider.getBlockMass(blockState);
+    }
+
+    /**
+     * Get the mass category of a block
+     *
+     * @param block A block
+     * @return the corresponding mass category
+     * */
+    @NotNull
+    public static BlockMass getBlockMass(Block block) {
+        return provider.getBlockMass(block);
+    }
+
+    /**
      * Internal service contract implemented by Rifted Valkyrium at runtime.
      */
     @ApiStatus.Internal
@@ -423,6 +445,12 @@ public class RiftedValkyriumAPI {
         void setBlockMass(IBlockState blockState, BlockMass blockMass);
 
         void setBlockMass(Block block, BlockMass blockMass);
+
+        @NotNull
+        BlockMass getBlockMass(IBlockState blockState);
+
+        @NotNull
+        BlockMass getBlockMass(Block block);
 
         void setEntityUnloadWithShip(Class<? extends Entity> entityClass);
 
@@ -489,6 +517,18 @@ public class RiftedValkyriumAPI {
 
         @Override
         public void setBlockMass(Block block, BlockMass blockMass) {
+            throw new IllegalStateException("Rifted Valkyrium has not initialized its API provider");
+        }
+
+        @Override
+        @NotNull
+        public BlockMass getBlockMass(IBlockState blockState) {
+            throw new IllegalStateException("Rifted Valkyrium has not initialized its API provider");
+        }
+
+        @Override
+        @NotNull
+        public BlockMass getBlockMass(Block block) {
             throw new IllegalStateException("Rifted Valkyrium has not initialized its API provider");
         }
 

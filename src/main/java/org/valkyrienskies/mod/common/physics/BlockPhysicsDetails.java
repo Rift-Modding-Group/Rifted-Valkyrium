@@ -242,22 +242,21 @@ public class BlockPhysicsDetails {
         return getMassCategoryFromState(state).mass;
     }
 
-    @Deprecated
-    private static double getMassOfBlock(Block block) {
+    public static BlockMass getMassCategoryFromBlock(Block block) {
         //individual block set from API
         BlockMass blockMass = configuredBlockToMass.get(block);
-        if (blockMass != null) return blockMass.mass;
+        if (blockMass != null) return blockMass;
 
         //block masses set internally
         blockMass = blockToMass.get(block);
-        if (blockMass != null) return blockMass.mass;
+        if (blockMass != null) return blockMass;
 
         //liquids instantly negligible
-        if (block instanceof BlockLiquid) return BlockMass.NEGLIGIBLE.mass;
+        if (block instanceof BlockLiquid) return BlockMass.NEGLIGIBLE;
 
-        //material
+        //material from default state
         Material material = block.getDefaultState().getMaterial();
-        return materialBlockMass.getOrDefault(material, BlockMass.NEGLIGIBLE).mass;
+        return materialBlockMass.getOrDefault(material, BlockMass.NEGLIGIBLE);
     }
 
     /**

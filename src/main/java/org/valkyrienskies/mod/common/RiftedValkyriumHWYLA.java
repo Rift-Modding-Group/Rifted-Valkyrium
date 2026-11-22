@@ -4,7 +4,6 @@ import mcp.mobius.waila.api.*;
 import net.minecraft.block.Block;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import org.jetbrains.annotations.NotNull;

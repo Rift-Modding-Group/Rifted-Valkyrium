@@ -101,6 +101,18 @@ public class RiftedValkyriumAPIProvider implements RiftedValkyriumAPI.Provider {
     }
 
     @Override
+    @NotNull
+    public BlockMass getBlockMass(IBlockState blockState) {
+        return BlockPhysicsDetails.getMassCategoryFromState(blockState);
+    }
+
+    @Override
+    @NotNull
+    public BlockMass getBlockMass(Block block) {
+        return BlockPhysicsDetails.getMassCategoryFromBlock(block);
+    }
+
+    @Override
     public void setEntityUnloadWithShip(Class<? extends Entity> entityClass) {
         ShipEntityUnloading.register(entityClass);
     }
