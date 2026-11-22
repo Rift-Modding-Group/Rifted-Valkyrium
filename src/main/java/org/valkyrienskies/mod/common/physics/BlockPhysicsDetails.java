@@ -205,29 +205,57 @@ public class BlockPhysicsDetails {
         blockToMass.put(block, blockMass);
     }
 
+    public static BlockMass getMassCategoryFromState(@NonNull IBlockState state) {
+        //exception when air is passed
+        if (state.getMaterial() == Material.AIR) throw new RuntimeException("Air does not have mass!");
+
+        //configs first
+        BlockMass stateMass = configuredBlockStateToMass.get(state);
+        if (stateMass != null) return stateMass;
+
+        //state set from API
+        stateMass = blockStateToMass.get(state);
+        if (stateMass != null) return stateMass;
+
+        //individual block set from API
+        stateMass = configuredBlockToMass.get(state.getBlock());
+        if (stateMass != null) return stateMass;
+
+        //block masses set internally
+        stateMass = blockToMass.get(state.getBlock());
+        if (stateMass != null) return stateMass;
+
+        //liquids instantly negligible
+        if (state.getBlock() instanceof BlockLiquid) return BlockMass.NEGLIGIBLE;
+
+        //material
+        Material material = state.getMaterial();
+        return materialBlockMass.getOrDefault(material, BlockMass.NEGLIGIBLE);
+    }
+
     /**
      * Get block mass, in kg.
      */
     public static double getMassFromState(@NonNull IBlockState state) {
         //special case for air, it gets no mass at all
         if (state.getMaterial() == Material.AIR) return 0;
-
-        BlockMass stateMass = configuredBlockStateToMass.get(state);
-        if (stateMass != null) return stateMass.mass;
-        stateMass = blockStateToMass.get(state);
-        if (stateMass != null) return stateMass.mass;
-        return getMassOfBlock(state.getBlock());
+        return getMassCategoryFromState(state).mass;
     }
 
+    @Deprecated
     private static double getMassOfBlock(Block block) {
-        //prioritize block mass
+        //individual block set from API
         BlockMass blockMass = configuredBlockToMass.get(block);
         if (blockMass != null) return blockMass.mass;
+
+        //block masses set internally
         blockMass = blockToMass.get(block);
         if (blockMass != null) return blockMass.mass;
+
+        //liquids instantly negligible
         if (block instanceof BlockLiquid) return BlockMass.NEGLIGIBLE.mass;
 
-        //use material otherwise
+        //material
         Material material = block.getDefaultState().getMaterial();
         return materialBlockMass.getOrDefault(material, BlockMass.NEGLIGIBLE).mass;
     }

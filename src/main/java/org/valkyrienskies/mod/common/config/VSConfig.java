@@ -281,10 +281,12 @@ public class VSConfig extends VSConfigTemplate {
     public static boolean showShipInMinimapMods = false;
 
     @Name("Show Linear and Angular velocities in debug view")
-    @Comment({
-            "Show linear and angular velocities acting on a ship when F3+B is enabled."
-    })
+    @Comment("Show linear and angular velocities acting on a ship when F3+H is enabled.")
     public static boolean showVelocitiesInDebug = false;
+
+    @Name("Show Block Masses in debug view")
+    @Comment("Show masses of blocks on a ship when F3+H is enabled.")
+    public static boolean showBlockMassesInDebug = false;
 
     @Ignore
     public static Set<ResourceLocation> sittableBlockEntityIDsSet;

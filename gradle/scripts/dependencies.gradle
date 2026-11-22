@@ -42,7 +42,6 @@ repositories {
 }
 
 dependencies {
-    compileOnly files('libs/riftlib-2.4.0-dev.jar')
     compileOnly "com.cleanroommc:sponge-mixin:0.20.12+mixin.0.8.7"
     compileOnly "org.jetbrains:annotations:26.0.2"
     if (enable_lwjglx.toBoolean()) {
@@ -52,6 +51,12 @@ dependencies {
     //hei stuff
     modImplementation 'curse.maven:hei-557549:6187146' // Use for mod Mixin example
     //dependencies { implementation 'mezz:jei:4.29.11' }
+
+    //riftlibrary for some compat
+    compileOnly files('libs/riftlib-2.4.0-dev.jar')
+
+    //HWYLA for integration
+    compileOnly files("libs/Hwyla-1.8.26-B41_1.12.2-api.jar")
 
     //sponge api
     implementation ('org.spongepowered:spongeapi:7.4.0') {

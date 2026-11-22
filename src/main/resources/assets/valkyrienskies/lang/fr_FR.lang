@@ -3,6 +3,7 @@
 ### Valkyrien Skies Main
 
 tooltip.valkyrienskies.legacy=Obsolète
+tooltip.valkyrienskies.mass_category=Masse : %s (%s kg)
 message.valkyrienskies.shipyard_boundary=Vous ne pouvez pas aller au-delà de %s blocs, car les vaisseaux y sont stockés !
 
 # Blocks

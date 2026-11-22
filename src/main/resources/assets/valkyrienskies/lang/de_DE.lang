@@ -3,6 +3,7 @@
 ### Valkyrien Skies Main
 
 tooltip.valkyrienskies.legacy=Veraltet
+tooltip.valkyrienskies.mass_category=Masse: %s (%s kg)
 message.valkyrienskies.shipyard_boundary=Du kannst nicht weiter als %s Blöcke hinausgehen, da dort Luftschiffe gespeichert werden!
 
 # Blocks
