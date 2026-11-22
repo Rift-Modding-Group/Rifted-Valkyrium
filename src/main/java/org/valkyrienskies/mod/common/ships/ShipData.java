@@ -135,6 +135,12 @@ public class ShipData implements IShipData {
     public transient AxisAlignedBB assemblyBounds;
 
     /**
+     * Flag to emphasize the fact that when the ship was assembled, it was built with bounds
+     * */
+    @PacketIgnore
+    public boolean builtWithBounds;
+
+    /**
      * Stable placement policy ID. The callback remains in the addon registry on the server.
      */
     @PacketIgnore

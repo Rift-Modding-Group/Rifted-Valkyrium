@@ -178,6 +178,7 @@ public class RiftedValkyriumAPIProvider implements RiftedValkyriumAPI.Provider {
         shipData.setPhysicsEnabled(shipBuildOptions.getPhysicsEnabled());
         shipData.dontSetSpawn = shipBuildOptions.getDontSetSpawn();
         shipData.assemblyBounds = initialBounds;
+        shipData.builtWithBounds = initialBounds != null;
         shipData.assembledBlockBlacklistId = assembledBlacklistId;
         if (maxShipBounds != null) {
             shipData.shipBounds = ShipDataMethods.createBuildBounds(regionCenter, maxShipBounds);

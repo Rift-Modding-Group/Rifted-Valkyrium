@@ -39,13 +39,21 @@ public class ItemShipSizeLockStick extends BaseItem {
     ) {
         if (world.isRemote) return EnumActionResult.SUCCESS;
         ShipData ship = ValkyrienUtils.getShipManagingBlock(world, pos).orElse(null);
-        if (ship == null || !ShipDataMethods.toggleShipSizeLock(ship)) {
+        if (ship == null) {
+            player.sendStatusMessage(new TextComponentTranslation("message.valkyrienskies.size_lock.select_ship"), true);
+            return EnumActionResult.FAIL;
+        }
+        if (ship.builtWithBounds) {
+            player.sendStatusMessage(new TextComponentTranslation("message.valkyrienskies.size_lock.ship_built_with_bounds"), true);
+            return EnumActionResult.FAIL;
+        }
+        if (!ShipDataMethods.toggleShipSizeLock(ship)) {
             player.sendStatusMessage(new TextComponentTranslation("message.valkyrienskies.size_lock.select_ship"), true);
             return EnumActionResult.FAIL;
         }
         String message = ship.shipBounds == null
                 ? "message.valkyrienskies.size_lock.unlocked" : "message.valkyrienskies.size_lock.locked";
-        player.sendStatusMessage(new TextComponentTranslation(message, ship.getName()), true);
+        player.sendStatusMessage(new TextComponentTranslation(message), true);
         return EnumActionResult.SUCCESS;
     }
 
