@@ -23,6 +23,7 @@ public class ModMixinConfigPlugin implements IMixinConfigPlugin {
             case "spongeforge" -> Loader.isModLoaded("spongeforge");
             case "rustic" -> Loader.isModLoaded("rustic");
             case "fairylights" -> Loader.isModLoaded("fairylights");
+            case "locks" -> Loader.isModLoaded("locks");
             case "effortlessbuilding" -> Loader.isModLoaded("effortlessbuilding");
             case "malisiscore" -> Loader.isModLoaded("malisiscore");
             default -> true;

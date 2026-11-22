@@ -19,19 +19,17 @@ import net.minecraft.world.WorldServer;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 import net.minecraft.world.gen.ChunkProviderServer;
-import net.minecraftforge.fml.common.Loader;
+import net.minecraftforge.common.MinecraftForge;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.jspecify.annotations.NonNull;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
-import org.valkyrienskies.mod.common.compat.FairyLightsCompat;
-import org.valkyrienskies.mod.common.compat.FluidloggedAPICompat;
-import org.valkyrienskies.mod.common.compat.MalisisCoreCompat;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.physics.BlockPhysicsDetails;
 import org.valkyrienskies.mod.common.ships.QueryableShipData;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.ShipEntityAttachment;
 import org.valkyrienskies.mod.common.ships.block_relocation.BlockFinder;
+import org.valkyrienskies.mod.common.ships.block_relocation.BlockRelocation;
 import org.valkyrienskies.mod.common.ships.block_relocation.IRelocationAwareTile;
 import org.valkyrienskies.mod.common.ships.block_relocation.SpatialDetector;
 import org.valkyrienskies.mod.common.ships.entity_interaction.ShipEntityUnloading;
@@ -43,6 +41,7 @@ import org.valkyrienskies.mod.common.util.multithreaded.VSWorldPhysicsLoop;
 import valkyrienwarfare.api.TransformType;
 import valkyrienwarfare.api.ShipEntityDeathBehavior;
 import valkyrienwarfare.api.ShipBlockBlacklist;
+import valkyrienwarfare.api.event.ShipBlockRelocationEvent;
 
 import javax.annotation.Nonnull;
 import java.util.*;
@@ -354,6 +353,7 @@ public class WorldServerShipManager implements IPhysObjectWorld {
                 Chunk chunkToSet = sourceChunksMap.get(sourceChunkPos);
 
                 IBlockState srcState = chunkToSet.getBlockState(srcLocationPos);
+                IBlockState previousState = newChunk.getBlockState(pasteLocationPos);
 
                 // Then paste that IBlockState into the new ship chunk
                 int newChunkStorageIndex = pasteLocationPos.getY() >> 4;
@@ -363,9 +363,9 @@ public class WorldServerShipManager implements IPhysObjectWorld {
                 }
                 newChunk.getBlockStorageArray()[newChunkStorageIndex]
                         .set(pasteLocationPos.getX() & 15, pasteLocationPos.getY() & 15, pasteLocationPos.getZ() & 15, srcState);
-                if (Loader.isModLoaded("fluidlogged_api")) {
-                    FluidloggedAPICompat.copyFluidState(chunkToSet, srcLocationPos, newChunk, pasteLocationPos);
-                }
+                MinecraftForge.EVENT_BUS.post(new ShipBlockRelocationEvent.PostCopied(
+                        chunkToSet, srcLocationPos, newChunk, pasteLocationPos, previousState, srcState, false, false
+                ));
 
                 // If this block is force block, then add it to the activeForcePositions list of the ship.
                 if (BlockPhysicsDetails.isBlockProvidingForce(srcState) && toSpawn.activeForcePositions != null) {
@@ -403,9 +403,10 @@ public class WorldServerShipManager implements IPhysObjectWorld {
 
             preserveInfuserPlacementAfterCenterOfMassChange(toSpawn);
 
-            if (Loader.isModLoaded("fluidlogged_api")) {
-                FluidloggedAPICompat.clearWorldFlow(this.world, detectedBlocks);
-            }
+            List<BlockPos> sourcePositions = new ArrayList<>(detectedBlocks.length);
+            for (long position : detectedBlocks) sourcePositions.add(BlockPos.fromLong(position));
+            MinecraftForge.EVENT_BUS.post(new ShipBlockRelocationEvent.Cleanup(this.world, sourcePositions));
+            Runnable restoreCapabilities = BlockRelocation.prepare(this.world, sourcePositions, centerDifference, true);
 
             // Then delete the copied blocks from the old chunks
             for (long hashedPos : detectedBlocks) {
@@ -433,13 +434,9 @@ public class WorldServerShipManager implements IPhysObjectWorld {
                     }
                 }
 
-                //and on fluidlogged
-                if (Loader.isModLoaded("fluidlogged_api")) FluidloggedAPICompat.clearFluidState(chunkToSet, srcLocationPos);
-
-                //and malisisdoors
-                if (Loader.isModLoaded("malisiscore")) {
-                    MalisisCoreCompat.updateChunkBlockRegistration(this.world, srcLocationPos, srcState, airState);
-                }
+                MinecraftForge.EVENT_BUS.post(new ShipBlockRelocationEvent.PostCopied(
+                        chunkToSet, srcLocationPos, chunkToSet, srcLocationPos, srcState, airState, false, true
+                ));
 
                 // Delete the TileEntity at this pos (if there is one)
                 if (relocatedTilePositions.contains(hashedPos)) this.world.removeTileEntity(srcLocationPos);
@@ -483,15 +480,7 @@ public class WorldServerShipManager implements IPhysObjectWorld {
             PhysicsObject physicsObject = new PhysicsObject(this.world, toSpawn);
             this.loadedShips.put(toSpawn.getUuid(), physicsObject);
 
-            if (Loader.isModLoaded("fluidlogged_api")) {
-                FluidloggedAPICompat.resumeFluidTicks(physicsObject);
-            }
-
-            // Fairy Lights initially builds connections before the ship can be resolved. Rebuild
-            // them now so their artificial block light is written into the installed ship chunks.
-            if (Loader.isModLoaded("fairylights")) {
-                FairyLightsCompat.rebuildShipLighting(physicsObject);
-            }
+            restoreCapabilities.run();
         }
         this.spawnQueue.clear();
     }

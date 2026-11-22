@@ -21,6 +21,8 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 import net.minecraft.world.chunk.Chunk;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.fml.common.eventhandler.Event;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4dc;
@@ -47,6 +49,7 @@ import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.ships.ship_world.WorldServerShipManager;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import valkyrienwarfare.api.*;
+import valkyrienwarfare.api.event.ShipFluidSupportEvent;
 
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -476,9 +479,12 @@ public final class ValkyrienUtils {
     }
 
     /**
-     * Checks the source-space supply of a vanilla liquid before ticking or relocating it.
+     * Checks source-space fluid supply through mod handlers, with a vanilla liquid fallback.
      */
     public static boolean isLiquidFlowSupported(World world, BlockPos origin, IBlockState state) {
+        ShipFluidSupportEvent event = new ShipFluidSupportEvent(world, origin, state);
+        MinecraftForge.EVENT_BUS.post(event);
+        if (event.getResult() != Event.Result.DEFAULT) return event.getResult() == Event.Result.ALLOW;
         if (!(state.getBlock() instanceof BlockLiquid)) return true;
         return isLiquidFlowSupported(
                 origin,

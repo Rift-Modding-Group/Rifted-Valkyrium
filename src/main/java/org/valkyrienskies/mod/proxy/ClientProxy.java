@@ -3,6 +3,7 @@ package org.valkyrienskies.mod.proxy;
 import net.minecraftforge.fml.common.Loader;
 import org.valkyrienskies.mod.client.EventsClient;
 import org.valkyrienskies.mod.client.VSKeyHandler;
+import org.valkyrienskies.mod.client.compat.FluidloggedRenderCompat;
 import org.valkyrienskies.mod.client.compat.ShipMinimapRenderer;
 import org.valkyrienskies.mod.client.render.GibsModelRegistry;
 import org.valkyrienskies.mod.client.render.ValkyrienSkiesOBJLoader;
@@ -32,6 +33,7 @@ public class ClientProxy extends CommonProxy {
         // Register events
         MinecraftForge.EVENT_BUS.register(new EventsClient());
         MinecraftForge.EVENT_BUS.register(new VSKeyHandler());
+        if (Loader.isModLoaded("fluidlogged_api")) MinecraftForge.EVENT_BUS.register(FluidloggedRenderCompat.class);
 
         // Register VS Minecraft resource reload listener.
         IReloadableResourceManager mcResourceManager = (IReloadableResourceManager) Minecraft.getMinecraft().getResourceManager();

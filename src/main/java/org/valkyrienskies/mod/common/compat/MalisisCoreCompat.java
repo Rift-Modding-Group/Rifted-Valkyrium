@@ -10,12 +10,15 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 import net.minecraft.world.chunk.Chunk;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.network.MessageMalisisChunkBlockRegistrations;
-import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
-import org.valkyrienskies.mod.common.util.datastructures.IBlockPosSetAABB;
+import valkyrienwarfare.api.event.ShipBlockDataLoadEvent;
+import valkyrienwarfare.api.event.ShipBlockRelocationEvent;
+import valkyrienwarfare.api.event.ShipChunkSentEvent;
 
 import javax.annotation.Nonnull;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -25,39 +28,32 @@ import java.util.Set;
  */
 public class MalisisCoreCompat {
     /**
-     * Finds the Malisis blocks on a loaded ship and adds them back to the chunk tracker.
+     * Rebuilds registrations for the initial ship cache or one arriving client chunk.
+     * Neighboring blocks can contribute registrations to the arriving chunk.
      */
-    public static void rebuildChunkBlockRegistrations(@Nonnull PhysicsObject physicsObject) {
-        IBlockPosSetAABB blockPositions = physicsObject.getBlockPositions();
-        if (blockPositions == null) return;
-
-        World world = physicsObject.getWorld();
-        for (BlockPos blockPos : blockPositions) {
+    @SubscribeEvent
+    public static void onShipBlockDataLoad(@Nonnull ShipBlockDataLoadEvent event) {
+        World world = event.getWorld();
+        Chunk arrivingChunk = event.getArrivingChunk();
+        for (BlockPos blockPos : event.getBlockPositions()) {
             IChunkBlock chunkBlock = getChunkBlock(world, blockPos);
             if (chunkBlock == null) continue;
 
-            List<Chunk> affectedChunks = ChunkBlockHandler.getAffectedChunks(world, blockPos.getX(), blockPos.getZ(), chunkBlock.blockRange());
-            for (Chunk affectedChunk : affectedChunks) {
-                addRegistration(affectedChunk, blockPos);
+            if (arrivingChunk != null) {
+                int blockRange = chunkBlock.blockRange();
+                int minimumChunkX = blockPos.getX() - blockRange >> 4;
+                int maximumChunkX = blockPos.getX() + blockRange + 1 >> 4;
+                int minimumChunkZ = blockPos.getZ() - blockRange >> 4;
+                int maximumChunkZ = blockPos.getZ() + blockRange + 1 >> 4;
+                if (arrivingChunk.x >= minimumChunkX && arrivingChunk.x <= maximumChunkX
+                        && arrivingChunk.z >= minimumChunkZ && arrivingChunk.z <= maximumChunkZ) {
+                    addRegistration(arrivingChunk, blockPos);
+                }
             }
-        }
-    }
-
-    /**
-     * Adds Malisis blocks to a ship chunk that just reached the client.
-     * A large door can reach into nearby chunks, so this checks every block on the ship.
-     */
-    public static void rebuildChunkBlockRegistrations(@Nonnull PhysicsObject physicsObject, @Nonnull Chunk arrivingChunk) {
-        IBlockPosSetAABB blockPositions = physicsObject.getBlockPositions();
-        if (blockPositions == null) return;
-
-        World world = physicsObject.getWorld();
-        for (BlockPos blockPos : blockPositions) {
-            IChunkBlock chunkBlock = getChunkBlock(world, blockPos);
-            if (chunkBlock == null || !affectsChunk(blockPos, chunkBlock.blockRange(), arrivingChunk)) {
-                continue;
+            else {
+                List<Chunk> affectedChunks = ChunkBlockHandler.getAffectedChunks(world, blockPos.getX(), blockPos.getZ(), chunkBlock.blockRange());
+                for (Chunk affectedChunk : affectedChunks) addRegistration(affectedChunk, blockPos);
             }
-            addRegistration(arrivingChunk, blockPos);
         }
     }
 
@@ -65,11 +61,15 @@ public class MalisisCoreCompat {
      * Keeps MalisisCore's tracker up to date when we change a block without using the usual
      * {@link Chunk#setBlockState(BlockPos, IBlockState)} path.
      */
-    public static void updateChunkBlockRegistration(
-            @Nonnull World world, @Nonnull BlockPos blockPos,
-            @Nonnull IBlockState oldState, @Nonnull IBlockState newState
-    ) {
-        IChunkBlock oldChunkBlock = getChunkBlock(oldState);
+    @SubscribeEvent
+    public static void onBlockRelocationPost(@Nonnull ShipBlockRelocationEvent.PostCopied event) {
+        Chunk destinationChunk = event.getDestinationChunk();
+        // Detached assembly chunks are registered after the complete ship is installed.
+        if (!destinationChunk.isLoaded()) return;
+
+        World world = destinationChunk.getWorld();
+        BlockPos blockPos = event.getDestinationPos();
+        IChunkBlock oldChunkBlock = getChunkBlock(event.getOldState());
         if (oldChunkBlock != null) {
             List<Chunk> affectedChunks = ChunkBlockHandler.getAffectedChunks(world, blockPos.getX(), blockPos.getZ(), oldChunkBlock.blockRange());
             for (Chunk affectedChunk : affectedChunks) {
@@ -77,13 +77,18 @@ public class MalisisCoreCompat {
             }
         }
 
-        IChunkBlock newChunkBlock = getChunkBlock(newState);
+        IChunkBlock newChunkBlock = getChunkBlock(event.getNewState());
         if (newChunkBlock != null) {
             List<Chunk> affectedChunks = ChunkBlockHandler.getAffectedChunks(world, blockPos.getX(), blockPos.getZ(), newChunkBlock.blockRange());
             for (Chunk affectedChunk : affectedChunks) {
                 addRegistration(affectedChunk, blockPos);
             }
         }
+    }
+
+    @SubscribeEvent
+    public static void onShipChunkSent(@Nonnull ShipChunkSentEvent event) {
+        sendChunkBlockRegistrations(event.getChunk(), event.getPlayer());
     }
 
     /**
@@ -97,27 +102,45 @@ public class MalisisCoreCompat {
     }
 
     /**
-     * Updates nearby players after a ship's blocks have been placed back into the world.
+     * Moves block registrations between source and destination chunks and updates nearby players.
      */
-    public static void sendRelocatedChunkBlockRegistrations(@Nonnull World world, @Nonnull Iterable<BlockPos> relocatedPositions) {
-        if (!(world instanceof WorldServer serverWorld)) return;
+    @SubscribeEvent
+    public static void onBlockRelocation(@Nonnull ShipBlockRelocationEvent.PreCopied event) {
+        if (!(event.getWorld() instanceof WorldServer world)) return;
 
-        Set<Chunk> affectedChunks = new HashSet<>();
-        for (BlockPos blockPos : relocatedPositions) {
-            IChunkBlock chunkBlock = getChunkBlock(world, blockPos);
+        List<BlockPos> relocatedPositions = new ArrayList<>();
+        for (BlockPos source : event.getSourceBlocks()) {
+            IChunkBlock chunkBlock = getChunkBlock(world, source);
             if (chunkBlock == null) continue;
 
-            affectedChunks.addAll(ChunkBlockHandler.getAffectedChunks(world, blockPos.getX(), blockPos.getZ(), chunkBlock.blockRange()));
+            for (Chunk affectedChunk : ChunkBlockHandler.getAffectedChunks(world, source.getX(), source.getZ(), chunkBlock.blockRange())) {
+                removeRegistration(affectedChunk, source);
+            }
+            relocatedPositions.add(source.add(event.getOffset()));
         }
+        if (relocatedPositions.isEmpty()) return;
 
-        for (Chunk affectedChunk : affectedChunks) {
-            for (EntityPlayer player : serverWorld.playerEntities) {
-                if (!(player instanceof EntityPlayerMP serverPlayer)) continue;
-                if (serverWorld.getPlayerChunkMap().isPlayerWatchingChunk(serverPlayer, affectedChunk.x, affectedChunk.z)) {
-                    sendChunkBlockRegistrations(affectedChunk, serverPlayer);
+        event.afterRelocation(() -> {
+            Set<Chunk> affectedChunks = new HashSet<>();
+            for (BlockPos destination : relocatedPositions) {
+                IChunkBlock chunkBlock = getChunkBlock(world, destination);
+                if (chunkBlock == null) continue;
+
+                for (Chunk affectedChunk : ChunkBlockHandler.getAffectedChunks(world, destination.getX(), destination.getZ(), chunkBlock.blockRange())) {
+                    addRegistration(affectedChunk, destination);
+                    affectedChunks.add(affectedChunk);
                 }
             }
-        }
+
+            for (Chunk affectedChunk : affectedChunks) {
+                for (EntityPlayer player : world.playerEntities) {
+                    if (!(player instanceof EntityPlayerMP serverPlayer)) continue;
+                    if (world.getPlayerChunkMap().isPlayerWatchingChunk(serverPlayer, affectedChunk.x, affectedChunk.z)) {
+                        sendChunkBlockRegistrations(affectedChunk, serverPlayer);
+                    }
+                }
+            }
+        });
     }
 
     /**
@@ -135,14 +158,6 @@ public class MalisisCoreCompat {
 
     private static IChunkBlock getChunkBlock(@Nonnull IBlockState blockState) {
         return IComponent.getComponent(IChunkBlock.class, blockState.getBlock());
-    }
-
-    private static boolean affectsChunk(@Nonnull BlockPos blockPos, int blockRange, @Nonnull Chunk chunk) {
-        int minimumChunkX = blockPos.getX() - blockRange >> 4;
-        int maximumChunkX = blockPos.getX() + blockRange + 1 >> 4;
-        int minimumChunkZ = blockPos.getZ() - blockRange >> 4;
-        int maximumChunkZ = blockPos.getZ() + blockRange + 1 >> 4;
-        return chunk.x >= minimumChunkX && chunk.x <= maximumChunkX && chunk.z >= minimumChunkZ && chunk.z <= maximumChunkZ;
     }
 
     private static void addRegistration(@Nonnull Chunk chunk, @Nonnull BlockPos blockPos) {

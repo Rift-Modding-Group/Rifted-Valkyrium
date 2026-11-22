@@ -107,27 +107,30 @@ dependencies {
     modCompileOnly 'curse.maven:chibi-460609:8957115'
 
     //MalisisDoors and core mavens for compatibility
-    modCompileOnly "curse.maven:malisiscore-223896:2680892"
-    modCompileOnly "curse.maven:malisisdoors-223891:2526674"
+    compatMods "curse.maven:malisiscore-223896:2680892"
+    compatMods "curse.maven:malisisdoors-223891:2526674"
 
     //Fairy Lights maven for compatibility
     modCompileOnly "curse.maven:fairy-lights-233342:3068499"
 
+    //Locks compat
+    compatMods "curse.maven:locks-253456:3568569"
+    testRuntimeOnly files(configurations.compatMods)
+
     //Fluidlogged API for compat
-    modCompileOnly "maven.modrinth:fluidlogged-api:3.3.3"
-    testRuntimeOnly "maven.modrinth:fluidlogged-api:3.3.3"
+    compatMods "maven.modrinth:fluidlogged-api:3.3.3"
 
-    //xaero map mods for compat using a special config
-    mapMods "xaero.lib:xaerolib-forge-1.12.2:1.7.3"
-    mapMods("xaero.minimap:xaerominimap-forge-1.12.2:26.6.0") {
+    //xaero map mods for compat
+    compatMods "xaero.lib:xaerolib-forge-1.12.2:1.7.3"
+    compatMods("xaero.minimap:xaerominimap-forge-1.12.2:26.6.0") {
         exclude group: 'xaero.lib', module: 'xaerolib-forge-1.12.2'
     }
-    mapMods("xaero.map:xaeroworldmap-forge-1.12.2:1.47.0") {
+    compatMods("xaero.map:xaeroworldmap-forge-1.12.2:1.47.0") {
         exclude group: 'xaero.lib', module: 'xaerolib-forge-1.12.2'
     }
 
-    //journeymap compat using a special config
-    mapMods "curse.maven:journeymap-32274:9049805"
+    //journeymap compat
+    compatMods "curse.maven:journeymap-32274:9049805"
 
     // junit tests
     testImplementation 'org.junit.jupiter:junit-jupiter:5.6.2'

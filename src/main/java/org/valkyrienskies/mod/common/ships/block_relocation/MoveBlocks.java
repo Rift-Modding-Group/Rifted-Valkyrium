@@ -9,17 +9,16 @@ import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fluids.IFluidBlock;
-import net.minecraftforge.fml.common.Loader;
 import org.jetbrains.annotations.NotNull;
-import org.valkyrienskies.mod.common.compat.FluidloggedAPICompat;
-import org.valkyrienskies.mod.common.compat.MalisisCoreCompat;
 import org.valkyrienskies.mod.common.compat.WorldHeightCompat;
 import org.valkyrienskies.mod.common.physics.BlockPhysicsDetails;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import org.valkyrienskies.mod.common.util.datastructures.IBlockPosSetAABB;
+import valkyrienwarfare.api.event.ShipBlockRelocationEvent;
 
 import javax.annotation.Nullable;
 
@@ -46,10 +45,7 @@ public class MoveBlocks {
             if (sourceChunk == null) throw new IllegalStateException("Missing ship chunk for " + source);
             IBlockState movedState = sourceChunk.getBlockState(source);
             // Check supply before writing destination terrain, while every ship source is still in place.
-            if (Loader.isModLoaded("fluidlogged_api")) {
-                if (movedState.getMaterial().isLiquid() && !FluidloggedAPICompat.isFlowSupported(world, source)) continue;
-            }
-            else if (!ValkyrienUtils.isLiquidFlowSupported(world, source, movedState)) continue;
+            if (!ValkyrienUtils.isLiquidFlowSupported(world, source, movedState)) continue;
 
             int chunkX = destination.getX() >> 4;
             int chunkZ = destination.getZ() >> 4;
@@ -71,11 +67,9 @@ public class MoveBlocks {
             if (storage[section] == null) storage[section] = new ExtendedBlockStorage(y & ~15, world.provider.hasSkyLight());
             storage[section].set(destination.getX() & 15, y & 15, destination.getZ() & 15, movedState);
 
-            //update state for fluidlogged blocks by fluidlogged api
-            if (Loader.isModLoaded("fluidlogged_api")) FluidloggedAPICompat.copyFluidState(sourceChunk, source, targetChunk, destination, true);
-
-            //update state for multiblock doors by malisis doors
-            if (Loader.isModLoaded("malisiscore")) MalisisCoreCompat.updateChunkBlockRegistration(world, destination, previousState, movedState);
+            MinecraftForge.EVENT_BUS.post(new ShipBlockRelocationEvent.PostCopied(
+                    sourceChunk, source, targetChunk, destination, previousState, movedState, true, false
+            ));
 
             //normal update
             world.notifyBlockUpdate(destination, previousState, movedState, 2);
@@ -110,12 +104,9 @@ public class MoveBlocks {
                 true);
         }
         chunkToSet.getBlockStorageArray()[storageIndex].set(newPos.getX() & 15, newPos.getY() & 15, newPos.getZ() & 15, newState);
-        if (Loader.isModLoaded("fluidlogged_api")) {
-            FluidloggedAPICompat.copyFluidState(world.getChunk(oldPos), oldPos, chunkToSet, newPos);
-        }
-        if (Loader.isModLoaded("malisiscore")) {
-            MalisisCoreCompat.updateChunkBlockRegistration(world, newPos, oldState, newState);
-        }
+        MinecraftForge.EVENT_BUS.post(new ShipBlockRelocationEvent.PostCopied(
+                world.getChunk(oldPos), oldPos, chunkToSet, newPos, oldState, newState, false, false
+        ));
         // Only want to send the update to clients and nothing else, so we use flag 2.
         world.notifyBlockUpdate(newPos, oldState, newState, 2);
 

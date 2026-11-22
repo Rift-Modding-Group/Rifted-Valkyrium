@@ -10,6 +10,8 @@ import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.culling.ICamera;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.ChunkCache;
+import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
@@ -102,7 +104,9 @@ public abstract class MixinAnimatedRenderer {
     @Unique
     @Nullable
     private static PhysicsObject valkyrienskies$getPhysicsObject(IAnimatedRenderable renderable) {
-        if (!(renderable.getWorld() instanceof World world)) return null;
+        IBlockAccess blockAccess = renderable.getWorld();
+        if (blockAccess instanceof ChunkCache cache) blockAccess = cache.world;
+        if (!(blockAccess instanceof World world)) return null;
         return ValkyrienUtils.getPhysoManagingBlock(world, renderable.getPos()).orElse(null);
     }
 }

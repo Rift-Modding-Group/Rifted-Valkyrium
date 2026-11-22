@@ -45,7 +45,7 @@ configurations {
     compileOnly.extendsFrom(modCompileOnly)
     modRuntimeOnly
     runtimeOnly.extendsFrom(modRuntimeOnly)
-    mapMods
+    compatMods
 }
 
 def remapTaskName = enable_shadow.toBoolean() ? "remapShadowJar" : "remapJar"
@@ -100,9 +100,8 @@ unimined.minecraft {
     mods {
         remap(configurations.modCompileOnly)
         remap(configurations.modRuntimeOnly)
-        remap(configurations.mapMods) {
-            //a special config for the minimap mods so that they can work in obf env
-            //without screaming a noclassdeffound error
+        remap(configurations.compatMods) {
+            // Remap SRG member names for compatibility dependencies.
             remapper { builder ->
                 Map<String, String> methodNames = [:]
                 Map<String, String> fieldNames = [:]
@@ -220,7 +219,7 @@ processResources {
 
 sourceSets {
     main {
-        compileClasspath += configurations.mapMods
+        compileClasspath += configurations.compatMods
         blossom {
             javaSources {
                 property('mod_id', mod_id)

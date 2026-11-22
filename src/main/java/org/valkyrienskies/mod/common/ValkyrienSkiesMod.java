@@ -16,6 +16,7 @@ import net.minecraft.item.crafting.ShapedRecipes;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.common.crafting.CraftingHelper;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegistryEvent;
 import net.minecraftforge.fml.common.Loader;
 import net.minecraftforge.fml.common.Mod;
@@ -45,6 +46,10 @@ import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.command.MainCommand;
 import org.valkyrienskies.mod.common.command.config.VSConfigCommand;
 import org.valkyrienskies.mod.common.config.VSConfig;
+import org.valkyrienskies.mod.common.compat.LocksCompat;
+import org.valkyrienskies.mod.common.compat.MalisisCoreCompat;
+import org.valkyrienskies.mod.common.compat.FluidloggedAPICompat;
+import org.valkyrienskies.mod.common.compat.FairyLightsCompat;
 import org.valkyrienskies.mod.common.item.ItemShipAssemblerStick;
 import org.valkyrienskies.mod.common.item.ItemShipSizeLockStick;
 import org.valkyrienskies.mod.common.item.ItemPhysicsStick;
@@ -151,6 +156,10 @@ public class ValkyrienSkiesMod {
         registerNetworks(event);
 
 		VSCapabilityRegistry.registerCapabilities();
+        if (Loader.isModLoaded("locks")) MinecraftForge.EVENT_BUS.register(LocksCompat.class);
+        if (Loader.isModLoaded("malisiscore")) MinecraftForge.EVENT_BUS.register(MalisisCoreCompat.class);
+        if (Loader.isModLoaded("fluidlogged_api")) MinecraftForge.EVENT_BUS.register(FluidloggedAPICompat.class);
+        if (Loader.isModLoaded("fairylights")) MinecraftForge.EVENT_BUS.register(FairyLightsCompat.class);
         proxy.preInit(event);
 
         LOGGER.debug("Initializing the Rifted Valkyrium API.");

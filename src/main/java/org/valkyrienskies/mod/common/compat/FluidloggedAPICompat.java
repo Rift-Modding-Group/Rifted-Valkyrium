@@ -11,14 +11,18 @@ import git.jbredwards.fluidlogged_api.mod.common.fluid.util.ISpecializedFluidNei
 import git.jbredwards.fluidlogged_api.mod.common.fluid.util.impl.SpecializedFluidNeighborInfo;
 import net.minecraft.block.BlockLiquid;
 import net.minecraft.block.state.IBlockState;
-import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraftforge.fluids.BlockFluidFinite;
-import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
+import net.minecraftforge.fml.common.eventhandler.Event;
+import net.minecraftforge.fml.common.eventhandler.EventPriority;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
+import valkyrienwarfare.api.event.ShipFluidSupportEvent;
+import valkyrienwarfare.api.event.ShipBlockRelocationEvent;
+import valkyrienwarfare.api.event.ShipChunkSentEvent;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayDeque;
@@ -38,25 +42,32 @@ public class FluidloggedAPICompat {
         return FluidloggedUtils.getFluidOrReal(world, pos);
     }
 
-    /**
-     * Copies stored fluid alongside a relocated block, including an empty source state.
-     */
-    public static void copyFluidState(
-            @Nonnull Chunk sourceChunk, @Nonnull BlockPos sourcePos,
-            @Nonnull Chunk destinationChunk, @Nonnull BlockPos destinationPos
-    ) {
-        copyFluidState(sourceChunk, sourcePos, destinationChunk, destinationPos, false);
+    @SubscribeEvent
+    public static void onFluidFlowSupport(@Nonnull ShipFluidSupportEvent event) {
+        boolean supported = !event.getState().getMaterial().isLiquid() || isFlowSupported(event.getWorld(), event.getPos());
+        event.setResult(supported ? Event.Result.ALLOW : Event.Result.DENY);
     }
 
     /**
-     * Copies stored fluid, optionally retaining only flow with a source-space supply.
+     * Copies stored fluid with the requested supply checks and clears it from removed source blocks.
      */
-    public static void copyFluidState(
-            @Nonnull Chunk sourceChunk, @Nonnull BlockPos sourcePos,
-            @Nonnull Chunk destinationChunk, @Nonnull BlockPos destinationPos, boolean requireSource
-    ) {
+    @SubscribeEvent(priority = EventPriority.HIGH)
+    public static void onBlockRelocationPost(@Nonnull ShipBlockRelocationEvent.PostCopied event) {
+        Chunk destinationChunk = event.getDestinationChunk();
+        BlockPos destinationPos = event.getDestinationPos();
+        if (event.isSourceRemoval()) {
+            if (FluidloggedUtils.setFluidState(destinationChunk.getWorld(), destinationPos,
+                    destinationChunk.getBlockState(destinationPos), FluidState.EMPTY, false, 2)
+            ) {
+                destinationChunk.markDirty();
+            }
+            return;
+        }
+
+        Chunk sourceChunk = event.getSourceChunk();
+        BlockPos sourcePos = event.getSourcePos();
         FluidState fluidState = FluidState.getFromProvider(sourceChunk, sourcePos);
-        if (requireSource && !fluidState.isEmpty() && !isFlowSupported(sourceChunk.getWorld(), sourcePos)) {
+        if (event.requiresSourceSupport() && !fluidState.isEmpty() && !isFlowSupported(sourceChunk.getWorld(), sourcePos)) {
             fluidState = FluidState.EMPTY;
         }
         IFluidStateCapability capability = Objects.requireNonNull(IFluidStateCapability.get(destinationChunk));
@@ -75,38 +86,35 @@ public class FluidloggedAPICompat {
      */
     public static boolean isFlowSupported(@Nonnull World world, @Nonnull BlockPos origin) {
         FluidState originState = FluidloggedUtils.getFluidState(world, origin);
-        if (originState.isEmpty() || !originState.isValid() || originState.isSource()
-                || originState.getBlock() instanceof BlockFluidFinite) return true;
-        return ValkyrienUtils.isLiquidFlowSupported(origin, pos -> {
-            if (world.isOutsideBuildHeight(pos)) return -1;
-            if (!world.isBlockLoaded(pos, false)) return -2;
-            FluidState state = FluidloggedUtils.getFluidState(world, pos);
-            if (state.isEmpty() || !state.isValid() || !FluidloggedUtils.isCompatibleFluid(originState, state)) return -1;
-            if (state.isSource()) return 0;
-            return Math.max(1, state.getLevel());
-        }, (pos, side) -> {
-            if (!FluidloggedUtils.canFluidFlow(world, pos, world.getBlockState(pos), side)) return false;
-            BlockPos neighbor = pos.offset(side);
-            if (!world.isBlockLoaded(neighbor, false)) return true;
-            return FluidloggedUtils.canFluidFlow(world, neighbor, world.getBlockState(neighbor), side.getOpposite());
-        });
-    }
-
-    /**
-     * Removes stored fluid from a block that has been moved out of its source chunk.
-     */
-    public static void clearFluidState(@Nonnull Chunk chunk, @Nonnull BlockPos pos) {
-        if (FluidloggedUtils.setFluidState(chunk.getWorld(), pos, chunk.getBlockState(pos), FluidState.EMPTY, false, 2)) {
-            chunk.markDirty();
+        if (originState.isEmpty() || !originState.isValid() || originState.isSource() || originState.getBlock() instanceof BlockFluidFinite) {
+            return true;
         }
+        return ValkyrienUtils.isLiquidFlowSupported(
+                origin,
+                pos -> {
+                    if (world.isOutsideBuildHeight(pos)) return -1;
+                    if (!world.isBlockLoaded(pos, false)) return -2;
+                    FluidState state = FluidloggedUtils.getFluidState(world, pos);
+                    if (state.isEmpty() || !state.isValid() || !FluidloggedUtils.isCompatibleFluid(originState, state)) return -1;
+                    if (state.isSource()) return 0;
+                    return Math.max(1, state.getLevel());
+                },
+                (pos, side) -> {
+                    if (!FluidloggedUtils.canFluidFlow(world, pos, world.getBlockState(pos), side)) return false;
+                    BlockPos neighbor = pos.offset(side);
+                    if (!world.isBlockLoaded(neighbor, false)) return true;
+                    return FluidloggedUtils.canFluidFlow(world, neighbor, world.getBlockState(neighbor), side.getOpposite());
+                }
+        );
     }
 
     /**
      * Clears flow left behind by relocated sources while retaining independently supplied fluid.
      */
-    public static void clearWorldFlow(@Nonnull World world, @Nonnull long[] movingPositions) {
-        Set<BlockPos> movingBlocks = new HashSet<>();
-        for (long packedPos : movingPositions) movingBlocks.add(BlockPos.fromLong(packedPos));
+    @SubscribeEvent
+    public static void onBlockRelocationCleanup(@Nonnull ShipBlockRelocationEvent.Cleanup event) {
+        World world = event.getWorld();
+        Set<BlockPos> movingBlocks = event.getSourceBlocks();
         Set<BlockPos> unsupportedFlow = findUnsupportedFlow(movingBlocks, pos -> {
             if (world.isOutsideBuildHeight(pos) || !world.isBlockLoaded(pos, false)) return null;
             FluidState state = FluidloggedUtils.getFluidState(world, pos);
@@ -146,26 +154,34 @@ public class FluidloggedAPICompat {
     /**
      * Activates copied fluids after the complete ship is installed in the world.
      */
-    public static void resumeFluidTicks(@Nonnull PhysicsObject ship) {
-        World world = ship.getWorld();
-        for (BlockPos pos : ship.getBlockPositions()) {
-            FluidState fluidState = FluidState.get(world, pos);
-            if (fluidState.isEmpty()) continue;
+    @SubscribeEvent
+    public static void onBlockRelocation(@Nonnull ShipBlockRelocationEvent.PreCopied event) {
+        if (!event.isAssembling()) return;
 
-            fluidState.getState().neighborChanged(world, pos, fluidState.getBlock(), pos);
-            FluidState updatedFluidState = FluidState.get(world, pos);
-            if (updatedFluidState.isEmpty()) continue;
+        World world = event.getWorld();
+        event.afterRelocation(() -> {
+            for (BlockPos source : event.getSourceBlocks()) {
+                BlockPos pos = source.add(event.getOffset());
+                FluidState fluidState = FluidState.get(world, pos);
+                if (fluidState.isEmpty()) continue;
 
-            world.scheduleUpdate(pos, updatedFluidState.getBlock(), updatedFluidState.getBlock().tickRate(world));
-        }
+                fluidState.getState().neighborChanged(world, pos, fluidState.getBlock(), pos);
+                FluidState updatedFluidState = FluidState.get(world, pos);
+                if (updatedFluidState.isEmpty()) continue;
+
+                world.scheduleUpdate(pos, updatedFluidState.getBlock(), updatedFluidState.getBlock().tickRate(world));
+            }
+        });
     }
 
     /**
      * Sends the fluid snapshot after the ship's terrain packet.
      */
-    public static void sendChunkFluidStates(@Nonnull Chunk chunk, @Nonnull EntityPlayerMP player) {
+    @SubscribeEvent
+    public static void onShipChunkSent(@Nonnull ShipChunkSentEvent event) {
+        Chunk chunk = event.getChunk();
         IFluidStateCapability capability = Objects.requireNonNull(IFluidStateCapability.get(chunk));
-        FluidloggedAPI.WRAPPER.sendTo(new SMessageSyncFluidStates(chunk, capability), player);
+        FluidloggedAPI.WRAPPER.sendTo(new SMessageSyncFluidStates(chunk, capability), event.getPlayer());
     }
 
     //-----for clearing up world flowin liquid when assemblin-----

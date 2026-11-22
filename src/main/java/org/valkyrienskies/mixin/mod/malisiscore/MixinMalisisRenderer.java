@@ -4,6 +4,7 @@ import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.renderer.BufferBuilder;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.ChunkCache;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
 import org.spongepowered.asm.mixin.Mixin;
@@ -71,6 +72,7 @@ public abstract class MixinMalisisRenderer {
     private static Vec3d valkyrienskies$getBlockRenderOffset(
             IBlockAccess blockAccess, BlockPos blockPos, Vec3d originalOffset
     ) {
+        if (blockAccess instanceof ChunkCache cache) blockAccess = cache.world;
         if (!(blockAccess instanceof World world)) return originalOffset;
 
         PhysicsObject physicsObject = ValkyrienUtils.getPhysoManagingBlock(world, blockPos).orElse(null);

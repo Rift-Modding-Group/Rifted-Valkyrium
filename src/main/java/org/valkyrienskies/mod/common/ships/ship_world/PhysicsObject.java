@@ -20,7 +20,7 @@ import net.minecraft.world.EnumSkyBlock;
 import net.minecraft.world.WorldServer;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.gen.ChunkProviderServer;
-import net.minecraftforge.fml.common.Loader;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import org.jetbrains.annotations.NotNull;
@@ -33,7 +33,6 @@ import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
-import org.valkyrienskies.mod.common.compat.MalisisCoreCompat;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.physics.PhysicsCalculations;
 import org.valkyrienskies.mod.common.physics.BlockSectionList;
@@ -41,6 +40,7 @@ import org.valkyrienskies.mod.common.physics.physx.IPhysicsBlockController;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.ShipEntityAttachment;
 import org.valkyrienskies.mod.common.ships.block_relocation.MoveBlocks;
+import org.valkyrienskies.mod.common.ships.block_relocation.BlockRelocation;
 import org.valkyrienskies.mod.common.ships.chunk_claims.ClaimedChunkCacheController;
 import org.valkyrienskies.mod.common.ships.chunk_claims.VSChunkClaim;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
@@ -57,6 +57,7 @@ import valkyrienwarfare.api.IPhysicsEntity;
 import valkyrienwarfare.api.IShipMaintenanceProvider;
 import valkyrienwarfare.api.TransformType;
 import valkyrienwarfare.api.IShipForcesInducer;
+import valkyrienwarfare.api.event.ShipBlockDataLoadEvent;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -167,10 +168,7 @@ public class PhysicsObject implements IPhysicsEntity {
         this.forceInducers = List.of();
         this.maintenanceProviders = ConcurrentHashMap.newKeySet();
         this.claimedChunkCache = new ClaimedChunkCacheController(this);
-        //malisis doors compat, malisisdoors can suck my fucking cock
-        if (Loader.isModLoaded("malisiscore")) {
-            MalisisCoreCompat.rebuildChunkBlockRegistrations(this);
-        }
+        MinecraftForge.EVENT_BUS.post(new ShipBlockDataLoadEvent(this.world, this.getBlockPositions(), null));
         this.shipTransformationManager = new ShipTransformationManager(this, this.getShipData().getShipTransform());
         this.physicsCalculations = new PhysicsCalculations(this);
         this.physicsCollideWith = new BlockSectionList();
@@ -445,14 +443,15 @@ public class PhysicsObject implements IPhysicsEntity {
                         Math.round(this.getCenterCoord().z() - position.z())
                 );
 
-                TLongObjectHashMap<Chunk> changedChunks = MoveBlocks.copyBlocksToWorld(this.world, this.getBlockPositions(),
-                        this.claimedChunkCache, centerDifference);
+                Runnable restoreCapabilities = BlockRelocation.prepare(
+                        this.world, this.getBlockPositions(),
+                        BlockPos.ORIGIN.subtract(centerDifference), false
+                );
 
-                if (Loader.isModLoaded("malisiscore")) {
-                    List<BlockPos> relocatedPositions = new ArrayList<>(this.getBlockPositions().size());
-                    for (BlockPos oldPos : this.getBlockPositions()) relocatedPositions.add(oldPos.subtract(centerDifference));
-                    MalisisCoreCompat.sendRelocatedChunkBlockRegistrations(this.getWorld(), relocatedPositions);
-                }
+                TLongObjectHashMap<Chunk> changedChunks = MoveBlocks.copyBlocksToWorld(
+                        this.world, this.getBlockPositions(),
+                        this.claimedChunkCache, centerDifference
+                );
 
                 Collection<Chunk> relitChunks = ShipLighting.relightWorldChunks(this.world, changedChunks.valueCollection());
                 for (BlockPos oldPos : this.getBlockPositions()) {
@@ -479,6 +478,8 @@ public class PhysicsObject implements IPhysicsEntity {
                     }
                     else if (sectionMask != 0) entry.sendPacket(new SPacketChunkData(chunk, sectionMask));
                 }
+
+                restoreCapabilities.run();
 
                 //the blocks discard the ship's remaining rotation when they return to the world grid
                 //project associated entities through that same transform so their contact points still line up
@@ -625,9 +626,7 @@ public class PhysicsObject implements IPhysicsEntity {
             throw new IllegalStateException("Ship renderer was null for ship " + getShipData());
         }
         claimedChunkCache.updateChunk(chunk);
-        if (Loader.isModLoaded("malisiscore")) {
-            MalisisCoreCompat.rebuildChunkBlockRegistrations(this, chunk);
-        }
+        MinecraftForge.EVENT_BUS.post(new ShipBlockDataLoadEvent(this.world, this.getBlockPositions(), chunk));
         shipRenderer.updateChunk(chunk);
     }
 

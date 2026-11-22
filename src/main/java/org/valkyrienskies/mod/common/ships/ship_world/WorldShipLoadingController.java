@@ -8,10 +8,8 @@ import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
-import net.minecraftforge.fml.common.Loader;
+import net.minecraftforge.common.MinecraftForge;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
-import org.valkyrienskies.mod.common.compat.FluidloggedAPICompat;
-import org.valkyrienskies.mod.common.compat.MalisisCoreCompat;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.network.ShipIndexDataMessage;
 import org.valkyrienskies.mod.common.ships.QueryableShipData;
@@ -21,6 +19,7 @@ import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.util.TransformedAABB;
 import valkyrienwarfare.api.TransformType;
 import valkyrienwarfare.api.ShipEntityDeathBehavior;
+import valkyrienwarfare.api.event.ShipChunkSentEvent;
 
 import java.util.*;
 
@@ -234,12 +233,7 @@ class WorldShipLoadingController {
                 int fullChunkSectionMask = -1;
                 if (sectionCount < Integer.SIZE) fullChunkSectionMask = (1 << sectionCount) - 1;
                 player.connection.sendPacket(new SPacketChunkData(chunk, fullChunkSectionMask));
-                if (Loader.isModLoaded("fluidlogged_api")) {
-                    FluidloggedAPICompat.sendChunkFluidStates(chunk, player);
-                }
-                if (Loader.isModLoaded("malisiscore")) {
-                    MalisisCoreCompat.sendChunkBlockRegistrations(chunk, player);
-                }
+                MinecraftForge.EVENT_BUS.post(new ShipChunkSentEvent(chunk, player));
                 this.shipManager.getWorld().getEntityTracker().sendLeashedEntitiesInChunk(player, chunk);
             }
         });

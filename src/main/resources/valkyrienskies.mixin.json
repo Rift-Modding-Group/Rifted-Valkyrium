@@ -39,7 +39,8 @@
     "mod.malisiscore.MixinAnimatedRenderer",
     "mod.xaerominimap.MixinMinimapFBORenderer",
     "mod.xaeroworldmap.MixinGuiMap",
-    "mod.journeymap.MixinMapRenderer"
+    "mod.journeymap.MixinMapRenderer",
+    "mod.locks.MixinLocksClientEvents"
   ],
   "mixins": [
     "entity.MixinEntity",
