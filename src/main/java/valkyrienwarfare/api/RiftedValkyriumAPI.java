@@ -110,9 +110,9 @@ public class RiftedValkyriumAPI {
      *
      * @param world the server world that will own the ship
      * @param initialPosition the initial world position of the ship as a {@link BlockPos}
-     * @return the data for the queued ship
+     * @return the data for the queued ship, or null if assembly is cancelled
      */
-    @NotNull
+    @Nullable
     public static IShipData createNewShip(WorldServer world, BlockPos initialPosition) {
         return createNewShip(world, initialPosition, new ShipBuildOptions());
     }
@@ -123,9 +123,9 @@ public class RiftedValkyriumAPI {
      * @param world the server world that will own the ship
      * @param initialPosition the initial world position of the ship
      * @param shipBuildOptions a {@link ShipBuildOptions} for passing additional settings to the ship
-     * @return the data for the queued ship
+     * @return the data for the queued ship, or null if assembly is cancelled
      */
-    @NotNull
+    @Nullable
     public static IShipData createNewShip(WorldServer world, BlockPos initialPosition, ShipBuildOptions shipBuildOptions) {
         return createNewShip(
                 world,
@@ -146,9 +146,9 @@ public class RiftedValkyriumAPI {
      *
      * @param world the server world that will own the ship
      * @param initialPosition the initial world position of the ship as a {@link Vec3d}
-     * @return the data for the queued ship
+     * @return the data for the queued ship, or null if assembly is cancelled
      */
-    @NotNull
+    @Nullable
     public static IShipData createNewShip(WorldServer world, Vec3d initialPosition) {
         return createNewShip(world, initialPosition, new ShipBuildOptions());
     }
@@ -159,9 +159,9 @@ public class RiftedValkyriumAPI {
      * @param world the server world that will own the ship
      * @param initialPosition the initial world position of the ship
      * @param shipBuildOptions a {@link ShipBuildOptions} for passing additional settings to the ship
-     * @return the data for the queued ship
+     * @return the data for the queued ship, or null if assembly is cancelled
      */
-    @NotNull
+    @Nullable
     public static IShipData createNewShip(WorldServer world, Vec3d initialPosition, ShipBuildOptions shipBuildOptions) {
         return createNewShip(world, initialPosition, null, shipBuildOptions);
     }
@@ -173,9 +173,9 @@ public class RiftedValkyriumAPI {
      * @param world the server world that will own the ship
      * @param initialPosition the initial world position of the ship as a {@link BlockPos}
      * @param initialBounds the assembly region, with inclusive minimum and exclusive maximum coordinates
-     * @return the data for the queued ship
+     * @return the data for the queued ship, or null if assembly is cancelled
      */
-    @NotNull
+    @Nullable
     public static IShipData createNewShip(WorldServer world, BlockPos initialPosition, AxisAlignedBB initialBounds) {
         return createNewShip(world, initialPosition, initialBounds, new ShipBuildOptions());
     }
@@ -187,9 +187,9 @@ public class RiftedValkyriumAPI {
      * @param initialPosition the initial world position of the ship
      * @param initialBounds the assembly region, with inclusive minimum and exclusive maximum coordinates
      * @param shipBuildOptions a {@link ShipBuildOptions} for passing additional settings to the ship
-     * @return the data for the queued ship
+     * @return the data for the queued ship, or null if assembly is cancelled
      */
-    @NotNull
+    @Nullable
     public static IShipData createNewShip(
             WorldServer world, BlockPos initialPosition, AxisAlignedBB initialBounds,
             ShipBuildOptions shipBuildOptions
@@ -205,9 +205,9 @@ public class RiftedValkyriumAPI {
      * @param world the server world that will own the ship
      * @param initialPosition the initial world position of the ship as a {@link Vec3d}
      * @param initialBounds the assembly region, with inclusive minimum and exclusive maximum coordinates
-     * @return the data for the queued ship
+     * @return the data for the queued ship, or null if assembly is cancelled
      */
-    @NotNull
+    @Nullable
     public static IShipData createNewShip(WorldServer world, Vec3d initialPosition, AxisAlignedBB initialBounds) {
         return createNewShip(world, initialPosition, initialBounds, new ShipBuildOptions());
     }
@@ -221,9 +221,9 @@ public class RiftedValkyriumAPI {
      * @param initialBounds the assembly region, with inclusive minimum and exclusive maximum
      *                      coordinates, or null for connected-block assembly
      * @param shipBuildOptions a {@link ShipBuildOptions} for passing additional settings to the ship
-     * @return the data for the queued ship
+     * @return the data for the queued ship, or null if assembly is cancelled
      */
-    @NotNull
+    @Nullable
     public static IShipData createNewShip(
             WorldServer world, Vec3d initialPosition, @Nullable AxisAlignedBB initialBounds,
             ShipBuildOptions shipBuildOptions
@@ -456,7 +456,7 @@ public class RiftedValkyriumAPI {
 
         void setEntityAlignWithShip(Class<? extends Entity> entityClass);
 
-        @NotNull
+        @Nullable
         IShipData createNewShip(WorldServer world, Vec3d initialPosition, @Nullable AxisAlignedBB initialBounds, ShipBuildOptions shipBuildOptions);
 
         void linkShipToEntity(WorldServer world, IShipData shipData, Entity entity, Vec3d offset, ShipEntityDeathBehavior entityDeathBehavior, @Nullable String locator);
@@ -543,7 +543,7 @@ public class RiftedValkyriumAPI {
         }
 
         @Override
-        @NotNull
+        @Nullable
         public IShipData createNewShip(WorldServer world, Vec3d initialPosition, @Nullable AxisAlignedBB initialBounds, ShipBuildOptions shipBuildOptions) {
             throw new IllegalStateException("Rifted Valkyrium has not initialized its API provider");
         }

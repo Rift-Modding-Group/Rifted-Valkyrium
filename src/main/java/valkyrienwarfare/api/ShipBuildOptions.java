@@ -76,8 +76,13 @@ public final class ShipBuildOptions {
      * This makes it so that physics is enabled the moment that a {@link IPhysicsEntity} is created.
      * If not set, physics has to be enabled some other way.
      * */
+    @Deprecated
     public ShipBuildOptions setPhysicsEnabled() {
-        this.physicsEnabled = true;
+        return this.setPhysicsEnabled(true);
+    }
+
+    public ShipBuildOptions setPhysicsEnabled(boolean value) {
+        this.physicsEnabled = value;
         return this;
     }
 
@@ -183,8 +188,13 @@ public final class ShipBuildOptions {
     /**
      * If set, this makes it so sleeping on ships will not set the spawnpoint to there
      * */
+    @Deprecated
     public ShipBuildOptions setDontSetSpawn() {
-        this.dontSetSpawn = true;
+        return this.setDontSetSpawn(true);
+    }
+
+    public ShipBuildOptions setDontSetSpawn(boolean value) {
+        this.dontSetSpawn = value;
         return this;
     }
 

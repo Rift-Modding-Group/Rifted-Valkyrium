@@ -42,6 +42,7 @@ import valkyrienwarfare.api.TransformType;
 import valkyrienwarfare.api.ShipEntityDeathBehavior;
 import valkyrienwarfare.api.ShipBlockBlacklist;
 import valkyrienwarfare.api.event.ShipBlockRelocationEvent;
+import valkyrienwarfare.api.event.ShipDisassemblyEvent;
 
 import javax.annotation.Nonnull;
 import java.util.*;
@@ -129,6 +130,13 @@ public class WorldServerShipManager implements IPhysObjectWorld {
         while (iterator.hasNext()) {
             PhysicsObject physicsObject = iterator.next().getValue();
             if (physicsObject.shouldShipBeDestroyed()) {
+                if (!physicsObject.getBlockPositions().isEmpty()
+                        && physicsObject.getDeconstructState().isCopyBlocks()
+                        && MinecraftForge.EVENT_BUS.post(new ShipDisassemblyEvent(physicsObject))) {
+                    physicsObject.setDeconstructState(PhysicsObject.DeconstructState.NOT_DECONSTRUCTING);
+                    physicsObject.setShipAligningToGrid(false);
+                    continue;
+                }
                 // Copy ship blocks to the world
                 physicsObject.destroyShip();
                 // Then remove the ship from the world, and the ship map.

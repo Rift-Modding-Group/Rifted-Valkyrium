@@ -91,7 +91,9 @@ public class ItemShipAssemblerStick extends BaseItem {
             return EnumActionResult.FAIL;
         }
         BlockPos assemblyPosition = new BlockPos(bounds.getCenter());
-        RiftedValkyriumAPI.createNewShip(serverWorld, assemblyPosition, bounds, new ShipBuildOptions().setPhysicsEnabled());
+        if (RiftedValkyriumAPI.createNewShip(serverWorld, assemblyPosition, bounds, new ShipBuildOptions().setPhysicsEnabled()) == null) {
+            return EnumActionResult.FAIL;
+        }
         tag.removeTag(SELECTION_TAG);
         stack.setTagCompound(tag);
         player.sendStatusMessage(new TextComponentTranslation("message.valkyrienskies.assembler.queued"), true);

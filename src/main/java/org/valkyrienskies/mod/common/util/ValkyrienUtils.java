@@ -252,10 +252,11 @@ public final class ValkyrienUtils {
     /**
      * Queues a new ship for assembly at a block-aligned world position.
      *
+     * @return the queued ship data, or null if assembly is cancelled
      * @deprecated use {@link RiftedValkyriumAPI#createNewShip(WorldServer, BlockPos)}
      */
     @Deprecated
-    @NotNull
+    @Nullable
     public static ShipData createNewShip(World world, BlockPos initialPosition) {
         if (!(world instanceof WorldServer serverWorld)) {
             throw new IllegalStateException("Cannot create a ship outside a server world: " + world);
@@ -267,10 +268,11 @@ public final class ValkyrienUtils {
     /**
      * Queues a new ship at an arbitrary world position without requiring a controller block.
      *
+     * @return the queued ship data, or null if assembly is cancelled
      * @deprecated use {@link RiftedValkyriumAPI#createNewShip(WorldServer, Vec3d)}
      */
     @Deprecated
-    @NotNull
+    @Nullable
     public static ShipData createNewShip(World world, Vector3dc initialPosition) {
         if (!(world instanceof WorldServer serverWorld)) {
             throw new IllegalStateException("Cannot create a ship outside a server world: " + world);

@@ -6,6 +6,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.RayTraceResult;
+import net.minecraftforge.common.MinecraftForge;
 import org.jetbrains.annotations.Nullable;
 import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
 import net.minecraft.util.math.Vec3d;
@@ -37,6 +38,7 @@ import org.valkyrienskies.mod.common.ships.ship_world.WorldServerShipManager;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import org.valkyrienskies.mod.common.util.names.NounListNameGenerator;
 import valkyrienwarfare.api.*;
+import valkyrienwarfare.api.event.ShipAssemblyEvent;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.List;
@@ -123,9 +125,12 @@ public class RiftedValkyriumAPIProvider implements RiftedValkyriumAPI.Provider {
     }
 
     @Override
-    @NotNull
+    @Nullable
     @SuppressWarnings("deprecation")
     public IShipData createNewShip(WorldServer world, Vec3d initialPosition, @Nullable AxisAlignedBB initialBounds, ShipBuildOptions shipBuildOptions) {
+        ShipAssemblyEvent event = new ShipAssemblyEvent(world, initialPosition, initialBounds, shipBuildOptions);
+        if (MinecraftForge.EVENT_BUS.post(event)) return null;
+
         IPhysObjectWorld physObjectWorld = ValkyrienUtils.getPhysObjWorld(world);
         if (!(physObjectWorld instanceof WorldServerShipManager serverShipManager)) {
             throw new IllegalStateException("Could not get server ship manager from world!");
