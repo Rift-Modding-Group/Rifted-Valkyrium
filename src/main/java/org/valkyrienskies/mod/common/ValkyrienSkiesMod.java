@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import net.minecraft.block.Block;
 import net.minecraft.command.ServerCommandManager;
 import net.minecraft.creativetab.CreativeTabs;
+import net.minecraft.entity.EntityLeashKnot;
 import net.minecraft.entity.item.*;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Items;
@@ -157,6 +158,7 @@ public class ValkyrienSkiesMod {
 
         //default entity align w ship registry
         RiftedValkyriumAPI.setEntityAlignWithShip(EntityArmorStand.class);
+        RiftedValkyriumAPI.setEntityAlignWithShip(EntityLeashKnot.class);
 
         //default unloadable entities registry
         RiftedValkyriumAPI.setEntityUnloadWithShip(EntityArmorStand.class);

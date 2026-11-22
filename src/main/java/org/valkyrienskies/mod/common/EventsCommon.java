@@ -3,12 +3,16 @@ package org.valkyrienskies.mod.common;
 import net.minecraft.block.BlockLiquid;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityLeashKnot;
+import net.minecraft.entity.EntityLiving;
+import net.minecraft.entity.EntityTracker;
 import net.minecraft.entity.item.EntityFallingBlock;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.network.play.server.SPacketEntityAttach;
 import net.minecraft.util.EnumActionResult;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
@@ -22,6 +26,7 @@ import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.event.entity.living.LivingDropsEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerSetSpawnEvent;
 import net.minecraftforge.event.world.ChunkEvent;
 import net.minecraftforge.event.world.ExplosionEvent;
@@ -58,6 +63,36 @@ import java.util.UUID;
 @EventBusSubscriber(modid = ValkyrienSkiesMod.MOD_ID)
 public class EventsCommon {
     private static final int PLAYER_WORLD_LIMIT = 27_000_000;
+
+    //should help out with rendering the leash upon connecting to a fence for the first time
+    @SubscribeEvent
+    public static void onStartTracking(@NotNull PlayerEvent.StartTracking event) {
+        if (!(event.getEntityPlayer() instanceof EntityPlayerMP player)) return;
+
+        EntityLeashKnot knot;
+        List<EntityLiving> entities;
+        if (event.getTarget() instanceof EntityLeashKnot trackedKnot) {
+            knot = trackedKnot;
+            entities = knot.world.getEntitiesWithinAABB(EntityLiving.class, knot.getEntityBoundingBox().grow(10D));
+        }
+        else if (event.getTarget() instanceof EntityLiving living && living.getLeashHolder() instanceof EntityLeashKnot holder) {
+            knot = holder;
+            entities = List.of(living);
+        }
+        else return;
+
+        IShipAnchoredMount anchor = knot.getCapability(VSCapabilityRegistry.VS_SHIP_ANCHORED_MOUNT, null);
+        if (anchor == null || !anchor.isAnchoredToShip()) return;
+
+        EntityTracker tracker = player.getServerWorld().getEntityTracker();
+        if (!tracker.getTrackingPlayers(knot).contains(player)) return;
+
+        for (EntityLiving living : entities) {
+            if (living.getLeashHolder() == knot && tracker.getTrackingPlayers(living).contains(player)) {
+                player.connection.sendPacket(new SPacketEntityAttach(living, knot));
+            }
+        }
+    }
 
     @SubscribeEvent
     public static void onPlayerSetSpawn(@NotNull PlayerSetSpawnEvent event) {

@@ -46,6 +46,7 @@
     "entity.MixinEntityArrow",
     "entity.MixinEntityBoat",
     "entity.MixinEntityIntrinsic",
+    "entity.MixinEntityLeashKnot",
     "entity.MixinEntityLivingBase",
     "entity.MixinEntityMinecart",
     "entity.MixinEntityPlayer",
