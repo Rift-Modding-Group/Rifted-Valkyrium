@@ -240,6 +240,7 @@ public class VSConfig extends VSConfigTemplate {
     @Name("(LEGACY) Ship Spawn Detector Blacklist")
     @Comment({
             "Blocks to not be included when assembling a ship using the legacy Physics Infuser.",
+            "Entries use namespace:block for every state or namespace:block:metadata for one metadata value.",
             "NOTE THAT ADDONS MAY HAVE THEIR OWN SHIP ASSEMBLY BLACKLISTS/WHITELISTS."
     })
     public static String[] shipSpawnDetectorBlacklist = {
@@ -248,7 +249,7 @@ public class VSConfig extends VSConfigTemplate {
         "minecraft:sandstone", "minecraft:gravel", "minecraft:ice", "minecraft:snow",
         "minecraft:snow_layer", "minecraft:lava", "minecraft:flowing_lava", "minecraft:grass_path",
         "minecraft:bedrock", "minecraft:end_portal_frame", "minecraft:end_portal",
-        "minecraft:end_gateway", "minecraft:portal",
+        "minecraft:end_gateway", "minecraft:portal", "minecraft:clay"
     };
 
     @Name("Block Mass")

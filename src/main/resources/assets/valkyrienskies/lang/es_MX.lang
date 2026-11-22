@@ -103,7 +103,7 @@ valkyrienskies.general.ship_loading_settings.unloadDistance=Distancia de descarg
 valkyrienskies.general.ship_loading_settings.unloadDistance.tooltip=Si no hay jugadores dentro de esta distancia XZ de una nave y la nave está cargada, se descargará.
 
 valkyrienskies.general.shipspawndetectorblacklist=Lista negra del detector de creación de naves
-valkyrienskies.general.shipspawndetectorblacklist.tooltip=Bloques que no se incluirán al armar una nave.
+valkyrienskies.general.shipspawndetectorblacklist.tooltip=Bloques excluidos al armar una nave con el infusor de física antiguo. Usa namespace:block para todos los estados o namespace:block:metadata para un valor de metadatos.
 
 valkyrienskies.general.blockmass=Masa de los bloques
 valkyrienskies.general.blockmass.tooltip=Sobrescribe el valor de masa generado automáticamente para los bloques. La unidad de masa es el kg.

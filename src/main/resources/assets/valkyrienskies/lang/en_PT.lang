@@ -103,7 +103,7 @@ valkyrienskies.general.ship_loading_settings.unloadDistance=Ship Anchor Distance
 valkyrienskies.general.ship_loading_settings.unloadDistance.tooltip=If all ye landlubber's leagues to this ship are long, it'll drop anchor.
 
 valkyrienskies.general.shipspawndetectorblacklist=Shipwright's Code of Conduct
-valkyrienskies.general.shipspawndetectorblacklist.tooltip=These materials should never be used for shipbuildin'!
+valkyrienskies.general.shipspawndetectorblacklist.tooltip=Keep these materials out o' ships built with the old Physics Infuser! Use namespace:block fer all states or namespace:block:metadata fer one metadata value.
 
 valkyrienskies.general.blockmass=Weight of yer Vessel
 valkyrienskies.general.blockmass.tooltip=How low yer draft be when on the seas.

@@ -102,7 +102,7 @@ valkyrienskies.general.ship_loading_settings.unloadDistance=Ship Unload Distance
 valkyrienskies.general.ship_loading_settings.unloadDistance.tooltip=If there are no players within this XZ distance of a ship, then if that ship is currently loaded, it will unload itself.
 
 valkyrienskies.general.shipspawndetectorblacklist=Ship Spawn Detector Blacklist
-valkyrienskies.general.shipspawndetectorblacklist.tooltip=Blocks to not be included when assembling a ship.
+valkyrienskies.general.shipspawndetectorblacklist.tooltip=Blocs exclus de l'assemblage d'un navire avec l'ancien infuseur physique. Utilisez namespace:block pour tous les états ou namespace:block:metadata pour une valeur de métadonnées.
 
 valkyrienskies.general.blockmass=Block Mass
 valkyrienskies.general.blockmass.tooltip=Override the auto generated mass value of blocks. The units of mass are kg.

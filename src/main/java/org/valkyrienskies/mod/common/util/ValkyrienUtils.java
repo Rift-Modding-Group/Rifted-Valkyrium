@@ -26,6 +26,7 @@ import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4dc;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
+import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.annotation.LegacyContent;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.VSWorldDataCapability;
@@ -286,6 +287,7 @@ public final class ValkyrienUtils {
     }
 
     /**
+     * Exclusively used by the physics infuser to assemble ships.
      * @deprecated use {@link RiftedValkyriumAPI#createNewShip(WorldServer, Vec3d)}
      */
     @Deprecated
@@ -303,12 +305,26 @@ public final class ValkyrienUtils {
 
         ShipBlockBlacklist blockBlacklist = switch (blockFinderType) {
             case FIND_ALLOWED_BLOCKS -> {
-                Set<Block> blacklist = new HashSet<>();
+                Set<IBlockState> blacklist = new HashSet<>();
                 for (String blockId : VSConfig.shipSpawnDetectorBlacklist) {
-                    Block block = Block.getBlockFromName(blockId);
-                    if (block != null) blacklist.add(block);
+                    try {
+                        ImmutablePair<String, Integer> blockNameAndMeta = getRegistryNameAndMeta(blockId, -1);
+                        Block block = Block.getBlockFromName(blockNameAndMeta.getLeft());
+                        if (block == null) continue;
+
+                        for (IBlockState state : block.getBlockState().getValidStates()) {
+                            if (blockNameAndMeta.getRight() < 0 || block.getMetaFromState(state) == blockNameAndMeta.getRight()) {
+                                blacklist.add(state);
+                            }
+                        }
+                    }
+                    catch (IllegalArgumentException exception) {
+                        ValkyrienSkiesMod.LOGGER.warn(
+                                "Ignoring shipSpawnDetectorBlacklist entry '{}'; invalid block selector", blockId
+                        );
+                    }
                 }
-                yield (world, position, state) -> blacklist.contains(state.getBlock());
+                yield (world, position, state) -> blacklist.contains(state);
             }
             case FIND_ALL_BLOCKS -> (candidateWorld, position, state) ->
                     BlockPhysicsDetails.blocksToNotPhysicsInfuse.contains(state.getBlock());

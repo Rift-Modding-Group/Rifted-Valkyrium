@@ -103,7 +103,7 @@ valkyrienskies.general.ship_loading_settings.unloadDistance=飞船停止加载�
 valkyrienskies.general.ship_loading_settings.unloadDistance.tooltip=玩家和飞船距离的XZ平面投影大于这个值时飞船将停止加载。
 
 valkyrienskies.general.shipspawndetectorblacklist=构建飞船黑名单
-valkyrienskies.general.shipspawndetectorblacklist.tooltip=这些方块构建飞船时将不被包含。
+valkyrienskies.general.shipspawndetectorblacklist.tooltip=使用旧版物理注入器组装飞船时排除的方块。使用 namespace:block 匹配所有状态，或使用 namespace:block:metadata 匹配指定元数据值。
 
 valkyrienskies.general.blockmass=方块质量
 valkyrienskies.general.blockmass.tooltip=修改自动生成的方块质量，单位是千克。
