@@ -14,24 +14,30 @@ import net.minecraft.network.play.server.SPacketPlayerPosLook;
 import net.minecraft.util.Tuple;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.text.TextComponentString;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 import org.joml.Vector3d;
+import org.joml.Vector3dc;
+import org.jetbrains.annotations.NotNull;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.*;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
+import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.network.IHasPlayerMovementData;
 import org.valkyrienskies.mod.common.network.PlayerMovementData;
+import org.valkyrienskies.mod.common.network.MessageShipBedRespawn;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.chunk_claims.ShipChunkAllocator;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
+import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
 import org.valkyrienskies.mod.common.util.VSMath;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import valkyrienwarfare.api.TransformType;
@@ -56,6 +62,66 @@ public abstract class MixinNetHandlerPlayServer {
     public double lastGoodY;
     @Shadow
     public double lastGoodZ;
+
+    @WrapOperation(
+            method = "processConfirmTeleport",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/entity/player/EntityPlayerMP;setPositionAndRotation(DDDFF)V"
+            )
+    )
+    private void confirmTeleportInMovingShipFrame(
+            @NotNull EntityPlayerMP player, double x, double y, double z, float yaw, float pitch,
+            @NotNull Operation<Void> original
+    ) {
+        Vec3d position = EntityDraggable.getPendingShipTeleportPosition(player);
+        if (position != null) {
+            x = position.x;
+            y = position.y;
+            z = position.z;
+        }
+        original.call(player, x, y, z, yaw, pitch);
+        IEntityShipDraggable draggable = player.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
+        if (draggable != null && draggable.isPendingShipTeleport()) draggable.clearPendingShipPosition();
+    }
+
+    @WrapOperation(
+            method = "processPlayer",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/network/NetHandlerPlayServer;setPlayerLocation(DDDFF)V"
+            )
+    )
+    private void resendTeleportInMovingShipFrame(
+            @NotNull NetHandlerPlayServer connection, double x, double y, double z, float yaw, float pitch,
+            @NotNull Operation<Void> original
+    ) {
+        Vec3d position = EntityDraggable.getPendingShipTeleportPosition(this.player);
+        IEntityShipDraggable draggable = this.player.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
+        if (position == null || draggable == null) {
+            original.call(connection, x, y, z, yaw, pitch);
+            return;
+        }
+        UUID shipId = draggable.getPendingShipId();
+        Vector3dc localPosition = draggable.getPendingShipLocalPosition();
+        IPhysObjectWorld manager = ValkyrienUtils.getPhysObjWorld(this.player.world);
+        PhysicsObject ship = manager == null ? null : manager.getPhysObjectFromUUID(shipId);
+        if (ship == null) {
+            draggable.clearPendingShipPosition();
+            original.call(connection, x, y, z, yaw, pitch);
+            return;
+        }
+        ValkyrienSkiesMod.physWrapperNetwork.sendTo(
+                new MessageShipBedRespawn(
+                        this.player.dimension, shipId,
+                        new Vector3d(position.x, position.y, position.z),
+                        ship.getShipTransform()
+                ),
+                this.player
+        );
+        original.call(connection, position.x, position.y, position.z, yaw, pitch);
+        draggable.setPendingShipPosition(shipId, localPosition, true);
+    }
 
     /**
      * A ship can move the vehicle after vanilla records its last accepted position. Resolve from
@@ -84,6 +150,8 @@ public abstract class MixinNetHandlerPlayServer {
     @Inject(method = "setPlayerLocation(DDDFFLjava/util/Set;)V", at = @At("HEAD"), cancellable = true)
     public void onSetPlayerLocation(double x, double y, double z, float yaw, float pitch,
         Set<SPacketPlayerPosLook.EnumFlags> relativeSet, CallbackInfo callbackInfo) {
+        IEntityShipDraggable draggable = this.player.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
+        if (draggable != null && draggable.isPendingShipTeleport()) draggable.clearPendingShipPosition();
         if (!redirectingSetPlayerLocation) {
             BlockPos pos = new BlockPos(x, y, z);
             // If the player is being teleported to ship space then we have to stop it.
@@ -234,6 +302,7 @@ public abstract class MixinNetHandlerPlayServer {
 
             if (lastTouchedShip != null) {
                 packetPlayer.moving = true;
+                packetPlayer.rotating = true;
 
                 // Then update the packet values to match the ones above.
                 packetPlayer.x = playerPosInShip.x();

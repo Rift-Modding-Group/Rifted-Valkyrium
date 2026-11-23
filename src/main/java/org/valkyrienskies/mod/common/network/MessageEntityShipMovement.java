@@ -405,18 +405,15 @@ public class MessageEntityShipMovement implements IMessage {
                     else {
                         movementData = draggable.getOrCreateShipLocalMovementData();
                         movementData.useShip(message.shipUuid);
-                        boolean initializeFromAuthoritativeState = !movementData.isInitialized();
 
                         if (shipTransform != null) {
-                            movementData.initializeIfNeeded(
-                                    shipTransform,
-                                    new Vector3d(entity.posX, entity.posY, entity.posZ),
-                                    entity.rotationYaw,
-                                    entity.rotationPitch,
-                                    entity.getRotationYawHead()
-                            );
+                            ShipTransform previousShipTransform = indexedShip.map(ShipData::getPrevTickShipTransform).orElse(shipTransform);
+                            if (physicsObject != null) {
+                                previousShipTransform = physicsObject.getShipTransformationManager().getPrevTickTransform();
+                            }
+                            movementData.initializeIfNeeded(shipTransform, previousShipTransform, entity);
                         }
-                        int interpolationSteps = initializeFromAuthoritativeState
+                        int interpolationSteps = entity.ticksExisted == 0
                                 ? 0 : ShipLocalEntityMovementData.DEFAULT_LERP_STEPS;
                         if (message.hasComponent(POSITION)) {
                             movementData.setPositionTarget(

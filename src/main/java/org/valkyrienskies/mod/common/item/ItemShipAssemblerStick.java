@@ -20,6 +20,7 @@ import org.jetbrains.annotations.Nullable;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.BaseItem;
+import org.valkyrienskies.mod.common.util.VSMath;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import valkyrienwarfare.api.RiftedValkyriumAPI;
 import valkyrienwarfare.api.ShipBuildOptions;
@@ -90,7 +91,7 @@ public class ItemShipAssemblerStick extends BaseItem {
             player.sendStatusMessage(new TextComponentTranslation("message.valkyrienskies.assembler.unloaded"), true);
             return EnumActionResult.FAIL;
         }
-        BlockPos assemblyPosition = new BlockPos(bounds.getCenter());
+        BlockPos assemblyPosition = new BlockPos(VSMath.getCenter(bounds));
         if (RiftedValkyriumAPI.createNewShip(serverWorld, assemblyPosition, bounds, new ShipBuildOptions().setPhysicsEnabled()) == null) {
             return EnumActionResult.FAIL;
         }

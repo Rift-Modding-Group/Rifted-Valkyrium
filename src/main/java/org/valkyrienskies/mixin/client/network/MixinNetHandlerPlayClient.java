@@ -71,7 +71,7 @@ public class MixinNetHandlerPlayClient {
         }
         //no pending tp flag, standard procedure
         else {
-            draggable.clearPendingShipPosition();
+            EntityDraggable.clearShipTracking(player);
             player.setPositionAndRotation(x, y, z, yaw, pitch);
         }
     }

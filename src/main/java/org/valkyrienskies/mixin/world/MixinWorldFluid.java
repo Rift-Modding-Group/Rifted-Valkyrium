@@ -18,6 +18,7 @@ import org.valkyrienskies.mod.common.ships.chunk_claims.ShipChunkAllocator;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.TransformedAABB;
+import org.valkyrienskies.mod.common.util.VSMath;
 import valkyrienwarfare.api.TransformType;
 
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -28,7 +29,7 @@ public abstract class MixinWorldFluid {
     @Inject(method = "handleMaterialAcceleration", at = @At("RETURN"), cancellable = true)
     private void accelerateInShipFluid(AxisAlignedBB bounds, Material material, Entity entity, CallbackInfoReturnable<Boolean> callback) {
         if (callback.getReturnValueZ() || !material.isLiquid()) return;
-        if (ShipChunkAllocator.isBlockInShipyard(new BlockPos(bounds.getCenter()))) return;
+        if (ShipChunkAllocator.isBlockInShipyard(new BlockPos(VSMath.getCenter(bounds)))) return;
         IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
         World world = (World) (Object) this;
         IShipWorld shipWorld = world.getCapability(VSCapabilityRegistry.VS_SHIP_WORLD, null);
@@ -84,7 +85,7 @@ public abstract class MixinWorldFluid {
     @Inject(method = "isMaterialInBB", at = @At("RETURN"), cancellable = true)
     private void detectShipFluidMaterial(AxisAlignedBB bounds, Material material, CallbackInfoReturnable<Boolean> callback) {
         if (callback.getReturnValueZ() || !material.isLiquid()) return;
-        if (ShipChunkAllocator.isBlockInShipyard(new BlockPos(bounds.getCenter()))) return;
+        if (ShipChunkAllocator.isBlockInShipyard(new BlockPos(VSMath.getCenter(bounds)))) return;
         World world = (World) (Object) this;
         IShipWorld shipWorld = world.getCapability(VSCapabilityRegistry.VS_SHIP_WORLD, null);
         if (shipWorld == null || shipWorld.getManager() == null) return;
@@ -101,7 +102,7 @@ public abstract class MixinWorldFluid {
     @Inject(method = "containsAnyLiquid", at = @At("RETURN"), cancellable = true)
     private void detectShipLiquid(AxisAlignedBB bounds, CallbackInfoReturnable<Boolean> callback) {
         if (callback.getReturnValueZ()) return;
-        if (ShipChunkAllocator.isBlockInShipyard(new BlockPos(bounds.getCenter()))) return;
+        if (ShipChunkAllocator.isBlockInShipyard(new BlockPos(VSMath.getCenter(bounds)))) return;
         World world = (World) (Object) this;
         IShipWorld shipWorld = world.getCapability(VSCapabilityRegistry.VS_SHIP_WORLD, null);
         if (shipWorld == null || shipWorld.getManager() == null) return;

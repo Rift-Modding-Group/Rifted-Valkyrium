@@ -5,17 +5,22 @@ import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLeashKnot;
 import net.minecraft.entity.EntityLiving;
+import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.EntityTracker;
+import net.minecraft.entity.monster.EntityEnderman;
 import net.minecraft.entity.item.EntityFallingBlock;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.pathfinding.Path;
+import net.minecraft.pathfinding.PathNodeType;
 import net.minecraft.network.play.server.SPacketEntityAttach;
 import net.minecraft.util.EnumActionResult;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.text.TextComponentTranslation;
 import net.minecraft.world.Explosion;
@@ -25,6 +30,8 @@ import net.minecraft.world.WorldServer;
 import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.event.entity.living.LivingDropsEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
+import net.minecraftforge.event.entity.living.LivingEvent.LivingUpdateEvent;
+import net.minecraftforge.event.entity.living.EnderTeleportEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerSetSpawnEvent;
@@ -49,6 +56,7 @@ import org.valkyrienskies.mod.common.capability.ship_world.IShipWorld;
 import org.valkyrienskies.mod.common.item.ItemEntityShipLinkerStick;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
+import org.valkyrienskies.mod.common.ships.pathfinding.ShipPathfinder;
 import org.valkyrienskies.mod.common.ships.ship_world.*;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import valkyrienwarfare.api.TransformType;
@@ -56,6 +64,7 @@ import valkyrienwarfare.api.IShipData;
 import valkyrienwarfare.api.RiftedValkyriumAPI;
 import valkyrienwarfare.api.ShipEntityDeathBehavior;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -63,6 +72,122 @@ import java.util.UUID;
 @EventBusSubscriber(modid = ValkyrienSkiesMod.MOD_ID)
 public class EventsCommon {
     private static final int PLAYER_WORLD_LIMIT = 27_000_000;
+
+    //set nbt tags for combat on endermen
+    @SubscribeEvent
+    public static void onLivingUpdate(@NotNull LivingUpdateEvent event) {
+        if (!(event.getEntityLiving() instanceof EntityEnderman enderman) || enderman.world.isRemote) return;
+        EntityLivingBase target = enderman.getAttackTarget();
+        boolean inShipCombat = false;
+        boolean needsPursuit = false;
+        if (target != null && enderman.world == target.world && enderman.isEntityAlive()
+                && target.isEntityAlive() && !enderman.isAIDisabled() && !enderman.isRiding()
+        ) {
+            double distance = enderman.getDistanceSq(target);
+            if (distance <= 1024D && (EntityDraggable.getActiveShip(enderman) != null || EntityDraggable.getActiveShip(target) != null)) {
+                inShipCombat = true;
+                if (distance > 256D) needsPursuit = true;
+                else if (distance > 4D) {
+                    Path path = enderman.getNavigator().getPath();
+                    needsPursuit = path == null || path.isFinished() || path.getCurrentPathLength() == 0
+                            || path.getVectorFromIndex(enderman, path.getCurrentPathLength() - 1)
+                            .squareDistanceTo(target.getPositionVector()) >= 1D;
+                }
+            }
+        }
+        NBTTagCompound entityData = enderman.getEntityData();
+        if (!inShipCombat) {
+            entityData.removeTag("VSShipCombatTeleport");
+            return;
+        }
+
+        NBTTagCompound pursuit = entityData.getCompoundTag("VSShipCombatTeleport");
+        if (!pursuit.hasUniqueId("Target") || !target.getUniqueID().equals(pursuit.getUniqueId("Target"))) {
+            pursuit.setUniqueId("Target", target.getUniqueID());
+            pursuit.setInteger("Ticks", 0);
+            entityData.setTag("VSShipCombatTeleport", pursuit);
+        }
+        int ticks = pursuit.getInteger("Ticks") + 1;
+        pursuit.setInteger("Ticks", ticks);
+        if (ticks < 30) return;
+        pursuit.setInteger("Ticks", 0);
+
+        if (!needsPursuit && enderman.getRNG().nextInt(3) != 0) return;
+        enderman.teleportTo(target.posX, target.getEntityBoundingBox().minY + 0.6D, target.posZ);
+    }
+
+    //enderman teleportation to target on ships
+    @SubscribeEvent(priority = EventPriority.LOWEST, receiveCanceled = true)
+    public static void onEnderTeleport(@NotNull EnderTeleportEvent event) {
+        if (!(event.getEntityLiving() instanceof EntityEnderman enderman) || enderman.world.isRemote) return;
+        enderman.getEntityData().removeTag("VSShipCombatTeleport");
+        EntityLivingBase target = enderman.getAttackTarget();
+        if (event.isCanceled() || target == null || target.world != enderman.world || !target.isEntityAlive()
+                || !enderman.isEntityAlive() || enderman.isRiding() || enderman.getDistanceSq(target) > 1024D
+                || EntityDraggable.getActiveShip(enderman) == null && EntityDraggable.getActiveShip(target) == null
+        ) {
+            return;
+        }
+
+        double radius = enderman.width * 0.5D;
+        ShipPathfinder.TeleportResult requested = ShipPathfinder.findTeleportLanding(
+                enderman, new Vec3d(event.getTargetX(), event.getTargetY(), event.getTargetZ())
+        );
+        if (requested.landing() != null) {
+            Vec3d position = requested.landing().worldPosition(enderman.width);
+            AxisAlignedBB bounds = new AxisAlignedBB(
+                    position.x - radius, position.y, position.z - radius,
+                    position.x + radius, position.y + enderman.height, position.z + radius
+            );
+            if (position.squareDistanceTo(enderman.getPositionVector()) >= 1D && !bounds.intersects(target.getEntityBoundingBox())) {
+                event.setTargetX(position.x);
+                event.setTargetY(position.y);
+                event.setTargetZ(position.z);
+                return;
+            }
+        }
+        ShipData targetShip = EntityDraggable.getActiveShip(target);
+        ShipPathfinder search = new ShipPathfinder(enderman, enderman.getNavigator(), target.getEntityBoundingBox().grow(3D));
+        int targetX = MathHelper.floor(target.posX);
+        int targetZ = MathHelper.floor(target.posZ);
+        double targetY = target.getEntityBoundingBox().minY;
+        List<Vec3d> candidates = new ArrayList<>();
+        for (int ring = 1; ring <= 2; ring++) {
+            for (int dx = -ring; dx <= ring; dx++) {
+                for (int dz = -ring; dz <= ring; dz++) {
+                    if (Math.abs(dx) < ring && Math.abs(dz) < ring) continue;
+                    for (ShipPathfinder.Surface surface : search.surfaces(
+                            targetX + dx + 0.5D, targetZ + dz + 0.5D, targetY - 1.25D, targetY + 0.6D)
+                    ) {
+                        if (surface.waypoint().ship() != targetShip || surface.penalty() != 0f
+                                || surface.type() != PathNodeType.WALKABLE && surface.type() != PathNodeType.OPEN
+                        ) {
+                            continue;
+                        }
+                        Vec3d position = surface.position();
+                        double distance = position.squareDistanceTo(enderman.getPositionVector());
+                        if (distance < 1D || distance > 1024D) continue;
+                        AxisAlignedBB bounds = new AxisAlignedBB(
+                                position.x - radius, position.y, position.z - radius,
+                                position.x + radius, position.y + enderman.height, position.z + radius
+                        );
+                        if (!bounds.intersects(target.getEntityBoundingBox())) {
+                            candidates.add(position);
+                        }
+                    }
+                }
+            }
+        }
+        if (candidates.isEmpty()) {
+            event.setCanceled(true);
+            return;
+        }
+
+        Vec3d position = candidates.get(enderman.getRNG().nextInt(candidates.size()));
+        event.setTargetX(position.x);
+        event.setTargetY(position.y);
+        event.setTargetZ(position.z);
+    }
 
     //should help out with rendering the leash upon connecting to a fence for the first time
     @SubscribeEvent

@@ -2,9 +2,13 @@ package org.valkyrienskies.mixin.entity;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.sugar.Share;
+import com.llamalad7.mixinextras.sugar.ref.LocalRef;
+import net.minecraft.block.material.Material;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.item.EntityXPOrb;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
@@ -24,6 +28,9 @@ import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMount;
 import org.valkyrienskies.mod.common.capability.anchored_mount.ImplCapabilityShipAnchoredMount;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
+import org.valkyrienskies.mod.common.ships.pathfinding.ShipPath;
+import org.valkyrienskies.mod.common.ships.pathfinding.ShipPathfinder;
+import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
 import org.valkyrienskies.mod.common.network.MessageShipBedRespawn;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
@@ -35,6 +42,79 @@ import valkyrienwarfare.api.event.ShipAnchoredEntityDismountEvent;
 public class MixinEntityLivingBase {
     @Shadow
     protected int newPosRotationIncrements;
+
+    @Inject(method = "getLook", at = @At("HEAD"), cancellable = true)
+    private void usePlayerCameraDirection(float partialTicks, @NotNull CallbackInfoReturnable<Vec3d> callback) {
+        if ((Object) this instanceof EntityPlayer player) {
+            callback.setReturnValue(ValkyrienUtils.getPlayerLook(player, partialTicks));
+        }
+    }
+
+    @WrapOperation(method = "attemptTeleport", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/World;isBlockLoaded(Lnet/minecraft/util/math/BlockPos;)Z"))
+    private boolean findShipTeleportLanding(
+            @NotNull World world, @NotNull BlockPos target, @NotNull Operation<Boolean> original,
+            @Share("teleportLanding") @NotNull LocalRef<ShipPath.Waypoint> landing
+    ) {
+        if (!original.call(world, target)) return false;
+        if (world.isRemote) return true;
+        EntityLivingBase entity = (EntityLivingBase) (Object) this;
+        ShipPathfinder.TeleportResult result = ShipPathfinder.findTeleportLanding(entity, entity.getPositionVector());
+        if (!result.handled()) return true;
+        landing.set(result.landing());
+        return result.landing() != null;
+    }
+
+    @WrapOperation(method = "attemptTeleport", at = @At(value = "INVOKE", target = "Lnet/minecraft/block/material/Material;blocksMovement()Z"))
+    private boolean useShipTeleportLanding(
+            @NotNull Material material, @NotNull Operation<Boolean> original,
+            @Share("teleportLanding") @NotNull LocalRef<ShipPath.Waypoint> landing
+    ) {
+        ShipPath.Waypoint destination = landing.get();
+        if (destination == null) return original.call(material);
+        EntityLivingBase entity = (EntityLivingBase) (Object) this;
+        entity.posY = destination.worldPosition(entity.width).y;
+        return true;
+    }
+
+    @WrapOperation(method = "attemptTeleport", at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/EntityLivingBase;setPositionAndUpdate(DDD)V"))
+    private void placePlayerBeforeShipTeleportSync(
+            @NotNull EntityLivingBase entity, double x, double y, double z, @NotNull Operation<Void> original
+    ) {
+        if (entity instanceof EntityPlayerMP) entity.setPosition(x, y, z);
+        else original.call(entity, x, y, z);
+    }
+
+    @Inject(method = "attemptTeleport", at = @At("RETURN"))
+    private void updateShipAfterTeleport(
+            @NotNull CallbackInfoReturnable<Boolean> callback,
+            @Share("teleportLanding") @NotNull LocalRef<ShipPath.Waypoint> landing
+    ) {
+        EntityLivingBase entity = (EntityLivingBase) (Object) this;
+        if (entity.world.isRemote) return;
+        ShipPath.Waypoint destination = landing.get();
+        ShipData ship = null;
+        if (callback.getReturnValueZ()) {
+            EntityDraggable.clearShipTracking(entity);
+            if (destination != null && destination.ship() != null) {
+                ship = destination.ship();
+                EntityDraggable.startTrackingShip(entity, ship);
+            }
+        }
+        else if (entity instanceof EntityPlayerMP) ship = EntityDraggable.getActiveShip(entity);
+        if (entity instanceof EntityPlayerMP player) {
+            Vector3d position = new Vector3d(player.posX, player.posY, player.posZ);
+            if (ship != null) {
+                ValkyrienSkiesMod.physWrapperNetwork.sendTo(new MessageShipBedRespawn(
+                        player.dimension, ship.getUuid(), position, ship.getShipTransform()), player);
+            }
+            player.setPositionAndUpdate(position.x, position.y, position.z);
+            IEntityShipDraggable draggable = player.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
+            if (ship != null && draggable != null) {
+                ship.getShipTransform().transformPosition(position, TransformType.GLOBAL_TO_SUBSPACE);
+                draggable.setPendingShipPosition(ship.getUuid(), position, true);
+            }
+        }
+    }
 
     /**
      * Gives death experience the same moving frame as the entity before the orb enters the world.

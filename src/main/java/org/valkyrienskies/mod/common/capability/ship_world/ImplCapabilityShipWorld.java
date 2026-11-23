@@ -46,6 +46,7 @@ public class ImplCapabilityShipWorld implements IShipWorld {
             World world, Vec3d vec31, Vec3d vec32, boolean stopOnLiquid,
             boolean ignoreBlockWithoutBoundingBox, boolean returnLastUncollidableBlock, PhysicsObject toIgnore
     ) {
+        boolean wasIntercepting = this.shouldInterceptRayTrace;
         this.shouldInterceptRayTrace = false;
         RayTraceResult vanillaTrace = world.rayTraceBlocks(
                 vec31, vec32, stopOnLiquid,
@@ -57,9 +58,10 @@ public class ImplCapabilityShipWorld implements IShipWorld {
             physObjectWorld = this.manager;
         }
 
-        if (physObjectWorld == null) return vanillaTrace;
-
-        Vec3d playerReachVector = vec32.subtract(vec31);
+        if (physObjectWorld == null) {
+            this.shouldInterceptRayTrace = wasIntercepting;
+            return vanillaTrace;
+        }
 
         AxisAlignedBB playerRangeBB = new AxisAlignedBB(
                 vec31.x, vec31.y, vec31.z,
@@ -67,32 +69,16 @@ public class ImplCapabilityShipWorld implements IShipWorld {
         );
 
         List<PhysicsObject> nearbyShips = physObjectWorld.getPhysObjectsInAABB(playerRangeBB);
-        // Get rid of the Ship that we're not supposed to be RayTracing for
-        nearbyShips.remove(toIgnore);
-
-        double reachDistance = playerReachVector.length();
         double worldResultDistFromPlayer = 420000000D;
         if (vanillaTrace != null && vanillaTrace.hitVec != null) {
             worldResultDistFromPlayer = vanillaTrace.hitVec.distanceTo(vec31);
         }
 
         for (PhysicsObject wrapper : nearbyShips) {
-            Vec3d playerEyesPos = vec31;
-            playerReachVector = vec32.subtract(vec31);
-
-            ShipTransform shipTransform = wrapper.getShipTransformationManager()
-                    .getRenderTransform();
-
-            playerEyesPos = shipTransform.transform(playerEyesPos,
-                    TransformType.GLOBAL_TO_SUBSPACE);
-            playerReachVector = shipTransform.rotate(playerReachVector,
-                    TransformType.GLOBAL_TO_SUBSPACE);
-
-            Vec3d playerEyesReachAdded = playerEyesPos.add(
-                    playerReachVector.x * reachDistance,
-                    playerReachVector.y * reachDistance,
-                    playerReachVector.z * reachDistance
-            );
+            if (wrapper == toIgnore) continue;
+            ShipTransform shipTransform = wrapper.getShipTransformationManager().getRenderTransform();
+            Vec3d playerEyesPos = shipTransform.transform(vec31, TransformType.GLOBAL_TO_SUBSPACE);
+            Vec3d playerEyesReachAdded = shipTransform.transform(vec32, TransformType.GLOBAL_TO_SUBSPACE);
             RayTraceResult resultInShip = world.rayTraceBlocks(
                     playerEyesPos, playerEyesReachAdded,
                     stopOnLiquid, ignoreBlockWithoutBoundingBox, returnLastUncollidableBlock
@@ -110,7 +96,7 @@ public class ImplCapabilityShipWorld implements IShipWorld {
             }
         }
 
-        this.shouldInterceptRayTrace = true;
+        this.shouldInterceptRayTrace = wasIntercepting;
         return vanillaTrace;
     }
 
@@ -119,17 +105,17 @@ public class ImplCapabilityShipWorld implements IShipWorld {
             World world, Vec3d vec31, Vec3d vec32, boolean stopOnLiquid,
             boolean ignoreBlockWithoutBoundingBox, boolean returnLastUncollidableBlock, PhysicsObject toUse
     ) {
+        boolean wasIntercepting = this.shouldInterceptRayTrace;
         this.shouldInterceptRayTrace = false;
 
-        final ShipTransform shipTransform = toUse.getShipTransformationManager()
-                .getRenderTransform();
+        ShipTransform shipTransform = toUse.getShipTransformationManager().getRenderTransform();
 
-        final Vec3d traceStart = shipTransform.transform(vec31,
+        Vec3d traceStart = shipTransform.transform(vec31,
                 TransformType.GLOBAL_TO_SUBSPACE);
-        final Vec3d traceEnd = shipTransform.transform(vec32,
+        Vec3d traceEnd = shipTransform.transform(vec32,
                 TransformType.GLOBAL_TO_SUBSPACE);
 
-        final RayTraceResult resultInShip = world.rayTraceBlocks(
+        RayTraceResult resultInShip = world.rayTraceBlocks(
                 traceStart, traceEnd,
                 stopOnLiquid, ignoreBlockWithoutBoundingBox, returnLastUncollidableBlock
         );
@@ -137,11 +123,11 @@ public class ImplCapabilityShipWorld implements IShipWorld {
             // The hitVec must ALWAYS be in global coordinates.
             resultInShip.hitVec = shipTransform
                     .transform(resultInShip.hitVec, TransformType.SUBSPACE_TO_GLOBAL);
-            this.shouldInterceptRayTrace = true;
+            this.shouldInterceptRayTrace = wasIntercepting;
             return resultInShip;
         }
 
-        this.shouldInterceptRayTrace = true;
+        this.shouldInterceptRayTrace = wasIntercepting;
         return null;
     }
 

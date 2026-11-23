@@ -1,5 +1,7 @@
 package org.valkyrienskies.mod.common.capability.entity_ship_draggable;
 
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityLivingBase;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
@@ -72,32 +74,44 @@ public class ShipLocalEntityMovementData {
     }
 
     public void initializeIfNeeded(
-            @NotNull ShipTransform shipTransform,
-            @NotNull Vector3dc worldPosition,
-            double worldYaw,
-            double worldPitch,
-            double worldHeadYaw
+            @NotNull ShipTransform shipTransform, @NotNull ShipTransform previousShipTransform, @NotNull Entity entity
     ) {
         if (this.initialized) return;
 
-        this.relativePosition.set(worldPosition);
+        boolean newlySpawned = entity.ticksExisted == 0;
+        // Preserve the world-space render endpoints in the ship's corresponding tick frames.
+        this.relativePosition.set(entity.posX, entity.posY, entity.posZ);
         shipTransform.transformPosition(this.relativePosition, TransformType.GLOBAL_TO_SUBSPACE);
-        this.previousRelativePosition.set(this.relativePosition);
+        if (newlySpawned) this.previousRelativePosition.set(this.relativePosition);
+        else {
+            this.previousRelativePosition.set(entity.lastTickPosX, entity.lastTickPosY, entity.lastTickPosZ);
+            previousShipTransform.transformPosition(this.previousRelativePosition, TransformType.GLOBAL_TO_SUBSPACE);
+        }
         if (!this.hasPositionTarget) {
             this.targetRelativePosition.set(this.relativePosition);
         }
 
-        this.relativeYaw = transformYaw(shipTransform, worldYaw, TransformType.GLOBAL_TO_SUBSPACE);
+        this.relativeYaw = transformYaw(shipTransform, entity.rotationYaw, TransformType.GLOBAL_TO_SUBSPACE);
         this.previousRelativeYaw = this.relativeYaw;
+        if (!newlySpawned) {
+            double previousYaw = transformYaw(previousShipTransform, entity.prevRotationYaw, TransformType.GLOBAL_TO_SUBSPACE);
+            this.previousRelativeYaw -= wrapDegrees(this.relativeYaw - previousYaw);
+        }
         if (!this.hasRotationTarget) {
             this.targetRelativeYaw = this.relativeYaw;
-            this.targetPitch = worldPitch;
+            this.targetPitch = entity.rotationPitch;
         }
-        this.pitch = worldPitch;
-        this.previousPitch = worldPitch;
+        this.pitch = entity.rotationPitch;
+        this.previousPitch = newlySpawned ? this.pitch : entity.prevRotationPitch;
 
-        this.relativeHeadYaw = transformYaw(shipTransform, worldHeadYaw, TransformType.GLOBAL_TO_SUBSPACE);
+        this.relativeHeadYaw = transformYaw(shipTransform, entity.getRotationYawHead(), TransformType.GLOBAL_TO_SUBSPACE);
         this.previousRelativeHeadYaw = this.relativeHeadYaw;
+        if (!newlySpawned) {
+            double previousHeadYaw = entity.prevRotationYaw;
+            if (entity instanceof EntityLivingBase livingEntity) previousHeadYaw = livingEntity.prevRotationYawHead;
+            previousHeadYaw = transformYaw(previousShipTransform, previousHeadYaw, TransformType.GLOBAL_TO_SUBSPACE);
+            this.previousRelativeHeadYaw -= wrapDegrees(this.relativeHeadYaw - previousHeadYaw);
+        }
         if (!this.hasHeadRotationTarget) {
             this.targetRelativeHeadYaw = this.relativeHeadYaw;
         }

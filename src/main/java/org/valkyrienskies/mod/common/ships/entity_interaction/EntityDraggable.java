@@ -1,6 +1,7 @@
 package org.valkyrienskies.mod.common.ships.entity_interaction;
 
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityLiving;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.item.EntityBoat;
 import net.minecraft.entity.item.EntityItem;
@@ -122,6 +123,38 @@ public class EntityDraggable {
         draggable.setAddedLinearVelocity(new Vector3d());
         draggable.setAddedYawVelocity(0D);
         return true;
+    }
+
+    public static void clearShipTracking(@NotNull Entity entity) {
+        IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
+        if (draggable == null) return;
+        draggable.setLastTouchedShip(null);
+        draggable.setTicksSinceTouchedShip(VSConfig.ticksToStickToShip);
+        draggable.setTicksPartOfGround(0);
+        draggable.setTicksAirPocket(0);
+        draggable.setAddedLinearVelocity(new Vector3d());
+        draggable.setAddedYawVelocity(0D);
+        draggable.clearPendingShipPosition();
+        if (draggable.getShipLocalMovementData() != null) draggable.getShipLocalMovementData().clear();
+        draggable.setRenderRelativeMovement(null);
+    }
+
+    /**
+     * Resolves unacknowledged teleport destinations against the ship's latest transform.
+     */
+    @Nullable
+    public static Vec3d getPendingShipTeleportPosition(@NotNull Entity entity) {
+        IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
+        if (draggable == null || !draggable.isPendingShipTeleport()) return null;
+        UUID shipId = draggable.getPendingShipId();
+        Vector3dc localPosition = draggable.getPendingShipLocalPosition();
+        IPhysObjectWorld manager = ValkyrienUtils.getPhysObjWorld(entity.world);
+        if (shipId == null || localPosition == null || manager == null) return null;
+        PhysicsObject ship = manager.getPhysObjectFromUUID(shipId);
+        if (ship == null || ship.getShipData().isPeggedTo(entity)) return null;
+        Vector3d position = new Vector3d(localPosition);
+        ship.getShipData().getShipTransform().transformPosition(position, TransformType.SUBSPACE_TO_GLOBAL);
+        return new Vec3d(position.x, position.y, position.z);
     }
 
     /**
@@ -317,13 +350,8 @@ public class EntityDraggable {
                 }
 
                 ShipTransform currentShipTransform = physicsObject.getShipTransformationManager().getCurrentTickTransform();
-                shipLocalMovementData.initializeIfNeeded(
-                        currentShipTransform,
-                        new Vector3d(entity.posX, entity.posY, entity.posZ),
-                        entity.rotationYaw,
-                        entity.rotationPitch,
-                        entity.getRotationYawHead()
-                );
+                shipLocalMovementData.initializeIfNeeded(currentShipTransform,
+                        physicsObject.getShipTransformationManager().getPrevTickTransform(), entity);
 
                 Vector3d oldWorldPosition = new Vector3d(entity.posX, entity.posY, entity.posZ);
                 float oldYaw = entity.rotationYaw;
@@ -340,15 +368,18 @@ public class EntityDraggable {
                 float yawMovement = MathHelper.wrapDegrees(entity.rotationYaw - oldYaw);
 
                 if (entity instanceof EntityLivingBase livingEntity) {
-                    livingEntity.renderYawOffset += yawMovement;
-
                     Vector3d relativeMovement = shipLocalMovementData.getRelativeMovement();
+                    if (livingEntity instanceof EntityLiving && relativeMovement.x * relativeMovement.x + relativeMovement.z * relativeMovement.z > 2.5E-7D) {
+                        livingEntity.renderYawOffset = entity.rotationYaw;
+                    }
+                    else livingEntity.renderYawOffset += yawMovement;
+
                     float targetLimbSwingAmount = (float) Math.sqrt(
                             relativeMovement.x * relativeMovement.x + relativeMovement.z * relativeMovement.z
                     ) * 4f;
-                    targetLimbSwingAmount = Math.min(targetLimbSwingAmount, 1F);
+                    targetLimbSwingAmount = Math.min(targetLimbSwingAmount, 1f);
                     float correctedLimbSwingAmount = livingEntity.prevLimbSwingAmount
-                            + (targetLimbSwingAmount - livingEntity.prevLimbSwingAmount) * 0.4F;
+                            + (targetLimbSwingAmount - livingEntity.prevLimbSwingAmount) * 0.4f;
                     livingEntity.limbSwing += correctedLimbSwingAmount - livingEntity.limbSwingAmount;
                     livingEntity.limbSwingAmount = correctedLimbSwingAmount;
                 }

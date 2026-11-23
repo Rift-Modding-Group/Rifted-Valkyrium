@@ -119,6 +119,19 @@ public final class ValkyrienUtils {
     }
 
     @NotNull
+    public static Vec3d getPlayerLook(EntityPlayer player, float partialTicks) {
+        float pitch = player.prevRotationPitch + (player.rotationPitch - player.prevRotationPitch) * partialTicks;
+        float yaw = player.prevRotationYaw + (player.rotationYaw - player.prevRotationYaw) * partialTicks;
+        Vec3d direction = Vec3d.fromPitchYaw(pitch, yaw);
+        EntityShipMountData mount = getMountedShipAndPos(player);
+        if (mount.isMounted()) {
+            return mount.mountedShip().getShipTransformationManager().getRenderTransform()
+                    .rotate(direction, TransformType.SUBSPACE_TO_GLOBAL);
+        }
+        return direction;
+    }
+
+    @NotNull
     public static EntityShipMountData getMountedShipAndPos(Entity entity) {
         if (!entity.isRiding() && ImplCapabilityShipAnchoredMount.isAlignedEntity(entity.getClass())) {
             IShipAnchoredMount anchor = entity.getCapability(VSCapabilityRegistry.VS_SHIP_ANCHORED_MOUNT, null);

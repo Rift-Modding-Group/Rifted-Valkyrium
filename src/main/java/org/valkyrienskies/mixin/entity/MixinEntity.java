@@ -307,8 +307,8 @@ public abstract class MixinEntity {
         if (material == Material.WATER && draggable != null && draggable.getInAirPocket()) return;
 
         Vec3d eyes = new Vec3d(entity.posX, entity.posY + entity.getEyeHeight(), entity.posZ);
-        AxisAlignedBB eyeBounds = new AxisAlignedBB(eyes, eyes).grow(0.001D);
-        if (ShipChunkAllocator.isBlockInShipyard(new BlockPos(eyeBounds.getCenter()))) return;
+        AxisAlignedBB eyeBounds = new AxisAlignedBB(eyes.x, eyes.y, eyes.z, eyes.x, eyes.y, eyes.z).grow(0.001D);
+        if (ShipChunkAllocator.isBlockInShipyard(new BlockPos(eyes))) return;
         IShipWorld shipWorld = entity.world.getCapability(VSCapabilityRegistry.VS_SHIP_WORLD, null);
         if (shipWorld == null || shipWorld.getManager() == null) return;
 

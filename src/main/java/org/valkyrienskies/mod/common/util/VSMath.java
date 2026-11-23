@@ -4,6 +4,7 @@ import net.minecraft.util.Tuple;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
+import org.jetbrains.annotations.NotNull;
 import org.joml.*;
 
 import java.lang.Math;
@@ -16,12 +17,20 @@ import java.util.List;
  * @author thebest108
  */
 public final class VSMath {
-
     public static final int AABB_MERGE_PASSES = 5;
     public static final double STANDING_TOLERANCE = .42D;
 
     private VSMath() {
         throw new UnsupportedOperationException("Utility class");
+    }
+
+    @NotNull
+    public static Vec3d getCenter(@NotNull AxisAlignedBB bounds) {
+        return new Vec3d(
+                (bounds.minX + bounds.maxX) * 0.5D,
+                (bounds.minY + bounds.maxY) * 0.5D,
+                (bounds.minZ + bounds.maxZ) * 0.5D
+        );
     }
 
     public static Vector3d toVector3d(Vec3i vec) {

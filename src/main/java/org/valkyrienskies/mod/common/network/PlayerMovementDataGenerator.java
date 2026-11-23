@@ -2,6 +2,7 @@ package org.valkyrienskies.mod.common.network;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.EntityPlayerSP;
+import net.minecraft.util.math.Vec3d;
 import org.joml.Vector3d;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
@@ -28,8 +29,7 @@ public class PlayerMovementDataGenerator {
         //---send anchored or sleeping players using their fixed ship-local position---
         if (fixedMountData.isMounted()) {
             final ShipData mountedShip = fixedMountData.mountedShip().getShipData();
-            final Vector3d playerLookInLocal = JOML.convert(entityPlayer.getLook(1));
-            mountedShip.getShipTransform().transformDirection(playerLookInLocal, TransformType.GLOBAL_TO_SUBSPACE);
+            Vector3d playerLookInLocal = JOML.convert(Vec3d.fromPitchYaw(entityPlayer.rotationPitch, entityPlayer.rotationYaw));
 
             return new PlayerMovementData(
                     mountedShip.getUuid(),
