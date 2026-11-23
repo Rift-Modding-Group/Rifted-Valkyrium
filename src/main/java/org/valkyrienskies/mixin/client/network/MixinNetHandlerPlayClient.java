@@ -50,8 +50,9 @@ public class MixinNetHandlerPlayClient {
             return;
         }
 
-        //for pegging to ship upon respawning on ship
+        // Place and acknowledge ship teleports outside the passenger's coordinate frame.
         if (draggable.isPendingShipTeleport()) {
+            player.dismountRidingEntity();
             UUID shipId = draggable.getPendingShipId();
             Vector3dc localPosition = draggable.getPendingShipLocalPosition();
             IPhysObjectWorld shipWorld = ValkyrienUtils.getPhysObjWorld(player.world);

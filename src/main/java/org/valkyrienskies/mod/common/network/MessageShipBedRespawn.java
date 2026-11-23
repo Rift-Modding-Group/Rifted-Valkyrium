@@ -19,7 +19,7 @@ import valkyrienwarfare.api.TransformType;
 import java.util.UUID;
 
 /**
- * Precedes the vanilla respawn teleport so it can be placed in the client's ship frame.
+ * Precedes a vanilla respawn or dismount teleport so it can be placed in the client's ship frame.
  */
 public class MessageShipBedRespawn implements IMessage {
     private int dimension;

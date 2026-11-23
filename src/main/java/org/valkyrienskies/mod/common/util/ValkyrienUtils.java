@@ -108,6 +108,16 @@ public final class ValkyrienUtils {
         else return axisAlignedBB;
     }
 
+    /**
+     * Resolves a fixed mount's block position in ship coordinates.
+     */
+    @Nullable
+    public static BlockPos getShipAnchoredPosition(Entity entity) {
+        IShipAnchoredMount mount = entity.getCapability(VSCapabilityRegistry.VS_SHIP_ANCHORED_MOUNT, null);
+        if (mount == null || !mount.isAnchoredToShip() && !mount.tryAnchorMount(entity)) return null;
+        return mount.getLocalAnchorBlock();
+    }
+
     @NotNull
     public static EntityShipMountData getMountedShipAndPos(Entity entity) {
         if (!entity.isRiding() && ImplCapabilityShipAnchoredMount.isAlignedEntity(entity.getClass())) {

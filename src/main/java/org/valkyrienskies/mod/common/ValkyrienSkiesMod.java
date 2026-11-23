@@ -1,6 +1,8 @@
 package org.valkyrienskies.mod.common;
 
+import bl4ckscor3.mod.sit.EntitySit;
 import com.google.common.collect.ImmutableList;
+import com.mrcrayfish.furniture.entity.EntitySeat;
 import net.minecraft.block.Block;
 import net.minecraft.command.ServerCommandManager;
 import net.minecraft.creativetab.CreativeTabs;
@@ -50,6 +52,7 @@ import org.valkyrienskies.mod.common.compat.LocksCompat;
 import org.valkyrienskies.mod.common.compat.MalisisCoreCompat;
 import org.valkyrienskies.mod.common.compat.FluidloggedAPICompat;
 import org.valkyrienskies.mod.common.compat.FairyLightsCompat;
+import org.valkyrienskies.mod.common.compat.FurnitureCompat;
 import org.valkyrienskies.mod.common.item.ItemShipAssemblerStick;
 import org.valkyrienskies.mod.common.item.ItemShipSizeLockStick;
 import org.valkyrienskies.mod.common.item.ItemPhysicsStick;
@@ -72,7 +75,9 @@ import org.valkyrienskies.mod.common.tileentity.TileEntityPassengerChair;
 import org.valkyrienskies.mod.common.tileentity.TileEntityWaterPump;
 import org.valkyrienskies.mod.fixes.darkness_lib_fix.VSDarknessLibAPILightProvider;
 import org.valkyrienskies.mod.proxy.CommonProxy;
+import rustic.common.blocks.BlockChair;
 import valkyrienwarfare.api.RiftedValkyriumAPI;
+import vazkii.quark.vanity.feature.SitInStairs;
 
 import javax.annotation.Nullable;
 import java.lang.reflect.Field;
@@ -160,14 +165,20 @@ public class ValkyrienSkiesMod {
         if (Loader.isModLoaded("malisiscore")) MinecraftForge.EVENT_BUS.register(MalisisCoreCompat.class);
         if (Loader.isModLoaded("fluidlogged_api")) MinecraftForge.EVENT_BUS.register(FluidloggedAPICompat.class);
         if (Loader.isModLoaded("fairylights")) MinecraftForge.EVENT_BUS.register(FairyLightsCompat.class);
+        MinecraftForge.EVENT_BUS.register(FurnitureCompat.class);
         proxy.preInit(event);
 
         LOGGER.debug("Initializing the Rifted Valkyrium API.");
         RiftedValkyriumAPI.registerProvider(new RiftedValkyriumAPIProvider());
 
-        //default entity align w ship registry
+        //default entity align w ship registry, includes mod compat stuff
         RiftedValkyriumAPI.setEntityAlignWithShip(EntityArmorStand.class);
         RiftedValkyriumAPI.setEntityAlignWithShip(EntityLeashKnot.class);
+        if (Loader.isModLoaded("cfm")) RiftedValkyriumAPI.setEntityAlignWithShip(EntitySeat.class);
+        if (Loader.isModLoaded("rustic")) RiftedValkyriumAPI.setEntityAlignWithShip(BlockChair.EntityChair.class);
+        if (Loader.isModLoaded("sit")) RiftedValkyriumAPI.setEntityAlignWithShip(EntitySit.class);
+        if (Loader.isModLoaded("quark")) RiftedValkyriumAPI.setEntityAlignWithShip(SitInStairs.Seat.class);
+        if (Loader.isModLoaded("bibliocraft")) RiftedValkyriumAPI.setEntityAlignWithShip(jds.bibliocraft.entity.EntitySeat.class);
 
         //default unloadable entities registry
         RiftedValkyriumAPI.setEntityUnloadWithShip(EntityArmorStand.class);

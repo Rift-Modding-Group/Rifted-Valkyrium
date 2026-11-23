@@ -78,7 +78,9 @@
     "mod.effortlessbuilding.MixinWall",
     "mod.fairylights.MixinBlockEntityFastener",
     "mod.fairylights.MixinConnectionHangingLights",
-    "mod.rustic.MixinRusticEntityChair"
+    "mod.rustic.MixinRusticEntityChair",
+    "mod.quark.MixinSitInStairs",
+    "mod.quark.MixinSeat"
   ],
   "server": [],
   "setSourceFile": true,

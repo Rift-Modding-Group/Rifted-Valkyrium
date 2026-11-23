@@ -129,6 +129,21 @@ dependencies {
         exclude group: 'xaero.lib', module: 'xaerolib-forge-1.12.2'
     }
 
+    //mr crayfish furniture
+    compatMods "curse.maven:mrcrayfish-furniture-mod-rebuilt-997328:8097145"
+
+    //rustic
+    compatMods "curse.maven:rustic-256141:6031613"
+
+    //sit
+    compatMods "curse.maven:sit-278717:2848862"
+
+    //bibliocraft
+    compatMods "curse.maven:bibliocraft-reshelved-1523934:8903948"
+
+    //quark, for its sittable stairs apparently
+    compatMods "curse.maven:quark-rotn-edition-417392:9650778"
+
     //journeymap compat
     compatMods "curse.maven:journeymap-32274:9049805"
 

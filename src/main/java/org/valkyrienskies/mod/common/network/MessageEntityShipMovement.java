@@ -355,24 +355,6 @@ public class MessageEntityShipMovement implements IMessage {
                         }
                     }
 
-                    if (message.hasComponent(POSITION)) {
-                        ResourceLocation entityType = EntityList.getKey(entity);
-                        if (entityType != null && VSConfig.sittableBlockEntityIDsSet != null
-                                && VSConfig.sittableBlockEntityIDsSet.contains(entityType)
-                        ) {
-                            IShipAnchoredMount anchoredMount = entity.getCapability(
-                                    VSCapabilityRegistry.VS_SHIP_ANCHORED_MOUNT,
-                                    null
-                            );
-                            if (anchoredMount != null) {
-                                anchoredMount.setAnchorMountData(
-                                        new Vec3d(message.localX, message.localY, message.localZ),
-                                        new BlockPos(message.localX, message.localY, message.localZ)
-                                );
-                            }
-                        }
-                    }
-
                     Minecraft minecraft = Minecraft.getMinecraft();
                     if (entity == minecraft.player || entity.canPassengerSteer()) {
                         if (movementData != null) movementData.clear();

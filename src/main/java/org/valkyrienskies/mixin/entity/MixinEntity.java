@@ -414,14 +414,8 @@ public abstract class MixinEntity {
     @Inject(method = "getPosition", at = @At("HEAD"), cancellable = true)
     private void getShipAnchoredMountPosition(CallbackInfoReturnable<BlockPos> callbackInfo) {
         Entity thisEntity = (Entity) ((Object) this);
-
-        IShipAnchoredMount mount = thisEntity.getCapability(VSCapabilityRegistry.VS_SHIP_ANCHORED_MOUNT, null);
-        if (mount == null) return;
-        if (!mount.isAnchoredToShip() && !mount.tryAnchorMount(thisEntity)) return;
-
-        if (mount.isAnchoredToShip()) {
-            callbackInfo.setReturnValue(mount.getLocalAnchorBlock());
-        }
+        BlockPos anchor = ValkyrienUtils.getShipAnchoredPosition(thisEntity);
+        if (anchor != null) callbackInfo.setReturnValue(anchor);
     }
 
     /**

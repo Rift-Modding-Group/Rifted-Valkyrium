@@ -206,18 +206,18 @@ public class MixinEntityTrackerEntry {
         }
     }
 
-    //---rustic stuff coz fuck rustic---
-    //this is to make rustic chairs not autodismount the player when ship is going too fast and they sittin for a good while
-
     @Inject(method = "isVisibleTo", at = @At("HEAD"), cancellable = true)
     private void keepShipAnchoredMountVisibleToPassenger(EntityPlayerMP player, CallbackInfoReturnable<Boolean> callbackInfo) {
         IShipAnchoredMount anchoredMount = this.trackedEntity.getCapability(VSCapabilityRegistry.VS_SHIP_ANCHORED_MOUNT, null);
-        if (this.isRusticChairEntity(this.trackedEntity) && this.trackedEntity.getPassengers().isEmpty()
+        ResourceLocation entityId = EntityList.getKey(this.trackedEntity);
+        boolean removesEmptySeat = entityId != null
+                && ("rustic".equals(entityId.getNamespace()) && "chair".equals(entityId.getPath())
+                || "quark".equals(entityId.getNamespace()) && "seat".equals(entityId.getPath()));
+        if (removesEmptySeat && this.trackedEntity.getPassengers().isEmpty()
             && anchoredMount != null && (anchoredMount.isAnchoredToShip()
             || anchoredMount.tryAnchorMount(this.trackedEntity))
         ) {
-            // Rustic kills a client chair that ticks without a passenger and then asks the server
-            // to dismount. Wait until startRiding has populated the passenger list before spawning it.
+            // Spawn self-removing seats after startRiding has populated their passenger list.
             callbackInfo.setReturnValue(false);
             return;
         }
@@ -232,11 +232,6 @@ public class MixinEntityTrackerEntry {
         if (this.isShipAnchoredPassenger(player)) {
             callbackInfo.setReturnValue(true);
         }
-    }
-
-    private boolean isRusticChairEntity(@NotNull Entity entity) {
-        ResourceLocation entityId = EntityList.getKey(entity);
-        return entityId != null && "rustic".equals(entityId.getNamespace()) && entityId.getPath().equals("chair");
     }
 
     private boolean isShipAnchoredPassenger(EntityPlayerMP player) {
