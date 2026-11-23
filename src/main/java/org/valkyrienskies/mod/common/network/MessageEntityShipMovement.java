@@ -43,7 +43,6 @@ public class MessageEntityShipMovement implements IMessage {
     public static final int ROTATION = 1 << 1;
     public static final int VELOCITY = 1 << 2;
     public static final int HEAD_ROTATION = 1 << 3;
-    //distinguish vanilla velocity updates (including impulses) from periodic interpolation snapshots
     public static final int VELOCITY_UPDATE = 1 << 4;
     public static final int ALL_COMPONENTS = POSITION | ROTATION | VELOCITY | HEAD_ROTATION;
 

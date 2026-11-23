@@ -146,8 +146,10 @@ public class MixinEntityTrackerEntry {
                     componentMask = MessageEntityShipMovement.ROTATION;
             case SPacketEntityTeleport sPacketEntityTeleport ->
                     componentMask = MessageEntityShipMovement.POSITION | MessageEntityShipMovement.ROTATION;
-            case SPacketEntityVelocity sPacketEntityVelocity ->
-                    componentMask = MessageEntityShipMovement.VELOCITY | MessageEntityShipMovement.VELOCITY_UPDATE;
+            case SPacketEntityVelocity sPacketEntityVelocity -> {
+                componentMask = MessageEntityShipMovement.VELOCITY;
+                if (this.trackedEntity.velocityChanged) componentMask |= MessageEntityShipMovement.VELOCITY_UPDATE;
+            }
             case SPacketEntityHeadLook sPacketEntityHeadLook -> componentMask = MessageEntityShipMovement.HEAD_ROTATION;
             case null, default -> {
                 return;

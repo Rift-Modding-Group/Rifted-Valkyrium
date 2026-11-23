@@ -171,6 +171,7 @@ public class EntityCollisionInjector {
                         double stepSquared = entity.stepHeight * entity.stepHeight;
                         // Do not do stair stepping if the player is on a ladder.
                         boolean isStep = isLiving && entity.onGround && !isPlayerOnLadder;
+                        // Resolve walkable support vertically; reserve step-up responses for obstacles.
                         if (response.y >= 0
                             && VSMath.canStandOnNormal(
                             fast.getCollisionAxes()[fast.getMinDistanceIndex()])) {
@@ -181,7 +182,7 @@ public class EntityCollisionInjector {
 
                             response = slowButStopped;
                         }
-                        if (isStep) {
+                        else if (isStep) {
                             EntityLivingBase living = (EntityLivingBase) entity;
                             if (Math.abs(living.moveForward) > .01
                                 || Math.abs(living.moveStrafing) > .01) {
@@ -283,7 +284,7 @@ public class EntityCollisionInjector {
         Vector3d newMov = new Vector3d(dx - origDx, dy - origDy, dz - origDz);
         entity.collidedHorizontally = original.dot(newMov) < 0;
         entity.collidedVertically = isDifSignificant(dy, origDy);
-        entity.onGround = entity.collidedVertically && origDy < 0 || alreadyOnGround;
+        entity.onGround = origDy < 0D && dy > origDy || alreadyOnGround;
         entity.collided = entity.collidedHorizontally || entity.collidedVertically;
 
         // entity.resetPositionToBB();
@@ -329,7 +330,7 @@ public class EntityCollisionInjector {
 
         entity.collidedHorizontally = (motionInterfering(dx, origDx)) || (motionInterfering(dz, origDz));
         entity.collidedVertically = isDifSignificant(dy, origDy);
-        entity.onGround = entity.collidedVertically && origDy < 0 || alreadyOnGround || entity.onGround;
+        entity.onGround = origDy < 0D && dy > origDy || alreadyOnGround || entity.onGround;
         entity.collided = entity.collidedHorizontally || entity.collidedVertically;
 
         Vector3d entityPosInShip = new Vector3d(entity.posX, entity.posY - 0.20000000298023224D, entity.posZ);
