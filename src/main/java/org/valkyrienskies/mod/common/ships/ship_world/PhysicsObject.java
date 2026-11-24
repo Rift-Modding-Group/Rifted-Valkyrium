@@ -424,8 +424,8 @@ public class PhysicsObject implements IPhysicsEntity {
 
     public boolean isShipAlignedToWorld() {
         // The quaternion with the ship's orientation
-        Quaterniondc shipQuat = getShipTransformationManager().getCurrentTickTransform()
-                .rotationQuaternion(TransformType.SUBSPACE_TO_GLOBAL);
+        Quaterniondc shipQuat = getShipTransformationManager().getCurrentTickTransform().rotationQuaternion(TransformType.SUBSPACE_TO_GLOBAL);
+
         // Only allow a ship to be deconstructed if the angle between the grid and its orientation is less than half a degree.
         return Math.toDegrees(shipQuat.angle()) < 2;
     }
@@ -487,6 +487,8 @@ public class PhysicsObject implements IPhysicsEntity {
                 }
 
                 restoreCapabilities.run();
+                BlockRelocation.relocatePlayerBeds(serverWorld, this.getChunkClaim(),
+                        BlockPos.ORIGIN.subtract(centerDifference));
 
                 //the blocks discard the ship's remaining rotation when they return to the world grid
                 //project associated entities through that same transform so their contact points still line up
@@ -603,13 +605,14 @@ public class PhysicsObject implements IPhysicsEntity {
         this.maintenanceProviders.clear();
         watchingPlayers.clear();
         this.physicsCollideWith.close();
-        if (!getWorld().isRemote) {
-            ChunkProviderServer provider = (ChunkProviderServer) getWorld().getChunkProvider();
+        if (!this.getWorld().isRemote) {
+            ChunkProviderServer provider = (ChunkProviderServer) this.getWorld().getChunkProvider();
             for (ChunkPos chunkPos : getChunkClaim()) {
                 provider.queueUnload(claimedChunkCache.getChunkAt(chunkPos.x, chunkPos.z));
             }
-        } else {
-            ChunkProviderClient provider = (ChunkProviderClient) getWorld().getChunkProvider();
+        }
+        else {
+            ChunkProviderClient provider = (ChunkProviderClient) this.getWorld().getChunkProvider();
             for (ChunkPos chunkPos : getChunkClaim()) {
                 provider.unloadChunk(chunkPos.x, chunkPos.z);
             }

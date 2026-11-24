@@ -132,7 +132,8 @@ public class WorldServerShipManager implements IPhysObjectWorld {
             if (physicsObject.shouldShipBeDestroyed()) {
                 if (!physicsObject.getBlockPositions().isEmpty()
                         && physicsObject.getDeconstructState().isCopyBlocks()
-                        && MinecraftForge.EVENT_BUS.post(new ShipDisassemblyEvent(physicsObject))) {
+                        && MinecraftForge.EVENT_BUS.post(new ShipDisassemblyEvent(physicsObject))
+                ) {
                     physicsObject.setDeconstructState(PhysicsObject.DeconstructState.NOT_DECONSTRUCTING);
                     physicsObject.setShipAligningToGrid(false);
                     continue;
