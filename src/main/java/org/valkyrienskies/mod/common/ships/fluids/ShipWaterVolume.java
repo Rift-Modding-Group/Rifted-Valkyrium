@@ -165,7 +165,7 @@ public class ShipWaterVolume {
             BitSet passages = new BitSet(this.openFaces.length);
             boolean fluidlogged = Loader.isModLoaded("fluidlogged_api");
             for (int index = 0; index < this.openFaces.length; index++) {
-                if (dry.get(index) || !this.interior.get(index) || this.openFaces[index] == 0) continue;
+                if (dry.get(index) || this.openFaces[index] == 0) continue;
                 BlockPos pos = this.origin.add(index % this.sizeX, index / this.sizeX % this.sizeY, index / (this.sizeX * this.sizeY));
                 if (!ship.getChunkClaim().containsBlock(pos)) continue;
                 IBlockState state = world.getBlockState(pos);
@@ -173,7 +173,8 @@ public class ShipWaterVolume {
                 if (fluidlogged) acceptsWater = FluidloggedAPICompat.canAdmitWater(world, pos, state);
                 else acceptsWater = state.getMaterial() == Material.AIR
                         || state.getMaterial() == Material.WATER && state.getBlock() instanceof BlockLiquid && state.getValue(BlockLiquid.LEVEL) != 0;
-                if (acceptsWater) fillable.set(index);
+                // Exterior cells relay ocean supply without creating ship-space fluid.
+                if (acceptsWater && this.interior.get(index)) fillable.set(index);
                 else if (!this.localFluid.get(index)) passages.set(index);
             }
             BitSet intake = findInflowCells(this.sizeX, this.sizeY, this.sizeZ, this.openFaces, wetFaces,
@@ -302,9 +303,10 @@ public class ShipWaterVolume {
                 int nz = z + side.getZOffset();
                 if (nx < 0 || nx >= sizeX || ny < 0 || ny >= sizeY || nz < 0 || nz >= sizeZ) continue;
                 int neighbor = nx + sizeX * (ny + sizeY * nz);
-                if ((openFaces[neighbor] & (1 << side.getOpposite().getIndex())) == 0) continue;
+                if (incoming.get(neighbor) || supplied.get(neighbor)
+                        || (openFaces[neighbor] & (1 << side.getOpposite().getIndex())) == 0) continue;
                 if (fillable.get(neighbor)) incoming.set(neighbor);
-                else if (passages.get(neighbor) && !supplied.get(neighbor)) {
+                else if (passages.get(neighbor)) {
                     supplied.set(neighbor);
                     pending.add(neighbor);
                 }
@@ -327,7 +329,9 @@ public class ShipWaterVolume {
         return boundary;
     }
 
-    /** Marks the space spanned by opposing hull blocks, including their breached cells. */
+    /**
+     * Marks the space spanned by opposing hull blocks, including their breached cells.
+     * */
     public static BitSet findInteriorCells(int sizeX, int sizeY, int sizeZ, byte[] openFaces) {
         int volume = Math.multiplyExact(Math.multiplyExact(sizeX, sizeY), sizeZ);
         if (openFaces.length != volume) throw new IllegalArgumentException("Invalid water grid");
@@ -368,7 +372,7 @@ public class ShipWaterVolume {
     }
 
     /**
-     * Floods only connections whose open faces touch water, leaving openings above the waterline dry.
+     * Follows continuous open faces touching water, leaving openings above the waterline dry.
      */
     public static BitSet findDryCells(int sizeX, int sizeY, int sizeZ, byte[] openFaces, IntUnaryOperator wetFaces, BitSet localFluid) {
         int volume = Math.multiplyExact(Math.multiplyExact(sizeX, sizeY), sizeZ);
