@@ -249,7 +249,8 @@ public class VSConfig extends VSConfigTemplate {
         "minecraft:sandstone", "minecraft:gravel", "minecraft:ice", "minecraft:snow",
         "minecraft:snow_layer", "minecraft:lava", "minecraft:flowing_lava", "minecraft:grass_path",
         "minecraft:bedrock", "minecraft:end_portal_frame", "minecraft:end_portal",
-        "minecraft:end_gateway", "minecraft:portal", "minecraft:clay"
+        "minecraft:end_gateway", "minecraft:portal", "minecraft:clay", "minecraft:netherrack",
+        "minecraft:magma", "minecraft:end_stone"
     };
 
     @Name("Block Mass")
