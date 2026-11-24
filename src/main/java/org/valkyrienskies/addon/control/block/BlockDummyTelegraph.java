@@ -3,6 +3,7 @@ package org.valkyrienskies.addon.control.block;
 import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.BlockRenderLayer;
 import net.minecraft.util.EnumBlockRenderType;
@@ -13,6 +14,8 @@ import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.world.World;
 import org.valkyrienskies.addon.control.ValkyrienSkiesControl;
 import org.valkyrienskies.mod.common.util.BaseBlock;
+
+import java.util.Random;
 
 public class BlockDummyTelegraph extends BaseBlock {
 
@@ -56,6 +59,11 @@ public class BlockDummyTelegraph extends BaseBlock {
             .getBlock() == ValkyrienSkiesControl.INSTANCE.vsControlBlocks.speedTelegraph) {
             worldIn.setBlockToAir(pos.down());
         }
+    }
+
+    @Override
+    public Item getItemDropped(IBlockState state, Random rand, int fortune) {
+        return Item.getItemFromBlock(ValkyrienSkiesControl.INSTANCE.vsControlBlocks.speedTelegraph);
     }
 
     @Override

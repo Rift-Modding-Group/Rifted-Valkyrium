@@ -39,6 +39,8 @@ public class BlockPhysicsInfuser extends BlockVSDirectional implements ITileEnti
 
     protected BlockPhysicsInfuser(final String name, final BlockFinder.BlockFinderType blockFinderType) {
         super(name, Material.WOOD, 0.0F, true);
+        this.setHardness(2f);
+        this.setResistance(5f);
         this.blockFinderType = blockFinderType;
     }
 
