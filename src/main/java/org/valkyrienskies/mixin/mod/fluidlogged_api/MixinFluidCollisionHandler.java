@@ -1,5 +1,6 @@
 package org.valkyrienskies.mixin.mod.fluidlogged_api;
 
+import git.jbredwards.fluidlogged_api.api.util.FluidloggedUtils;
 import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
@@ -15,6 +16,7 @@ import org.valkyrienskies.mod.common.compat.FluidloggedAPICompat;
 import org.valkyrienskies.mod.common.ships.fluids.ShipWaterVolume;
 
 import javax.annotation.ParametersAreNonnullByDefault;
+import javax.annotation.Nullable;
 
 @Pseudo
 @Mixin(targets = "git.jbredwards.fluidlogged_api.mod.common.fluid.handler.FluidCollisionHandler", remap = false)
@@ -50,9 +52,10 @@ public abstract class MixinFluidCollisionHandler {
             at = @At("HEAD"), cancellable = true, remap = false
     )
     private static void maskLiquidWater(
-            IBlockAccess access, BlockPos pos, AxisAlignedBB bounds, IBlockState state,
-            Object heightCache, boolean fancy, CallbackInfoReturnable<Boolean> callback
+            IBlockAccess access, BlockPos pos, AxisAlignedBB bounds, @Nullable IBlockState state,
+            @Nullable Object heightCache, boolean fancy, CallbackInfoReturnable<Boolean> callback
     ) {
+        if (state == null) state = FluidloggedUtils.getFluidOrReal(access, pos);
         if (state.getMaterial() == Material.WATER && FluidloggedAPICompat.isWorldWaterMasked(access, pos, bounds)) callback.setReturnValue(false);
     }
 }
