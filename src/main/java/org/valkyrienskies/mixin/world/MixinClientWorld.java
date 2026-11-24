@@ -81,11 +81,10 @@ public class MixinClientWorld {
                 int j = world.getLightFromNeighborsFor(EnumSkyBlock.BLOCK, pos);
                 PhysicsObject localShip = ValkyrienUtils.getPhysoManagingBlock(world, pos).orElse(null);
                 if (localShip != null) {
-                    int ambientSky = ShipLighting.getWorldSkyLight(world,
-                            localShip.getShipTransformationManager().getRenderTransform(),
-                            JOML.convertTo3d(pos).add(.5, .5, .5));
+                    int ambient = ShipLighting.getWorldLight(world, localShip, JOML.convertTo3d(pos).add(.5, .5, .5));
+                    int block = Math.max(Math.max(j, ambient >> 4 & 15), lightValue);
                     callbackInfoReturnable.setReturnValue(ShipLighting.attenuateSkyLight(
-                            i << 20 | Math.max(j, lightValue) << 4, ambientSky));
+                            i << 20 | block << 4, ambient >> 20 & 15));
                     return;
                 }
                 AxisAlignedBB lightBB = new AxisAlignedBB(pos.getX() - 2, pos.getY() - 2,
@@ -102,6 +101,9 @@ public class MixinClientWorld {
                     if (!lightBB.intersects(physicsObject.getShipBB())) continue;
                     final Vector3dc posInLocal = physicsObject.getShipTransformationManager().getRenderTransform()
                             .transformPositionNew(JOML.convertTo3d(pos).add(.5, .5, .5), TransformType.GLOBAL_TO_SUBSPACE);
+                    int ambient = ShipLighting.getWorldLight(world, physicsObject, posInLocal);
+                    i = Math.max(i, ambient >> 20 & 15);
+                    j = Math.max(j, ambient >> 4 & 15);
 
                     final int minX = (int) Math.floor(posInLocal.x());
                     final int minY = (int) Math.floor(posInLocal.y());

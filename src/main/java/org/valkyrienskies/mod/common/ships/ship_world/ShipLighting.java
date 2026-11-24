@@ -15,6 +15,7 @@ import org.jetbrains.annotations.NotNull;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.valkyrienskies.mod.common.compat.WorldHeightCompat;
+import org.valkyrienskies.mod.common.ships.fluids.ShipWaterVolume;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import valkyrienwarfare.api.TransformType;
 
@@ -94,6 +95,26 @@ public class ShipLighting {
             if (sky == 15) break;
         }
         return sky;
+    }
+
+    /**
+     * Combines hull ambient sky with world block light at the transformed sample position.
+     * */
+    public static int getWorldLight(@NotNull World world, @NotNull PhysicsObject ship, @NotNull Vector3dc localPosition) {
+        ShipTransform transform = ship.getShipTransformationManager().getRenderTransform();
+        ShipWaterVolume.Snapshot volume = ship.getWaterVolume().getSnapshot();
+        int sky;
+        if (volume.isMasked(localPosition.x(), localPosition.y(), localPosition.z())) {
+            AxisAlignedBB bounds = new AxisAlignedBB(volume.origin().getX(), volume.origin().getY(), volume.origin().getZ(),
+                    volume.origin().getX() + volume.sizeX(), volume.origin().getY() + volume.sizeY(), volume.origin().getZ() + volume.sizeZ());
+            sky = getWorldSkyLight(world, transform, bounds);
+        }
+        else sky = getWorldSkyLight(world, transform, localPosition);
+        Vector3d globalPosition = transform.getSubspaceToGlobal().transformPosition(localPosition, new Vector3d());
+        BlockPos globalBlock = new BlockPos(globalPosition.x, globalPosition.y, globalPosition.z);
+        int block = 0;
+        if (world.isBlockLoaded(globalBlock)) block = world.getLightFromNeighborsFor(EnumSkyBlock.BLOCK, globalBlock);
+        return sky << 20 | block << 4;
     }
 
     /**
