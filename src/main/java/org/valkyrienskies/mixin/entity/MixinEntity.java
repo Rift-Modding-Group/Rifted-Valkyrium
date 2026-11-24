@@ -1,6 +1,10 @@
 package org.valkyrienskies.mixin.entity;
 
 import net.minecraft.block.material.Material;
+import net.minecraft.block.state.IBlockState;
+import net.minecraft.init.Blocks;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.item.EntityBoat;
 import net.minecraft.nbt.NBTTagCompound;
@@ -31,6 +35,7 @@ import org.valkyrienskies.mod.common.ships.entity_interaction.EntityDraggable;
 import org.valkyrienskies.mod.common.ships.chunk_claims.ShipChunkAllocator;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
+import org.valkyrienskies.mod.common.ships.fluids.ShipWaterVolume;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityShipMountData;
 import org.valkyrienskies.mod.common.util.JOML;
 import org.valkyrienskies.mod.common.util.TransformedAABB;
@@ -288,14 +293,30 @@ public abstract class MixinEntity {
     /**
      * This mixin removes the rendering effect when under water, and removes the drown bar on the gui.
      */
+    @WrapOperation(
+            method = "isInsideOfMaterial",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/world/World;getBlockState(Lnet/minecraft/util/math/BlockPos;)Lnet/minecraft/block/state/IBlockState;"),
+            require = 0
+    )
+    private IBlockState maskOceanAtEyes(World world, BlockPos pos, Operation<IBlockState> original) {
+        IBlockState state = original.call(world, pos);
+        Entity entity = (Entity) (Object) this;
+        if (state.getMaterial() == Material.WATER
+                && ShipWaterVolume.isWorldWaterMasked(world, entity.posX, entity.posY + entity.getEyeHeight(), entity.posZ)) {
+            return Blocks.AIR.getDefaultState();
+        }
+        return state;
+    }
+
     @Inject(method = "isInsideOfMaterial", at = @At("HEAD"), cancellable = true)
     private void onPreIsInsideOfMaterial(Material materialIn, CallbackInfoReturnable<Boolean> cir) {
         Entity thisEntity = (Entity) ((Object) this);
         IEntityShipDraggable entityShipDraggable = thisEntity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
-        if (entityShipDraggable == null) return;
-
-        if (materialIn != Material.WATER || !entityShipDraggable.getInAirPocket()) return;
-        cir.setReturnValue(false);
+        if (materialIn != Material.WATER) return;
+        boolean pumped = entityShipDraggable != null && entityShipDraggable.getInAirPocket();
+        if (pumped || ShipWaterVolume.isDry(thisEntity.world, thisEntity.posX, thisEntity.posY + thisEntity.getEyeHeight(), thisEntity.posZ)) {
+            cir.setReturnValue(false);
+        }
     }
 
     @Inject(method = "isInsideOfMaterial", at = @At("RETURN"), cancellable = true)

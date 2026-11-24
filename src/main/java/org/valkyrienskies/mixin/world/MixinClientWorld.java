@@ -17,13 +17,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
+import org.valkyrienskies.mod.common.ships.ship_world.ShipLighting;
 import org.valkyrienskies.mod.common.util.JOML;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import org.valkyrienskies.mod.fixes.FixAccurateRain;
 import valkyrienwarfare.api.TransformType;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -79,6 +79,15 @@ public class MixinClientWorld {
             try {
                 int i = world.getLightFromNeighborsFor(EnumSkyBlock.SKY, pos);
                 int j = world.getLightFromNeighborsFor(EnumSkyBlock.BLOCK, pos);
+                PhysicsObject localShip = ValkyrienUtils.getPhysoManagingBlock(world, pos).orElse(null);
+                if (localShip != null) {
+                    int ambientSky = ShipLighting.getWorldSkyLight(world,
+                            localShip.getShipTransformationManager().getRenderTransform(),
+                            JOML.convertTo3d(pos).add(.5, .5, .5));
+                    callbackInfoReturnable.setReturnValue(ShipLighting.attenuateSkyLight(
+                            i << 20 | Math.max(j, lightValue) << 4, ambientSky));
+                    return;
+                }
                 AxisAlignedBB lightBB = new AxisAlignedBB(pos.getX() - 2, pos.getY() - 2,
                         pos.getZ() - 2, pos.getX() + 2, pos.getY() + 2, pos.getZ() + 2);
 
@@ -86,13 +95,11 @@ public class MixinClientWorld {
                 if (physObjectWorld == null) {
                     throw new IllegalStateException("Could not get ship manager from world!");
                 }
-                final List<PhysicsObject> physicsObjectList = physObjectWorld.getAllLoadedThreadSafe().stream()
-                        .filter((physicsObject -> lightBB.intersects(physicsObject.getShipBB())))
-                        .toList();
-
                 final BlockPos.MutableBlockPos mutableBlockPos = new BlockPos.MutableBlockPos();
+                int skyLimit = 15;
 
-                for (final PhysicsObject physicsObject : physicsObjectList) {
+                for (PhysicsObject physicsObject : physObjectWorld.getAllLoadedThreadSafe()) {
+                    if (!lightBB.intersects(physicsObject.getShipBB())) continue;
                     final Vector3dc posInLocal = physicsObject.getShipTransformationManager().getRenderTransform()
                             .transformPositionNew(JOML.convertTo3d(pos).add(.5, .5, .5), TransformType.GLOBAL_TO_SUBSPACE);
 
@@ -123,9 +130,10 @@ public class MixinClientWorld {
                         }
                     }
 
-                    if (i > shipSkyLight) i = shipSkyLight;
+                    skyLimit = Math.min(skyLimit, shipSkyLight);
                 }
 
+                i = i * skyLimit / 15;
                 if (j < lightValue) j = lightValue;
 
                 callbackInfoReturnable.setReturnValue(i << 20 | j << 4);

@@ -39,6 +39,7 @@ import org.valkyrienskies.mod.common.entity.EntityMountable;
 import org.valkyrienskies.mod.common.physics.BlockPhysicsDetails;
 import org.valkyrienskies.mod.common.ships.QueryableShipData;
 import org.valkyrienskies.mod.common.ships.ShipData;
+import org.valkyrienskies.mod.common.ships.fluids.ShipWaterVolume;
 import org.valkyrienskies.mod.common.ships.block_relocation.BlockFinder;
 import org.valkyrienskies.mod.common.ships.chunk_claims.ShipChunkAllocator;
 import org.valkyrienskies.mod.common.ships.entity_interaction.EntityShipMountData;
@@ -559,17 +560,11 @@ public final class ValkyrienUtils {
     }
 
     /**
-     * Allows four blocks of downflow below a source or horizontal inlet.
-     * The lookup returns vanilla liquid levels, or -1 for a different fluid or an empty cell.
-     */
-    public static boolean canFlowDown(BlockPos sourcePos, ToIntFunction<BlockPos> levelAt) {
-        BlockPos.MutableBlockPos columnPos = new BlockPos.MutableBlockPos(sourcePos);
-        for (int distance = 0; distance < 4; distance++) {
-            int level = levelAt.applyAsInt(columnPos);
-            if (level < 0) return false;
-            if (level < 8) return true;
-            columnPos.move(EnumFacing.UP);
-        }
-        return false;
+     * Allows ship fluid to fall as far as the lowest non-fluid hull block.
+     * */
+    public static boolean canFlowDown(World world, BlockPos sourcePos) {
+        PhysicsObject ship = getPhysoManagingBlock(world, sourcePos).orElse(null);
+        if (ship == null) return getShipManagingBlock(world, sourcePos).isEmpty();
+        return ShipWaterVolume.canFlowDown(ship, sourcePos);
     }
 }

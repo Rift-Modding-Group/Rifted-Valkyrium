@@ -1,6 +1,12 @@
 package org.valkyrienskies.mixin.world;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.sugar.Local;
 import net.minecraft.block.material.Material;
+import net.minecraft.block.state.IBlockState;
+import net.minecraft.init.Blocks;
+import org.valkyrienskies.mod.common.ships.fluids.ShipWaterVolume;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
@@ -26,6 +32,20 @@ import javax.annotation.ParametersAreNonnullByDefault;
 @Mixin(World.class)
 @ParametersAreNonnullByDefault
 public abstract class MixinWorldFluid {
+    @WrapOperation(
+            method = {"handleMaterialAcceleration", "isMaterialInBB", "containsAnyLiquid"},
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/world/World;getBlockState(Lnet/minecraft/util/math/BlockPos;)Lnet/minecraft/block/state/IBlockState;"),
+            require = 0
+    )
+    private IBlockState maskSealedWorldWater(
+            World world, BlockPos pos, Operation<IBlockState> original,
+            @Local(argsOnly = true) AxisAlignedBB bounds
+    ) {
+        IBlockState state = original.call(world, pos);
+        if (state.getMaterial() == Material.WATER && ShipWaterVolume.isWorldWaterMasked(world, bounds, pos)) return Blocks.AIR.getDefaultState();
+        return state;
+    }
+
     @Inject(method = "handleMaterialAcceleration", at = @At("RETURN"), cancellable = true)
     private void accelerateInShipFluid(AxisAlignedBB bounds, Material material, Entity entity, CallbackInfoReturnable<Boolean> callback) {
         if (callback.getReturnValueZ() || !material.isLiquid()) return;

@@ -39,6 +39,7 @@ import valkyrienwarfare.api.RiftedValkyriumAPI;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.NotNull;
 import org.valkyrienskies.mod.client.entity_position.EntityRenderStateBackup;
+import org.valkyrienskies.mod.client.render.ShipWaterRenderer;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMount;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
@@ -72,6 +73,9 @@ import java.util.Set;
  */
 @Mixin(EntityRenderer.class)
 public abstract class MixinEntityRenderer {
+    @Unique
+    private ShipWaterRenderer shipWaterRenderer = new ShipWaterRenderer();
+
     @Shadow
     @Final
     public Minecraft mc;
@@ -249,7 +253,10 @@ public abstract class MixinEntityRenderer {
         }
 
         GlStateManager.resetColor();
-        return original.call(renderGlobal, blockLayer, partialTicks, pass, entity);
+        if (blockLayer == BlockRenderLayer.TRANSLUCENT) ShipWaterRenderer.begin(this.shipWaterRenderer, physObjectWorld, camera, entity, partialTicks);
+        int rendered = original.call(renderGlobal, blockLayer, partialTicks, pass, entity);
+        if (blockLayer == BlockRenderLayer.TRANSLUCENT) ShipWaterRenderer.end(this.shipWaterRenderer);
+        return rendered;
     }
 
     @Unique

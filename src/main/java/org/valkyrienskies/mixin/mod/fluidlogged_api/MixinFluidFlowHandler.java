@@ -6,6 +6,10 @@ import git.jbredwards.fluidlogged_api.api.util.FluidState;
 import git.jbredwards.fluidlogged_api.api.util.FluidloggedUtils;
 import net.minecraft.block.material.Material;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.EnumFacing;
+import net.minecraft.util.math.AxisAlignedBB;
+import org.valkyrienskies.mod.common.ships.fluids.ShipWaterVolume;
+import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import net.minecraft.world.World;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
@@ -23,7 +27,7 @@ import java.util.Random;
 @ParametersAreNonnullByDefault
 public abstract class MixinFluidFlowHandler {
     /**
-     * Limits downward liquid flow on ships while allowing fluidlogged supply in the column.
+     * Keeps downward fluidlogged flow above the lowest non-fluid hull block.
      */
     @ModifyExpressionValue(
         method = "updateDynamic",
@@ -44,12 +48,8 @@ public abstract class MixinFluidFlowHandler {
         if (!canFlowInto) return false;
         Material material = originState.getMaterial();
         if (!material.isLiquid()) return true;
-        if (ValkyrienUtils.getShipManagingBlock(world, sourcePos).isEmpty()) return true;
-        return ValkyrienUtils.canFlowDown(sourcePos, pos -> {
-            FluidState state = FluidloggedUtils.getFluidState(world, pos);
-            if (state.isEmpty() || state.getMaterial() != material) return -1;
-            return state.getLevel();
-        });
+        if (originState.getDownDensityFace() != EnumFacing.DOWN) return true;
+        return ValkyrienUtils.canFlowDown(world, sourcePos);
     }
 
     /**
@@ -57,8 +57,16 @@ public abstract class MixinFluidFlowHandler {
      */
     @Inject(method = "updateDynamic", at = @At("HEAD"), cancellable = true, require = 1, remap = false)
     private static void drainUnsupportedShipLiquid(World world, BlockPos origin, FluidState originState, Random random, CallbackInfo callback) {
-        if (world.isRemote || originState.isEmpty() || !originState.isValid() || originState.isSource()) return;
-        if (ValkyrienUtils.getShipManagingBlock(world, origin).isEmpty()) return;
+        if (world.isRemote || originState.isEmpty() || !originState.isValid()) return;
+        PhysicsObject ship = ValkyrienUtils.getPhysoManagingBlock(world, origin).orElse(null);
+        if (ship == null) return;
+        AxisAlignedBB bounds = ShipWaterVolume.getHullBounds(ship);
+        if (bounds != null && origin.getY() < bounds.minY) {
+            FluidloggedUtils.setFluidToAir(world, origin, world.getBlockState(origin), 3);
+            callback.cancel();
+            return;
+        }
+        if (originState.isSource()) return;
 
         if (FluidloggedAPICompat.isFlowSupported(world, origin)) return;
 

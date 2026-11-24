@@ -11,7 +11,11 @@ import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 import org.jetbrains.annotations.NotNull;
+import org.joml.Vector3d;
+import org.joml.Vector3dc;
 import org.valkyrienskies.mod.common.compat.WorldHeightCompat;
+import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
+import valkyrienwarfare.api.TransformType;
 
 import java.util.BitSet;
 import java.util.Arrays;
@@ -56,6 +60,20 @@ public class ShipLighting {
     }
 
     //-----static helpers from here on out-----
+    public static int attenuateSkyLight(int packedLight, int ambientSky) {
+        int sky = (packedLight >> 20 & 15) * ambientSky / 15;
+        return sky << 20 | packedLight & 0xFFFF;
+    }
+
+    public static int getWorldSkyLight(@NotNull World world, @NotNull ShipTransform transform,
+                                      @NotNull Vector3dc localPosition) {
+        Vector3d globalPosition = new Vector3d(localPosition);
+        transform.transformPosition(globalPosition, TransformType.SUBSPACE_TO_GLOBAL);
+        BlockPos globalBlock = new BlockPos(globalPosition.x, globalPosition.y, globalPosition.z);
+        if (!world.isBlockLoaded(globalBlock)) return 0;
+        return world.getLightFromNeighborsFor(EnumSkyBlock.SKY, globalBlock);
+    }
+
     /**
      * Initializes newly installed ship chunks with vertical skylight and a shared propagation
      * queue. The claimed empty margin contains all horizontal light spread.

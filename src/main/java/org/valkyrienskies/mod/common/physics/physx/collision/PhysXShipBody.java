@@ -19,6 +19,7 @@ import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.jspecify.annotations.NonNull;
 import org.valkyrienskies.mod.common.block.IBlockBuoyancyProvider;
+import org.valkyrienskies.mod.common.ships.fluids.ShipWaterVolume;
 import org.valkyrienskies.mod.common.block.IBlockForceProvider;
 import org.valkyrienskies.mod.common.block.IBlockTorqueProvider;
 import org.valkyrienskies.mod.common.config.VSConfig;
@@ -49,7 +50,6 @@ import java.util.*;
 
 /**
  * Information involving the ships collisions
- * todo: make interface and move most of the methods used here to there for when we get multiple physics engines
  * */
 public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Identifier> {
     private static final int MAX_SHIP_SHAPES = 8192;
@@ -266,9 +266,10 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
         }
         else this.calculateForcesDeconstruction(calculations, timeStep);
 
-        //apply buoyancy and water drag only when touching liquid actors
+        // Sample hull blocks and dry interior volume against world liquids.
         AxisAlignedBB shipAabb = this.ship.getPhysicsTransformAABB();
-        if (!aligningToGrid && shipAabb != null && this.isTouchingLiquidActor(shipAabb, blockSectionsWithLiquids)) {
+        if (!aligningToGrid && shipAabb != null
+                && (this.isTouchingLiquidActor(shipAabb, blockSectionsWithLiquids) || !this.ship.getWaterVolume().getSnapshot().air().isEmpty())) {
             //sample each ship block against nearby water and apply submerged force.
             ShipTransform transform = this.ship.getShipTransformationManager().getCurrentPhysicsTransform();
             AxisAlignedBB localShipAabb = this.ship.getBlockPositions().makeAABB();
@@ -309,7 +310,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
                 );
                 transform.transformPosition(centerWorld, TransformType.SUBSPACE_TO_GLOBAL);
 
-                double submergedFraction = this.getSubmergedFraction(hostWorld, mutablePos, centerWorld);
+                double submergedFraction = this.getSubmergedFraction(hostWorld, mutablePos, centerWorld, false);
                 if (submergedFraction > 0D) {
                     if (!yawVelocityDamped) {
                         Vector3d angularVelocity = calculations.getAngularVelocity();
@@ -345,6 +346,26 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
                     );
                     calculations.addForceAtPoint(relativeToShipCenter, force, tempTorque);
                 }
+            }
+
+            //push ship downwards based on the water that leaked into it
+            ShipWaterVolume.Snapshot waterVolume = this.ship.getWaterVolume().getSnapshot();
+            for (int index = waterVolume.air().nextSetBit(0); index >= 0; index = waterVolume.air().nextSetBit(index + 1)) {
+                BlockPos blockPos = waterVolume.origin().add(
+                        index % waterVolume.sizeX(),
+                        index / waterVolume.sizeX() % waterVolume.sizeY(),
+                        index / (waterVolume.sizeX() * waterVolume.sizeY())
+                );
+                Vector3d centerWorld = new Vector3d(blockPos.getX() + 0.5D, blockPos.getY() + 0.5D, blockPos.getZ() + 0.5D);
+                transform.transformPosition(centerWorld, TransformType.SUBSPACE_TO_GLOBAL);
+                double submergedFraction = this.getSubmergedFraction(hostWorld, mutablePos, centerWorld, true);
+                if (submergedFraction <= 0D) continue;
+                Vector3d relative = centerWorld.sub(transform.getPosX(), transform.getPosY(), transform.getPosZ());
+                calculations.addForceAtPoint(
+                        relative,
+                        new Vector3d(0D, WATER_DENSITY * Math.abs(VSConfig.gravityVecY) * submergedFraction, 0D),
+                        tempTorque
+                );
             }
 
             // Cancel yaw from translational water drag while retaining the water drag produced by rotation at each block.
@@ -758,7 +779,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
         return false;
     }
 
-    private double getSubmergedFraction(@NotNull World world, BlockPos.MutableBlockPos mutablePos, Vector3d centerWorld) {
+    private double getSubmergedFraction(@NotNull World world, BlockPos.MutableBlockPos mutablePos, Vector3d centerWorld, boolean waterOnly) {
         int x = (int) Math.floor(centerWorld.x);
         int z = (int) Math.floor(centerWorld.z);
         int minY = (int) Math.floor(centerWorld.y - BLOCK_HALF_EXTENT - 0.25D);
@@ -766,9 +787,11 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
         for (int y = maxY; y >= minY; y--) {
             mutablePos.setPos(x, y, z);
             if (world.isOutsideBuildHeight(mutablePos)) continue;
-            if (PhysicsUtils.isLiquid(world.getBlockState(mutablePos))) {
-                double waterSurfaceY = y + 1D;
-                return Math.clamp(waterSurfaceY - (centerWorld.y - BLOCK_HALF_EXTENT), 0D, 1D);
+            double surface = ShipWaterVolume.waterHeight(world, centerWorld.x, y + 0.0001D, centerWorld.z);
+            IBlockState state = world.getBlockState(mutablePos);
+            if (!waterOnly && state.getMaterial() != Material.WATER && PhysicsUtils.isLiquid(state)) surface = y + 1D;
+            if (surface > y + 0.0001D) {
+                return Math.clamp(surface - (centerWorld.y - BLOCK_HALF_EXTENT), 0D, 1D);
             }
         }
         return 0D;

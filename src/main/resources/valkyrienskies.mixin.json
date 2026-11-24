@@ -6,6 +6,7 @@
   "client": [
     "client.MixinMinecraft",
     "client.entity.MixinEntityBoatInterpolation",
+    "client.entity.MixinEntityBrightness",
     "client.entity.MixinEntityLivingBaseDeathParticles",
     "client.entity.MixinEntityMinecartInterpolation",
     "client.entity.MixinEntityOtherPlayerMPInterpolation",
@@ -27,6 +28,7 @@
     "network.play.client.MixinCPacketPlayerRotation",
     "world.MixinClientWorld",
     "client.renderer.MixinActiveRenderInfo",
+    "world.MixinBlockLiquid",
     "client.multiplayer.MixinWorldClient",
     "mod.effortlessbuilding.MixinBlockPlacedMessage",
     "mod.effortlessbuilding.MixinRenderHandler",
@@ -72,6 +74,7 @@
     "world.chunk.MixinChunk",
     "world.gen.MixinChunkProviderServer",
     "mod.fluidlogged_api.MixinFluidFlowHandler",
+    "mod.fluidlogged_api.MixinFluidCollisionHandler",
     "mod.fluidlogged_api.MixinMessageUtils",
     "mod.effortlessbuilding.MixinBuildModes",
     "mod.effortlessbuilding.MixinFloor",

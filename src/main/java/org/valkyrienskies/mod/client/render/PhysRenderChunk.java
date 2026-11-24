@@ -25,8 +25,11 @@ import net.minecraftforge.client.MinecraftForgeClient;
 import net.minecraftforge.common.MinecraftForge;
 import org.lwjgl.opengl.GL11;
 import org.valkyrienskies.mod.client.compat.ShipTextureAnimationCompat;
+import org.valkyrienskies.mod.common.ships.fluids.ShipWaterVolume;
 import org.valkyrienskies.mod.common.util.TransformedAABB;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
+import org.valkyrienskies.mod.common.ships.ship_world.ShipLighting;
+import org.joml.Vector3d;
 import valkyrienwarfare.api.TransformType;
 import valkyrienwarfare.api.event.ShipBlockRenderEvent;
 
@@ -85,6 +88,7 @@ public class PhysRenderChunk {
             this.tileEntitiesDirty = false;
         }
 
+        ShipWaterVolume.Snapshot volume = this.toRender.getWaterVolume().getSnapshot();
         for (int i = 0; i < 16; i++) {
             IVSRenderChunk renderChunk = renderChunks[i];
             if (renderChunk != null) {
@@ -94,7 +98,30 @@ public class PhysRenderChunk {
 
                 // Only render chunks that can be shown by the camera.
                 if (iCamera.isBoundingBoxInFrustum(inWorldBB)) {
+                    Vector3d lightPosition = new Vector3d((chunk.x << 4) + 8, renderChunk.minY() + 8,
+                            (chunk.z << 4) + 8);
+                    if (volume.sizeX() > 0) {
+                        lightPosition.set(
+                                (Math.max(renderChunkBB.minX, volume.origin().getX()) + Math.min(renderChunkBB.maxX, volume.origin().getX() + volume.sizeX())) * .5,
+                                (Math.max(renderChunkBB.minY, volume.origin().getY()) + Math.min(renderChunkBB.maxY, volume.origin().getY() + volume.sizeY())) * .5,
+                                (Math.max(renderChunkBB.minZ, volume.origin().getZ()) + Math.min(renderChunkBB.maxZ, volume.origin().getZ() + volume.sizeZ())) * .5);
+                    }
+                    // shortcut: one ambient sample per section; use per-vertex samples if large hulls need finer shadows.
+                    float skyFactor = ShipLighting.getWorldSkyLight(this.toRender.getWorld(),
+                            this.toRender.getShipTransformationManager().getRenderTransform(), lightPosition) / 15F;
+                    // The ship layer enables the lightmap and enters with model-view/default texture state.
+                    GlStateManager.setActiveTexture(OpenGlHelper.lightmapTexUnit);
+                    GlStateManager.matrixMode(GL11.GL_TEXTURE);
+                    GlStateManager.pushMatrix();
+                    GlStateManager.scale(1F, skyFactor, 1F);
+                    GlStateManager.matrixMode(GL11.GL_MODELVIEW);
+                    GlStateManager.setActiveTexture(OpenGlHelper.defaultTexUnit);
                     renderChunk.renderBlockLayer(layerToRender, partialTicks, pass);
+                    GlStateManager.setActiveTexture(OpenGlHelper.lightmapTexUnit);
+                    GlStateManager.matrixMode(GL11.GL_TEXTURE);
+                    GlStateManager.popMatrix();
+                    GlStateManager.matrixMode(GL11.GL_MODELVIEW);
+                    GlStateManager.setActiveTexture(OpenGlHelper.defaultTexUnit);
                 }
             }
         }

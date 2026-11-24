@@ -38,6 +38,7 @@ import org.valkyrienskies.mod.common.physics.PhysicsCalculations;
 import org.valkyrienskies.mod.common.physics.BlockSectionList;
 import org.valkyrienskies.mod.common.physics.physx.IPhysicsBlockController;
 import org.valkyrienskies.mod.common.ships.ShipData;
+import org.valkyrienskies.mod.common.ships.fluids.ShipWaterVolume;
 import org.valkyrienskies.mod.common.ships.ShipEntityAttachment;
 import org.valkyrienskies.mod.common.ships.block_relocation.MoveBlocks;
 import org.valkyrienskies.mod.common.ships.block_relocation.BlockRelocation;
@@ -128,6 +129,9 @@ public class PhysicsObject implements IPhysicsEntity {
 
     // Published after each terrain collision scan.
     private volatile boolean physicsReady;
+
+    // helps out a ton in water sealing
+    private final ShipWaterVolume waterVolume = new ShipWaterVolume();
 
     @Nullable
     public volatile ShipTransform entityAttachmentTransform;
@@ -260,6 +264,7 @@ public class PhysicsObject implements IPhysicsEntity {
 
             this.shipTransformationManager.updateShipTransform(newTransform);
         }
+        this.waterVolume.update(this);
     }
 
     // endregion
@@ -626,6 +631,7 @@ public class PhysicsObject implements IPhysicsEntity {
             throw new IllegalStateException("Ship renderer was null for ship " + getShipData());
         }
         claimedChunkCache.updateChunk(chunk);
+        this.waterVolume.markDirty();
         MinecraftForge.EVENT_BUS.post(new ShipBlockDataLoadEvent(this.world, this.getBlockPositions(), chunk));
         shipRenderer.updateChunk(chunk);
     }
@@ -796,6 +802,10 @@ public class PhysicsObject implements IPhysicsEntity {
 
     public ShipInertiaData getInertiaData() {
         return shipData.getInertiaData();
+    }
+
+    public ShipWaterVolume getWaterVolume() {
+        return this.waterVolume;
     }
 
     public IBlockPosSetAABB getBlockPositions() {

@@ -3,6 +3,8 @@ package org.valkyrienskies.mixin.entity;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import net.minecraft.block.state.IBlockState;
+import net.minecraft.block.material.Material;
+import org.valkyrienskies.mod.common.ships.fluids.ShipWaterVolume;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityList;
 import net.minecraft.entity.MoverType;
@@ -199,6 +201,7 @@ public abstract class MixinEntityIntrinsic {
                     if (Loader.isModLoaded("fluidlogged_api")) state = FluidloggedAPICompat.getFluidOrReal(thisEntity.world, pos);
                     else state = thisEntity.world.getBlockState(pos);
 
+                    if (state.getMaterial() == Material.WATER && ShipWaterVolume.isWorldWaterMasked(thisEntity.world, bounds, pos)) continue;
                     Boolean result = state.getBlock().isAABBInsideLiquid(thisEntity.world, pos, bounds);
                     if (Boolean.TRUE.equals(result) || result == null && state.getMaterial().isLiquid()) {
                         inWorldLiquid = true;

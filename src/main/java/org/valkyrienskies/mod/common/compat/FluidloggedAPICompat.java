@@ -1,6 +1,7 @@
 package org.valkyrienskies.mod.common.compat;
 
 import git.jbredwards.fluidlogged_api.api.capability.IFluidStateCapability;
+import git.jbredwards.fluidlogged_api.api.event.FluidloggedEvent;
 import git.jbredwards.fluidlogged_api.api.network.MessageUtils;
 import git.jbredwards.fluidlogged_api.api.util.FluidState;
 import git.jbredwards.fluidlogged_api.api.util.FluidloggedUtils;
@@ -10,10 +11,16 @@ import git.jbredwards.fluidlogged_api.mod.common.message.SMessageSyncFluidStates
 import git.jbredwards.fluidlogged_api.mod.common.fluid.util.ISpecializedFluidNeighborInfo;
 import git.jbredwards.fluidlogged_api.mod.common.fluid.util.impl.SpecializedFluidNeighborInfo;
 import net.minecraft.block.BlockLiquid;
+import net.minecraft.block.material.Material;
+import net.minecraft.init.Blocks;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
+import net.minecraft.world.IBlockAccess;
+import net.minecraft.util.math.AxisAlignedBB;
+import git.jbredwards.fluidlogged_api.api.world.IBlockAccessWrapper;
+import org.valkyrienskies.mod.common.ships.fluids.ShipWaterVolume;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraftforge.fluids.BlockFluidFinite;
 import net.minecraftforge.fml.common.eventhandler.Event;
@@ -40,6 +47,42 @@ public class FluidloggedAPICompat {
     @Nonnull
     public static IBlockState getFluidOrReal(@Nonnull World world, @Nonnull BlockPos pos) {
         return FluidloggedUtils.getFluidOrReal(world, pos);
+    }
+
+    public static boolean isWorldWaterMasked(@Nonnull IBlockAccess access, @Nonnull BlockPos pos, @Nonnull AxisAlignedBB bounds) {
+        while (access instanceof IBlockAccessWrapper wrapper) access = wrapper.getWrapped();
+        return access instanceof World world && ShipWaterVolume.isWorldWaterMasked(world, bounds, pos);
+    }
+
+    public static boolean canWaterFlow(@Nonnull World world, @Nonnull BlockPos pos, @Nonnull IBlockState state, @Nonnull EnumFacing side) {
+        return FluidloggedUtils.canFluidFlow(world, pos, state, side);
+    }
+
+    public static boolean canAdmitWater(@Nonnull World world, @Nonnull BlockPos pos, @Nonnull IBlockState state) {
+        FluidState current = FluidloggedUtils.getFluidState(world, pos);
+        if (!current.isEmpty() && (current.getMaterial() != Material.WATER || current.isSource())) return false;
+        return state.getMaterial() == Material.AIR || state.getMaterial() == Material.WATER
+                || FluidloggedUtils.isStateFluidloggable(state, world, pos, FluidState.of(Blocks.WATER));
+    }
+
+    public static boolean admitWater(@Nonnull World world, @Nonnull BlockPos pos) {
+        IBlockState state = world.getBlockState(pos);
+        if (!canAdmitWater(world, pos, state)) return false;
+        if (state.getMaterial() == Material.AIR || state.getMaterial() == Material.WATER) {
+            return world.setBlockState(pos, Blocks.FLOWING_WATER.getDefaultState(), 3);
+        }
+        return FluidloggedUtils.setFluidState(world, pos, state, FluidState.of(Blocks.FLOWING_WATER), false, 3);
+    }
+
+    public static double getWaterHeight(@Nonnull World world, @Nonnull BlockPos pos, double fallback) {
+        FluidState fluid = FluidloggedUtils.getFluidState(world, pos);
+        if (fluid.isEmpty() || fluid.getMaterial() != Material.WATER) return fallback;
+        return pos.getY() + fluid.getActualHeight(world, pos);
+    }
+
+    @SubscribeEvent
+    public static void onFluidlogged(@Nonnull FluidloggedEvent event) {
+        ValkyrienUtils.getPhysoManagingBlock(event.world, event.pos).ifPresent(ship -> ship.getWaterVolume().markDirty());
     }
 
     @SubscribeEvent

@@ -1,6 +1,12 @@
 package org.valkyrienskies.mixin.entity;
 
 import net.minecraft.block.state.IBlockState;
+import net.minecraft.block.material.Material;
+import net.minecraft.init.Blocks;
+import net.minecraft.world.World;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import org.valkyrienskies.mod.common.ships.fluids.ShipWaterVolume;
 import net.minecraft.entity.item.EntityBoat;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
@@ -24,6 +30,19 @@ import java.util.List;
  */
 @Mixin(EntityBoat.class)
 public class MixinEntityBoat {
+    @WrapOperation(
+            method = {"checkInWater", "getUnderwaterStatus", "getWaterLevelAbove"},
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/world/World;getBlockState(Lnet/minecraft/util/math/BlockPos;)Lnet/minecraft/block/state/IBlockState;"),
+            require = 0
+    )
+    private IBlockState maskWaterInsideHull(World world, BlockPos pos, Operation<IBlockState> original) {
+        IBlockState state = original.call(world, pos);
+        EntityBoat boat = (EntityBoat) (Object) this;
+        if (state.getMaterial() == Material.WATER
+                && ShipWaterVolume.isWorldWaterMasked(world, boat.getEntityBoundingBox().grow(0D, 0.001D, 0D), pos)) return Blocks.AIR.getDefaultState();
+        return state;
+    }
+
     @Inject(method = "getBoatGlide", at = @At("HEAD"), cancellable = true)
     private void useShipDeckGlide(@NotNull CallbackInfoReturnable<Float> callbackInfo) {
         EntityBoat boat = (EntityBoat) (Object) this;
