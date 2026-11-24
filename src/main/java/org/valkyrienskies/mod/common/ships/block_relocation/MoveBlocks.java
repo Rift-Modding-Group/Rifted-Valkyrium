@@ -2,25 +2,34 @@ package org.valkyrienskies.mod.common.ships.block_relocation;
 
 import gnu.trove.map.hash.TLongObjectHashMap;
 import net.minecraft.block.state.IBlockState;
+import net.minecraft.block.material.Material;
+import net.minecraft.init.Blocks;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
+import net.minecraft.util.EnumFacing;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fluids.IFluidBlock;
+import net.minecraftforge.fml.common.Loader;
 import org.jetbrains.annotations.NotNull;
 import org.valkyrienskies.mod.common.compat.WorldHeightCompat;
+import org.valkyrienskies.mod.common.compat.FluidloggedAPICompat;
 import org.valkyrienskies.mod.common.physics.BlockPhysicsDetails;
 import org.valkyrienskies.mod.common.ships.ShipData;
+import org.valkyrienskies.mod.common.ships.fluids.ShipWaterVolume;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import org.valkyrienskies.mod.common.util.datastructures.IBlockPosSetAABB;
 import valkyrienwarfare.api.event.ShipBlockRelocationEvent;
 
 import javax.annotation.Nullable;
+import java.util.BitSet;
+import java.util.HashSet;
+import java.util.Set;
 
 public class MoveBlocks {
     /**
@@ -30,7 +39,8 @@ public class MoveBlocks {
     @NotNull
     public static TLongObjectHashMap<Chunk> copyBlocksToWorld(
             @NotNull World world, @NotNull IBlockPosSetAABB blockPositions,
-            @NotNull Iterable<Chunk> sourceChunks, @NotNull BlockPos centerDifference
+            @NotNull Iterable<Chunk> sourceChunks, @NotNull BlockPos centerDifference,
+            @NotNull ShipWaterVolume.Snapshot waterVolume
     ) {
         TLongObjectHashMap<Chunk> changedChunks = new TLongObjectHashMap<>();
         TLongObjectHashMap<Chunk> sourceChunksByPosition = new TLongObjectHashMap<>();
@@ -76,6 +86,69 @@ public class MoveBlocks {
 
             if (movedState.getBlock().hasTileEntity(movedState) || sourceChunk.getTileEntityMap().containsKey(source)) {
                 copyTileEntityToPos(world, source, destination.toImmutable(), null);
+            }
+        }
+
+        // Install the complete hull before restoring its displaced air on the destination grid.
+        boolean fluidlogged = Loader.isModLoaded("fluidlogged_api");
+        BitSet restoredAir = new BitSet();
+        for (int index = waterVolume.air().nextSetBit(0); index >= 0; index = waterVolume.air().nextSetBit(index + 1)) {
+            destination.setPos(
+                    waterVolume.origin().getX() + index % waterVolume.sizeX() - centerDifference.getX(),
+                    waterVolume.origin().getY() + index / waterVolume.sizeX() % waterVolume.sizeY() - centerDifference.getY(),
+                    waterVolume.origin().getZ() + index / (waterVolume.sizeX() * waterVolume.sizeY()) - centerDifference.getZ()
+            );
+            if (world.isOutsideBuildHeight(destination)) continue;
+            long chunkKey = ChunkPos.asLong(destination.getX() >> 4, destination.getZ() >> 4);
+            Chunk targetChunk = changedChunks.get(chunkKey);
+            if (targetChunk == null) targetChunk = world.getChunk(destination);
+            IBlockState previousState = targetChunk.getBlockState(destination);
+            IBlockState newState = previousState;
+            boolean changed = false;
+            if (previousState.getMaterial() == Material.WATER) {
+                if (previousState.getBlock().hasTileEntity(previousState) || targetChunk.getTileEntityMap().containsKey(destination)) {
+                    world.removeTileEntity(destination);
+                }
+                ExtendedBlockStorage storage = targetChunk.getBlockStorageArray()[WorldHeightCompat.getStorageIndex(world, destination.getY())];
+                newState = Blocks.AIR.getDefaultState();
+                storage.set(destination.getX() & 15, destination.getY() & 15, destination.getZ() & 15, newState);
+                changed = true;
+            }
+            if (fluidlogged) changed |= FluidloggedAPICompat.removeStoredWater(targetChunk, destination);
+            if (changed) {
+                restoredAir.set(index);
+                targetChunk.markDirty();
+                changedChunks.put(chunkKey, targetChunk);
+                world.notifyBlockUpdate(destination, previousState, newState, 2);
+            }
+        }
+
+        // Resume bordering water after every dry cell is installed, so real openings can still flood.
+        Set<BlockPos> updatedWater = new HashSet<>();
+        EnumFacing[] directions = EnumFacing.values();
+        for (int index = restoredAir.nextSetBit(0); index >= 0; index = restoredAir.nextSetBit(index + 1)) {
+            int x = index % waterVolume.sizeX();
+            int y = index / waterVolume.sizeX() % waterVolume.sizeY();
+            int z = index / (waterVolume.sizeX() * waterVolume.sizeY());
+            destination.setPos(
+                    waterVolume.origin().getX() + x - centerDifference.getX(),
+                    waterVolume.origin().getY() + y - centerDifference.getY(),
+                    waterVolume.origin().getZ() + z - centerDifference.getZ()
+            );
+            for (EnumFacing side : directions) {
+                int nx = x + side.getXOffset();
+                int ny = y + side.getYOffset();
+                int nz = z + side.getZOffset();
+                if (nx >= 0 && nx < waterVolume.sizeX() && ny >= 0 && ny < waterVolume.sizeY()
+                        && nz >= 0 && nz < waterVolume.sizeZ()
+                        && restoredAir.get(nx + waterVolume.sizeX() * (ny + waterVolume.sizeY() * nz))) continue;
+                BlockPos neighbor = destination.offset(side);
+                if (world.isOutsideBuildHeight(neighbor) || !world.isBlockLoaded(neighbor, false)) continue;
+                IBlockState fluid = world.getBlockState(neighbor);
+                if (fluidlogged) fluid = FluidloggedAPICompat.getFluidOrReal(world, neighbor);
+                if (fluid.getMaterial() == Material.WATER && updatedWater.add(neighbor)) {
+                    world.neighborChanged(neighbor, Blocks.AIR, destination);
+                }
             }
         }
         return changedChunks;

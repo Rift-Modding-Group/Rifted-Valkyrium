@@ -448,6 +448,8 @@ public class PhysicsObject implements IPhysicsEntity {
                         Math.round(this.getCenterCoord().z() - position.z())
                 );
 
+                this.waterVolume.update(this);
+                ShipWaterVolume.Snapshot waterSnapshot = this.waterVolume.getSnapshot();
                 Runnable restoreCapabilities = BlockRelocation.prepare(
                         this.world, this.getBlockPositions(),
                         BlockPos.ORIGIN.subtract(centerDifference), false
@@ -455,7 +457,7 @@ public class PhysicsObject implements IPhysicsEntity {
 
                 TLongObjectHashMap<Chunk> changedChunks = MoveBlocks.copyBlocksToWorld(
                         this.world, this.getBlockPositions(),
-                        this.claimedChunkCache, centerDifference
+                        this.claimedChunkCache, centerDifference, waterSnapshot
                 );
 
                 Collection<Chunk> relitChunks = ShipLighting.relightWorldChunks(this.world, changedChunks.valueCollection());

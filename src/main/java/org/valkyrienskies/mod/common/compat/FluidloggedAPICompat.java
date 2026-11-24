@@ -74,6 +74,18 @@ public class FluidloggedAPICompat {
         return FluidloggedUtils.setFluidState(world, pos, state, FluidState.of(Blocks.FLOWING_WATER), false, 3);
     }
 
+    /** Clears displaced stored water while retaining its host block and other fluids. */
+    public static boolean removeStoredWater(@Nonnull Chunk chunk, @Nonnull BlockPos pos) {
+        FluidState fluid = FluidState.getFromProvider(chunk, pos);
+        if (fluid.isEmpty() || fluid.getMaterial() != Material.WATER) return false;
+        IFluidStateCapability capability = Objects.requireNonNull(IFluidStateCapability.get(chunk));
+        if (!capability.getContainer(pos.getY()).setFluidState(pos, FluidState.EMPTY)) return false;
+        chunk.markDirty();
+        MessageUtils.sendToAllTracking(new SMessageSyncFluidState(pos.toImmutable(), FluidState.EMPTY, true),
+                chunk, FluidloggedAPI.WRAPPER);
+        return true;
+    }
+
     public static double getWaterHeight(@Nonnull World world, @Nonnull BlockPos pos, double fallback) {
         FluidState fluid = FluidloggedUtils.getFluidState(world, pos);
         if (fluid.isEmpty() || fluid.getMaterial() != Material.WATER) return fallback;
