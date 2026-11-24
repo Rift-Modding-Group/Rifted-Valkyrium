@@ -29,7 +29,6 @@ import org.valkyrienskies.mod.common.ships.fluids.ShipWaterVolume;
 import org.valkyrienskies.mod.common.util.TransformedAABB;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.ships.ship_world.ShipLighting;
-import org.joml.Vector3d;
 import valkyrienwarfare.api.TransformType;
 import valkyrienwarfare.api.event.ShipBlockRenderEvent;
 
@@ -89,6 +88,16 @@ public class PhysRenderChunk {
         }
 
         ShipWaterVolume.Snapshot volume = this.toRender.getWaterVolume().getSnapshot();
+        AxisAlignedBB hullBounds = null;
+        if (volume.sizeX() > 0) {
+            hullBounds = new AxisAlignedBB(
+                    volume.origin().getX(), volume.origin().getY(), volume.origin().getZ(),
+                    volume.origin().getX() + volume.sizeX(),
+                    volume.origin().getY() + volume.sizeY(),
+                    volume.origin().getZ() + volume.sizeZ()
+            );
+        }
+        float skyFactor = -1F;
         for (int i = 0; i < 16; i++) {
             IVSRenderChunk renderChunk = renderChunks[i];
             if (renderChunk != null) {
@@ -98,17 +107,12 @@ public class PhysRenderChunk {
 
                 // Only render chunks that can be shown by the camera.
                 if (iCamera.isBoundingBoxInFrustum(inWorldBB)) {
-                    Vector3d lightPosition = new Vector3d((chunk.x << 4) + 8, renderChunk.minY() + 8,
-                            (chunk.z << 4) + 8);
-                    if (volume.sizeX() > 0) {
-                        lightPosition.set(
-                                (Math.max(renderChunkBB.minX, volume.origin().getX()) + Math.min(renderChunkBB.maxX, volume.origin().getX() + volume.sizeX())) * .5,
-                                (Math.max(renderChunkBB.minY, volume.origin().getY()) + Math.min(renderChunkBB.maxY, volume.origin().getY() + volume.sizeY())) * .5,
-                                (Math.max(renderChunkBB.minZ, volume.origin().getZ()) + Math.min(renderChunkBB.maxZ, volume.origin().getZ() + volume.sizeZ())) * .5);
+                    // shortcut: one hull ambient factor; use per-vertex samples if external shadows need finer detail.
+                    if (skyFactor < 0F || hullBounds == null) {
+                        AxisAlignedBB lightBounds = hullBounds == null ? renderChunkBB : hullBounds;
+                        skyFactor = ShipLighting.getWorldSkyLight(this.toRender.getWorld(),
+                                this.toRender.getShipTransformationManager().getRenderTransform(), lightBounds) / 15F;
                     }
-                    // shortcut: one ambient sample per section; use per-vertex samples if large hulls need finer shadows.
-                    float skyFactor = ShipLighting.getWorldSkyLight(this.toRender.getWorld(),
-                            this.toRender.getShipTransformationManager().getRenderTransform(), lightPosition) / 15F;
                     // The ship layer enables the lightmap and enters with model-view/default texture state.
                     GlStateManager.setActiveTexture(OpenGlHelper.lightmapTexUnit);
                     GlStateManager.matrixMode(GL11.GL_TEXTURE);

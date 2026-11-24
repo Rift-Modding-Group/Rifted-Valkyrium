@@ -5,6 +5,7 @@ import gnu.trove.map.hash.TLongObjectHashMap;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.EnumSkyBlock;
 import net.minecraft.world.World;
@@ -65,13 +66,34 @@ public class ShipLighting {
         return sky << 20 | packedLight & 0xFFFF;
     }
 
-    public static int getWorldSkyLight(@NotNull World world, @NotNull ShipTransform transform,
-                                      @NotNull Vector3dc localPosition) {
+    public static int getWorldSkyLight(@NotNull World world, @NotNull ShipTransform transform, @NotNull Vector3dc localPosition) {
         Vector3d globalPosition = new Vector3d(localPosition);
         transform.transformPosition(globalPosition, TransformType.SUBSPACE_TO_GLOBAL);
         BlockPos globalBlock = new BlockPos(globalPosition.x, globalPosition.y, globalPosition.z);
         if (!world.isBlockLoaded(globalBlock)) return 0;
         return world.getLightFromNeighborsFor(EnumSkyBlock.SKY, globalBlock);
+    }
+
+    /**
+     * Samples surrounding sky while local vertex lighting supplies the hull's own shadows.
+     * */
+    public static int getWorldSkyLight(@NotNull World world, @NotNull ShipTransform transform, @NotNull AxisAlignedBB localBounds) {
+        AxisAlignedBB samples = localBounds.grow(.001D);
+        Vector3d globalPosition = new Vector3d();
+        int sky = 0;
+        for (int corner = 0; corner < 8; corner++) {
+            globalPosition.set(
+                    (corner & 1) == 0 ? samples.minX : samples.maxX,
+                    (corner & 2) == 0 ? samples.minY : samples.maxY,
+                    (corner & 4) == 0 ? samples.minZ : samples.maxZ
+            );
+            transform.transformPosition(globalPosition, TransformType.SUBSPACE_TO_GLOBAL);
+            BlockPos globalBlock = new BlockPos(globalPosition.x, globalPosition.y, globalPosition.z);
+            if (!world.isBlockLoaded(globalBlock)) continue;
+            sky = Math.max(sky, world.getLightFromNeighborsFor(EnumSkyBlock.SKY, globalBlock));
+            if (sky == 15) break;
+        }
+        return sky;
     }
 
     /**
