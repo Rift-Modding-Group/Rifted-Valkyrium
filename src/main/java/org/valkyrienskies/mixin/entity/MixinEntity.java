@@ -301,8 +301,22 @@ public abstract class MixinEntity {
     private IBlockState maskOceanAtEyes(World world, BlockPos pos, Operation<IBlockState> original) {
         IBlockState state = original.call(world, pos);
         Entity entity = (Entity) (Object) this;
-        if (state.getMaterial() == Material.WATER
-                && ShipWaterVolume.isWorldWaterMasked(world, entity.posX, entity.posY + entity.getEyeHeight(), entity.posZ)) {
+        if (ShipWaterVolume.isFluid(state)
+                && ShipWaterVolume.isWorldFluidMasked(world, entity.posX, entity.posY + entity.getEyeHeight(), entity.posZ)) {
+            return Blocks.AIR.getDefaultState();
+        }
+        return state;
+    }
+
+    @WrapOperation(
+            method = "doBlockCollisions",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/world/World;getBlockState(Lnet/minecraft/util/math/BlockPos;)Lnet/minecraft/block/state/IBlockState;"),
+            require = 0
+    )
+    private IBlockState maskSealedFluidCollisions(World world, BlockPos pos, Operation<IBlockState> original) {
+        IBlockState state = original.call(world, pos);
+        Entity entity = (Entity) (Object) this;
+        if (ShipWaterVolume.isFluid(state) && ShipWaterVolume.isWorldFluidMasked(world, entity.getEntityBoundingBox(), pos)) {
             return Blocks.AIR.getDefaultState();
         }
         return state;
@@ -321,7 +335,7 @@ public abstract class MixinEntity {
 
     @Inject(method = "isInsideOfMaterial", at = @At("RETURN"), cancellable = true)
     private void detectShipFluidAtEyes(Material material, CallbackInfoReturnable<Boolean> callback) {
-        if (callback.getReturnValueZ() || !material.isLiquid()) return;
+        if (callback.getReturnValueZ() || !ShipWaterVolume.isFluidMaterial(material)) return;
         Entity entity = (Entity) (Object) this;
         if (entity.getRidingEntity() instanceof EntityBoat) return;
         IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);

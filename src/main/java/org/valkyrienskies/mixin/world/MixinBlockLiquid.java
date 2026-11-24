@@ -19,7 +19,7 @@ import java.util.Random;
 public abstract class MixinBlockLiquid {
     @Inject(method = "randomDisplayTick", at = @At("HEAD"), cancellable = true)
     private void suppressWaterEffectsInsideHull(IBlockState state, World world, BlockPos pos, Random random, CallbackInfo callback) {
-        if (state.getMaterial() == Material.WATER && ShipWaterVolume.isDry(world, pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D)) {
+        if (ShipWaterVolume.isFluid(state) && ShipWaterVolume.isWorldFluidMasked(world, pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D)) {
             callback.cancel();
         }
     }

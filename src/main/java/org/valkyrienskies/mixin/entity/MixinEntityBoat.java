@@ -38,8 +38,8 @@ public class MixinEntityBoat {
     private IBlockState maskWaterInsideHull(World world, BlockPos pos, Operation<IBlockState> original) {
         IBlockState state = original.call(world, pos);
         EntityBoat boat = (EntityBoat) (Object) this;
-        if (state.getMaterial() == Material.WATER
-                && ShipWaterVolume.isWorldWaterMasked(world, boat.getEntityBoundingBox().grow(0D, 0.001D, 0D), pos)) return Blocks.AIR.getDefaultState();
+        if (ShipWaterVolume.isFluid(state)
+                && ShipWaterVolume.isWorldFluidMasked(world, boat.getEntityBoundingBox().grow(0D, 0.001D, 0D), pos)) return Blocks.AIR.getDefaultState();
         return state;
     }
 

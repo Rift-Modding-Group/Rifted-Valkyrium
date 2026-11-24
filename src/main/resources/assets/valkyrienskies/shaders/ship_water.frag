@@ -5,9 +5,10 @@ uniform sampler2D volumes;
 uniform vec2 volumeTextureSize;
 uniform int shipCount;
 uniform vec4 firstShipData[4];
-uniform vec4 waterSprites[3];
+uniform sampler2D fluidSprites;
 uniform int fogMode;
 uniform bool fogEnabled;
+uniform bool fogRadial;
 uniform float alphaThreshold;
 varying vec2 atlasUv;
 varying vec2 lightUv;
@@ -30,12 +31,7 @@ bool masked(vec3 local, vec4 size) {
     return dry > 0.5;
 }
 void main() {
-    bool water = false;
-    for (int sprite = 0; sprite < 3; sprite++) {
-        vec4 bounds = waterSprites[sprite];
-        if (atlasUv.x > bounds.x && atlasUv.y > bounds.y && atlasUv.x < bounds.z && atlasUv.y < bounds.w) water = true;
-    }
-    if (water) {
+    if (texture2D(fluidSprites, atlasUv).r > 0.5) {
         for (int ship = 0; ship < shipCount; ship++) {
             vec3 position;
             vec4 size;
@@ -71,7 +67,7 @@ void main() {
     vec4 color = texture2D(atlas, atlasUv) * texture2D(lightmap, lightUv) * vertexColor;
     if (color.a <= alphaThreshold) discard;
     if (fogEnabled) {
-        float distance = length(eyePosition);
+        float distance = fogRadial ? length(eyePosition) : abs(eyePosition.z);
         float fog = clamp((gl_Fog.end - distance) * gl_Fog.scale, 0.0, 1.0);
         if (fogMode == 2048) fog = exp(-gl_Fog.density * distance);
         if (fogMode == 2049) fog = exp(-pow(gl_Fog.density * distance, 2.0));

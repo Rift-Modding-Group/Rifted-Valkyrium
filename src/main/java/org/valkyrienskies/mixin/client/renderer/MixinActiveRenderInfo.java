@@ -45,10 +45,10 @@ public class MixinActiveRenderInfo {
             BlockPos pos = new BlockPos(local.x, local.y, local.z);
             IBlockState state = worldIn.getBlockState(pos);
             if (Loader.isModLoaded("fluidlogged_api")) state = FluidloggedAPICompat.getFluidOrReal(worldIn, pos);
-            if (state.getMaterial() == Material.WATER && ShipWaterVolume.waterHeight(worldIn, local.x, local.y, local.z) > local.y) {
+            if (ShipWaterVolume.isFluid(state) && ShipWaterVolume.fluidHeight(worldIn, local.x, local.y, local.z) > local.y) {
                 cir.setReturnValue(state);
             }
-            else if (cir.getReturnValue().getMaterial() == Material.WATER) cir.setReturnValue(Blocks.AIR.getDefaultState());
+            else if (ShipWaterVolume.isFluid(cir.getReturnValue())) cir.setReturnValue(Blocks.AIR.getDefaultState());
             return;
         }
     }

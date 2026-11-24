@@ -17,6 +17,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
+import org.valkyrienskies.mod.common.ships.fluids.ShipWaterVolume;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import valkyrienwarfare.api.TransformType;
@@ -94,6 +95,7 @@ public class MixinWorldClient {
     private void vs_displayTickPos(final BlockPos pos, final boolean holdingBarrier, final Random random) {
         WorldClient thisWorldClient = (WorldClient) ((Object) this);
         final IBlockState iblockstate = thisWorldClient.getBlockState(pos);
+        if (ShipWaterVolume.isFluid(iblockstate) && ShipWaterVolume.isWorldFluidMasked(thisWorldClient, pos.getX() + .5, pos.getY() + .5, pos.getZ() + .5)) return;
         iblockstate.getBlock().randomDisplayTick(iblockstate, thisWorldClient, pos, random);
         if (holdingBarrier && iblockstate.getBlock() == Blocks.BARRIER) {
             thisWorldClient.spawnParticle(EnumParticleTypes.BARRIER, (float) pos.getX() + 0.5F, (float) pos.getY() + 0.5F, (float) pos.getZ() + 0.5F, 0.0D, 0.0D, 0.0D);

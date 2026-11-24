@@ -253,10 +253,22 @@ public abstract class MixinEntityRenderer {
         }
 
         GlStateManager.resetColor();
-        if (blockLayer == BlockRenderLayer.TRANSLUCENT) ShipWaterRenderer.begin(this.shipWaterRenderer, physObjectWorld, camera, entity, partialTicks);
+        ShipWaterRenderer.begin(this.shipWaterRenderer, physObjectWorld, camera, entity, partialTicks);
         int rendered = original.call(renderGlobal, blockLayer, partialTicks, pass, entity);
-        if (blockLayer == BlockRenderLayer.TRANSLUCENT) ShipWaterRenderer.end(this.shipWaterRenderer);
+        ShipWaterRenderer.end(this.shipWaterRenderer);
         return rendered;
+    }
+
+    @WrapOperation(
+            method = "updateFogColor",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/block/Block;getFogColor(Lnet/minecraft/world/World;Lnet/minecraft/util/math/BlockPos;Lnet/minecraft/block/state/IBlockState;Lnet/minecraft/entity/Entity;Lnet/minecraft/util/math/Vec3d;F)Lnet/minecraft/util/math/Vec3d;")
+    )
+    private Vec3d getShipAwareFogColor(
+            Block block, World world, BlockPos pos, IBlockState state, Entity entity,
+            Vec3d color, float partialTicks, Operation<Vec3d> original,
+            @Local(ordinal = 0) IBlockState cameraState
+    ) {
+        return original.call(cameraState.getBlock(), world, pos, cameraState, entity, color, partialTicks);
     }
 
     @Unique

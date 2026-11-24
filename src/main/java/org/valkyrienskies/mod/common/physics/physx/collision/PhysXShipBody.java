@@ -310,7 +310,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
                 );
                 transform.transformPosition(centerWorld, TransformType.SUBSPACE_TO_GLOBAL);
 
-                double submergedFraction = this.getSubmergedFraction(hostWorld, mutablePos, centerWorld, false);
+                double submergedFraction = this.getSubmergedFraction(hostWorld, mutablePos, centerWorld);
                 if (submergedFraction > 0D) {
                     if (!yawVelocityDamped) {
                         Vector3d angularVelocity = calculations.getAngularVelocity();
@@ -348,7 +348,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
                 }
             }
 
-            //push ship downwards based on the water that leaked into it
+            // Sealed air contributes displacement until ship-local fluid occupies that cell.
             ShipWaterVolume.Snapshot waterVolume = this.ship.getWaterVolume().getSnapshot();
             for (int index = waterVolume.air().nextSetBit(0); index >= 0; index = waterVolume.air().nextSetBit(index + 1)) {
                 BlockPos blockPos = waterVolume.origin().add(
@@ -358,7 +358,7 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
                 );
                 Vector3d centerWorld = new Vector3d(blockPos.getX() + 0.5D, blockPos.getY() + 0.5D, blockPos.getZ() + 0.5D);
                 transform.transformPosition(centerWorld, TransformType.SUBSPACE_TO_GLOBAL);
-                double submergedFraction = this.getSubmergedFraction(hostWorld, mutablePos, centerWorld, true);
+                double submergedFraction = this.getSubmergedFraction(hostWorld, mutablePos, centerWorld);
                 if (submergedFraction <= 0D) continue;
                 Vector3d relative = centerWorld.sub(transform.getPosX(), transform.getPosY(), transform.getPosZ());
                 calculations.addForceAtPoint(
@@ -779,22 +779,20 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
         return false;
     }
 
-    private double getSubmergedFraction(@NotNull World world, BlockPos.MutableBlockPos mutablePos, Vector3d centerWorld, boolean waterOnly) {
+    private double getSubmergedFraction(@NotNull World world, BlockPos.MutableBlockPos mutablePos, Vector3d centerWorld) {
         int x = (int) Math.floor(centerWorld.x);
         int z = (int) Math.floor(centerWorld.z);
         int minY = (int) Math.floor(centerWorld.y - BLOCK_HALF_EXTENT - 0.25D);
         int maxY = Math.min(world.getHeight() - 1, (int) Math.floor(centerWorld.y + BLOCK_HALF_EXTENT));
+        double submerged = 0D;
         for (int y = maxY; y >= minY; y--) {
             mutablePos.setPos(x, y, z);
-            if (world.isOutsideBuildHeight(mutablePos)) continue;
-            double surface = ShipWaterVolume.waterHeight(world, centerWorld.x, y + 0.0001D, centerWorld.z);
-            IBlockState state = world.getBlockState(mutablePos);
-            if (!waterOnly && state.getMaterial() != Material.WATER && PhysicsUtils.isLiquid(state)) surface = y + 1D;
-            if (surface > y + 0.0001D) {
-                return Math.clamp(surface - (centerWorld.y - BLOCK_HALF_EXTENT), 0D, 1D);
-            }
+            ShipWaterVolume.FluidSample sample = ShipWaterVolume.fluidSample(world, mutablePos);
+            if (sample == null) continue;
+            submerged += Math.max(0D, Math.min(centerWorld.y + BLOCK_HALF_EXTENT, sample.maxY())
+                    - Math.max(centerWorld.y - BLOCK_HALF_EXTENT, sample.minY()));
         }
-        return 0D;
+        return Math.clamp(submerged, 0D, 1D);
     }
 
     //---static helpers---

@@ -20,6 +20,7 @@ import net.minecraft.world.World;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.util.math.AxisAlignedBB;
 import git.jbredwards.fluidlogged_api.api.world.IBlockAccessWrapper;
+import org.jetbrains.annotations.Nullable;
 import org.valkyrienskies.mod.common.ships.fluids.ShipWaterVolume;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraftforge.fluids.BlockFluidFinite;
@@ -49,35 +50,35 @@ public class FluidloggedAPICompat {
         return FluidloggedUtils.getFluidOrReal(world, pos);
     }
 
-    public static boolean isWorldWaterMasked(@Nonnull IBlockAccess access, @Nonnull BlockPos pos, @Nonnull AxisAlignedBB bounds) {
+    public static boolean isWorldFluidMasked(@Nonnull IBlockAccess access, @Nonnull BlockPos pos, @Nonnull AxisAlignedBB bounds) {
         while (access instanceof IBlockAccessWrapper wrapper) access = wrapper.getWrapped();
-        return access instanceof World world && ShipWaterVolume.isWorldWaterMasked(world, bounds, pos);
+        return access instanceof World world && ShipWaterVolume.isWorldFluidMasked(world, bounds, pos);
     }
 
-    public static boolean canWaterFlow(@Nonnull World world, @Nonnull BlockPos pos, @Nonnull IBlockState state, @Nonnull EnumFacing side) {
+    public static boolean canFluidFlow(@Nonnull World world, @Nonnull BlockPos pos, @Nonnull IBlockState state, @Nonnull EnumFacing side) {
         return FluidloggedUtils.canFluidFlow(world, pos, state, side);
     }
 
-    public static boolean canAdmitWater(@Nonnull World world, @Nonnull BlockPos pos, @Nonnull IBlockState state) {
+    public static boolean canAdmitFluid(@Nonnull World world, @Nonnull BlockPos pos, @Nonnull IBlockState state, @Nonnull IBlockState incoming) {
         FluidState current = FluidloggedUtils.getFluidState(world, pos);
-        if (!current.isEmpty() && (current.getMaterial() != Material.WATER || current.isSource())) return false;
-        return state.getMaterial() == Material.AIR || state.getMaterial() == Material.WATER
-                || FluidloggedUtils.isStateFluidloggable(state, world, pos, FluidState.of(Blocks.WATER));
+        if (!current.isEmpty()) return false;
+        return state.getMaterial() == Material.AIR
+                || FluidloggedUtils.isStateFluidloggable(state, world, pos, FluidState.of(incoming));
     }
 
-    public static boolean admitWater(@Nonnull World world, @Nonnull BlockPos pos) {
+    public static boolean admitFluid(@Nonnull World world, @Nonnull BlockPos pos, @Nonnull IBlockState incoming) {
         IBlockState state = world.getBlockState(pos);
-        if (!canAdmitWater(world, pos, state)) return false;
-        if (state.getMaterial() == Material.AIR || state.getMaterial() == Material.WATER) {
-            return world.setBlockState(pos, Blocks.FLOWING_WATER.getDefaultState(), 3);
-        }
-        return FluidloggedUtils.setFluidState(world, pos, state, FluidState.of(Blocks.FLOWING_WATER), false, 3);
+        if (!canAdmitFluid(world, pos, state, incoming)) return false;
+        if (state.getMaterial() == Material.AIR) return world.setBlockState(pos, incoming, 3);
+        return FluidloggedUtils.setFluidState(world, pos, state, FluidState.of(incoming), false, 3);
     }
 
-    /** Clears displaced stored water while retaining its host block and other fluids. */
-    public static boolean removeStoredWater(@Nonnull Chunk chunk, @Nonnull BlockPos pos) {
+    /**
+     * Clears displaced stored fluid while retaining its host block.
+     * */
+    public static boolean removeStoredFluid(@Nonnull Chunk chunk, @Nonnull BlockPos pos) {
         FluidState fluid = FluidState.getFromProvider(chunk, pos);
-        if (fluid.isEmpty() || fluid.getMaterial() != Material.WATER) return false;
+        if (fluid.isEmpty()) return false;
         IFluidStateCapability capability = Objects.requireNonNull(IFluidStateCapability.get(chunk));
         if (!capability.getContainer(pos.getY()).setFluidState(pos, FluidState.EMPTY)) return false;
         chunk.markDirty();
@@ -86,10 +87,12 @@ public class FluidloggedAPICompat {
         return true;
     }
 
-    public static double getWaterHeight(@Nonnull World world, @Nonnull BlockPos pos, double fallback) {
+    @Nullable
+    public static ShipWaterVolume.FluidSample getFluidSample(@Nonnull World world, @Nonnull BlockPos pos) {
         FluidState fluid = FluidloggedUtils.getFluidState(world, pos);
-        if (fluid.isEmpty() || fluid.getMaterial() != Material.WATER) return fallback;
-        return pos.getY() + fluid.getActualHeight(world, pos);
+        if (fluid.isEmpty()) return null;
+        AxisAlignedBB bounds = fluid.getFluidBox(world, pos);
+        return new ShipWaterVolume.FluidSample(fluid.toSource().toFlowing().getState(), bounds.minY, bounds.maxY);
     }
 
     @SubscribeEvent

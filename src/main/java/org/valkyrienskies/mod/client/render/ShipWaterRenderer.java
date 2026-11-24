@@ -3,6 +3,13 @@ package org.valkyrienskies.mod.client.render;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.culling.ICamera;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.renderer.texture.TextureMap;
+import net.minecraft.util.ResourceLocation;
+import net.minecraftforge.fluids.Fluid;
+import net.minecraftforge.fluids.FluidRegistry;
+import java.nio.ByteBuffer;
+import java.util.HashSet;
+import java.util.Set;
 import net.minecraft.entity.Entity;
 import org.joml.Matrix4d;
 import org.joml.Vector4d;
@@ -11,6 +18,7 @@ import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL13;
 import org.lwjgl.opengl.GL20;
 import org.lwjgl.opengl.GL30;
+import org.lwjgl.opengl.GLContext;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.ships.fluids.ShipWaterVolume;
 import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
@@ -27,12 +35,15 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Clips water fragments against ship-local voxels while retaining other translucent terrain.
+ * Clips fluid fragments against ship-local voxels while retaining other translucent terrain.
  * */
 @ParametersAreNonnullByDefault
 public class ShipWaterRenderer {
     private int program;
     private int texture;
+    private int spriteTexture;
+    private int previousSpriteTexture;
+    private TextureAtlasSprite atlasStamp;
     private int textureWidth;
     private int textureHeight;
     private int metadataHeight;
@@ -66,7 +77,7 @@ public class ShipWaterRenderer {
         }
         if (GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM) != 0) {
             if (!renderer.warnedShader) {
-                ValkyrienSkiesMod.LOGGER.warn("Ship water cutouts require the fixed-function terrain renderer; an external shader is active.");
+                ValkyrienSkiesMod.LOGGER.warn("Ship fluid cutouts require the fixed-function terrain renderer; an external shader is active.");
                 renderer.warnedShader = true;
             }
             return;
@@ -77,7 +88,7 @@ public class ShipWaterRenderer {
                 String extension = shaderType == GL20.GL_VERTEX_SHADER ? "vert" : "frag";
                 int shader = GL20.glCreateShader(shaderType);
                 try (InputStream stream = ShipWaterRenderer.class.getResourceAsStream("/assets/valkyrienskies/shaders/ship_water." + extension)) {
-                    if (stream == null) throw new IOException("Missing ship water shader");
+                    if (stream == null) throw new IOException("Missing ship fluid shader");
                     GL20.glShaderSource(shader, new String(stream.readAllBytes(), StandardCharsets.UTF_8));
                     GL20.glCompileShader(shader);
                     if (GL20.glGetShaderi(shader, GL20.GL_COMPILE_STATUS) == 0) throw new IOException(GL20.glGetShaderInfoLog(shader, 8192));
@@ -89,21 +100,21 @@ public class ShipWaterRenderer {
                     GL20.glDeleteProgram(renderer.program);
                     renderer.program = 0;
                     renderer.failed = true;
-                    ValkyrienSkiesMod.LOGGER.error("Could not create ship water shader", exception);
+                    ValkyrienSkiesMod.LOGGER.error("Could not create ship fluid shader", exception);
                     return;
                 }
             }
             GL20.glLinkProgram(renderer.program);
             if (GL20.glGetProgrami(renderer.program, GL20.GL_LINK_STATUS) == 0) {
-                ValkyrienSkiesMod.LOGGER.error("Could not link ship water shader: {}", GL20.glGetProgramInfoLog(renderer.program, 8192));
+                ValkyrienSkiesMod.LOGGER.error("Could not link ship fluid shader: {}", GL20.glGetProgramInfoLog(renderer.program, 8192));
                 GL20.glDeleteProgram(renderer.program);
                 renderer.program = 0;
                 renderer.failed = true;
                 return;
             }
             for (String name : new String[]{"atlas", "lightmap", "volumes", "volumeTextureSize", "shipCount",
-                    "firstShipData[0]", "fogMode", "fogEnabled", "alphaThreshold",
-                    "waterSprites[0]", "waterSprites[1]", "waterSprites[2]"}) {
+                    "firstShipData[0]", "fogMode", "fogEnabled", "fogRadial", "alphaThreshold",
+                    "fluidSprites"}) {
                 renderer.uniforms.put(name, GL20.glGetUniformLocation(renderer.program, name));
             }
             renderer.maxTextureSize = GL11.glGetInteger(GL11.GL_MAX_TEXTURE_SIZE);
@@ -111,6 +122,44 @@ public class ShipWaterRenderer {
         }
 
         renderer.previousActiveTexture = GL11.glGetInteger(GL13.GL_ACTIVE_TEXTURE);
+        TextureMap atlas = Minecraft.getMinecraft().getTextureMapBlocks();
+        TextureAtlasSprite atlasStamp = atlas.getAtlasSprite("minecraft:blocks/water_still");
+        GL13.glActiveTexture(GL13.GL_TEXTURE3);
+        renderer.previousSpriteTexture = GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
+        if (renderer.spriteTexture == 0 || renderer.atlasStamp != atlasStamp) {
+            GL13.glActiveTexture(GL13.GL_TEXTURE0);
+            int previousAtlas = GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
+            GL11.glBindTexture(GL11.GL_TEXTURE_2D, atlas.getGlTextureId());
+            int width = GL11.glGetTexLevelParameteri(GL11.GL_TEXTURE_2D, 0, GL11.GL_TEXTURE_WIDTH);
+            int height = GL11.glGetTexLevelParameteri(GL11.GL_TEXTURE_2D, 0, GL11.GL_TEXTURE_HEIGHT);
+            GL11.glBindTexture(GL11.GL_TEXTURE_2D, previousAtlas);
+            ByteBuffer sprites = BufferUtils.createByteBuffer(width * height);
+            Set<ResourceLocation> textures = new HashSet<>();
+            for (Fluid fluid : FluidRegistry.getRegisteredFluids().values()) {
+                if (fluid.getStill() != null) textures.add(fluid.getStill());
+                if (fluid.getFlowing() != null) textures.add(fluid.getFlowing());
+                if (fluid.getOverlay() != null) textures.add(fluid.getOverlay());
+            }
+            for (ResourceLocation name : textures) {
+                TextureAtlasSprite sprite = atlas.getAtlasSprite(name.toString());
+                if (sprite == atlas.getMissingSprite()) continue;
+                int minX = Math.clamp((int) Math.floor(sprite.getMinU() * width), 0, width);
+                int maxX = Math.clamp((int) Math.ceil(sprite.getMaxU() * width), 0, width);
+                int minY = Math.clamp((int) Math.floor(sprite.getMinV() * height), 0, height);
+                int maxY = Math.clamp((int) Math.ceil(sprite.getMaxV() * height), 0, height);
+                for (int y = minY; y < maxY; y++) {
+                    for (int x = minX; x < maxX; x++) sprites.put(x + width * y, (byte) 255);
+                }
+            }
+            GL13.glActiveTexture(GL13.GL_TEXTURE3);
+            if (renderer.spriteTexture == 0) renderer.spriteTexture = GL11.glGenTextures();
+            GL11.glBindTexture(GL11.GL_TEXTURE_2D, renderer.spriteTexture);
+            GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
+            GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
+            GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL30.GL_R8, width, height, 0, GL11.GL_RED, GL11.GL_UNSIGNED_BYTE, sprites);
+            renderer.atlasStamp = atlasStamp;
+        }
+        else GL11.glBindTexture(GL11.GL_TEXTURE_2D, renderer.spriteTexture);
         GL13.glActiveTexture(GL13.GL_TEXTURE2);
         renderer.previousTexture = GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
         if (renderer.texture == 0) renderer.texture = GL11.glGenTextures();
@@ -122,8 +171,10 @@ public class ShipWaterRenderer {
         renderer.textureHeight = (pixels + renderer.textureWidth - 1) / renderer.textureWidth;
         if (renderer.textureHeight > renderer.maxTextureSize) {
             GL11.glBindTexture(GL11.GL_TEXTURE_2D, renderer.previousTexture);
+            GL13.glActiveTexture(GL13.GL_TEXTURE3);
+            GL11.glBindTexture(GL11.GL_TEXTURE_2D, renderer.previousSpriteTexture);
             GL13.glActiveTexture(renderer.previousActiveTexture);
-            ValkyrienSkiesMod.LOGGER.warn("Ship water cutout volumes exceed the GPU texture size.");
+            ValkyrienSkiesMod.LOGGER.warn("Ship fluid cutout volumes exceed the GPU texture size.");
             renderer.failed = true;
             return;
         }
@@ -182,15 +233,11 @@ public class ShipWaterRenderer {
         GL20.glUniform2f(renderer.uniforms.get("volumeTextureSize"), renderer.textureWidth, renderer.textureHeight);
         GL20.glUniform1i(renderer.uniforms.get("shipCount"), ships.size());
         GL20.glUniform1i(renderer.uniforms.get("fogMode"), GL11.glGetInteger(GL11.GL_FOG_MODE));
+        GL20.glUniform1i(renderer.uniforms.get("fogRadial"), GLContext.getCapabilities().GL_NV_fog_distance ? 1 : 0);
         GL20.glUniform1i(renderer.uniforms.get("fogEnabled"), GL11.glIsEnabled(GL11.GL_FOG) ? 1 : 0);
         float alphaThreshold = GL11.glIsEnabled(GL11.GL_ALPHA_TEST) ? GL11.glGetFloat(GL11.GL_ALPHA_TEST_REF) : -1F;
         GL20.glUniform1f(renderer.uniforms.get("alphaThreshold"), alphaThreshold);
-        int spriteIndex = 0;
-        for (String name : new String[]{"minecraft:blocks/water_still", "minecraft:blocks/water_flow", "minecraft:blocks/water_overlay"}) {
-            TextureAtlasSprite sprite = Minecraft.getMinecraft().getTextureMapBlocks().getAtlasSprite(name);
-            GL20.glUniform4f(renderer.uniforms.get("waterSprites[" + spriteIndex++ + "]"),
-                    sprite.getMinU(), sprite.getMinV(), sprite.getMaxU(), sprite.getMaxV());
-        }
+        GL20.glUniform1i(renderer.uniforms.get("fluidSprites"), 3);
         renderer.active = true;
     }
 
@@ -199,6 +246,8 @@ public class ShipWaterRenderer {
         GL20.glUseProgram(0);
         GL13.glActiveTexture(GL13.GL_TEXTURE2);
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, renderer.previousTexture);
+        GL13.glActiveTexture(GL13.GL_TEXTURE3);
+        GL11.glBindTexture(GL11.GL_TEXTURE_2D, renderer.previousSpriteTexture);
         GL13.glActiveTexture(renderer.previousActiveTexture);
         renderer.active = false;
     }

@@ -46,8 +46,6 @@ public abstract class MixinFluidFlowHandler {
         @Local(argsOnly = true) FluidState originState
     ) {
         if (!canFlowInto) return false;
-        Material material = originState.getMaterial();
-        if (!material.isLiquid()) return true;
         if (originState.getDownDensityFace() != EnumFacing.DOWN) return true;
         return ValkyrienUtils.canFlowDown(world, sourcePos);
     }

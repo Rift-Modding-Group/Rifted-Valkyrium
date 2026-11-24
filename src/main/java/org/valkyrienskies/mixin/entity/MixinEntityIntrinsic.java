@@ -201,7 +201,7 @@ public abstract class MixinEntityIntrinsic {
                     if (Loader.isModLoaded("fluidlogged_api")) state = FluidloggedAPICompat.getFluidOrReal(thisEntity.world, pos);
                     else state = thisEntity.world.getBlockState(pos);
 
-                    if (state.getMaterial() == Material.WATER && ShipWaterVolume.isWorldWaterMasked(thisEntity.world, bounds, pos)) continue;
+                    if (ShipWaterVolume.isFluid(state) && ShipWaterVolume.isWorldFluidMasked(thisEntity.world, bounds, pos)) continue;
                     Boolean result = state.getBlock().isAABBInsideLiquid(thisEntity.world, pos, bounds);
                     if (Boolean.TRUE.equals(result) || result == null && state.getMaterial().isLiquid()) {
                         inWorldLiquid = true;

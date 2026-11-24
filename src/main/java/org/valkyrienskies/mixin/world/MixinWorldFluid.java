@@ -33,7 +33,7 @@ import javax.annotation.ParametersAreNonnullByDefault;
 @ParametersAreNonnullByDefault
 public abstract class MixinWorldFluid {
     @WrapOperation(
-            method = {"handleMaterialAcceleration", "isMaterialInBB", "containsAnyLiquid"},
+            method = {"handleMaterialAcceleration", "isMaterialInBB", "containsAnyLiquid", "isFlammableWithin"},
             at = @At(value = "INVOKE", target = "Lnet/minecraft/world/World;getBlockState(Lnet/minecraft/util/math/BlockPos;)Lnet/minecraft/block/state/IBlockState;"),
             require = 0
     )
@@ -42,13 +42,13 @@ public abstract class MixinWorldFluid {
             @Local(argsOnly = true) AxisAlignedBB bounds
     ) {
         IBlockState state = original.call(world, pos);
-        if (state.getMaterial() == Material.WATER && ShipWaterVolume.isWorldWaterMasked(world, bounds, pos)) return Blocks.AIR.getDefaultState();
+        if (ShipWaterVolume.isFluid(state) && ShipWaterVolume.isWorldFluidMasked(world, bounds, pos)) return Blocks.AIR.getDefaultState();
         return state;
     }
 
     @Inject(method = "handleMaterialAcceleration", at = @At("RETURN"), cancellable = true)
     private void accelerateInShipFluid(AxisAlignedBB bounds, Material material, Entity entity, CallbackInfoReturnable<Boolean> callback) {
-        if (callback.getReturnValueZ() || !material.isLiquid()) return;
+        if (callback.getReturnValueZ() || !ShipWaterVolume.isFluidMaterial(material)) return;
         if (ShipChunkAllocator.isBlockInShipyard(new BlockPos(VSMath.getCenter(bounds)))) return;
         IEntityShipDraggable draggable = entity.getCapability(VSCapabilityRegistry.VS_ENTITY_SHIP_DRAGGABLE, null);
         World world = (World) (Object) this;
@@ -104,7 +104,7 @@ public abstract class MixinWorldFluid {
 
     @Inject(method = "isMaterialInBB", at = @At("RETURN"), cancellable = true)
     private void detectShipFluidMaterial(AxisAlignedBB bounds, Material material, CallbackInfoReturnable<Boolean> callback) {
-        if (callback.getReturnValueZ() || !material.isLiquid()) return;
+        if (callback.getReturnValueZ() || !ShipWaterVolume.isFluidMaterial(material)) return;
         if (ShipChunkAllocator.isBlockInShipyard(new BlockPos(VSMath.getCenter(bounds)))) return;
         World world = (World) (Object) this;
         IShipWorld shipWorld = world.getCapability(VSCapabilityRegistry.VS_SHIP_WORLD, null);

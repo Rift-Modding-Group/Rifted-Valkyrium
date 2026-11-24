@@ -27,12 +27,12 @@ public abstract class MixinFluidCollisionHandler {
             IBlockAccess access, BlockPos pos, IBlockState state, Entity entity,
             double height, Material material, boolean testingHead, CallbackInfoReturnable<Boolean> callback
     ) {
-        if (material != Material.WATER) return;
+        if (!ShipWaterVolume.isFluidMaterial(material) && !ShipWaterVolume.isFluid(state)) return;
         boolean masked;
         if (testingHead) {
-            masked = ShipWaterVolume.isWorldWaterMasked(entity.world, entity.posX, entity.posY + entity.getEyeHeight(), entity.posZ);
+            masked = ShipWaterVolume.isWorldFluidMasked(entity.world, entity.posX, entity.posY + entity.getEyeHeight(), entity.posZ);
         }
-        else masked = ShipWaterVolume.isWorldWaterMasked(entity.world, entity.getEntityBoundingBox(), pos);
+        else masked = ShipWaterVolume.isWorldFluidMasked(entity.world, entity.getEntityBoundingBox(), pos);
         if (masked) callback.setReturnValue(false);
     }
 
@@ -44,7 +44,7 @@ public abstract class MixinFluidCollisionHandler {
             IBlockState state, IBlockAccess access, BlockPos pos, AxisAlignedBB bounds,
             Material material, CallbackInfoReturnable<Boolean> callback
     ) {
-        if (material == Material.WATER && FluidloggedAPICompat.isWorldWaterMasked(access, pos, bounds)) callback.setReturnValue(false);
+        if ((ShipWaterVolume.isFluidMaterial(material) || ShipWaterVolume.isFluid(state)) && FluidloggedAPICompat.isWorldFluidMasked(access, pos, bounds)) callback.setReturnValue(false);
     }
 
     @Inject(
@@ -56,6 +56,6 @@ public abstract class MixinFluidCollisionHandler {
             @Nullable Object heightCache, boolean fancy, CallbackInfoReturnable<Boolean> callback
     ) {
         if (state == null) state = FluidloggedUtils.getFluidOrReal(access, pos);
-        if (state.getMaterial() == Material.WATER && FluidloggedAPICompat.isWorldWaterMasked(access, pos, bounds)) callback.setReturnValue(false);
+        if (ShipWaterVolume.isFluid(state) && FluidloggedAPICompat.isWorldFluidMasked(access, pos, bounds)) callback.setReturnValue(false);
     }
 }

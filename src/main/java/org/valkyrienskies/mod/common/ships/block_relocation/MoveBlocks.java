@@ -67,7 +67,8 @@ public class MoveBlocks {
             }
             IBlockState previousState = targetChunk.getBlockState(destination);
             if ((movedState.getMaterial().isLiquid() || movedState.getBlock() instanceof IFluidBlock)
-                    && !previousState.getBlock().isAir(previousState, world, destination)) continue;
+                    && !previousState.getBlock().isAir(previousState, world, destination)
+                    && !ShipWaterVolume.isFluid(previousState)) continue;
 
             if (previousState.getBlock().hasTileEntity(previousState) || targetChunk.getTileEntityMap().containsKey(destination)) {
                 world.removeTileEntity(destination);
@@ -105,7 +106,7 @@ public class MoveBlocks {
             IBlockState previousState = targetChunk.getBlockState(destination);
             IBlockState newState = previousState;
             boolean changed = false;
-            if (previousState.getMaterial() == Material.WATER) {
+            if (ShipWaterVolume.isFluid(previousState)) {
                 if (previousState.getBlock().hasTileEntity(previousState) || targetChunk.getTileEntityMap().containsKey(destination)) {
                     world.removeTileEntity(destination);
                 }
@@ -114,7 +115,7 @@ public class MoveBlocks {
                 storage.set(destination.getX() & 15, destination.getY() & 15, destination.getZ() & 15, newState);
                 changed = true;
             }
-            if (fluidlogged) changed |= FluidloggedAPICompat.removeStoredWater(targetChunk, destination);
+            if (fluidlogged) changed |= FluidloggedAPICompat.removeStoredFluid(targetChunk, destination);
             if (changed) {
                 restoredAir.set(index);
                 targetChunk.markDirty();
@@ -146,7 +147,7 @@ public class MoveBlocks {
                 if (world.isOutsideBuildHeight(neighbor) || !world.isBlockLoaded(neighbor, false)) continue;
                 IBlockState fluid = world.getBlockState(neighbor);
                 if (fluidlogged) fluid = FluidloggedAPICompat.getFluidOrReal(world, neighbor);
-                if (fluid.getMaterial() == Material.WATER && updatedWater.add(neighbor)) {
+                if (ShipWaterVolume.isFluid(fluid) && updatedWater.add(neighbor)) {
                     world.neighborChanged(neighbor, Blocks.AIR, destination);
                 }
             }

@@ -25,7 +25,6 @@ import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.JOML;
 import valkyrienwarfare.api.TransformType;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.text.DecimalFormat;
@@ -46,6 +45,7 @@ public class PhysObjectRenderManager {
     public final BlockPos offsetPos;
     private final PhysicsObject parent;
     private final Map<ChunkPos, PhysRenderChunk> renderChunks;
+    private final ShipFluidBoundaryRenderer fluidBoundaryRenderer = new ShipFluidBoundaryRenderer();
 
     public PhysObjectRenderManager(PhysicsObject toRender, BlockPos offsetPos) {
         this.parent = toRender;
@@ -68,6 +68,7 @@ public class PhysObjectRenderManager {
         // GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
 
         applyRenderTransform(partialTicks);
+        ShipFluidBoundaryRenderer.render(this.fluidBoundaryRenderer, this.parent, layerToRender, this.offsetPos);
         for (PhysRenderChunk renderChunk : renderChunks.values()) {
             renderChunk.renderBlockLayer(layerToRender, partialTicks, pass, camera);
         }
@@ -333,7 +334,7 @@ public class PhysObjectRenderManager {
     /**
      * Called when a chunk is being replaced with a new one. We replace the old chunk renderer with a new one as well.
      */
-    public void updateChunk(@Nonnull Chunk chunk) {
+    public void updateChunk(Chunk chunk) {
         ChunkPos chunkPos = new ChunkPos(chunk.x, chunk.z);
         PhysRenderChunk oldRenderer = renderChunks.get(chunkPos);
         if (oldRenderer != null) {

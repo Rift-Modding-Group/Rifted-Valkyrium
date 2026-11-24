@@ -66,6 +66,7 @@
     "tileentity.MixinTileEntity",
     "util.math.MixinChunkPos",
     "world.MixinBlockDynamicLiquid",
+    "world.MixinBlockFluidBase",
     "world.MixinWorld",
     "world.MixinWorldFluid",
     "world.MixinWorldServerParticles",
