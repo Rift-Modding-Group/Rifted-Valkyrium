@@ -106,7 +106,7 @@ public abstract class MixinChunk {
     @Inject(method = "setBlockState", at = @At("RETURN"))
     private void updateWaterSeal(BlockPos pos, IBlockState state, CallbackInfoReturnable<IBlockState> callback) {
         if (callback.getReturnValue() == null || !ShipChunkAllocator.isChunkInShipyard(this.x, this.z)) return;
-        ValkyrienUtils.getPhysoManagingBlock(this.world, pos).ifPresent(ship -> ship.getWaterVolume().markDirty());
+        ValkyrienUtils.getPhysoManagingBlock(this.world, pos).ifPresent(ship -> ship.getWaterVolume().onBlockUpdate(pos, callback.getReturnValue(), state));
     }
 
     /**

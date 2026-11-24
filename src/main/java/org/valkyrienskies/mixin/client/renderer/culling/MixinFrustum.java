@@ -4,10 +4,12 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.MathHelper;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
+import org.valkyrienskies.mod.common.ships.chunk_claims.ShipChunkAllocator;
 
 @Mixin(Frustum.class)
 public abstract class MixinFrustum {
@@ -24,11 +26,12 @@ public abstract class MixinFrustum {
      */
     @Overwrite
     public boolean isBoundingBoxInFrustum(AxisAlignedBB axisAlignedBB) {
-        BlockPos pos = new BlockPos((axisAlignedBB.minX + axisAlignedBB.maxX) / 2,
-            (axisAlignedBB.minY + axisAlignedBB.maxY) / 2,
-            (axisAlignedBB.minZ + axisAlignedBB.maxZ) / 2);
-        axisAlignedBB = ValkyrienUtils
-            .getAABBInGlobal(axisAlignedBB, Minecraft.getMinecraft().world, pos);
+        double centerX = (axisAlignedBB.minX + axisAlignedBB.maxX) / 2;
+        double centerZ = (axisAlignedBB.minZ + axisAlignedBB.maxZ) / 2;
+        if (ShipChunkAllocator.isChunkInShipyard(MathHelper.floor(centerX) >> 4, MathHelper.floor(centerZ) >> 4)) {
+            BlockPos pos = new BlockPos(centerX, (axisAlignedBB.minY + axisAlignedBB.maxY) / 2, centerZ);
+            axisAlignedBB = ValkyrienUtils.getAABBInGlobal(axisAlignedBB, Minecraft.getMinecraft().world, pos);
+        }
         return isBoxInFrustum(axisAlignedBB.minX, axisAlignedBB.minY, axisAlignedBB.minZ,
             axisAlignedBB.maxX, axisAlignedBB.maxY, axisAlignedBB.maxZ);
     }

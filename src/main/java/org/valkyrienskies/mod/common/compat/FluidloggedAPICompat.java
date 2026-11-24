@@ -82,7 +82,7 @@ public class FluidloggedAPICompat {
 
     @SubscribeEvent
     public static void onFluidlogged(@Nonnull FluidloggedEvent event) {
-        ValkyrienUtils.getPhysoManagingBlock(event.world, event.pos).ifPresent(ship -> ship.getWaterVolume().markDirty());
+        ValkyrienUtils.getPhysoManagingBlock(event.world, event.pos).ifPresent(ship -> ship.getWaterVolume().markFluidDirty(event.pos));
     }
 
     @SubscribeEvent

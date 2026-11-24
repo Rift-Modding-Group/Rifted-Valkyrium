@@ -1,5 +1,6 @@
 package org.valkyrienskies.mixin.client.renderer;
 
+import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import net.minecraft.block.*;
 import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
@@ -22,6 +23,7 @@ import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Slice;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.valkyrienskies.mod.common.ships.chunk_claims.ShipChunkAllocator;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
@@ -33,6 +35,23 @@ import java.util.Optional;
 
 @Mixin(RenderGlobal.class)
 public abstract class MixinRenderGlobal {
+    @ModifyExpressionValue(
+            method = "setupTerrain",
+            slice = @Slice(from = @At(value = "INVOKE",
+                    target = "Lnet/minecraft/client/renderer/ChunkRenderContainer;initialize(DDD)V")),
+            at = {
+                    @At(value = "FIELD", target = "Lnet/minecraft/entity/Entity;posX:D"),
+                    @At(value = "FIELD", target = "Lnet/minecraft/entity/Entity;posY:D"),
+                    @At(value = "FIELD", target = "Lnet/minecraft/entity/Entity;posZ:D")
+            },
+            require = 6,
+            allow = 6
+    )
+    private static double stabilizeTerrainCameraPosition(double coordinate) {
+        // Compare at 1/4096-block precision while retaining the exact rendering camera position.
+        return Math.rint(coordinate * 4096D) / 4096D;
+    }
+
     @Shadow
     @Final
     public Map<Integer, DestroyBlockProgress> damagedBlocks;
@@ -53,9 +72,7 @@ public abstract class MixinRenderGlobal {
     public WorldClient world;
 
     @Shadow
-    public static void drawSelectionBoundingBox(AxisAlignedBB box, float red, float green,
-                                                float blue, float alpha) {
-    }
+    public static void drawSelectionBoundingBox(AxisAlignedBB box, float red, float green, float blue, float alpha) {}
 
     @Shadow
     public abstract void preRenderDamagedBlocks();
@@ -69,8 +86,7 @@ public abstract class MixinRenderGlobal {
      * @author xd
      */
     @Overwrite
-    public void drawBlockDamageTexture(Tessellator tessellatorIn, BufferBuilder worldRendererIn,
-                                       Entity entityIn, float partialTicks) {
+    public void drawBlockDamageTexture(Tessellator tessellatorIn, BufferBuilder worldRendererIn, Entity entityIn, float partialTicks) {
         double d0 = entityIn.lastTickPosX + (entityIn.posX - entityIn.lastTickPosX) * partialTicks;
         double d1 = entityIn.lastTickPosY + (entityIn.posY - entityIn.lastTickPosY) * partialTicks;
         double d2 = entityIn.lastTickPosZ + (entityIn.posZ - entityIn.lastTickPosZ) * partialTicks;

@@ -35,7 +35,7 @@ public class VSWorldEventListener implements IWorldEventListener {
 
     @Override
     public void notifyBlockUpdate(World worldIn, BlockPos pos, IBlockState oldState, IBlockState newState, int flags) {
-        ValkyrienUtils.getPhysoManagingBlock(worldIn, pos).ifPresent(ship -> ship.getWaterVolume().markDirty());
+        ValkyrienUtils.getPhysoManagingBlock(worldIn, pos).ifPresent(ship -> ship.getWaterVolume().onBlockUpdate(pos, oldState, newState));
         //is here for nothirium compat
         if (worldIn.isRemote) {
             Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(worldIn, pos);
@@ -84,7 +84,9 @@ public class VSWorldEventListener implements IWorldEventListener {
                 PhysicsObject ship = ValkyrienUtils.getPhysoManagingBlock(this.worldObj, pos).orElse(null);
                 if (ship == null || ship.getShipRenderer() == null) continue;
 
-                ship.getWaterVolume().markDirty();
+                ship.getWaterVolume().markFluidDirty(
+                        Math.max(minX, chunkX << 4), minY, Math.max(minZ, chunkZ << 4),
+                        Math.min(maxX, (chunkX << 4) + 15), maxY, Math.min(maxZ, (chunkZ << 4) + 15));
                 ship.getShipRenderer().updateRange(
                         Math.max(minX - 1, chunkX << 4), minY - 1, Math.max(minZ - 1, chunkZ << 4),
                         Math.min(maxX + 1, (chunkX << 4) + 15), maxY + 1, Math.min(maxZ + 1, (chunkZ << 4) + 15),

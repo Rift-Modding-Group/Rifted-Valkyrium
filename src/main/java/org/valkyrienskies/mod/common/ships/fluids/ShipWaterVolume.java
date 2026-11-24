@@ -1,5 +1,6 @@
 package org.valkyrienskies.mod.common.ships.fluids;
 
+import it.unimi.dsi.fastutil.longs.Long2DoubleOpenHashMap;
 import net.minecraft.block.BlockDoor;
 import net.minecraft.block.BlockLiquid;
 import net.minecraft.block.material.Material;
@@ -53,14 +54,51 @@ public class ShipWaterVolume {
     private int sizeY;
     private int sizeZ;
     private byte[] openFaces = new byte[0];
-    private BitSet localFluid = new BitSet();
-    private BitSet localWater = new BitSet();
-    private BitSet air = new BitSet();
+    private final BitSet localFluid = new BitSet();
+    private final BitSet localWater = new BitSet();
+    private final BitSet air = new BitSet();
     private BitSet interior = new BitSet();
+    private final BitSet changedCells = new BitSet();
+    private final BitSet acceptsWater = new BitSet();
+    private final BitSet passages = new BitSet();
+    private final Long2DoubleOpenHashMap waterHeights = new Long2DoubleOpenHashMap();
 
     public void markDirty() {
         this.dirty = true;
         this.hullBoundsDirty = true;
+    }
+
+    public void onBlockUpdate(BlockPos pos, IBlockState oldState, IBlockState newState) {
+        boolean oldHull = oldState.getMaterial() != Material.AIR && !oldState.getMaterial().isLiquid()
+                && !(oldState.getBlock() instanceof IFluidBlock);
+        boolean newHull = newState.getMaterial() != Material.AIR && !newState.getMaterial().isLiquid()
+                && !(newState.getBlock() instanceof IFluidBlock);
+        if (oldState != newState && (oldHull || newHull)) this.markDirty();
+        else this.markFluidDirty(pos);
+    }
+
+    public void markFluidDirty(BlockPos pos) {
+        this.markFluidDirty(pos.getX(), pos.getY(), pos.getZ(), pos.getX(), pos.getY(), pos.getZ());
+    }
+
+    /**
+     * Coalesces changed fluid cells and their neighbors without invalidating structural bounds.
+     * */
+    public void markFluidDirty(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
+        if (this.dirty) return;
+        int startX = Math.max(0, minX - this.origin.getX() - 1);
+        int endX = Math.min(this.sizeX - 1, maxX - this.origin.getX() + 1);
+        int startY = Math.max(0, minY - this.origin.getY() - 1);
+        int endY = Math.min(this.sizeY - 1, maxY - this.origin.getY() + 1);
+        int startZ = Math.max(0, minZ - this.origin.getZ() - 1);
+        int endZ = Math.min(this.sizeZ - 1, maxZ - this.origin.getZ() + 1);
+        if (startX > endX) return;
+        for (int z = startZ; z <= endZ; z++) {
+            for (int y = startY; y <= endY; y++) {
+                int base = this.sizeX * (y + this.sizeY * z);
+                this.changedCells.set(base + startX, base + endX + 1);
+            }
+        }
     }
 
     public Snapshot getSnapshot() {
@@ -69,6 +107,7 @@ public class ShipWaterVolume {
 
     public void update(PhysicsObject ship) {
         World world = ship.getWorld();
+        boolean facesChanged = this.dirty;
         if (this.dirty) {
             AxisAlignedBB bounds = getHullBounds(ship);
             this.sizeX = bounds == null ? 0 : (int) (bounds.maxX - bounds.minX) + 1;
@@ -86,53 +125,69 @@ public class ShipWaterVolume {
             }
             this.volumeLimitWarned = false;
             this.origin = new BlockPos(bounds.minX, bounds.minY, bounds.minZ);
-            byte[] faces = new byte[(int) volume];
-            BitSet fluids = new BitSet((int) volume);
-            BitSet water = new BitSet((int) volume);
-            BitSet empty = new BitSet((int) volume);
+            this.openFaces = new byte[(int) volume];
+            this.localFluid.clear();
+            this.localWater.clear();
+            this.air.clear();
+            this.acceptsWater.clear();
+            this.passages.clear();
+            this.changedCells.clear();
+            this.changedCells.set(0, (int) volume);
+        }
+        if (!this.changedCells.isEmpty()) {
             boolean fluidlogged = Loader.isModLoaded("fluidlogged_api");
             BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
-            for (int z = 0; z < this.sizeZ; z++) {
-                for (int y = 0; y < this.sizeY; y++) {
-                    for (int x = 0; x < this.sizeX; x++) {
-                        pos.setPos(this.origin.getX() + x, this.origin.getY() + y, this.origin.getZ() + z);
-                        int index = x + this.sizeX * (y + this.sizeY * z);
-                        if (!ship.getChunkClaim().containsBlock(pos)) {
-                            faces[index] = 63;
-                            empty.set(index);
-                            continue;
-                        }
-                        Chunk chunk = ship.getChunkAt(pos.getX() >> 4, pos.getZ() >> 4);
-                        if (chunk == null || !chunk.isLoaded() || chunk.isEmpty()) {
-                            this.snapshot = new Snapshot(BlockPos.ORIGIN, 0, 0, 0, new BitSet(), new BitSet(), new BitSet());
-                            return;
-                        }
-                        IBlockState state = chunk.getBlockState(pos);
-                        IBlockState actual = state.getActualState(world, pos);
-                        if (state.getMaterial() == Material.AIR) empty.set(index);
-                        IBlockState fluid = state;
-                        if (fluidlogged) fluid = FluidloggedAPICompat.getFluidOrReal(world, pos);
-                        if (fluid.getMaterial().isLiquid()) fluids.set(index);
-                        if (fluid.getMaterial() == Material.WATER) water.set(index);
-                        if (actual.getBlock() instanceof BlockDoor && !actual.getValue(BlockDoor.OPEN)) continue;
+            for (int index = this.changedCells.nextSetBit(0); index >= 0; index = this.changedCells.nextSetBit(index + 1)) {
+                pos.setPos(this.origin.getX() + index % this.sizeX, this.origin.getY() + index / this.sizeX % this.sizeY,
+                        this.origin.getZ() + index / (this.sizeX * this.sizeY));
+                byte faces = 63;
+                this.localFluid.clear(index);
+                this.localWater.clear(index);
+                this.air.set(index);
+                this.acceptsWater.clear(index);
+                this.passages.clear(index);
+                if (ship.getChunkClaim().containsBlock(pos)) {
+                    Chunk chunk = ship.getChunkAt(pos.getX() >> 4, pos.getZ() >> 4);
+                    if (chunk == null || !chunk.isLoaded() || chunk.isEmpty()) {
+                        this.markDirty();
+                        this.snapshot = new Snapshot(BlockPos.ORIGIN, 0, 0, 0, new BitSet(), new BitSet(), new BitSet());
+                        return;
+                    }
+                    IBlockState state = chunk.getBlockState(pos);
+                    IBlockState actual = state.getActualState(world, pos);
+                    this.air.set(index, state.getMaterial() == Material.AIR);
+                    IBlockState fluid = state;
+                    if (fluidlogged) fluid = FluidloggedAPICompat.getFluidOrReal(world, pos);
+                    this.localFluid.set(index, fluid.getMaterial().isLiquid());
+                    this.localWater.set(index, fluid.getMaterial() == Material.WATER);
+                    faces = 0;
+                    if (!(actual.getBlock() instanceof BlockDoor) || actual.getValue(BlockDoor.OPEN)) {
                         for (EnumFacing side : EnumFacing.values()) {
                             boolean open;
                             if (fluidlogged) open = FluidloggedAPICompat.canWaterFlow(world, pos, actual, side);
                             else open = actual.getBlockFaceShape(world, pos, side) != BlockFaceShape.SOLID;
-                            if (open) faces[index] |= (byte) (1 << side.getIndex());
+                            if (open) faces |= (byte) (1 << side.getIndex());
                         }
                     }
+                    if (!world.isRemote && faces != 0) {
+                        boolean accepts;
+                        if (fluidlogged) accepts = FluidloggedAPICompat.canAdmitWater(world, pos, state);
+                        else accepts = state.getMaterial() == Material.AIR
+                                || state.getMaterial() == Material.WATER && state.getBlock() instanceof BlockLiquid && state.getValue(BlockLiquid.LEVEL) != 0;
+                        this.acceptsWater.set(index, accepts);
+                        this.passages.set(index, !this.localFluid.get(index));
+                    }
                 }
+                if (this.openFaces[index] != faces) facesChanged = true;
+                this.openFaces[index] = faces;
             }
-            this.openFaces = faces;
-            this.interior = findInteriorCells(this.sizeX, this.sizeY, this.sizeZ, faces);
-            this.localFluid = fluids;
-            this.localWater = water;
-            this.air = empty;
+            if (facesChanged) this.interior = findInteriorCells(this.sizeX, this.sizeY, this.sizeZ, this.openFaces);
+            this.changedCells.clear();
             this.dirty = false;
         }
 
         ShipTransform transform = ship.getShipTransform();
+        this.waterHeights.clear();
         byte[] wetFaces = new byte[this.openFaces.length];
         Arrays.fill(wetFaces, (byte) -1);
         Vector3d center = new Vector3d();
@@ -152,7 +207,14 @@ public class ShipWaterVolume {
                 double faceBottom = center.y + normal.y * 0.5D - verticalExtent + Math.abs(normal.y) * 0.5D;
                 double sampleX = center.x + normal.x * 0.5001D;
                 double sampleZ = center.z + normal.z * 0.5001D;
-                if (waterHeight(world, sampleX, faceBottom + 0.0001D, sampleZ) > faceBottom + 0.0001D) {
+                double sampleY = faceBottom + 0.0001D;
+                long sample = new BlockPos(sampleX, sampleY, sampleZ).toLong();
+                double height = this.waterHeights.getOrDefault(sample, -Double.MAX_VALUE);
+                if (height == -Double.MAX_VALUE) {
+                    height = waterHeight(world, sampleX, sampleY, sampleZ);
+                    if (height > sampleY) this.waterHeights.put(sample, height);
+                }
+                if (height > sampleY) {
                     wet |= 1 << side.getIndex();
                 }
             }
@@ -161,22 +223,13 @@ public class ShipWaterVolume {
         }, new BitSet());
         if (!world.isRemote && ++this.inflowTicks >= Blocks.FLOWING_WATER.tickRate(world)) {
             this.inflowTicks = 0;
-            BitSet fillable = new BitSet(this.openFaces.length);
-            BitSet passages = new BitSet(this.openFaces.length);
+            BitSet fillable = (BitSet) this.acceptsWater.clone();
+            fillable.andNot(dry);
+            fillable.and(this.interior);
+            BitSet passages = (BitSet) this.passages.clone();
+            passages.andNot(dry);
+            passages.andNot(fillable);
             boolean fluidlogged = Loader.isModLoaded("fluidlogged_api");
-            for (int index = 0; index < this.openFaces.length; index++) {
-                if (dry.get(index) || this.openFaces[index] == 0) continue;
-                BlockPos pos = this.origin.add(index % this.sizeX, index / this.sizeX % this.sizeY, index / (this.sizeX * this.sizeY));
-                if (!ship.getChunkClaim().containsBlock(pos)) continue;
-                IBlockState state = world.getBlockState(pos);
-                boolean acceptsWater;
-                if (fluidlogged) acceptsWater = FluidloggedAPICompat.canAdmitWater(world, pos, state);
-                else acceptsWater = state.getMaterial() == Material.AIR
-                        || state.getMaterial() == Material.WATER && state.getBlock() instanceof BlockLiquid && state.getValue(BlockLiquid.LEVEL) != 0;
-                // Exterior cells relay ocean supply without creating ship-space fluid.
-                if (acceptsWater && this.interior.get(index)) fillable.set(index);
-                else if (!this.localFluid.get(index)) passages.set(index);
-            }
             BitSet intake = findInflowCells(this.sizeX, this.sizeY, this.sizeZ, this.openFaces, wetFaces,
                     fillable, passages, this.localWater);
             List<BlockPos> incoming = new ArrayList<>();
@@ -185,7 +238,7 @@ public class ShipWaterVolume {
             }
             for (BlockPos pos : incoming) {
                 boolean placed;
-                if (Loader.isModLoaded("fluidlogged_api")) placed = FluidloggedAPICompat.admitWater(world, pos);
+                if (fluidlogged) placed = FluidloggedAPICompat.admitWater(world, pos);
                 else {
                     IBlockState state = world.getBlockState(pos);
                     if (state.getMaterial() != Material.AIR && (state.getMaterial() != Material.WATER
@@ -198,7 +251,9 @@ public class ShipWaterVolume {
                 this.localFluid.set(index);
                 this.localWater.set(index);
                 this.air.clear(index);
-                this.markDirty();
+                this.acceptsWater.clear(index);
+                this.passages.clear(index);
+                this.markFluidDirty(pos);
             }
         }
         dry.or(this.interior);
