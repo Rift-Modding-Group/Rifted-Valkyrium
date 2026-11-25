@@ -1,6 +1,8 @@
 package org.valkyrienskies.mod.client.render;
 
 import java.util.List;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -12,6 +14,7 @@ import net.minecraft.client.renderer.*;
 import net.minecraft.client.renderer.culling.ICamera;
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 import net.minecraft.client.renderer.vertex.VertexBuffer;
+import net.minecraft.entity.Entity;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.BlockRenderLayer;
 import net.minecraft.util.math.AxisAlignedBB;
@@ -24,6 +27,7 @@ import net.minecraftforge.client.ForgeHooksClient;
 import net.minecraftforge.client.MinecraftForgeClient;
 import net.minecraftforge.common.MinecraftForge;
 import org.lwjgl.opengl.GL11;
+import org.joml.Vector3d;
 import org.valkyrienskies.mod.client.compat.ShipTextureAnimationCompat;
 import org.valkyrienskies.mod.common.ships.fluids.ShipWaterVolume;
 import org.valkyrienskies.mod.common.util.TransformedAABB;
@@ -39,6 +43,7 @@ public class PhysRenderChunk {
     private Set<TileEntity> tileEntitiesToRender;
     private boolean tileEntitiesDirty;
     private int lightingDirtySections;
+    private Vector3d translucentCamera = new Vector3d();
 
     public PhysRenderChunk(PhysicsObject toRender, Chunk chunk) {
         this.toRender = toRender;
@@ -64,6 +69,18 @@ public class PhysRenderChunk {
     }
 
     public void renderBlockLayer(BlockRenderLayer layerToRender, double partialTicks, int pass, ICamera iCamera) {
+        IVSRenderChunk[] sections = this.renderChunks;
+        if (layerToRender == BlockRenderLayer.TRANSLUCENT) {
+            Entity camera = Minecraft.getMinecraft().getRenderViewEntity();
+            if (camera == null) return;
+            this.translucentCamera = ShipTranslucentMesh.getCameraPosition(
+                    camera, partialTicks,
+                    this.toRender.getShipTransformationManager().getRenderTransform()
+            );
+            sections = this.renderChunks.clone();
+            Arrays.sort(sections, Comparator.nullsLast(Comparator.comparingDouble((IVSRenderChunk section) ->
+                    Math.abs(section.minY() + 8D - this.translucentCamera.y)).reversed()));
+        }
         // Thousands of light callbacks can target the same section during one block change.
         // Consume each section once, without creating renderers for empty, light-only storage.
         int lightingUpdates = this.lightingDirtySections;
@@ -98,8 +115,7 @@ public class PhysRenderChunk {
             );
         }
         float skyFactor = -1F;
-        for (int i = 0; i < 16; i++) {
-            IVSRenderChunk renderChunk = renderChunks[i];
+        for (IVSRenderChunk renderChunk : sections) {
             if (renderChunk != null) {
                 AxisAlignedBB renderChunkBB = new AxisAlignedBB(chunk.x << 4, renderChunk.minY(), chunk.z << 4, (chunk.x << 4) + 16, renderChunk.minY() + 16, (chunk.z << 4) + 16);
                 TransformedAABB polygon = new TransformedAABB(renderChunkBB, toRender.getShipTransformationManager().getRenderTransform(), TransformType.SUBSPACE_TO_GLOBAL);
@@ -188,6 +204,7 @@ public class PhysRenderChunk {
     }
 
     private static class RenderLayerVBO implements IVSRenderChunk {
+        private final ShipTranslucentMesh translucentMesh = new ShipTranslucentMesh();
         private final ShipTextureAnimationCompat textureAnimation = new ShipTextureAnimationCompat(); //for celeritas and chibi compat
         Chunk chunkToRender;
         int yMin, yMax;
@@ -268,6 +285,13 @@ public class PhysRenderChunk {
                 case TRANSLUCENT:
                     if (this.needsTranslucentUpdate) {
                         this.updateList(layerToRender);
+                    }
+                    BufferBuilder sortedBuffer = FastBlockModelRenderer.VERTEX_BUILDER;
+                    if (this.translucentMesh.sort(sortedBuffer, this.parent.translucentCamera,
+                            this.parent.toRender.getShipRenderer().offsetPos)) {
+                        sortedBuffer.finishDrawing();
+                        this.translucentBuffer.bufferData(sortedBuffer.getByteBuffer());
+                        sortedBuffer.reset();
                     }
                     FastBlockModelRenderer.renderVertexBuffer(translucentBuffer);
                     break;
@@ -362,6 +386,7 @@ public class PhysRenderChunk {
             }
 
             this.textureAnimation.collect(layerToUpdate, vsChunkBuilder);
+            if (layerToUpdate == BlockRenderLayer.TRANSLUCENT) this.translucentMesh.capture(vsChunkBuilder);
             vsChunkBuilder.finishDrawing();
             renderBuffer.bufferData(vsChunkBuilder.getByteBuffer());
             vsChunkBuilder.reset();
@@ -391,6 +416,7 @@ public class PhysRenderChunk {
     }
 
     public static class RenderLayerDisplayList implements IVSRenderChunk {
+        private final ShipTranslucentMesh translucentMesh = new ShipTranslucentMesh();
         private final ShipTextureAnimationCompat textureAnimation = new ShipTextureAnimationCompat();
 
         Chunk chunkToRender;
@@ -473,6 +499,15 @@ public class PhysRenderChunk {
                     if (needsTranslucentUpdate) {
                         updateList(layerToRender);
                     }
+                    Tessellator tessellator = Tessellator.getInstance();
+                    if (this.translucentMesh.sort(
+                            tessellator.getBuffer(), this.parent.translucentCamera,
+                            this.parent.toRender.getShipRenderer().offsetPos
+                    )) {
+                        GL11.glNewList(this.glCallListTranslucent, GL11.GL_COMPILE);
+                        tessellator.draw();
+                        GL11.glEndList();
+                    }
                     GL11.glCallList(glCallListTranslucent);
                     break;
                 default:
@@ -549,6 +584,7 @@ public class PhysRenderChunk {
                 }
             }
             this.textureAnimation.collect(layerToUpdate, worldrenderer);
+            if (layerToUpdate == BlockRenderLayer.TRANSLUCENT) this.translucentMesh.capture(worldrenderer);
             tessellator.draw();
             // worldrenderer.finishDrawing();
             ForgeHooksClient.setRenderLayer(oldLayer);

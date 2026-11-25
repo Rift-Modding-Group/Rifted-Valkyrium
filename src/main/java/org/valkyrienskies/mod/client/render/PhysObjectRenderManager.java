@@ -29,6 +29,10 @@ import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.text.DecimalFormat;
 import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -57,6 +61,8 @@ public class PhysObjectRenderManager {
     }
 
     public void renderBlockLayer(BlockRenderLayer layerToRender, double partialTicks, int pass, ICamera camera) {
+        Entity viewEntity = Minecraft.getMinecraft().getRenderViewEntity();
+        if (viewEntity == null) return;
         GL11.glPushMatrix();
         Minecraft.getMinecraft().entityRenderer.enableLightmap();
         // int i = parent.wrapper.getBrightnessForRender((float) partialTicks);
@@ -69,7 +75,18 @@ public class PhysObjectRenderManager {
 
         applyRenderTransform(partialTicks);
         ShipFluidBoundaryRenderer.render(this.fluidBoundaryRenderer, this.parent, layerToRender, this.offsetPos);
-        for (PhysRenderChunk renderChunk : renderChunks.values()) {
+        Collection<PhysRenderChunk> chunks = this.renderChunks.values();
+        if (layerToRender == BlockRenderLayer.TRANSLUCENT) {
+            Vector3d cameraPosition = ShipTranslucentMesh.getCameraPosition(
+                    viewEntity, partialTicks,
+                    this.parent.getShipTransformationManager().getRenderTransform()
+            );
+            List<PhysRenderChunk> sortedChunks = new ArrayList<>(chunks);
+            sortedChunks.sort(Comparator.comparingDouble((PhysRenderChunk renderChunk) -> cameraPosition.distanceSquared(
+                    (renderChunk.chunk.x << 4) + 8D, cameraPosition.y, (renderChunk.chunk.z << 4) + 8D)).reversed());
+            chunks = sortedChunks;
+        }
+        for (PhysRenderChunk renderChunk : chunks) {
             renderChunk.renderBlockLayer(layerToRender, partialTicks, pass, camera);
         }
 
