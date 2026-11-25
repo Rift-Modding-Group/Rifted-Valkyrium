@@ -52,7 +52,6 @@ import org.valkyrienskies.mod.common.compat.LocksCompat;
 import org.valkyrienskies.mod.common.compat.MalisisCoreCompat;
 import org.valkyrienskies.mod.common.compat.FluidloggedAPICompat;
 import org.valkyrienskies.mod.common.compat.FairyLightsCompat;
-import org.valkyrienskies.mod.common.compat.FurnitureCompat;
 import org.valkyrienskies.mod.common.item.ItemShipAssemblerStick;
 import org.valkyrienskies.mod.common.item.ItemShipSizeLockStick;
 import org.valkyrienskies.mod.common.item.ItemPhysicsStick;
@@ -165,7 +164,6 @@ public class ValkyrienSkiesMod {
         if (Loader.isModLoaded("malisiscore")) MinecraftForge.EVENT_BUS.register(MalisisCoreCompat.class);
         if (Loader.isModLoaded("fluidlogged_api")) MinecraftForge.EVENT_BUS.register(FluidloggedAPICompat.class);
         if (Loader.isModLoaded("fairylights")) MinecraftForge.EVENT_BUS.register(FairyLightsCompat.class);
-        MinecraftForge.EVENT_BUS.register(FurnitureCompat.class);
         proxy.preInit(event);
 
         LOGGER.debug("Initializing the Rifted Valkyrium API.");

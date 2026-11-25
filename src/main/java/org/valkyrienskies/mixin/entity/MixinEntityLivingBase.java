@@ -10,10 +10,11 @@ import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.item.EntityXPOrb;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.util.EnumFacing;
+import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
-import net.minecraftforge.common.MinecraftForge;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
@@ -26,7 +27,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMount;
-import org.valkyrienskies.mod.common.capability.anchored_mount.ImplCapabilityShipAnchoredMount;
 import org.valkyrienskies.mod.common.capability.entity_ship_draggable.IEntityShipDraggable;
 import org.valkyrienskies.mod.common.ships.pathfinding.ShipPath;
 import org.valkyrienskies.mod.common.ships.pathfinding.ShipPathfinder;
@@ -36,7 +36,6 @@ import org.valkyrienskies.mod.common.network.MessageShipBedRespawn;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import valkyrienwarfare.api.TransformType;
-import valkyrienwarfare.api.event.ShipAnchoredEntityDismountEvent;
 
 @Mixin(EntityLivingBase.class)
 public class MixinEntityLivingBase {
@@ -158,7 +157,7 @@ public class MixinEntityLivingBase {
     }
 
     /**
-     * Selects a default ship-local exit and applies event handlers' placement in the ship's current frame.
+     * Selects a ship-local exit and places the rider in the ship's current frame.
      */
     @Inject(method = "dismountEntity", at = @At("HEAD"), cancellable = true)
     private void dismountFromShipAnchoredSeat(@Nullable Entity mountedEntity, @NotNull CallbackInfo ci) {
@@ -173,48 +172,53 @@ public class MixinEntityLivingBase {
         PhysicsObject mountedShip = ValkyrienUtils.getPhysoManagingBlock(world, localAnchorBlock).orElse(null);
         if (mountedShip == null) return;
 
-        Vec3d localRiderPosition = mountedShip.transformVector(thisEntity.getPositionVector(), TransformType.GLOBAL_TO_SUBSPACE);
-        Vec3d localDismountPos = localRiderPosition;
+        //vanilla dismount, but ship friendly for anchored entities
+        Vec3d localMountPosition = anchoredMount.getLocalMountPos();
+        double riderY = localMountPosition.y + mountedEntity.getMountedYOffset() + thisEntity.getYOffset();
+        Vec3d localDismountPos = localMountPosition.add(0D, mountedEntity.height, 0D);
+        EnumFacing forward = mountedEntity.getAdjustedHorizontalFacing();
+        if (forward != null) {
+            EnumFacing sideways = forward.rotateY();
+            int[][] offsets = {{0, 1}, {0, -1}, {-1, 1}, {-1, -1}, {1, 1}, {1, -1}, {-1, 0}, {1, 0}, {0, 1}};
+            double centerX = Math.floor(localMountPosition.x) + 0.5D;
+            double centerZ = Math.floor(localMountPosition.z) + 0.5D;
+            double halfWidth = thisEntity.width / 2D;
+            AxisAlignedBB riderBounds = new AxisAlignedBB(
+                    centerX - halfWidth, localMountPosition.y, centerZ - halfWidth,
+                    centerX + halfWidth, Math.floor(localMountPosition.y) + thisEntity.height, centerZ + halfWidth
+            );
 
-        //give mounts without registered alignment a nearby exit before ShipAnchoredEntityDismountEvent choose their placement
-        if (!ImplCapabilityShipAnchoredMount.isAlignedEntity(mountedEntity.getClass())) {
-            BlockPos nearestExit = localAnchorBlock.up();
-            double nearestDistance = Double.MAX_VALUE;
-            for (int offsetX = -1; offsetX <= 1; offsetX++) {
-                for (int offsetZ = -1; offsetZ <= 1; offsetZ++) {
-                    if (offsetX == 0 && offsetZ == 0) continue;
+            for (int[] offset : offsets) {
+                double offsetX = forward.getXOffset() * offset[0] + sideways.getXOffset() * offset[1];
+                double offsetZ = forward.getZOffset() * offset[0] + sideways.getZOffset() * offset[1];
+                double x = centerX + offsetX;
+                double z = centerZ + offsetZ;
+                AxisAlignedBB candidateBounds = riderBounds.offset(offsetX, 0D, offsetZ);
+                if (!world.collidesWithAnyBlock(candidateBounds)) {
+                    BlockPos supportingBlock = new BlockPos(x, riderY, z);
+                    if (world.getBlockState(supportingBlock).isSideSolid(world, supportingBlock, EnumFacing.UP)) {
+                        localDismountPos = new Vec3d(x, riderY + 1D, z);
+                        break;
+                    }
 
-                    for (int offsetY = -1; offsetY <= 1; offsetY++) {
-                        BlockPos localDismountBlock = localAnchorBlock.add(offsetX, offsetY, offsetZ);
-                        BlockPos supportingBlock = localDismountBlock.down();
-                        PhysicsObject supportingShip = ValkyrienUtils.getPhysoManagingBlock(world, supportingBlock).orElse(null);
-                        if (supportingShip != null && supportingShip.getUuid().equals(mountedShip.getUuid())
-                                && world.getBlockState(supportingBlock).isTopSolid()
-                                && !world.getBlockState(localDismountBlock).getMaterial().isSolid()
-                                && !world.getBlockState(localDismountBlock.up()).getMaterial().isSolid()
-                        ) {
-                            double distance = localRiderPosition.squareDistanceTo(
-                                    localDismountBlock.getX() + 0.5D, localDismountBlock.getY(), localDismountBlock.getZ() + 0.5D
-                            );
-                            if (distance < nearestDistance) {
-                                nearestExit = localDismountBlock;
-                                nearestDistance = distance;
-                            }
-                        }
+                    supportingBlock = new BlockPos(x, riderY - 1D, z);
+                    if (world.getBlockState(supportingBlock).isSideSolid(world, supportingBlock, EnumFacing.UP)
+                            || world.getBlockState(supportingBlock).getMaterial() == Material.WATER
+                    ) {
+                        localDismountPos = new Vec3d(x, riderY + 1D, z);
+                    }
+                }
+                else {
+                    BlockPos supportingBlock = new BlockPos(x, riderY + 1D, z);
+                    if (!world.collidesWithAnyBlock(candidateBounds.offset(0D, 1D, 0D))
+                            && world.getBlockState(supportingBlock).isSideSolid(world, supportingBlock, EnumFacing.UP)
+                    ) {
+                        localDismountPos = new Vec3d(x, riderY + 2D, z);
                     }
                 }
             }
-
-            localDismountPos = new Vec3d(nearestExit.getX() + 0.5D, nearestExit.getY(), nearestExit.getZ() + 0.5D);
         }
 
-        //custom placement by events
-        ShipAnchoredEntityDismountEvent event = new ShipAnchoredEntityDismountEvent(
-                thisEntity, mountedEntity, mountedShip, anchoredMount.getLocalMountPos(), localAnchorBlock, localDismountPos
-        );
-        MinecraftForge.EVENT_BUS.post(event);
-
-        localDismountPos = event.getLocalDismountPos();
         Vector3d dismountPos = new Vector3d(localDismountPos.x, localDismountPos.y, localDismountPos.z);
         mountedShip.getShipTransform().transformPosition(dismountPos, TransformType.SUBSPACE_TO_GLOBAL);
 
@@ -228,8 +232,9 @@ public class MixinEntityLivingBase {
                     new MessageShipBedRespawn(player.dimension, mountedShip.getUuid(), dismountPos, mountedShip.getShipTransform()),
                     player
             );
+            player.setPosition(dismountPos.x, dismountPos.y, dismountPos.z);
         }
-        thisEntity.setPositionAndUpdate(dismountPos.x, dismountPos.y, dismountPos.z);
+        else thisEntity.setPositionAndUpdate(dismountPos.x, dismountPos.y, dismountPos.z);
         thisEntity.prevPosX = thisEntity.lastTickPosX = dismountPos.x;
         thisEntity.prevPosY = thisEntity.lastTickPosY = dismountPos.y;
         thisEntity.prevPosZ = thisEntity.lastTickPosZ = dismountPos.z;
