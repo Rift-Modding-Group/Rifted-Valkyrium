@@ -67,6 +67,15 @@ public class ShipLighting {
         return sky << 20 | packedLight & 0xFFFF;
     }
 
+    /**
+     * Samples terrain light directly for world fluid surfaces around the hull.
+     */
+    public static int getWorldLight(@NotNull World world, @NotNull BlockPos position, int minimumBlockLight) {
+        int sky = world.getLightFromNeighborsFor(EnumSkyBlock.SKY, position);
+        int block = Math.max(world.getLightFromNeighborsFor(EnumSkyBlock.BLOCK, position), minimumBlockLight);
+        return sky << 20 | block << 4;
+    }
+
     public static int getWorldSkyLight(@NotNull World world, @NotNull ShipTransform transform, @NotNull Vector3dc localPosition) {
         Vector3d globalPosition = new Vector3d(localPosition);
         transform.transformPosition(globalPosition, TransformType.SUBSPACE_TO_GLOBAL);

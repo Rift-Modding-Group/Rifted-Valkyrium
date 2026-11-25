@@ -24,6 +24,7 @@ import org.lwjgl.opengl.GL11;
 import org.valkyrienskies.mod.common.ships.fluids.ShipWaterVolume;
 import org.valkyrienskies.mod.common.ships.ship_transform.ShipTransform;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
+import org.valkyrienskies.mod.common.ships.ship_world.ShipLighting;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.Nullable;
@@ -73,7 +74,7 @@ public class ShipFluidBoundaryRenderer {
                 if (face.state().getBlock() instanceof BlockLiquid) {
                     color = 0xFF000000 | minecraft.getBlockColors().colorMultiplier(face.state(), world, face.worldPos(), 0) & 0xFFFFFF;
                 }
-                int light = world.getCombinedLight(face.worldPos(), fluid.getLuminosity(world, face.worldPos()));
+                int light = ShipLighting.getWorldLight(world, face.worldPos(), fluid.getLuminosity(world, face.worldPos()));
                 for (BlockRenderLayer target : BlockRenderLayer.values()) {
                     if (!face.state().getBlock().canRenderInLayer(face.state(), target)) continue;
                     BufferBuilder builder = builders.computeIfAbsent(target, ignored -> {
@@ -93,7 +94,7 @@ public class ShipFluidBoundaryRenderer {
                             builder.pos(point.x - offset.getX(), point.y - offset.getY(), point.z - offset.getZ())
                                     .color(color >> 16 & 255, color >> 8 & 255, color & 255, color >>> 24)
                                     .tex(sprite.getInterpolatedU(u * 16D), sprite.getInterpolatedV(v * 16D))
-                                    .lightmap(light & 65535, light >> 16 & 65535).endVertex();
+                                    .lightmap(light >> 16 & 65535, light & 65535).endVertex();
                         }
                     }
                 }
