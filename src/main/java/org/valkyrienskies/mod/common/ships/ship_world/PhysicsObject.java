@@ -39,6 +39,7 @@ import org.valkyrienskies.mod.common.physics.BlockSectionList;
 import org.valkyrienskies.mod.common.physics.physx.IPhysicsBlockController;
 import org.valkyrienskies.mod.common.ships.ShipData;
 import org.valkyrienskies.mod.common.ships.fluids.ShipWaterVolume;
+import org.valkyrienskies.mod.common.ships.fluids.ShipBlockIgnition;
 import org.valkyrienskies.mod.common.ships.ShipEntityAttachment;
 import org.valkyrienskies.mod.common.ships.block_relocation.MoveBlocks;
 import org.valkyrienskies.mod.common.ships.block_relocation.BlockRelocation;
@@ -265,6 +266,7 @@ public class PhysicsObject implements IPhysicsEntity {
             this.shipTransformationManager.updateShipTransform(newTransform);
         }
         this.waterVolume.update(this);
+        ShipBlockIgnition.tick(this);
     }
 
     // endregion

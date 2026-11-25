@@ -58,6 +58,7 @@ public class BlockRelocation {
         int dimension = world.provider.getDimension();
         if (world.getMinecraftServer() == null) return;
 
+        //for online players
         PlayerList playerList = world.getMinecraftServer().getPlayerList();
         Set<String> onlinePlayerFiles = new HashSet<>();
         for (EntityPlayerMP player : playerList.getPlayers()) {
@@ -75,6 +76,7 @@ public class BlockRelocation {
         NBTTagCompound ownerData = overworld.getWorldInfo().getPlayerNBTTagCompound();
         if (ownerData != null) relocateSavedPlayerBeds(ownerData, dimension, shipChunks, offset);
 
+        //include offline players
         Path playerDirectory = overworld.getSaveHandler().getWorldDirectory().toPath().resolve("playerdata");
         if (!Files.isDirectory(playerDirectory)) return;
         try (DirectoryStream<Path> playerFiles = Files.newDirectoryStream(playerDirectory, "*.dat")) {
