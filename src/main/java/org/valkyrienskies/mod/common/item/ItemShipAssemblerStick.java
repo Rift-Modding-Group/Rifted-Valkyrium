@@ -92,7 +92,7 @@ public class ItemShipAssemblerStick extends BaseItem {
             return EnumActionResult.FAIL;
         }
         BlockPos assemblyPosition = new BlockPos(VSMath.getCenter(bounds));
-        if (RiftedValkyriumAPI.createNewShip(serverWorld, assemblyPosition, bounds, new ShipBuildOptions().setPhysicsEnabled()) == null) {
+        if (RiftedValkyriumAPI.createNewShip(serverWorld, assemblyPosition, bounds, new ShipBuildOptions().setPhysicsEnabled(true)) == null) {
             return EnumActionResult.FAIL;
         }
         tag.removeTag(SELECTION_TAG);
