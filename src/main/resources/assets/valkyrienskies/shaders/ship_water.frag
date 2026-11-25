@@ -10,6 +10,9 @@ uniform int fogMode;
 uniform bool fogEnabled;
 uniform bool fogRadial;
 uniform float alphaThreshold;
+uniform bool clipFluids;
+uniform int shipLightCount;
+uniform vec4 shipLights[32];
 varying vec2 atlasUv;
 varying vec2 lightUv;
 varying vec4 vertexColor;
@@ -31,7 +34,7 @@ bool masked(vec3 local, vec4 size) {
     return dry > 0.5;
 }
 void main() {
-    if (texture2D(fluidSprites, atlasUv).r > 0.5) {
+    if (clipFluids && shipCount > 0 && texture2D(fluidSprites, atlasUv).r > 0.5) {
         for (int ship = 0; ship < shipCount; ship++) {
             vec3 position;
             vec4 size;
@@ -64,7 +67,20 @@ void main() {
             }
         }
     }
-    vec4 color = texture2D(atlas, atlasUv) * texture2D(lightmap, lightUv) * vertexColor;
+    vec2 illuminatedUv = lightUv;
+    if (illuminatedUv.x < 0.96875) {
+        for (int light = 0; light < 32; light++) {
+            if (light >= shipLightCount) break;
+            vec3 offset = eyePosition - shipLights[light].xyz;
+            float radius = shipLights[light].w;
+            float squaredDistance = dot(offset, offset);
+            if (squaredDistance < radius * radius) {
+                float blockLight = radius - sqrt(squaredDistance);
+                illuminatedUv.x = max(illuminatedUv.x, (blockLight * 16.0 + 8.0) / 256.0);
+            }
+        }
+    }
+    vec4 color = texture2D(atlas, atlasUv) * texture2D(lightmap, illuminatedUv) * vertexColor;
     if (color.a <= alphaThreshold) discard;
     if (fogEnabled) {
         float distance = fogRadial ? length(eyePosition) : abs(eyePosition.z);

@@ -13,6 +13,7 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.IWorldEventListener;
 import net.minecraft.world.World;
 import org.joml.Vector3d;
+import org.valkyrienskies.mod.client.render.ShipDynamicLighting;
 import org.valkyrienskies.mod.common.capability.VSCapabilityRegistry;
 import org.valkyrienskies.mod.common.capability.anchored_mount.IShipAnchoredMount;
 import org.valkyrienskies.mod.common.capability.anchored_mount.ImplCapabilityShipAnchoredMount;
@@ -38,6 +39,7 @@ public class VSWorldEventListener implements IWorldEventListener {
         ValkyrienUtils.getPhysoManagingBlock(worldIn, pos).ifPresent(ship -> ship.getWaterVolume().onBlockUpdate(pos, oldState, newState));
         //is here for nothirium compat
         if (worldIn.isRemote) {
+            ShipDynamicLighting.invalidate(worldIn, pos);
             Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(worldIn, pos);
             physicsObject.ifPresent(ship -> ship.getShipRenderer().updateRange(
                     pos.getX() - 1,
@@ -58,6 +60,7 @@ public class VSWorldEventListener implements IWorldEventListener {
     @Override
     public void notifyLightSet(BlockPos pos) {
         if (!this.worldObj.isRemote) return;
+        ShipDynamicLighting.invalidate(this.worldObj, pos);
         //is here as part of initiative to ensure that upon restarting world or
         //turning off and on, hanging lights still glow on assembled ships
         Optional<PhysicsObject> physicsObject = ValkyrienUtils.getPhysoManagingBlock(this.worldObj, pos);
@@ -83,6 +86,7 @@ public class VSWorldEventListener implements IWorldEventListener {
                 pos.setPos(chunkX << 4, minY, chunkZ << 4);
                 PhysicsObject ship = ValkyrienUtils.getPhysoManagingBlock(this.worldObj, pos).orElse(null);
                 if (ship == null || ship.getShipRenderer() == null) continue;
+                ShipDynamicLighting.invalidate(this.worldObj, pos);
 
                 ship.getWaterVolume().markFluidDirty(
                         Math.max(minX, chunkX << 4), minY, Math.max(minZ, chunkZ << 4),

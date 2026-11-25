@@ -15,6 +15,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.valkyrienskies.mod.common.config.VSConfig;
+import org.valkyrienskies.mod.client.render.ShipDynamicLighting;
 import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
 import org.valkyrienskies.mod.common.ships.ship_world.ShipLighting;
@@ -138,7 +139,7 @@ public class MixinClientWorld {
                 i = i * skyLimit / 15;
                 if (j < lightValue) j = lightValue;
 
-                callbackInfoReturnable.setReturnValue(i << 20 | j << 4);
+                callbackInfoReturnable.setReturnValue(ShipDynamicLighting.getCombinedLight(world, pos, i << 20 | j << 4));
             }
             catch (Exception e) {
                 System.err

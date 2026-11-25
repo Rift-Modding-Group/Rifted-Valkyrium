@@ -111,7 +111,7 @@ dependencies {
     compatMods "curse.maven:malisisdoors-223891:2526674"
 
     //Fairy Lights maven for compatibility
-    modCompileOnly "curse.maven:fairy-lights-233342:3068499"
+    compatMods "curse.maven:fairy-lights-233342:3068499"
 
     //Locks compat
     compatMods "curse.maven:locks-253456:3568569"

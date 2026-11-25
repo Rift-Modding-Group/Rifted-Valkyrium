@@ -244,6 +244,7 @@ public abstract class MixinEntityRenderer {
         if (physObjectWorld == null) {
             throw new IllegalStateException("Could not get ship manager from world!");
         }
+        ShipWaterRenderer.begin(this.shipWaterRenderer, physObjectWorld, camera, entity, partialTicks);
         for (PhysicsObject physicsObject : physObjectWorld.getAllLoadedPhysObj()) {
             GL11.glPushMatrix();
             if (physicsObject.getShipRenderer().shouldRender(camera)) {
@@ -253,7 +254,7 @@ public abstract class MixinEntityRenderer {
         }
 
         GlStateManager.resetColor();
-        ShipWaterRenderer.begin(this.shipWaterRenderer, physObjectWorld, camera, entity, partialTicks);
+        ShipWaterRenderer.clipWorldFluids(this.shipWaterRenderer);
         int rendered = original.call(renderGlobal, blockLayer, partialTicks, pass, entity);
         ShipWaterRenderer.end(this.shipWaterRenderer);
         return rendered;

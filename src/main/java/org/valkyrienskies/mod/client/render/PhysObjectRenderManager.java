@@ -352,6 +352,7 @@ public class PhysObjectRenderManager {
      * Called when a chunk is being replaced with a new one. We replace the old chunk renderer with a new one as well.
      */
     public void updateChunk(Chunk chunk) {
+        ShipDynamicLighting.invalidate(this.parent.getWorld(), new BlockPos(chunk.x << 4, 0, chunk.z << 4));
         ChunkPos chunkPos = new ChunkPos(chunk.x, chunk.z);
         PhysRenderChunk oldRenderer = renderChunks.get(chunkPos);
         if (oldRenderer != null) {

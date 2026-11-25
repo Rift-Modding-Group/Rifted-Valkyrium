@@ -6,6 +6,7 @@ import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
+import org.valkyrienskies.mod.client.render.ShipDynamicLighting;
 import org.valkyrienskies.mod.common.config.VSConfig;
 import org.valkyrienskies.mod.common.ships.QueryableShipData;
 import org.valkyrienskies.mod.common.ships.ShipData;
@@ -16,7 +17,7 @@ import javax.annotation.Nullable;
 import java.util.*;
 
 public class WorldClientShipManager implements IPhysObjectWorld {
-
+    public ShipDynamicLighting dynamicLighting = new ShipDynamicLighting();
     private final World world;
     private final Map<UUID, PhysicsObject> loadedShips;
     // Use LinkedHashSet as a queue because it preserves order and doesn't allow duplicates
@@ -101,6 +102,8 @@ public class WorldClientShipManager implements IPhysObjectWorld {
         }
         this.loadedShips.clear();
         this.threadSafeLoadedShips = ImmutableList.of();
+        ShipDynamicLighting.update(this.dynamicLighting, this.world, List.of());
+        ShipDynamicLighting.retainChunks(this.dynamicLighting, Set.of());
     }
 
     @Nullable

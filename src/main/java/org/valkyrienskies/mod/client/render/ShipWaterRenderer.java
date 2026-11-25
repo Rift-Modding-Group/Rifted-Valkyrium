@@ -7,11 +7,13 @@ import net.minecraft.client.renderer.texture.TextureMap;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidRegistry;
+import net.minecraftforge.fml.common.Loader;
 import java.nio.ByteBuffer;
 import java.util.HashSet;
 import java.util.Set;
 import net.minecraft.entity.Entity;
 import org.joml.Matrix4d;
+import org.joml.Vector3d;
 import org.joml.Vector4d;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
@@ -20,9 +22,12 @@ import org.lwjgl.opengl.GL20;
 import org.lwjgl.opengl.GL30;
 import org.lwjgl.opengl.GLContext;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
+import org.valkyrienskies.mod.client.compat.FairyLightsLighting;
 import org.valkyrienskies.mod.common.ships.fluids.ShipWaterVolume;
 import org.valkyrienskies.mod.common.ships.ship_world.IPhysObjectWorld;
 import org.valkyrienskies.mod.common.ships.ship_world.PhysicsObject;
+import org.valkyrienskies.mod.common.ships.ship_world.WorldClientShipManager;
+import net.minecraft.world.chunk.Chunk;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.IOException;
@@ -33,6 +38,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Comparator;
 
 /**
  * Clips fluid fragments against ship-local voxels while retaining other translucent terrain.
@@ -57,19 +63,53 @@ public class ShipWaterRenderer {
     private Map<String, Integer> uniforms = new HashMap<>();
     private FloatBuffer modelView = BufferUtils.createFloatBuffer(16);
     private FloatBuffer metadata = BufferUtils.createFloatBuffer(16);
+    private FloatBuffer lightData = BufferUtils.createFloatBuffer(ShipDynamicLighting.MAX_SHADER_LIGHTS * 4);
 
     public static void begin(ShipWaterRenderer renderer, IPhysObjectWorld manager, ICamera camera, Entity view, double partialTicks) {
         if (renderer.failed) return;
+        double viewX = view.lastTickPosX + (view.posX - view.lastTickPosX) * partialTicks;
+        double viewY = view.lastTickPosY + (view.posY - view.lastTickPosY) * partialTicks;
+        double viewZ = view.lastTickPosZ + (view.posZ - view.lastTickPosZ) * partialTicks;
+        List<ShipDynamicLighting.Light> lights = new ArrayList<>();
+        Set<Chunk> retainedChunks = new HashSet<>();
         List<PhysicsObject> ships = new ArrayList<>();
         List<ShipWaterVolume.Snapshot> snapshots = new ArrayList<>();
         for (PhysicsObject ship : manager.getAllLoadedPhysObj()) {
+            if (manager instanceof WorldClientShipManager client) {
+                lights.addAll(ShipDynamicLighting.collect(
+                        client.dynamicLighting, manager.getWorld(),
+                        ship.getClaimedChunkCache(), ship.getShipTransformationManager().getRenderTransform()
+                ));
+                if (Loader.isModLoaded("fairylights")) {
+                    FairyLightsLighting.collectLights(ship.getClaimedChunkCache(),
+                            ship.getShipTransformationManager().getCurrentTickTransform(),
+                            ship.getShipTransformationManager().getRenderTransform(), (float) partialTicks, lights
+                    );
+                }
+                for (Chunk chunk : ship.getClaimedChunkCache()) retainedChunks.add(chunk);
+            }
             ShipWaterVolume.Snapshot snapshot = ship.getWaterVolume().getSnapshot();
             if ((snapshot.air().isEmpty() && snapshot.mask().equals(snapshot.dry()))
                     || !ship.getShipRenderer().shouldRender(camera)) continue;
             ships.add(ship);
             snapshots.add(snapshot);
         }
-        if (ships.isEmpty()) {
+
+        //closest 32 sources bound fragment work, use tiled light lists for larger fleets
+        lights.sort(Comparator.comparingDouble(light -> {
+            double dx = light.x() - viewX;
+            double dy = light.y() - viewY;
+            double dz = light.z() - viewZ;
+            return dx * dx + dy * dy + dz * dz;
+        }));
+        if (lights.size() > ShipDynamicLighting.MAX_SHADER_LIGHTS) {
+            lights = new ArrayList<>(lights.subList(0, ShipDynamicLighting.MAX_SHADER_LIGHTS));
+        }
+        if (manager instanceof WorldClientShipManager client) {
+            ShipDynamicLighting.update(client.dynamicLighting, manager.getWorld(), lights);
+            ShipDynamicLighting.retainChunks(client.dynamicLighting, retainedChunks);
+        }
+        if (ships.isEmpty() && lights.isEmpty()) {
             if (renderer.texture != 0) GL11.glDeleteTextures(renderer.texture);
             renderer.texture = 0;
             renderer.uploaded = List.of();
@@ -114,7 +154,7 @@ public class ShipWaterRenderer {
             }
             for (String name : new String[]{"atlas", "lightmap", "volumes", "volumeTextureSize", "shipCount",
                     "firstShipData[0]", "fogMode", "fogEnabled", "fogRadial", "alphaThreshold",
-                    "fluidSprites"}) {
+                    "fluidSprites", "clipFluids", "shipLightCount", "shipLights[0]"}) {
                 renderer.uniforms.put(name, GL20.glGetUniformLocation(renderer.program, name));
             }
             renderer.maxTextureSize = GL11.glGetInteger(GL11.GL_MAX_TEXTURE_SIZE);
@@ -162,13 +202,14 @@ public class ShipWaterRenderer {
         else GL11.glBindTexture(GL11.GL_TEXTURE_2D, renderer.spriteTexture);
         GL13.glActiveTexture(GL13.GL_TEXTURE2);
         renderer.previousTexture = GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
-        if (renderer.texture == 0) renderer.texture = GL11.glGenTextures();
+        boolean newTexture = renderer.texture == 0;
+        if (newTexture) renderer.texture = GL11.glGenTextures();
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, renderer.texture);
         renderer.metadataHeight = (ships.size() * 4 + renderer.textureWidth - 1) / renderer.textureWidth;
         int voxelOffset = renderer.metadataHeight * renderer.textureWidth;
         int pixels = voxelOffset;
         for (ShipWaterVolume.Snapshot snapshot : snapshots) pixels += (snapshot.sizeX() * snapshot.sizeY() * snapshot.sizeZ() + 3) / 4;
-        renderer.textureHeight = (pixels + renderer.textureWidth - 1) / renderer.textureWidth;
+        renderer.textureHeight = Math.max(1, (pixels + renderer.textureWidth - 1) / renderer.textureWidth);
         if (renderer.textureHeight > renderer.maxTextureSize) {
             GL11.glBindTexture(GL11.GL_TEXTURE_2D, renderer.previousTexture);
             GL13.glActiveTexture(GL13.GL_TEXTURE3);
@@ -178,7 +219,7 @@ public class ShipWaterRenderer {
             renderer.failed = true;
             return;
         }
-        boolean changed = snapshots.size() != renderer.uploaded.size();
+        boolean changed = newTexture || snapshots.size() != renderer.uploaded.size();
         for (int i = 0; !changed && i < snapshots.size(); i++) changed = snapshots.get(i) != renderer.uploaded.get(i);
         if (changed) {
             FloatBuffer cells = BufferUtils.createFloatBuffer(renderer.textureWidth * renderer.textureHeight * 4);
@@ -197,11 +238,9 @@ public class ShipWaterRenderer {
         }
         renderer.modelView.clear();
         GL11.glGetFloat(GL11.GL_MODELVIEW_MATRIX, renderer.modelView);
-        Matrix4d eyeToCamera = new Matrix4d().set(renderer.modelView).invert();
-        double viewX = view.lastTickPosX + (view.posX - view.lastTickPosX) * partialTicks;
-        double viewY = view.lastTickPosY + (view.posY - view.lastTickPosY) * partialTicks;
-        double viewZ = view.lastTickPosZ + (view.posZ - view.lastTickPosZ) * partialTicks;
-        int metadataFloats = ships.size() == 1 ? 16 : renderer.metadataHeight * renderer.textureWidth * 4;
+        Matrix4d cameraToEye = new Matrix4d().set(renderer.modelView);
+        Matrix4d eyeToCamera = cameraToEye.invert(new Matrix4d());
+        int metadataFloats = ships.size() <= 1 ? 16 : renderer.metadataHeight * renderer.textureWidth * 4;
         if (renderer.metadata.capacity() < metadataFloats) renderer.metadata = BufferUtils.createFloatBuffer(metadataFloats);
         FloatBuffer metadata = renderer.metadata;
         metadata.clear();
@@ -238,7 +277,20 @@ public class ShipWaterRenderer {
         float alphaThreshold = GL11.glIsEnabled(GL11.GL_ALPHA_TEST) ? GL11.glGetFloat(GL11.GL_ALPHA_TEST_REF) : -1F;
         GL20.glUniform1f(renderer.uniforms.get("alphaThreshold"), alphaThreshold);
         GL20.glUniform1i(renderer.uniforms.get("fluidSprites"), 3);
+        GL20.glUniform1i(renderer.uniforms.get("clipFluids"), 0);
+        GL20.glUniform1i(renderer.uniforms.get("shipLightCount"), lights.size());
+        renderer.lightData.clear();
+        for (ShipDynamicLighting.Light light : lights) {
+            Vector3d eye = cameraToEye.transformPosition(new Vector3d(light.x() - viewX, light.y() - viewY, light.z() - viewZ));
+            renderer.lightData.put((float) eye.x).put((float) eye.y).put((float) eye.z).put(light.level());
+        }
+        renderer.lightData.flip();
+        if (!lights.isEmpty()) GL20.glUniform4(renderer.uniforms.get("shipLights[0]"), renderer.lightData);
         renderer.active = true;
+    }
+
+    public static void clipWorldFluids(ShipWaterRenderer renderer) {
+        if (renderer.active) GL20.glUniform1i(renderer.uniforms.get("clipFluids"), 1);
     }
 
     public static void end(ShipWaterRenderer renderer) {
