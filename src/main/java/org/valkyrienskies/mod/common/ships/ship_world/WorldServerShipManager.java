@@ -490,6 +490,8 @@ public class WorldServerShipManager implements IPhysObjectWorld {
             this.loadedShips.put(toSpawn.getUuid(), physicsObject);
 
             restoreCapabilities.run();
+            BlockRelocation.relocatePlayerBeds(this.world,
+                    position -> detectedPositions.contains(position.toLong()), centerDifference);
         }
         this.spawnQueue.clear();
     }

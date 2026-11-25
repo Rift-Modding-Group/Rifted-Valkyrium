@@ -11,7 +11,6 @@ import net.minecraft.world.WorldServer;
 import net.minecraftforge.common.MinecraftForge;
 import org.jetbrains.annotations.NotNull;
 import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
-import org.valkyrienskies.mod.common.ships.chunk_claims.VSChunkClaim;
 import valkyrienwarfare.api.event.ShipBlockRelocationEvent;
 
 import java.io.IOException;
@@ -25,6 +24,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Predicate;
 
 public class BlockRelocation {
     /**
@@ -54,7 +54,7 @@ public class BlockRelocation {
         };
     }
 
-    public static void relocatePlayerBeds(@NotNull WorldServer world, @NotNull VSChunkClaim shipChunks, @NotNull BlockPos offset) {
+    public static void relocatePlayerBeds(@NotNull WorldServer world, @NotNull Predicate<BlockPos> containsSourceBlock, @NotNull BlockPos offset) {
         int dimension = world.provider.getDimension();
         if (world.getMinecraftServer() == null) return;
 
@@ -64,17 +64,17 @@ public class BlockRelocation {
         for (EntityPlayerMP player : playerList.getPlayers()) {
             onlinePlayerFiles.add(player.getCachedUniqueIdString() + ".dat");
             BlockPos bed = player.getBedLocation(dimension);
-            if (bed != null && shipChunks.containsBlock(bed)) {
+            if (bed != null && containsSourceBlock.test(bed)) {
                 player.setSpawnChunk(bed.add(offset), player.isSpawnForced(dimension), dimension);
             }
-            if (player.dimension == dimension && player.bedLocation != null && shipChunks.containsBlock(player.bedLocation)) {
+            if (player.dimension == dimension && player.bedLocation != null && containsSourceBlock.test(player.bedLocation)) {
                 player.bedLocation = player.bedLocation.add(offset);
             }
         }
 
         WorldServer overworld = world.getMinecraftServer().worlds[0];
         NBTTagCompound ownerData = overworld.getWorldInfo().getPlayerNBTTagCompound();
-        if (ownerData != null) relocateSavedPlayerBeds(ownerData, dimension, shipChunks, offset);
+        if (ownerData != null) relocateSavedPlayerBeds(ownerData, dimension, containsSourceBlock, offset);
 
         //include offline players
         Path playerDirectory = overworld.getSaveHandler().getWorldDirectory().toPath().resolve("playerdata");
@@ -87,7 +87,7 @@ public class BlockRelocation {
                     try (InputStream input = Files.newInputStream(playerFile)) {
                         playerData = CompressedStreamTools.readCompressed(input);
                     }
-                    if (!relocateSavedPlayerBeds(playerData, dimension, shipChunks, offset)) continue;
+                    if (!relocateSavedPlayerBeds(playerData, dimension, containsSourceBlock, offset)) continue;
                     Path temporaryFile = playerFile.resolveSibling(playerFile.getFileName() + ".tmp");
                     try (OutputStream output = Files.newOutputStream(temporaryFile)) {
                         CompressedStreamTools.writeCompressed(playerData, output);
@@ -106,7 +106,7 @@ public class BlockRelocation {
 
     public static boolean relocateSavedPlayerBeds(
             @NotNull NBTTagCompound playerData, int dimension,
-            @NotNull VSChunkClaim shipChunks, @NotNull BlockPos offset
+            @NotNull Predicate<BlockPos> containsSourceBlock, @NotNull BlockPos offset
     ) {
         List<NBTTagCompound> spawns = new ArrayList<>();
         if (dimension == 0) spawns.add(playerData);
@@ -119,7 +119,7 @@ public class BlockRelocation {
         for (NBTTagCompound spawn : spawns) {
             if (!spawn.hasKey("SpawnX", 99) || !spawn.hasKey("SpawnY", 99) || !spawn.hasKey("SpawnZ", 99)) continue;
             BlockPos bed = new BlockPos(spawn.getInteger("SpawnX"), spawn.getInteger("SpawnY"), spawn.getInteger("SpawnZ"));
-            if (!shipChunks.containsBlock(bed)) continue;
+            if (!containsSourceBlock.test(bed)) continue;
             BlockPos destination = bed.add(offset);
             spawn.setInteger("SpawnX", destination.getX());
             spawn.setInteger("SpawnY", destination.getY());

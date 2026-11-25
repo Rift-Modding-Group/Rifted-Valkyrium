@@ -489,7 +489,7 @@ public class PhysicsObject implements IPhysicsEntity {
                 }
 
                 restoreCapabilities.run();
-                BlockRelocation.relocatePlayerBeds(serverWorld, this.getChunkClaim(),
+                BlockRelocation.relocatePlayerBeds(serverWorld, this.getChunkClaim()::containsBlock,
                         BlockPos.ORIGIN.subtract(centerDifference));
 
                 //the blocks discard the ship's remaining rotation when they return to the world grid
