@@ -418,12 +418,14 @@ public class ShipWaterVolume {
     }
 
     /**
-     * Marks the space spanned by opposing hull blocks, including their breached cells.
+     * Seeds space spanned by hull blocks on two axes, then follows connected spans to include breaches.
      * */
     public static BitSet findInteriorCells(int sizeX, int sizeY, int sizeZ, byte[] openFaces) {
         int volume = Math.multiplyExact(Math.multiplyExact(sizeX, sizeY), sizeZ);
         if (openFaces.length != volume) throw new IllegalArgumentException("Invalid fluid grid");
         BitSet interior = new BitSet(volume);
+        byte[] spannedAxes = new byte[volume];
+        BitSet extensions = new BitSet(volume);
         for (EnumFacing axis : new EnumFacing[]{EnumFacing.EAST, EnumFacing.UP, EnumFacing.SOUTH}) {
             int length;
             int stride;
@@ -441,19 +443,73 @@ public class ShipWaterVolume {
                     stride = sizeX * sizeY;
                 }
             }
-            for (int base = 0; base < volume; base++) {
-                if (base / stride % length != 0) continue;
-                int first = -1;
-                int last = -1;
-                for (int offset = 0; offset < length; offset++) {
-                    int faces = openFaces[base + stride * offset];
-                    int axisFaces = (1 << axis.getIndex()) | (1 << axis.getOpposite().getIndex());
-                    if ((faces & axisFaces) == axisFaces) continue;
-                    if (first < 0) first = offset;
-                    last = offset;
+            int axisFaces = (1 << axis.getIndex()) | (1 << axis.getOpposite().getIndex());
+            int axisMask = 1 << axis.getAxis().ordinal();
+            for (int group = 0; group < volume; group += stride * length) {
+                for (int base = group; base < group + stride; base++) {
+                    int first = -1;
+                    int last = -1;
+                    for (int offset = 0; offset < length; offset++) {
+                        int faces = openFaces[base + stride * offset];
+                        if ((faces & axisFaces) == axisFaces) continue;
+                        if (first < 0) first = offset;
+                        last = offset;
+                    }
+                    if (first < 0 || first == last) continue;
+                    for (int offset = first; offset <= last; offset++) {
+                        int index = base + stride * offset;
+                        if (spannedAxes[index] != 0) {
+                            interior.set(index);
+                            extensions.clear(index);
+                        }
+                        else if (openFaces[index] != 0) extensions.set(index);
+                        spannedAxes[index] |= (byte) axisMask;
+                    }
                 }
-                if (first < 0 || first == last) continue;
-                for (int offset = first; offset <= last; offset++) interior.set(base + stride * offset);
+            }
+        }
+        if (extensions.isEmpty()) return interior;
+
+        //only cells with one hull span need connectivity checks against the enclosed space
+        int[] pending = new int[extensions.cardinality()];
+        int head = 0;
+        int tail = 0;
+        EnumFacing[] sides = EnumFacing.values();
+        for (int index = extensions.nextSetBit(0); index >= 0; index = extensions.nextSetBit(index + 1)) {
+            if (interior.get(index)) continue;
+            int x = index % sizeX;
+            int y = index / sizeX % sizeY;
+            int z = index / (sizeX * sizeY);
+            for (EnumFacing side : sides) {
+                if ((openFaces[index] & (1 << side.getIndex())) == 0) continue;
+                int nx = x + side.getXOffset();
+                int ny = y + side.getYOffset();
+                int nz = z + side.getZOffset();
+                if (nx < 0 || nx >= sizeX || ny < 0 || ny >= sizeY || nz < 0 || nz >= sizeZ) continue;
+                int neighbor = nx + sizeX * (ny + sizeY * nz);
+                if (!interior.get(neighbor) || (openFaces[neighbor] & (1 << side.getOpposite().getIndex())) == 0
+                        || (spannedAxes[index] & spannedAxes[neighbor] & (1 << side.getAxis().ordinal())) == 0) continue;
+                interior.set(index);
+                pending[tail++] = index;
+                break;
+            }
+        }
+        while (head < tail) {
+            int index = pending[head++];
+            int x = index % sizeX;
+            int y = index / sizeX % sizeY;
+            int z = index / (sizeX * sizeY);
+            for (EnumFacing side : sides) {
+                if ((openFaces[index] & (1 << side.getIndex())) == 0) continue;
+                int nx = x + side.getXOffset();
+                int ny = y + side.getYOffset();
+                int nz = z + side.getZOffset();
+                if (nx < 0 || nx >= sizeX || ny < 0 || ny >= sizeY || nz < 0 || nz >= sizeZ) continue;
+                int neighbor = nx + sizeX * (ny + sizeY * nz);
+                if (interior.get(neighbor) || (openFaces[neighbor] & (1 << side.getOpposite().getIndex())) == 0
+                        || (spannedAxes[index] & spannedAxes[neighbor] & (1 << side.getAxis().ordinal())) == 0) continue;
+                interior.set(neighbor);
+                pending[tail++] = neighbor;
             }
         }
         return interior;
