@@ -253,9 +253,6 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
             return;
         }
 
-        //let addons add forces after the accumulator reset and transform update.
-        this.ship.applyForceInducers();
-
         //get aligning
         boolean aligningToGrid = this.ship.isShipAligningToGrid();
 
@@ -371,6 +368,9 @@ public class PhysXShipBody extends AbstractPhysXCollisionObject<PhysXShipBody.Id
             // Cancel yaw from translational water drag while retaining the water drag produced by rotation at each block.
             calculations.addTorque(new Vector3d(0D, -translationYawTorque, 0D));
         }
+
+        //addon forces
+        this.ship.applyForceInducers();
 
         //push gravity, mass, and velocity-limit settings into the PhysX actor.
         boolean disableGravity = !VSConfig.doGravity || aligningToGrid || calculations.actAsArchimedes;
