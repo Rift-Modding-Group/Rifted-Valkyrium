@@ -5,13 +5,11 @@ import net.minecraft.block.state.IBlockState;
 import net.minecraft.init.Blocks;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.valkyrienskies.mod.common.physics.BlockPhysicsDetails;
 import org.valkyrienskies.mod.common.ships.physics_data.BasicCenterOfMassProvider;
 import org.valkyrienskies.mod.common.ships.physics_data.IPhysicsObjectCenterOfMassProvider;
-import valkyrienwarfare.api.ShipBlockBlacklist;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
@@ -72,12 +70,8 @@ public final class ShipDataMethods {
     /**
      * Checks ship placement limits before changing blocks or physics data, always allowing removal.
      */
-    public static boolean canSetBlockState(ShipData shipData, World world, BlockPos pos, IBlockState state) {
-        if (state.getMaterial() == Material.AIR) return true;
-        if (!isWithinBuildBounds(shipData.shipBounds, pos)) return false;
-        if (shipData.assembledBlockBlacklistId == null) return true;
-        ShipBlockBlacklist blacklist = ShipBlockBlacklistRegistry.get(shipData.assembledBlockBlacklistId);
-        return blacklist != null && !blacklist.isBlacklisted(world, pos.toImmutable(), state);
+    public static boolean canSetBlockState(ShipData shipData, BlockPos pos, IBlockState state) {
+        return state.getMaterial() == Material.AIR || isWithinBuildBounds(shipData.shipBounds, pos);
     }
 
     /**

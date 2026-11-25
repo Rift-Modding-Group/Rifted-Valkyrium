@@ -81,7 +81,7 @@ public abstract class MixinChunk {
 
     /**
      * If this chunk is part of a ship, then tell that ship about the IBlockState update.
-     * Checks its build limits and placement blacklist before updating ship data.
+     * Checks its build limits before updating ship data.
      */
     @Inject(method = "setBlockState", at = @At("HEAD"), cancellable = true)
     private void pre_setBlockState(BlockPos pos, IBlockState state, CallbackInfoReturnable<IBlockState> cir) {
@@ -93,7 +93,7 @@ public abstract class MixinChunk {
                 Optional<ShipData> shipDataOptional = queryableShipData.getShipFromChunk(pos.getX() >> 4, pos.getZ() >> 4);
                 if (shipDataOptional.isPresent()) {
                     ShipData shipData = shipDataOptional.get();
-                    if (!ShipDataMethods.canSetBlockState(shipData, world, pos, state)) {
+                    if (!ShipDataMethods.canSetBlockState(shipData, pos, state)) {
                         cir.setReturnValue(null);
                         return;
                     }

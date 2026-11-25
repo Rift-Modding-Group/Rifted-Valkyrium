@@ -15,8 +15,6 @@ public final class ShipBuildOptions {
     @NotNull
     private ShipBlockBlacklist shipBlockBlacklist = ShipBlockBlacklist.airOnly();
     @Nullable
-    private ShipBlockBlacklist shipBlockAssembledBlacklist;
-    @Nullable
     private String shipName;
     private boolean physicsEnabled;
     private int @Nullable [] maxShipBounds;
@@ -42,20 +40,6 @@ public final class ShipBuildOptions {
     @NotNull
     public ShipBlockBlacklist getShipBlockBlacklist() {
         return this.shipBlockBlacklist;
-    }
-
-    /**
-     * Set a blacklist for the blocks that cannot be placed on an active {@link IPhysicsEntity}.
-     * By default, it's null, so that anything is allowed.
-     * */
-    public ShipBuildOptions setShipBlockAssembledBlacklist(@Nullable ShipBlockBlacklist shipBlockAssembledBlacklist) {
-        this.shipBlockAssembledBlacklist = shipBlockAssembledBlacklist;
-        return this;
-    }
-
-    @Nullable
-    public ShipBlockBlacklist getShipBlockAssembledBlacklist() {
-        return this.shipBlockAssembledBlacklist;
     }
 
     /**

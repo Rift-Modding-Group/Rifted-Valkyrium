@@ -141,13 +141,6 @@ public class ShipData implements IShipData {
     @PacketIgnore
     public boolean builtWithBounds;
 
-    /**
-     * Stable placement policy ID. The callback remains in the addon registry on the server.
-     */
-    @PacketIgnore
-    @Nullable
-    public String assembledBlockBlacklistId;
-
     // endregion
 
     private ShipData() {

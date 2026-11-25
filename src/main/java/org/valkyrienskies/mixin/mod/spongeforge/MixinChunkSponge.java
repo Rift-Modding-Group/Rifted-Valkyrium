@@ -31,7 +31,7 @@ public abstract class MixinChunkSponge {
             Optional<ShipData> shipDataOptional = queryableShipData.getShipFromChunk(pos.getX() >> 4, pos.getZ() >> 4);
             if (shipDataOptional.isPresent()) {
                 ShipData shipData = shipDataOptional.get();
-                if (!ShipDataMethods.canSetBlockState(shipData, world, pos, newState)) {
+                if (!ShipDataMethods.canSetBlockState(shipData, pos, newState)) {
                     cir.setReturnValue(null);
                     return;
                 }

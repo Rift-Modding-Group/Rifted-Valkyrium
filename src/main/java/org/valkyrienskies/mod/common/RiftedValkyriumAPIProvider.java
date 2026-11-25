@@ -23,7 +23,6 @@ import org.valkyrienskies.mod.common.entity.EntityMountable;
 import org.valkyrienskies.mod.common.physics.BlockPhysicsDetails;
 import org.valkyrienskies.mod.common.ships.QueryableShipData;
 import org.valkyrienskies.mod.common.ships.ShipData;
-import org.valkyrienskies.mod.common.ships.ShipBlockBlacklistRegistry;
 import org.valkyrienskies.mod.common.ships.ShipDataMethods;
 import org.valkyrienskies.mod.common.ships.ShipEntityAttachment;
 import org.valkyrienskies.mod.common.ships.block_relocation.BlockFinder;
@@ -162,12 +161,6 @@ public class RiftedValkyriumAPIProvider implements RiftedValkyriumAPI.Provider {
             };
         }
 
-        ShipBlockBlacklist assembledBlacklist = shipBuildOptions.getShipBlockAssembledBlacklist();
-        String assembledBlacklistId = null;
-        if (assembledBlacklist != null) {
-            assembledBlacklistId = ShipBlockBlacklistRegistry.register(assembledBlacklist);
-        }
-
         Vector3d position = new Vector3d(initialPosition.x, initialPosition.y, initialPosition.z);
         VSWorldDataCapability worldData = this.getWorldDataCapability(world);
         QueryableShipData queryableShipData = worldData.get().getQueryableShipData();
@@ -196,7 +189,6 @@ public class RiftedValkyriumAPIProvider implements RiftedValkyriumAPI.Provider {
         shipData.dontSetSpawn = shipBuildOptions.getDontSetSpawn();
         shipData.assemblyBounds = initialBounds;
         shipData.builtWithBounds = initialBounds != null;
-        shipData.assembledBlockBlacklistId = assembledBlacklistId;
         if (maxShipBounds != null) {
             shipData.shipBounds = ShipDataMethods.createBuildBounds(regionCenter, maxShipBounds);
         }
