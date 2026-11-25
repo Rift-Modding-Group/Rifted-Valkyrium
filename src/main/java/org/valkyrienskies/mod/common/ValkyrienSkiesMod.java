@@ -3,6 +3,7 @@ package org.valkyrienskies.mod.common;
 import bl4ckscor3.mod.sit.EntitySit;
 import com.google.common.collect.ImmutableList;
 import com.mrcrayfish.furniture.entity.EntitySeat;
+import net.geforcemods.securitycraft.entity.camera.SecurityCamera;
 import net.minecraft.block.Block;
 import net.minecraft.command.ServerCommandManager;
 import net.minecraft.creativetab.CreativeTabs;
@@ -52,6 +53,7 @@ import org.valkyrienskies.mod.common.compat.LocksCompat;
 import org.valkyrienskies.mod.common.compat.MalisisCoreCompat;
 import org.valkyrienskies.mod.common.compat.FluidloggedAPICompat;
 import org.valkyrienskies.mod.common.compat.FairyLightsCompat;
+import org.valkyrienskies.mod.common.compat.SecurityCraftCompat;
 import org.valkyrienskies.mod.common.item.ItemShipAssemblerStick;
 import org.valkyrienskies.mod.common.item.ItemShipSizeLockStick;
 import org.valkyrienskies.mod.common.item.ItemPhysicsStick;
@@ -164,6 +166,7 @@ public class ValkyrienSkiesMod {
         if (Loader.isModLoaded("malisiscore")) MinecraftForge.EVENT_BUS.register(MalisisCoreCompat.class);
         if (Loader.isModLoaded("fluidlogged_api")) MinecraftForge.EVENT_BUS.register(FluidloggedAPICompat.class);
         if (Loader.isModLoaded("fairylights")) MinecraftForge.EVENT_BUS.register(FairyLightsCompat.class);
+        if (Loader.isModLoaded("securitycraft")) MinecraftForge.EVENT_BUS.register(SecurityCraftCompat.class);
         proxy.preInit(event);
 
         LOGGER.debug("Initializing the Rifted Valkyrium API.");
@@ -177,6 +180,7 @@ public class ValkyrienSkiesMod {
         if (Loader.isModLoaded("sit")) RiftedValkyriumAPI.setEntityAlignWithShip(EntitySit.class);
         if (Loader.isModLoaded("quark")) RiftedValkyriumAPI.setEntityAlignWithShip(SitInStairs.Seat.class);
         if (Loader.isModLoaded("bibliocraft")) RiftedValkyriumAPI.setEntityAlignWithShip(jds.bibliocraft.entity.EntitySeat.class);
+        if (Loader.isModLoaded("securitycraft")) RiftedValkyriumAPI.setEntityAlignWithShip(SecurityCamera.class);
 
         //default unloadable entities registry
         RiftedValkyriumAPI.setEntityUnloadWithShip(EntityArmorStand.class);

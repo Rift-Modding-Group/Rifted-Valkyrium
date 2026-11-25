@@ -120,6 +120,9 @@ dependencies {
     //Fluidlogged API for compat
     compatMods "maven.modrinth:fluidlogged-api:3.3.3"
 
+    //securitycraft
+    compatMods "curse.maven:security-craft-64760:7148537"
+
     //xaero map mods for compat
     compatMods "xaero.lib:xaerolib-forge-1.12.2:1.7.3"
     compatMods("xaero.minimap:xaerominimap-forge-1.12.2:26.6.0") {

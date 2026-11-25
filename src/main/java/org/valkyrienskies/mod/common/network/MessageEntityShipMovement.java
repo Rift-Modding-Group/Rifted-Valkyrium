@@ -339,7 +339,7 @@ public class MessageEntityShipMovement implements IMessage {
                                 entity.serverPosY = message.serverPosY;
                                 entity.serverPosZ = message.serverPosZ;
                             }
-                            if (message.hasComponent(ROTATION)) {
+                            if (message.hasComponent(ROTATION) && entity != Minecraft.getMinecraft().getRenderViewEntity()) {
                                 entity.rotationYaw = (float) message.localYaw;
                                 entity.rotationPitch = message.pitch;
                             }

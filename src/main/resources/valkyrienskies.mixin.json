@@ -41,7 +41,12 @@
     "mod.xaerominimap.MixinMinimapFBORenderer",
     "mod.xaeroworldmap.MixinGuiMap",
     "mod.journeymap.MixinMapRenderer",
-    "mod.locks.MixinLocksClientEvents"
+    "mod.locks.MixinLocksClientEvents",
+    "mod.securitycraft.MixinCameraController",
+    "mod.securitycraft.MixinSCClientEventHandler",
+    "mod.securitycraft.MixinCameraPlayerMovement",
+    "mod.securitycraft.MixinSecurityCameraRenderer",
+    "mod.securitycraft.MixinSetCameraView"
   ],
   "mixins": [
     "entity.MixinEntity",
@@ -86,7 +91,12 @@
     "mod.fairylights.MixinConnectionHangingLights",
     "mod.rustic.MixinRusticEntityChair",
     "mod.quark.MixinSitInStairs",
-    "mod.quark.MixinSeat"
+    "mod.quark.MixinSeat",
+    "mod.securitycraft.MixinSecurityCamera",
+    "mod.securitycraft.MixinSecurityCameraBlock",
+    "mod.securitycraft.MixinSecurityCameraBlockEntity",
+    "mod.securitycraft.MixinSetDefaultCameraViewingDirection",
+    "mod.securitycraft.MixinCameraMonitorItem"
   ],
   "server": [],
   "setSourceFile": true,

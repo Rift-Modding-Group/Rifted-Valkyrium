@@ -1,6 +1,8 @@
 package org.valkyrienskies.mixin.client.renderer;
 
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import net.minecraft.block.*;
 import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
@@ -32,6 +34,8 @@ import org.valkyrienskies.mod.common.util.ValkyrienUtils;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
+import java.util.List;
+import java.util.Set;
 
 @Mixin(RenderGlobal.class)
 public abstract class MixinRenderGlobal {
@@ -244,5 +248,14 @@ public abstract class MixinRenderGlobal {
         // VSWorldEventListener independently queues ship mesh updates. Sending these distant
         // positions to the terrain renderer creates a second, unused per-voxel update set.
         if (ShipChunkAllocator.isBlockInShipyard(pos)) callbackInfo.cancel();
+    }
+
+    @WrapOperation(method = "loadRenderers", at = @At(value = "INVOKE", target = "Ljava/util/Set;clear()V", remap = false))
+    private void retainShipTileEntities(Set<TileEntity> tiles, Operation<Void> original) {
+        List<TileEntity> shipTiles = tiles.stream()
+                .filter(tile -> tile.getWorld() == this.world && ShipChunkAllocator.isBlockInShipyard(tile.getPos()))
+                .toList();
+        original.call(tiles);
+        tiles.addAll(shipTiles);
     }
 }
